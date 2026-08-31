@@ -11,8 +11,8 @@ header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px s
 h1{font-size:16px;margin:0 0 6px;letter-spacing:.02em}
 .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
 .chip{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap}
-#forceRefreshBtn{font:inherit;font-size:11px;font-weight:600;color:var(--bg);background:var(--blue);border:none;border-radius:999px;padding:5px 12px;white-space:nowrap;cursor:pointer;min-height:28px}
-#forceRefreshBtn:active{opacity:.8}
+.chip-action{font:inherit;font-size:11px;font-weight:600;color:var(--bg);background:var(--blue);border:none;cursor:pointer;min-height:24px}
+.chip-action:active{opacity:.8}
 .chip.warn{color:var(--gold);border-color:#4a3a10}
 .chip.bad{color:var(--bad);border-color:#4a1f1f}
 .tabs{display:flex;gap:4px}
@@ -285,7 +285,6 @@ details>summary::marker{color:var(--faint)}
 </style></head><body>
 <header>
   <h1>Owners League — Season Dashboard</h1>
-  <button id="forceRefreshBtn" type="button" title="Fetch the latest version right now, bypassing anything cached on your phone." onclick="location.href=location.pathname+'?v='+Date.now();">&#8635; Refresh</button>
   <div class="chips" id="chips"></div>
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" id="tabScores"  aria-selected="true"  onclick="showTab('scores')">Live scores</button>
@@ -404,6 +403,7 @@ function renderChips(){
   /* Casey, 31 Aug 2026: "please capitalize words. It looks terrible when the first word in this
      is a lowercase, it looks sloppy." Every chip now starts with a capital. */
   c.push(`<span class="chip" title="When this file was made. It is not the same as how current the scores in it are — that is the Results chip. Arizona time, which does not change for daylight saving.">Built ${DATA._built}</span>`);
+  c.push(`<button type="button" class="chip chip-action" title="Checks for a newer BUILD of this page (rosters, features, fixes) and loads it if one exists. Live scores already update on their own every minute -- this has nothing to do with those." onclick="location.href=location.pathname+'?v='+Date.now();">&#8635; Check for update</button>`);
   const src = DATA.owner_source === 'draft'
     ? `<span class="chip warn" title="${DATA.owner_note}">Rosters: draft day</span>`
     : `<span class="chip" title="${DATA.owner_note}">Rosters from your workbook</span>`;
