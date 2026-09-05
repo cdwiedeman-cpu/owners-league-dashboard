@@ -1,0 +1,99 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YouTube TV — which link opens the app?</title>
+<style>
+:root{--bg:#0b1017;--pan:#111a24;--pan2:#16212e;--line:#1e2a37;--ink:#e8eef5;--dim:#93a4b8;
+  --faint:#6b7f95;--blue:#60a5fa;--good:#4ade80;--gold:#fbbf24;--tv:#38bdf8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%;padding:16px 14px 60px;max-width:640px;margin:0 auto}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:.01em}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);
+  margin:26px 0 8px;font-weight:600}
+p{margin:0 0 12px;color:var(--dim)}
+b{color:var(--ink)}
+.card{background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:14px;
+  margin-bottom:12px}
+.card.note{background:var(--pan2)}
+a.try{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--pan2);border:1px solid var(--line);border-radius:10px;
+  padding:14px 14px;margin-bottom:8px;text-decoration:none;color:var(--ink);
+  min-height:56px}
+a.try:active{border-color:var(--blue);background:rgba(96,165,250,.10)}
+a.try .n{font-weight:700;font-size:16px}
+a.try .u{display:block;font:13px/1.35 ui-monospace,Menlo,Consolas,monospace;color:var(--tv);
+  overflow-wrap:anywhere;margin-top:3px}
+a.try .go{color:var(--faint);font-size:20px;flex:0 0 auto}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;border-radius:999px;padding:2px 8px;margin-bottom:6px}
+.tag.ctl{color:var(--gold);border:1px solid #4a3a10}
+.tag.exp{color:var(--tv);border:1px solid #14405a}
+ol{margin:8px 0 0;padding-left:20px;color:var(--dim)}
+ol li{margin-bottom:8px}
+code{font:14px ui-monospace,Menlo,Consolas,monospace;background:var(--pan2);
+  border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--ink)}
+footer{color:var(--faint);font-size:13px;margin-top:28px;line-height:1.6}
+</style></head><body>
+
+<h1>Which link opens the YouTube TV app?</h1>
+<p>Thirty seconds on your iPhone settles something I cannot test from here. Tap each button below
+and note what happens. Then tell me the numbers that worked.</p>
+
+<div class="card note">
+  <p style="margin:0"><b>What you are looking for:</b> the YouTube TV <b>app</b> opening. Not
+  Safari, not a "get the app" page, not the App Store.</p>
+  <p style="margin:8px 0 0"><b>Some of these will do nothing</b>, or show a
+  "Cannot Open Page" message. That is a clean <b>no</b> — tap OK and carry on. It is also exactly
+  why I will not put an untested one of these in your dashboard.</p>
+</div>
+
+<h2>First, prove the test works</h2>
+<span class="tag ctl">Control</span>
+<a class="try" href="sportscenter://"><span><span class="n">1 · ESPN app</span>
+  <span class="u">sportscenter://</span></span><span class="go">→</span></a>
+<a class="try" href="youtube://"><span><span class="n">2 · YouTube app</span>
+  <span class="u">youtube://</span></span><span class="go">→</span></a>
+<p style="font-size:14px">If neither of those opens an app, the phone is blocking this kind of
+link entirely and nothing below will work either — tell me that and we stop.</p>
+
+<h2>Then the ones I need answered</h2>
+<span class="tag exp">YouTube TV candidates</span>
+<a class="try" href="youtubetv://"><span><span class="n">3</span>
+  <span class="u">youtubetv://</span></span><span class="go">→</span></a>
+<a class="try" href="youtubetv://browse"><span><span class="n">4</span>
+  <span class="u">youtubetv://browse</span></span><span class="go">→</span></a>
+<a class="try" href="vnd.youtube.tv://"><span><span class="n">5</span>
+  <span class="u">vnd.youtube.tv://</span></span><span class="go">→</span></a>
+<a class="try" href="com.google.ios.youtubeunplugged://"><span><span class="n">6</span>
+  <span class="u">com.google.ios.youtubeunplugged://</span></span><span class="go">→</span></a>
+<a class="try" href="googleyoutubetv://"><span><span class="n">7</span>
+  <span class="u">googleyoutubetv://</span></span><span class="go">→</span></a>
+<a class="try" href="youtubeunplugged://"><span><span class="n">8</span>
+  <span class="u">youtubeunplugged://</span></span><span class="go">→</span></a>
+
+<h2>And the web addresses, for comparison</h2>
+<span class="tag ctl">Known behaviour</span>
+<a class="try" href="https://tv.youtube.com/"><span><span class="n">9 · the one you have now</span>
+  <span class="u">https://tv.youtube.com/</span></span><span class="go">→</span></a>
+<a class="try" href="https://tv.youtube.com/live"><span><span class="n">10</span>
+  <span class="u">https://tv.youtube.com/live</span></span><span class="go">→</span></a>
+
+<div class="card">
+  <h2 style="margin-top:0">One more thing worth trying on 9 and 10</h2>
+  <ol>
+    <li><b>Press and hold</b> the link instead of tapping it.</li>
+    <li>If the menu offers <b>"Open in YouTube TV"</b>, that means iOS knows the app claims that
+      address and has simply been told to stop handing it over. Choosing it once resets that.</li>
+    <li>If the menu only offers Open / Open in New Tab / Copy, the app does not claim it and there
+      is nothing to reset.</li>
+  </ol>
+</div>
+
+<footer>
+  Tell me: which numbers opened the app, which did nothing, and whether the long-press on 9 or 10
+  offered "Open in YouTube TV". If any of 3–8 works I will put it straight into the dashboard. If
+  none of them do, I will drop the YouTube TV link rather than leave you a tap that goes nowhere.
+  <br><br>Owners League · built for one question, delete it whenever.
+</footer>
+</body></html>
