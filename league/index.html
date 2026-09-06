@@ -558,14 +558,9 @@ details>summary::marker{color:var(--faint)}
 .cg5{width:11%} .cg6{width:12%} .cg7{width:11%} .cg8{width:15%}
 @media (max-width:560px){
   .hide-s{display:none}
-  /* THE OWNER DRAWER DROPS ITS QUARTER COLUMNS ON A PHONE RATHER THAN SCROLLING INSIDE THE
-     TABLE IT LIVES IN. The drawer is a <tr> inside the standings table, so its own `.scr` is
-     NESTED inside the standings `.scr` -- and two sideways scrollers in one stack is a bug this
-     project already has a rule about: on iOS the drag goes to the outer one and the inner never
-     moves. Adding Bonus and Post to the standings table pushed both over the edge at once.
-     Dropping columns beats shrinking them (the standing rule), and the per-quarter split for a
-     single team is on the Weekly / Quarterly tab in full. */
-  .ownertbl .c-q{display:none}
+  /* NO COLUMN-HIDING IN THE OWNER DRAWER. Casey, 31 Aug 2026, asked that this panel keep every
+     column on a phone and scroll instead, and a suite enforces it. The nesting problem is solved
+     by taking the drawer OUT of the standings table -- see ownerBlock(). */
   /* THE AVAILABLE-TEAMS TABLE KEEPS ALL EIGHT COLUMNS ON A PHONE AND SCROLLS SIDEWAYS INSTEAD.
      Casey, 31 Aug 2026: "on the college and NFL pickup tabs it looks like only part of the table
      is displayed... even if I had to scroll to the right, I would be fine with doing that to see
@@ -4430,7 +4425,7 @@ function ownerBlock(o, rank, lead, showDiv){
       ${proj.unpriced ? ` <b class="y">${proj.unpriced} remaining game(s) could not be priced</b>
       — an opponent this build has no rating for — and are in neither Rest nor Post.` : ''}</div>` : '';
 
-  const detail = OPEN_OWNER === key ? `<tr><td colspan="${nCols}"><div class="dtl">
+  const detail = OPEN_OWNER !== key ? '' : `<div class="card"><h2>${esc(o.owner)} — every team</h2><div class="dtl">
     ${projBlock}
     <div class="scr"><table class="ownertbl">
       <colgroup><col style="width:38%"><col style="width:12%"><col style="width:14%">${
@@ -4461,10 +4456,15 @@ function ownerBlock(o, rank, lead, showDiv){
       listed under <b>both</b> owners, each with the weeks they held it, so the two halves add
       back to the team's season total. <b>Rec</b> and <b>Bonus</b> are the team's whole season
       either way — they are the team's record, not a share of it.` : ''}</div>
-    </div></td></tr>` : '';
-  return `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')">
+    </div></div>`;
+  /* THE DRAWER IS NO LONGER A ROW INSIDE THE TABLE. As a <tr> its sideways scroller sat INSIDE
+     the standings table's sideways scroller, and two nested scrollers is a bug this project
+     already has a rule about: on iOS the drag goes to the outer one and the inner never moves.
+     Adding Bonus and Post pushed both over the edge at once. standTable() renders `detail` in its
+     own card BELOW the table, where it is one scroller in its own right and keeps every column. */
+  const row = `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')">
       <td class="num d c-rank">${rank}</td>
-      <td class="c-own">${o.owner}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">▸</span></td>
+      <td class="c-own">${o.owner}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
       ${showDiv ? `<td class="c-div"><span class="pill p-div${o.div === MY_DIV ? ' own' : ''}"
         title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
         ><span class="divshort">${o.div}</span></span></td>` : ''}
@@ -4480,7 +4480,8 @@ function ownerBlock(o, rank, lead, showDiv){
       ${QKEYS().map(q => `<td class="num d c-q ${SORTBY === q ? 'sorted' : ''}">${
         ((o.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
       ${postCell()}
-      </tr>` + detail;
+      </tr>`;
+  return {row, detail};
 }
 
 function toggleOwner(k){ OPEN_OWNER = OPEN_OWNER === k ? null : k; renderStandings(); }
@@ -4640,6 +4641,7 @@ function standTable(rows, title, note, showDiv){
      Total was the LAST column, behind four quarter columns, so on a 390px phone the one number
      the table exists for was the one thing off screen. Owner, Div, Total and Projected now fit
      without scrolling; Behind and the quarters are what you swipe for. */
+  const blocks = rows.map((o, i) => ownerBlock(o, i + 1, top - sortVal(o, SORTBY), showDiv));
   return `<div class="card">
     <div class="scrhint"><b>Swipe</b> the table sideways for the quarters.</div>
     <div class="scr"><table class="standtbl">
@@ -4652,9 +4654,9 @@ function standTable(rows, title, note, showDiv){
         ${qs.map(q => th(q, q, `Points earned in ${q} — ${wk(q)} of the league season, as your workbook's Weekly_Quarterly tab defines it.`)).join('')}
         <th class="num c-q">Post ${helpQM('stand', 'post')}</th>
         </tr></thead>
-      <tbody>${rows.map((o, i) => ownerBlock(o, i + 1, top - sortVal(o, SORTBY), showDiv)).join('')}</tbody></table></div>
+      <tbody>${blocks.map(b => b.row).join('')}</tbody></table></div>
     ${String(BONUS_OPEN).startsWith('stand|') ? bonusHelpHTML(BONUS_OPEN) : ''}
-    ${note || ''}</div>`;
+    ${note || ''}</div>` + blocks.map(b => b.detail).join('');
 }
 
 /* WHAT THE TRANSACTION LOG COULD NOT ANSWER ON ITS OWN.
