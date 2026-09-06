@@ -673,6 +673,11 @@ details>summary::marker{color:var(--faint)}
      inside a third-party browser app that may not draw one -- the same reason alert() and
      confirm() are banned here. -->
 <div id="scout" class="modal" hidden role="dialog" aria-modal="true" aria-label="Team detail"></div>
+<!-- FIRST RUN. The league page needs one thing from a reader before it can say "your teams", and
+     a dropdown in a filter row is something you have to notice. This asks. Same in-page panel as
+     the team detail -- never a native dialog, for the same reason alert() is banned here: this is
+     read on a phone inside a third-party browser app that may not draw one at all. -->
+<div id="setup" class="modal" hidden role="dialog" aria-modal="true" aria-label="Who are you"></div>
 <main>
   <section id="scores">
     <div class="bar" id="sfilters"></div>
@@ -812,6 +817,69 @@ function viewerLoad(){
   } catch (e) { /* private window, or storage blocked. They pick again; nothing breaks. */ }
   MY_DIV = VIEWER ? VIEWER.div : null;
 }
+/* ---- first-run setup ------------------------------------------------------------------- */
+let SETUP_OPEN = false;
+function openSetup(){
+  if (!LEAGUE) return;
+  const box = el('setup'); if (!box) return;
+  const seats = DATA.seats || [];
+  if (!seats.length) return;
+  const cur = VIEWER ? VIEWER.div + '|' + VIEWER.owner : '';
+  const groups = DIVORDER.filter(d => seats.some(x => x.div === d)).map(d =>
+    `<optgroup label="${DIVNAME[d] || d} division">${seats.filter(x => x.div === d).map(x => {
+      const k = x.div + '|' + x.owner;
+      return `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(x.owner)}</option>`;
+    }).join('')}</optgroup>`).join('');
+  SETUP_OPEN = true;
+  box.hidden = false;
+  box.innerHTML = `<div class="modalbox">
+    <div class="modalhd"><div><h2>Welcome to the Owners League dashboard</h2></div>
+      <button class="modalx" onclick="closeSetup()" aria-label="Close">✕</button></div>
+    <div class="note"><b>Which owner are you?</b> Once you say, this page highlights your eleven
+      teams on the scoreboard, tags your row in the standings, and opens the Weekly and Season
+      Summary grids on you.</div>
+    <div class="bar" style="margin-top:10px">
+      <select class="search" id="setupWho" style="flex:1 1 240px;max-width:100%"
+        aria-label="Which owner are you">
+        <option value="">Choose your name…</option>${groups}</select>
+      <button class="f me" id="setupGo" onclick="setupCommit()">That's me</button>
+    </div>
+    <div class="note" style="margin-top:10px">This is remembered <b>in this browser only</b>.
+      Nothing is sent anywhere and nothing is verified — it is a convenience, not a login, so
+      there is no password and nothing to forget. You can change it any time from the chip at the
+      top of the page.</div>
+    <div style="margin-top:12px"><button class="f" onclick="closeSetup()">Skip for now</button>
+      <span class="d" style="font-size:12px"> — every score, standing and grid works without it;
+      you just will not have a “my teams” to filter by.</span></div>
+  </div>`;
+  const sel = el('setupWho');
+  if (sel) sel.focus({preventScroll: true});
+  document.body.style.overflow = 'hidden';
+}
+function closeSetup(){
+  SETUP_OPEN = false;
+  const box = el('setup'); if (!box) return;
+  box.hidden = true; box.innerHTML = '';
+  document.body.style.overflow = '';
+}
+/* SELECTING IS NOT CHOOSING. A phone's picker fires `change` as you scroll past a name, so the
+   commit is its own button -- the alternative is landing on whoever happened to be under your
+   thumb. */
+function setupCommit(){
+  const sel = el('setupWho');
+  const v = sel ? sel.value : '';
+  if (!v){
+    /* An absence is never an answer: say what is missing rather than doing nothing. */
+    const b = el('setupGo');
+    if (b) b.textContent = 'Pick a name first';
+    if (sel) sel.focus();
+    return;
+  }
+  closeSetup();
+  viewerSet(v);
+}
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && SETUP_OPEN) closeSetup(); });
+
 function viewerSet(seat){
   const [div, owner] = String(seat || '').split('|');
   VIEWER = (div && owner) ? {div, owner} : null;
@@ -929,9 +997,11 @@ function renderChips(){
         VIEWER_SAVED === false ? '\n\nIt could NOT be saved (a private window, or storage is blocked), so you will be asked again next time.' : ''
         }">You are <b>${esc(VIEWER.owner)}</b>${VIEWER_SAVED === false ? ' (not saved)' : ''}
         <button class="f" style="margin-left:6px;padding:1px 6px;font-size:11px"
-          onclick="viewerSet('')" title="Forget who I am and ask again">change</button></span>`);
+          onclick="openSetup()" title="Pick a different owner">change</button></span>`);
     else
-      c.unshift(`<span class="chip warn" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are. Pick yourself from the list on the scores tab.">Pick who you are to see your teams</span>`);
+      c.unshift(`<span class="chip warn" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are.">Not signed in as anyone
+        <button class="f" style="margin-left:6px;padding:1px 6px;font-size:11px"
+          onclick="openSetup()" title="Say which owner you are">who am I?</button></span>`);
   }
   const ages = (DATA.inputs||[]).filter(x=>x.age!=null);
   if (ages.length){
@@ -6202,5 +6272,8 @@ if (PROJ_ON) computeRerate();
 renderChips(); renderFilters(); renderScores(); renderStandings();
 if (PROJ_ON){ renderPick(); renderSlots(); renderRace(); }
 else { renderWeekly(); renderSummary(); renderTx(); }
+/* ASK ONCE, ON FIRST OPEN. After the page has drawn, so a reader who skips is looking at a
+   working dashboard and not a blank one, and so nothing here can stop the page rendering. */
+if (LEAGUE && !VIEWER) openSetup();
 pollNow();
 </script></body></html>
