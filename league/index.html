@@ -4395,7 +4395,7 @@ function ownerBlock(o, rank, lead, showDiv){
       <colgroup><col style="width:38%"><col style="width:12%"><col style="width:14%">${
         qs.map(() => `<col style="width:${Math.floor(24 / Math.max(qs.length, 1))}%">`).join('')
         }<col style="width:12%"></colgroup>
-      <thead><tr><th>Team</th>
+      <thead><tr><th title="Each team on this owner's roster. A team traded away is still listed, with the weeks they held it, because the points it earned in those weeks are theirs.">Team</th>
         <th class="num" title="Won-lost, and ties after a second dash. The team's WHOLE season, not this owner's share of it.">Rec</th>
         <th class="num">BO · SO <button type="button" class="qm" aria-expanded="${BOSO_OPEN}"
           onclick="event.stopPropagation();toggleBoSo()"
