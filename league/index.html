@@ -5870,6 +5870,15 @@ function lSeats(){
   return [...m.values()].sort((a, b) =>
     (DIVORDER.indexOf(a.div) - DIVORDER.indexOf(b.div)) || a.owner.localeCompare(b.owner));
 }
+/* Everything the standings repaint on also has to repaint these, and this is the ONE place
+   that knows which set is live. Personal mode keeps Slots and Race; league mode keeps the three
+   all-owners grids. A second copy of this list is a tab that silently stops updating. */
+function lRepaint(){
+  if (PROJ_ON){ if (typeof renderSlots === 'function') renderSlots();
+                if (typeof renderRace === 'function') renderRace(); }
+  else { renderWeekly(); renderSummary(); }
+}
+
 function lNoSeason(what){
   if (SEASON === null) return `<div class="card"><div class="empty">
     ${SEASON_PROGRESS || 'Reading every week played so far from ESPN…'}
