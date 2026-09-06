@@ -783,14 +783,78 @@ function ownerOf(name){
   if (!t || t.owner == null) return null;
   return OWNERS[t.owner];
 }
-/* There is no "my division" on a page twenty-seven people read. league_payload.py sets
-   my_div to null, and `undefined` (an older payload) still means Casey's own page. */
-const MY_DIV = DATA.my_div === undefined ? 'PFD' : DATA.my_div;
+/* WHO IS LOOKING AT THIS. On Casey's own page the answer is baked in: he is the only reader.
+   On the league page twenty-seven different people open the same file, so "my teams" cannot be
+   a build-time fact -- it was highlighting Palma/Wiedeman for everybody, which is worse than
+   useless to the other twenty-six. Casey, 6 Sep 2026: "they could come in with a setup of to
+   select who they are when they first open the dashboard ... then the dashboard would highlight
+   automatically based upon what they selected."
+
+   So the league page asks once and remembers the answer IN THAT PERSON'S BROWSER. It is a
+   preference, not a login: nothing is verified, nothing is sent anywhere, and picking somebody
+   else shows you their teams. That is the right trade for a league page -- there are no secrets
+   on it, and a real sign-in would be a barrier twenty-six people would have to get past to look
+   at a scoreboard. Until they choose, NOTHING is highlighted and the My-teams filter is not
+   offered, because a filter that matches nobody is worse than an absent one. */
+const VIEWER_KEY = 'ofl_league_viewer_v1';
+let VIEWER = null;                       // {div, owner} once they pick; null until then
+let MY_DIV = DATA.my_div === undefined ? 'PFD' : DATA.my_div;
+
+function viewerLoad(){
+  if (!LEAGUE) return;
+  try {
+    const raw = localStorage.getItem(VIEWER_KEY);
+    if (raw){
+      const v = JSON.parse(raw);
+      if (v && v.div && v.owner && (DATA.seats || []).some(s => s.div === v.div && s.owner === v.owner))
+        VIEWER = v;                      // a seat that no longer exists is dropped, not honoured
+    }
+  } catch (e) { /* private window, or storage blocked. They pick again; nothing breaks. */ }
+  MY_DIV = VIEWER ? VIEWER.div : null;
+}
+function viewerSet(seat){
+  const [div, owner] = String(seat || '').split('|');
+  VIEWER = (div && owner) ? {div, owner} : null;
+  MY_DIV = VIEWER ? VIEWER.div : null;
+  try {
+    if (VIEWER) localStorage.setItem(VIEWER_KEY, JSON.stringify(VIEWER));
+    else localStorage.removeItem(VIEWER_KEY);
+  } catch (e) { /* not saved. Said out loud in the chip rather than pretended. */ }
+  VIEWER_SAVED = viewerSaved();
+  if (!VIEWER && FILTER === 'ME') FILTER = 'ALL';
+  LSEAT = VIEWER ? (VIEWER.div + '|' + VIEWER.owner) : LSEAT;
+  renderChips(); renderFilters(); renderScores(); renderStandings(); lRepaint();
+}
+let VIEWER_SAVED = null;
+function viewerSaved(){
+  if (!LEAGUE || !VIEWER) return null;
+  try { return localStorage.getItem(VIEWER_KEY) !== null; } catch (e) { return false; }
+}
+/* WHOSE TEAMS ARE "MINE". One definition, used by the scoreboard, the offline fallback, the
+   owner labels and the standings -- five copies of this test is five places to forget one. */
+function meName(){ return LEAGUE ? (VIEWER && VIEWER.owner) : OWNERS[ME]; }
+function isMine(name){
+  if (!LEAGUE) return (BY.get(name) || {}).mine === true;
+  if (!VIEWER) return false;
+  return labelsOf(name).some(l => l.div === VIEWER.div && l.owner === VIEWER.owner);
+}
+function viewerPicker(){
+  const seats = (DATA.seats || []);
+  if (!seats.length) return '';
+  const groups = ['PFD', 'VFD', 'SFD'].filter(d => seats.some(s => s.div === d)).map(d =>
+    `<optgroup label="${DIVNAME[d] || d} division">${seats.filter(s => s.div === d).map(s => {
+      const k = s.div + '|' + s.owner;
+      return `<option value="${esc(k)}"${VIEWER && k === VIEWER.div + '|' + VIEWER.owner ? ' selected' : ''}>${esc(s.owner)}</option>`;
+    }).join('')}</optgroup>`).join('');
+  return `<select class="search" id="whoami" aria-label="Which owner are you"
+      onchange="viewerSet(this.value)">
+      <option value="">Who are you?…</option>${groups}</select>`;
+}
 function ownerHTML(name){
   const ls = labelsOf(name);
   if (!ls.length) return '<span class="own nolink">free agent in all three divisions</span>';
   return '<span class="own">' + ls.map(l =>
-    `<span class="dv">${l.div}</span> <b class="${l.div===MY_DIV && l.owner===OWNERS[ME] ? 'isme':''}">${l.owner}</b>`
+    `<span class="dv">${l.div}</span> <b class="${l.div===MY_DIV && l.owner===meName() ? 'isme':''}">${l.owner}</b>`
   ).join(' · ') + '</span>';
 }
 
@@ -855,6 +919,20 @@ function renderChips(){
     ? `<span class="chip warn" title="${DATA.owner_note}">Rosters: draft day</span>`
     : `<span class="chip" title="${DATA.owner_note}">Rosters from your workbook</span>`;
   c.push(src);
+  /* WHO THE PAGE THINKS YOU ARE, said on the face of it. A page that quietly decided you were
+     somebody else -- which is exactly what it did before this, for twenty-six people -- must
+     never be silent about that choice. First chip, because it changes what every other one
+     means. */
+  if (LEAGUE){
+    if (VIEWER)
+      c.unshift(`<span class="chip" title="This page is showing YOUR teams highlighted, and the My-teams filter lists them. It is remembered in this browser only — nothing is sent anywhere and nothing is verified.${
+        VIEWER_SAVED === false ? '\n\nIt could NOT be saved (a private window, or storage is blocked), so you will be asked again next time.' : ''
+        }">You are <b>${esc(VIEWER.owner)}</b>${VIEWER_SAVED === false ? ' (not saved)' : ''}
+        <button class="f" style="margin-left:6px;padding:1px 6px;font-size:11px"
+          onclick="viewerSet('')" title="Forget who I am and ask again">change</button></span>`);
+    else
+      c.unshift(`<span class="chip warn" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are. Pick yourself from the list on the scores tab.">Pick who you are to see your teams</span>`);
+  }
   const ages = (DATA.inputs||[]).filter(x=>x.age!=null);
   if (ages.length){
     const oldest = ages.reduce((a,b)=>b.age>a.age?b:a);
@@ -1163,7 +1241,7 @@ async function loadScores(){
           const nm = resolve(t.team || {}, pool);
           if (!nm && (t.team||{}).location) unmatched.add((t.team||{}).displayName || t.team.location);
           return {espn: (t.team||{}).displayName || '?', name: nm, owner: nm ? ownerOf(nm) : null,
-                  mine: nm ? (BY.get(nm)||{}).owner === ME : false,
+                  mine: nm ? isMine(nm) : false,
                   score: t.score == null ? null : Number(t.score), winner: !!t.winner};
         };
         const st = (ev.status || {}).type || {};
@@ -1580,8 +1658,7 @@ function emptyWhy(live){
 }
 
 function fallbackList(){
-  const me = n => (BY.get(n)||{}).owner === ME;
-  let fx = (DATA.fixtures||[]).map(g => ({...g, hm: me(g.home), am: me(g.away)}));
+  let fx = (DATA.fixtures||[]).map(g => ({...g, hm: isMine(g.home), am: isMine(g.away)}));
   if (FILTER === 'ME') fx = fx.filter(g => g.hm || g.am);
   else if (FILTER !== 'ALL') fx = fx.filter(g => g.pool === FILTER);
   fx = fx.filter(g => matchQ([g.home, g.away]));
@@ -1631,13 +1708,18 @@ function ownerKey(){
 }
 
 function renderFilters(){
-  const fs = [['ALL','All'],['NFL','NFL'],['FBS','FBS'],['FCS','FCS'],['ME','My teams']];
+  /* NO "MY TEAMS" UNTIL THERE IS A ME. On the league page the button matched nobody and
+     highlighted Casey for all twenty-seven readers; offered before they have said who they are,
+     it is a control that cannot work. */
+  const fs = [['ALL','All'],['NFL','NFL'],['FBS','FBS'],['FCS','FCS']];
+  if (!LEAGUE || VIEWER) fs.push(['ME','My teams']);
   const owners = [];
   for (const [dv, list] of Object.entries(DATA.division_owners || {}))
     for (const o of list) owners.push(dv + ' · ' + o);
   el('sfilters').innerHTML = statusChip() +
     fs.map(([k,l]) => `<button class="f ${k==='ME'?'me':''}" aria-pressed="${FILTER===k}"
       onclick="setFilter('${k}')">${l}</button>`).join('')
+    + (LEAGUE ? viewerPicker() : '')
     + `<input class="search" id="q" type="search" placeholder="Search team…" value="${Q}"
         oninput="Q=this.value;renderScores()" aria-label="Search for a team">`
     + `<select class="search" id="ownq" onchange="OWNQ=this.value;renderScores()"
@@ -4173,7 +4255,7 @@ let OPEN_OWNER = null;
 function ownerBlock(o, rank, lead, showDiv){
   const proj = projOf(o);
   const nTrade = ((DATA.owner_history || {}).changes || []).length;
-  const mine = o.div === MY_DIV && o.owner === OWNERS[ME];
+  const mine = !!meName() && o.div === MY_DIV && o.owner === meName();
   const key = o.div + '|' + o.owner;
   const teams = o.teams.slice().sort((a, b) => b.pts - a.pts);
   const qs = QKEYS();
@@ -5616,6 +5698,9 @@ function lSeats(){
 function lSeatOf(){
   const all = lSeats();
   if (!all.length) return null;
+  /* OPENS ON YOU. Twenty-seven owners and an alphabetical default means twenty-six people scroll
+     a dropdown before they see their own grid. */
+  if (!LSEAT && VIEWER) LSEAT = VIEWER.div + '|' + VIEWER.owner;
   if (!LSEAT || !all.some(o => o.div + '|' + o.owner === LSEAT))
     LSEAT = all[0].div + '|' + all[0].owner;
   return all.find(o => o.div + '|' + o.owner === LSEAT);
@@ -5640,6 +5725,8 @@ function lPicker(which){
     <select id="lsel_${which}" class="f" style="max-width:100%"
       onchange="lSetSeat(this.value, '${which}')">${groups}</select>
     ${cur ? `<span class="pill p-div" style="align-self:center">${DIVNAME[cur.div] || cur.div}</span>` : ''}
+    ${cur && meName() && cur.div === MY_DIV && cur.owner === meName()
+      ? '<span class="mytag" style="align-self:center">YOU</span>' : ''}
   </div>`;
 }
 function lNoSeason(what){
@@ -5676,7 +5763,11 @@ function lRepaint(){
    entirely, which is why the workbook writes BYE there for all thirty-two. */
 function lWeekHasGame(team, wk){
   const t = BY.get(team);
-  if (!t) return {unknown: true};
+  /* `noTeam`, NOT `unknown`. A schedule row carries its OWN `unknown: true`, meaning the SCORE
+     is not known -- USC has played twice and both rows are marked that way. A sentinel called
+     `unknown` on the same object read as "this team is not on the board" and drew ? over two
+     real games. Same class of bug as `n` meaning both a team name and a game count. */
+  if (!t) return {noTeam: true};
   if (t.pool === 'NFL'){
     if (wk === 0) return {none: 'The NFL had not started yet — week 0 is college football only.'};
     const row = (t.sched || []).find(g => Number(g.when) === wk);
@@ -5728,7 +5819,7 @@ function renderWeekly(){
     const got = (t.wk || {})[wk];
     if (got != null) return `<td class="num ${got > 0 ? 'g' : 'd'}">${got.toFixed(1)}</td>`;
     const g = lWeekHasGame(t.team, wk);
-    if (g.unknown) return `<td class="num d" title="This team is not on this build's board, so its schedule is unknown — which is not the same as having no game.">?</td>`;
+    if (g.noTeam) return `<td class="num d" title="This team is not on this build's board, so its schedule is unknown — which is not the same as having no game.">?</td>`;
     if (g.none) return `<td class="num d" title="${esc(g.none)}">BYE</td>`;
     const when = typeof g.when === 'number' ? `week ${g.when}` : pretty(g.d || g.when);
     const why = g.played
@@ -6029,6 +6120,8 @@ function openLeagueScout(n){
 
 
 buildTabs();
+viewerLoad();
+VIEWER_SAVED = viewerSaved();
 watchHeader();
 watchScroll();
 watchWake();
