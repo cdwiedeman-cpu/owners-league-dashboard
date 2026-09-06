@@ -407,6 +407,13 @@ select.search{max-width:100%;flex:1 1 380px;min-width:0}
    every tap on the page lands on an invisible backdrop instead of the thing under it. Found by
    the suite, which could no longer click the Live scores tab. */
 .modal[hidden]{display:none}
+/* THE ? BESIDE A COLUMN HEAD. A real control: 18px square (the 12x12 floor is a floor, not a
+   target), keyboard reachable, and it opens a panel rather than relying on a hover this page
+   will never get on a phone. */
+.qm{appearance:none;background:var(--pan2);border:1px solid var(--line);color:var(--dim);
+  border-radius:50%;width:18px;height:18px;line-height:1;padding:0;margin-left:4px;
+  font:700 11px inherit;cursor:pointer;vertical-align:middle}
+.qm:hover,.qm[aria-expanded="true"]{border-color:var(--blue);color:var(--blue)}
 .modalbox{background:var(--pan);border:1px solid var(--line);border-radius:12px;
   width:100%;max-width:860px;padding:12px 14px 16px;margin:auto 0;position:relative}
 /* `min-width:0` ON THE TEXT SIDE. A flex child refuses to shrink below its content by
@@ -4385,25 +4392,39 @@ function ownerBlock(o, rank, lead, showDiv){
   const detail = OPEN_OWNER === key ? `<tr><td colspan="${nCols}"><div class="dtl">
     ${projBlock}
     <div class="scr"><table class="ownertbl">
-      <thead><tr><th>Team</th><th class="num">Rec</th><th class="num">Bonus</th>
+      <colgroup><col style="width:38%"><col style="width:12%"><col style="width:14%">${
+        qs.map(() => `<col style="width:${Math.floor(24 / Math.max(qs.length, 1))}%">`).join('')
+        }<col style="width:12%"></colgroup>
+      <thead><tr><th>Team</th>
+        <th class="num" title="Won-lost, and ties after a second dash. The team's WHOLE season, not this owner's share of it.">Rec</th>
+        <th class="num">BO · SO <button type="button" class="qm" aria-expanded="${BOSO_OPEN}"
+          onclick="event.stopPropagation();toggleBoSo()"
+          title="What BO and SO stand for">?</button></th>
         ${qs.map(q => `<th class="num c-q" title="What this team earned for this owner in ${q}.">${q}</th>`).join('')}
-        <th class="num">Pts</th></tr></thead>
+        <th class="num" title="League points this team earned for this owner.">Pts</th></tr></thead>
       <tbody>${teams.map(t => `<tr data-team="${esc(t.team)}"${t.held === false ? ' class="g-before"' : ''}>
         <td><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${t.team}${spell(t)}${
           t.held === false ? ' <span class="gtag t-before" title="No longer on this roster. The points shown are the ones earned while it was — the weeks are on the row.">NO LONGER HELD</span>' : ''}${
           t.held && t.partial ? ' <span class="gtag t-hold" title="Picked up mid-season. Only the weeks since then are counted here; the earlier ones belong to the previous owner.">PART SEASON</span>' : ''}</td>
         <td class="num d">${t.w}-${t.l}${t.t ? '-' + t.t : ''}</td>
-        <td class="num d">${t.bl?`${t.bl} blowout `:''}${t.so?`${t.so} SO`:''}${!t.bl&&!t.so?'—':''}</td>
+        <td class="num d" title="${t.bl || 0} blowout win(s) and ${t.so || 0} shutout(s), 0.5 league points each.">${
+          t.bl || t.so ? `${t.bl ? t.bl + ' BO' : ''}${t.bl && t.so ? ' · ' : ''}${t.so ? t.so + ' SO' : ''}` : '—'}</td>
         ${qs.map(q => `<td class="num d c-q">${((t.q||{})[q] || 0).toFixed(1)}</td>`).join('')}
         <td class="num"><b>${t.pts.toFixed(1)}</b></td></tr>`).join('')}</tbody></table></div>
-    <div class="note">Bonus counts a 40+ NFL / 50+ college win and a shutout, 0.5 each.
-    A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
+    ${BOSO_OPEN ? `<div class="note"><b>BO</b> — a <b>blowout win</b>: an NFL win by 40 or more,
+      or a college win by 50 or more. Worth <b>0.5</b> league points each time.<br>
+      <b>SO</b> — a <b>shutout</b>: a win in which the opponent scored nothing. Worth <b>0.5</b>
+      each time.<br>They are counted for the team's <b>whole season</b>, the same as Rec. The
+      points they are worth are already inside the quarter columns and the Pts total beside
+      them — this column is the count, not a second helping of points.
+      <button class="f" onclick="toggleBoSo()">Close</button></div>` : ''}
+    <div class="note">A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
     <b>wk 3–7</b> after a team name is the stretch of weeks THIS owner held it; the quarter
     columns and Pts count only those weeks, so a traded team's two spells add back to its
     season total.
     ${nTrade ? `<br><b>Points follow ownership week by week.</b> A team that changed hands is
       listed under <b>both</b> owners, each with the weeks they held it, so the two halves add
-      back to the team's season total. <b>Rec</b> and <b>Bonus</b> are the team's whole season
+      back to the team's season total. <b>Rec</b> and <b>BO · SO</b> are the team's whole season
       either way — they are the team's record, not a share of it.` : ''}</div>
     </div></td></tr>` : '';
   return `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')">
@@ -4427,6 +4448,13 @@ function toggleOwner(k){ OPEN_OWNER = OPEN_OWNER === k ? null : k; renderStandin
 /* SORTED BY WHICHEVER COLUMN HE PICKED. Casey, 1 Sep 2026: "I should then be able to sort
    total points or by quarter." One key for the whole page, so the overall table and a division
    table never disagree about what "1st" means. */
+/* WHAT BO AND SO STAND FOR, BEHIND A REAL PANEL. Casey, 6 Sep 2026: the cell read "1 blowout
+   1 SO" -- one word spelled out in lower case and one abbreviated -- and neither said what it
+   was worth. A title alone is not an answer here: this page is read on a phone, where there is
+   no hover, and the project's own rule is that every clickable mark opens a real panel. */
+let BOSO_OPEN = false;
+function toggleBoSo(){ BOSO_OPEN = !BOSO_OPEN; renderStandings(); }
+
 let SORTBY = 'pts';
 function setSort(k){ SORTBY = k; renderStandings(); }
 
