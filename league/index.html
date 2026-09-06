@@ -83,6 +83,15 @@ main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
 .stickystack .subtabs{position:static;top:auto;z-index:auto;background:transparent;
   padding:0;margin:0 0 6px}
 .stickystack .subtabs:last-child{margin-bottom:0}
+/* THE EXPANDED ROWS INSIDE THE STANDINGS TABLE. Two levels of nesting under an owner, each
+   stepped in and dimmed a little further, so depth is visible without a second table. */
+tr.own-kid>td{background:var(--pan2)}
+tr.own-kid .c-own{padding-left:10px}
+tr.slot-kid>td{background:var(--pan2);opacity:.86}
+tr.slot-kid .c-own{padding-left:22px}
+tr.note-kid>td{background:var(--pan2);padding-top:8px;padding-bottom:10px}
+tr.own-kid.clickable{cursor:pointer}
+tr.own-kid.clickable:hover>td{background:var(--pan)}
 
 /* THE SCOREBOARD FILTERS STICK TOO. Casey, 5 Sep 2026, from the iPhone app: "on the live scores
    page, when I scroll down, the NFL, my team, FBS, those filters at the top as well as the search
@@ -4446,70 +4455,64 @@ function ownerBlock(o, rank, lead, showDiv){
       ${proj.unpriced ? ` <b class="y">${proj.unpriced} remaining game(s) could not be priced</b>
       — an opponent this build has no rating for — and are in neither Rest nor Post.` : ''}</div>` : '';
 
-  const detail = OPEN_OWNER !== key ? '' : `<div class="card ownercard"><h2>${esc(o.owner)} — every team</h2><div class="dtl">
-    ${projBlock}
-    <div class="scr"><table class="ownertbl">
-      <colgroup><col style="width:38%"><col style="width:12%"><col style="width:14%">${
-        qs.map(() => `<col style="width:${Math.floor(24 / Math.max(qs.length, 1))}%">`).join('')
-        }<col style="width:12%"></colgroup>
-      <thead><tr><th title="Each team on this owner's roster. A team traded away is still listed, with the weeks they held it, because the points it earned in those weeks are theirs.">Team</th>
-        <th class="num" title="Won-lost, and ties after a second dash. The team's WHOLE season, not this owner's share of it.">Rec</th>
-        <th class="num">Bonus ${helpQM('stand', 'bonus')}</th>
-        ${qs.map(q => `<th class="num c-q" title="What this team earned for this owner in ${q}.">${q}</th>`).join('')}
-        <th class="num" title="League points this team earned for this owner.">Pts</th></tr></thead>
-      <tbody>${slotGroups(o).map(g => {
-        const k = grpKey(o, g), open = OPEN_SLOT === k, many = g.spells.length > 1;
-        const head = `<tr data-team="${esc(g.cur.team)}"${many ? ` class="clickable" onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')"` : ''}>
-          <td>${grpHeadLabel(o, g)}</td>
-          <td class="num d">${lRec(g.cur)}</td>
-          ${bonusCell()}
-          ${qs.map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
-          <td class="num"><b>${grpPts(g).toFixed(1)}</b></td></tr>`;
-        /* THE TEAMS THAT HELD IT BEFORE, each with its own points and the weeks it was in the
-           slot. Shown only when the slot has had more than one, and only when opened. */
-        const kids = (!many || !open) ? '' : g.spells.slice().reverse().map((t, i) => `<tr class="slot-kid${
-            i === g.spells.length - 1 ? ' last' : ''}${t.held === false ? ' g-before' : ''}">
-          <td class="d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
-            <span class="d" style="font-size:11px">${grpSpan(t)}</span>${
-            t.held === false ? ' <span class="gtag t-before" title="Traded away. It keeps the points it earned while this owner held it.">TRADED AWAY</span>' : ''}</td>
-          <td class="num d">${lRec(t)}</td>
-          ${bonusCell()}
-          ${qs.map(q => `<td class="num d c-q">${((t.q||{})[q] || 0).toFixed(1)}</td>`).join('')}
-          <td class="num d">${(t.pts || 0).toFixed(1)}</td></tr>`).join('');
-        return head + kids;
-      }).join('')}</tbody></table></div>
-    <div class="note"><b>One row per roster slot</b>, named for the team in it now. A slot that
-    has held more than one team says so and opens to show each of them with the weeks it was
-    held — the slot's points are all of theirs added together, and each team keeps its own.
-    Postseason points are per OWNER, in the <b>Post</b> column of the table above.
-    A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
-    ${nTrade ? `<br><b>Points follow ownership week by week.</b> A team that changed hands is
-      listed under <b>both</b> owners, each with the weeks they held it, so the two halves add
-      back to the team's season total. <b>Rec</b> and <b>Bonus</b> are the team's whole season
-      either way — they are the team's record, not a share of it.` : ''}</div>
-    </div></div>`;
-  /* THE DRAWER IS NO LONGER A ROW INSIDE THE TABLE. As a <tr> its sideways scroller sat INSIDE
-     the standings table's sideways scroller, and two nested scrollers is a bug this project
-     already has a rule about: on iOS the drag goes to the outer one and the inner never moves.
-     Adding Bonus and Post pushed both over the edge at once. standTable() renders `detail` in its
-     own card BELOW the table, where it is one scroller in its own right and keeps every column. */
-  const row = `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')">
-      <td class="num d c-rank">${rank}</td>
-      <td class="c-own">${o.owner}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
-      ${showDiv ? `<td class="c-div"><span class="pill p-div${o.div === MY_DIV ? ' own' : ''}"
-        title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
-        ><span class="divshort">${o.div}</span></span></td>` : ''}
-      <td class="num c-tot ${SORTBY === 'pts' ? 'sorted' : ''}"><b>${o.pts.toFixed(1)}</b></td>
-      ${PROJ_ON ? `<td class="num c-proj ${SORTBY === 'proj' ? 'sorted' : ''}"
-          title="${proj ? `${o.pts.toFixed(1)} banked + ${(proj.rest).toFixed(1)} from the games still to play + ${(proj.post).toFixed(1)} postseason. Tap for the breakdown.` : 'This build ships no postseason vectors, so there is nothing to project from.'}"
-        >${proj ? proj.total.toFixed(1) : '<span class="d">—</span>'}</td>` : ''}
-      <td class="num d hide-s">${lead == null ? '—' : (lead === 0 ? '—' : '−' + lead.toFixed(1))}</td>
-      ${undecidedCell('bonus')}
-      ${QKEYS().map(q => `<td class="num d c-q ${SORTBY === q ? 'sorted' : ''}">${
-        ((o.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
-      ${postCell()}
-      </tr>`;
-  return {row, detail};
+  /* THE TEAMS EXPAND INSIDE THE STANDINGS TABLE, AS ROWS. Casey, 6 Sep 2026: "when you click on
+     a name it takes you to a table below... I think it'd be better if, when you click on the
+     team, it expands to show the detail by team instead of having it as a separate table."
+     Rows in the SAME table, not a table of their own, and that settles an old conflict as well:
+     a nested table needed its own sideways scroller inside the standings' scroller, and two
+     nested scrollers is a bug this project already has a rule about. One table, one scroller,
+     and every number lands under the heading it belongs to.
+
+     THREE LEVELS. Owner -> the eleven roster slots (named for the team held now) -> the teams
+     that held that slot before it, with the weeks each was in it. Casey: "you click on the owner,
+     it shows the teams. You click on the team, it shows the slot and lineage." */
+  const nBlank = (showDiv ? 1 : 0) + (PROJ_ON ? 1 : 0) + 1;   // Div, Proj, Behind
+  const kidRow = (label, cls, ptsCell, qOf, tip) => `<tr class="${cls}"${tip ? ` title="${esc(tip)}"` : ''}>
+      <td class="num d c-rank"></td>
+      <td class="c-own">${label}</td>
+      ${'<td></td>'.repeat(nBlank - 1)}
+      <td class="num c-tot">${ptsCell}</td>
+      <td class="num d hide-s"></td>
+      <td class="num d c-q">—</td>
+      ${QKEYS().map(q => `<td class="num d c-q">${qOf(q)}</td>`).join('')}
+      <td class="num d c-q">—</td></tr>`;
+
+  const kids = OPEN_OWNER !== key ? '' : slotGroups(o).map(g => {
+    const sk = grpKey(o, g), open = OPEN_SLOT === sk, many = g.spells.length > 1;
+    const rec = lRec(g.cur);
+    const head = `<tr class="own-kid${many ? ' clickable' : ''}"${
+        many ? ` onclick="event.stopPropagation();toggleSlotRow('${esc(sk).replace(/'/g,"\\'")}')"` : ''}>
+      <td class="num d c-rank"></td>
+      <td class="c-own">↳ ${grpHeadLabel(o, g)}
+        <span class="d" style="font-size:11px">${rec}</span></td>
+      ${'<td></td>'.repeat(nBlank - 1)}
+      <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td>
+      <td class="num d hide-s"></td>
+      <td class="num d c-q">—</td>
+      ${QKEYS().map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
+      <td class="num d c-q">—</td></tr>`;
+    const lin = (!many || !open) ? '' : g.spells.slice().reverse().map(t => kidRow(
+      `<span class="d">↳↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
+       <span class="d" style="font-size:11px">${grpSpan(t)} · ${lRec(t)}</span>${
+       t.held === false ? ' <span class="gtag t-before">TRADED AWAY</span>' : ''}`,
+      'slot-kid' + (t.held === false ? ' g-before' : ''),
+      `<span class="d">${(t.pts || 0).toFixed(1)}</span>`,
+      q => ((t.q || {})[q] || 0).toFixed(1),
+      `${t.team} held this slot ${grpSpan(t)}. The points on this row are the ones it earned in those weeks.`)).join('');
+    return head + lin;
+  }).join('') + `<tr class="own-kid note-kid"><td></td>
+      <td colspan="${nCols - 1}" class="d" style="font-size:11px;line-height:1.5">
+      One row per <b>roster slot</b>, named for the team in it now. A slot that has held more than
+      one team says so and opens to each of them with the weeks it was held — the slot's points are
+      all of theirs added together, and each team keeps its own.
+      ${nTrade ? ' Points follow ownership week by week, so a traded team is listed under both owners.' : ''}
+      </td></tr>`;
+
+  /* THE PROJECTION BREAKDOWN STAYS A CARD, and only on Casey's own page. It answers a different
+     question with four columns of its own that have no home in the standings table. */
+  const detail = (!PROJ_ON || OPEN_OWNER !== key || !proj) ? '' : `<div class="card ownercard">
+    <h2>${esc(o.owner)} — what the projection is made of</h2><div class="dtl">${projBlock}</div></div>`;
+  return {row: row + kids, detail};
 }
 
 function toggleOwner(k){
