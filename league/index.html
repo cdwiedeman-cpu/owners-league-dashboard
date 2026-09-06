@@ -5870,6 +5870,18 @@ function lSeats(){
   return [...m.values()].sort((a, b) =>
     (DIVORDER.indexOf(a.div) - DIVORDER.indexOf(b.div)) || a.owner.localeCompare(b.owner));
 }
+function lNoSeason(what){
+  if (SEASON === null) return `<div class="card"><div class="empty">
+    ${SEASON_PROGRESS || 'Reading every week played so far from ESPN…'}
+    <p>${what} is computed on this page from final scores — there is no macro to run and no
+    spreadsheet to open.</p></div></div>`;
+  if (SEASON.size === 0) return `<div class="card"><h2 class="y">No results to work from</h2>
+    <div class="empty"><p>ESPN could not be reached and this build has no verified results baked
+    in. A grid of zeros is not shown, because a zero nobody earned looks exactly like a zero
+    somebody did.</p><p class="d">${(SEASON_ERR || []).slice(0, 4).join(' · ')}</p></div></div>`;
+  return null;
+}
+
 function lSeatOf(){
   const all = lSeats();
   if (!all.length) return null;
@@ -5992,13 +6004,15 @@ function renderWeekly(){
      cannot be read on a phone and shrinking them is not reading them, so a quarter at a time is
      the same information with nothing dropped. */
   const weeks = (DATA.quarters || {})[LQ] || [];
+  /* JUST Q1 Q2 Q3 Q4. They carried a points figure, which Casey read as a number that ought to
+     mean something about the quarter you were about to open -- "I don't know why there needs to
+     be numbers next to the quarters." It was the total for everyone on screen, which is a fact
+     nothing else on the page asks for. Every owner's four quarter totals are on their own card,
+     under their own grid, where they belong. */
   const qbar = `<div class="tabs subtabs">${qs.map(q => {
     const w = (DATA.quarters || {})[q] || [];
-    const tot = shown.reduce((a, o) => a + ((o.q || {})[q] || 0), 0);
     return `<button class="tab pick-tab ${LQ === q ? 'on' : ''}" aria-pressed="${LQ === q}"
-      onclick="lSetQ('${q}')" title="Weeks ${w[0]}–${w[w.length - 1]} of the league season.${
-      shown.length > 1 ? ' The figure is the total for everyone on screen.' : ''}">${q}
-      <span class="d">${tot.toFixed(1)}</span></button>`;
+      onclick="lSetQ('${q}')" title="Weeks ${w[0]}–${w[w.length - 1]} of the league season.">${q}</button>`;
   }).join('')}</div>`;
 
   b.innerHTML = lPicker('weekly') + `<div class="card"><h2>Week by week — ${LQ}</h2>${qbar}
@@ -6051,7 +6065,7 @@ function weeklyCard(o, weeks){
       <colgroup><col style="width:34%">${weeks.map(() =>
         `<col style="width:${Math.floor(52 / Math.max(weeks.length, 1))}%">`).join('')}<col style="width:14%"></colgroup>
       <thead><tr><th class="c-own">Team</th>
-        ${weeks.map(w => `<th class="num" title="League week ${w}. The league week runs Tuesday to Monday.">${w}</th>`).join('')}
+        ${weeks.map(w => `<th class="num" title="League week ${w}. The league week runs Tuesday to Monday.">Wk ${w}</th>`).join('')}
         <th class="num">${LQ}</th></tr></thead>
       <tbody>${rows}${foot}</tbody></table></div>
     <div class="note">${qs.map(q => `${q} <b>${((o.q || {})[q] || 0).toFixed(1)}</b>`).join(' · ')}
