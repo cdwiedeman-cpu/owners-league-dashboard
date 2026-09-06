@@ -558,6 +558,14 @@ details>summary::marker{color:var(--faint)}
 .cg5{width:11%} .cg6{width:12%} .cg7{width:11%} .cg8{width:15%}
 @media (max-width:560px){
   .hide-s{display:none}
+  /* THE OWNER DRAWER DROPS ITS QUARTER COLUMNS ON A PHONE RATHER THAN SCROLLING INSIDE THE
+     TABLE IT LIVES IN. The drawer is a <tr> inside the standings table, so its own `.scr` is
+     NESTED inside the standings `.scr` -- and two sideways scrollers in one stack is a bug this
+     project already has a rule about: on iOS the drag goes to the outer one and the inner never
+     moves. Adding Bonus and Post to the standings table pushed both over the edge at once.
+     Dropping columns beats shrinking them (the standing rule), and the per-quarter split for a
+     single team is on the Weekly / Quarterly tab in full. */
+  .ownertbl .c-q{display:none}
   /* THE AVAILABLE-TEAMS TABLE KEEPS ALL EIGHT COLUMNS ON A PHONE AND SCROLLS SIDEWAYS INSTEAD.
      Casey, 31 Aug 2026: "on the college and NFL pickup tabs it looks like only part of the table
      is displayed... even if I had to scroll to the right, I would be fine with doing that to see
