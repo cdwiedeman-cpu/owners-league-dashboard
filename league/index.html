@@ -73,6 +73,16 @@ main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
    be wrong on exactly the screen he uses. */
 .subtabs{position:sticky;top:var(--hdrh,58px);z-index:15;background:var(--bg);
   padding:6px 0;margin-bottom:10px}
+/* TWO STRIPS THAT STICK AT THE SAME OFFSET LAND ON TOP OF EACH OTHER. Casey, 6 Sep 2026, on the
+   Weekly tab: "the my team / predator / division filters hold, but when I'm scrolling, the Q1 Q2
+   Q3 initially scroll up on top of those filters, and then they go away."
+   Exactly that: both are `top: var(--hdrh)`, so the second slid under the header and over the
+   first. They are one block now -- the stack sticks, the strips inside it do not. */
+.stickystack{position:sticky;top:var(--hdrh,58px);z-index:15;background:var(--bg);
+  padding:6px 0;margin-bottom:10px}
+.stickystack .subtabs{position:static;top:auto;z-index:auto;background:transparent;
+  padding:0;margin:0 0 6px}
+.stickystack .subtabs:last-child{margin-bottom:0}
 
 /* THE SCOREBOARD FILTERS STICK TOO. Casey, 5 Sep 2026, from the iPhone app: "on the live scores
    page, when I scroll down, the NFL, my team, FBS, those filters at the top as well as the search
@@ -6080,7 +6090,8 @@ function renderWeekly(){
       onclick="lSetQ('${q}')" title="Weeks ${w[0]}–${w[w.length - 1]} of the league season.">${q}</button>`;
   }).join('')}</div>`;
 
-  b.innerHTML = lPicker('weekly') + `<div class="card"><h2>Week by week — ${LQ}</h2>${qbar}
+  b.innerHTML = `<div class="stickystack">${lScopeBar('weekly')}${qbar}</div>`
+    + `<div class="card"><h2>Week by week — ${LQ}</h2>
     <div class="note">${shown.length === 1 ? 'Your teams.' :
       `${shown.length} owners, ranked by points. ` + (lScope() === 'ALL'
         ? 'Every division.' : `${DIVNAME[lScope()] || lScope()} division.`)}
