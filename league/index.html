@@ -4425,14 +4425,13 @@ function ownerBlock(o, rank, lead, showDiv){
   const detail = OPEN_OWNER === key ? `<tr><td colspan="${nCols}"><div class="dtl">
     ${projBlock}
     <div class="scr"><table class="ownertbl">
-      <colgroup><col style="width:32%"><col style="width:11%"><col style="width:13%">${
+      <colgroup><col style="width:38%"><col style="width:12%"><col style="width:14%">${
         qs.map(() => `<col style="width:${Math.floor(24 / Math.max(qs.length, 1))}%">`).join('')
-        }<col style="width:10%"><col style="width:10%"></colgroup>
+        }<col style="width:12%"></colgroup>
       <thead><tr><th title="Each team on this owner's roster. A team traded away is still listed, with the weeks they held it, because the points it earned in those weeks are theirs.">Team</th>
         <th class="num" title="Won-lost, and ties after a second dash. The team's WHOLE season, not this owner's share of it.">Rec</th>
         <th class="num">Bonus ${helpQM('stand', 'bonus')}</th>
         ${qs.map(q => `<th class="num c-q" title="What this team earned for this owner in ${q}.">${q}</th>`).join('')}
-        <th class="num">Post ${helpQM('stand', 'post')}</th>
         <th class="num" title="League points this team earned for this owner.">Pts</th></tr></thead>
       <tbody>${teams.map(t => `<tr data-team="${esc(t.team)}"${t.held === false ? ' class="g-before"' : ''}>
         <td><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${t.team}${spell(t)}${
@@ -4441,10 +4440,12 @@ function ownerBlock(o, rank, lead, showDiv){
         <td class="num d">${t.w}-${t.l}${t.t ? '-' + t.t : ''}</td>
         ${bonusCell(t)}
         ${qs.map(q => `<td class="num d c-q">${((t.q||{})[q] || 0).toFixed(1)}</td>`).join('')}
-        ${postCell()}
         <td class="num"><b>${t.pts.toFixed(1)}</b></td></tr>`).join('')}</tbody></table></div>
     ${String(BONUS_OPEN).startsWith('stand|') ? bonusHelpHTML(BONUS_OPEN) : ''}
-    <div class="note">A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
+    <div class="note">Postseason points are per OWNER, in the <b>Post</b> column of the table
+    above — every category in it is undecided for every team until the season ends, so a column
+    of dashes here would say nothing.
+    A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
     <b>wk 3–7</b> after a team name is the stretch of weeks THIS owner held it; the quarter
     columns and Pts count only those weeks, so a traded team's two spells add back to its
     season total.
