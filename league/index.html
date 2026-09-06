@@ -5684,6 +5684,16 @@ function lWeekHasGame(team, wk){
     if (row.bye) return {none: 'Bye week. A bye does not score, and it still costs a week of the roster slot.'};
     return row;
   }
+  /* PLAYED GAMES ARE NOT IN `sched`. team_view() splits a college season into `hist` (already
+     played) and `sched` (still to come), so a grid that searches only `sched` reads BYE for
+     every game that has ALREADY HAPPENED. USC beat Fresno State on 4 Sep and the week 0 cell
+     said BYE. A bye and a game whose score has not arrived are two different sentences, and
+     writing one as the other is the same unknown-is-not-zero mistake in words instead of
+     numbers. `hist` first, because a played game is the more certain fact of the two. */
+  for (const g of (t.hist || [])){
+    const d = g.d || g.when;
+    if (d && weekOf(t.pool, d) === wk) return {...g, played: true};
+  }
   for (const g of (t.sched || [])){
     if (g.when && weekOf(t.pool, g.when) === wk) return g;
   }
@@ -5720,8 +5730,11 @@ function renderWeekly(){
     const g = lWeekHasGame(t.team, wk);
     if (g.unknown) return `<td class="num d" title="This team is not on this build's board, so its schedule is unknown — which is not the same as having no game.">?</td>`;
     if (g.none) return `<td class="num d" title="${esc(g.none)}">BYE</td>`;
-    const when = typeof g.when === 'number' ? `week ${g.when}` : pretty(g.when);
-    return `<td class="num d" title="${esc(g.opp || 'Scheduled')}, ${when} — not played yet, or the result is not in.">–</td>`;
+    const when = typeof g.when === 'number' ? `week ${g.when}` : pretty(g.d || g.when);
+    const why = g.played
+      ? `played, and the score has not reached this device yet — reload where ESPN is reachable`
+      : `not played yet`;
+    return `<td class="num d" title="${esc(g.opp || 'Scheduled')}, ${when} — ${why}.">–</td>`;
   };
   const qTot = t => weeks.reduce((a, wk) => a + (((t.wk || {})[wk]) || 0), 0);
   const colTot = wk => teams.reduce((a, t) => a + (((t.wk || {})[wk]) || 0), 0);
