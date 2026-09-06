@@ -407,6 +407,13 @@ select.search{max-width:100%;flex:1 1 380px;min-width:0}
    every tap on the page lands on an invisible backdrop instead of the thing under it. Found by
    the suite, which could no longer click the Live scores tab. */
 .modal[hidden]{display:none}
+/* THE ? BESIDE A COLUMN HEAD. A real control: 18px square (the 12x12 floor is a floor, not a
+   target), keyboard reachable, and it opens a panel rather than relying on a hover this page
+   will never get on a phone. */
+.qm{appearance:none;background:var(--pan2);border:1px solid var(--line);color:var(--dim);
+  border-radius:50%;width:18px;height:18px;line-height:1;padding:0;margin-left:4px;
+  font:700 11px inherit;cursor:pointer;vertical-align:middle}
+.qm:hover,.qm[aria-expanded="true"]{border-color:var(--blue);color:var(--blue)}
 .modalbox{background:var(--pan);border:1px solid var(--line);border-radius:12px;
   width:100%;max-width:860px;padding:12px 14px 16px;margin:auto 0;position:relative}
 /* `min-width:0` ON THE TEXT SIDE. A flex child refuses to shrink below its content by
@@ -673,6 +680,11 @@ details>summary::marker{color:var(--faint)}
      inside a third-party browser app that may not draw one -- the same reason alert() and
      confirm() are banned here. -->
 <div id="scout" class="modal" hidden role="dialog" aria-modal="true" aria-label="Team detail"></div>
+<!-- FIRST RUN. The league page needs one thing from a reader before it can say "your teams", and
+     a dropdown in a filter row is something you have to notice. This asks. Same in-page panel as
+     the team detail -- never a native dialog, for the same reason alert() is banned here: this is
+     read on a phone inside a third-party browser app that may not draw one at all. -->
+<div id="setup" class="modal" hidden role="dialog" aria-modal="true" aria-label="Who are you"></div>
 <main>
   <section id="scores">
     <div class="bar" id="sfilters"></div>
@@ -812,6 +824,69 @@ function viewerLoad(){
   } catch (e) { /* private window, or storage blocked. They pick again; nothing breaks. */ }
   MY_DIV = VIEWER ? VIEWER.div : null;
 }
+/* ---- first-run setup ------------------------------------------------------------------- */
+let SETUP_OPEN = false;
+function openSetup(){
+  if (!LEAGUE) return;
+  const box = el('setup'); if (!box) return;
+  const seats = DATA.seats || [];
+  if (!seats.length) return;
+  const cur = VIEWER ? VIEWER.div + '|' + VIEWER.owner : '';
+  const groups = DIVORDER.filter(d => seats.some(x => x.div === d)).map(d =>
+    `<optgroup label="${DIVNAME[d] || d} division">${seats.filter(x => x.div === d).map(x => {
+      const k = x.div + '|' + x.owner;
+      return `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(x.owner)}</option>`;
+    }).join('')}</optgroup>`).join('');
+  SETUP_OPEN = true;
+  box.hidden = false;
+  box.innerHTML = `<div class="modalbox">
+    <div class="modalhd"><div><h2>Welcome to the Owners League dashboard</h2></div>
+      <button class="modalx" onclick="closeSetup()" aria-label="Close">✕</button></div>
+    <div class="note"><b>Which owner are you?</b> Once you say, this page highlights your eleven
+      teams on the scoreboard, tags your row in the standings, and opens the Weekly and Season
+      Summary grids on you.</div>
+    <div class="bar" style="margin-top:10px">
+      <select class="search" id="setupWho" style="flex:1 1 240px;max-width:100%"
+        aria-label="Which owner are you">
+        <option value="">Choose your name…</option>${groups}</select>
+      <button class="f me" id="setupGo" onclick="setupCommit()">That's me</button>
+    </div>
+    <div class="note" style="margin-top:10px">This is remembered <b>in this browser only</b>.
+      Nothing is sent anywhere and nothing is verified — it is a convenience, not a login, so
+      there is no password and nothing to forget. You can change it any time from the chip at the
+      top of the page.</div>
+    <div style="margin-top:12px"><button class="f" onclick="closeSetup()">Skip for now</button>
+      <span class="d" style="font-size:12px"> — every score, standing and grid works without it;
+      you just will not have a “my teams” to filter by.</span></div>
+  </div>`;
+  const sel = el('setupWho');
+  if (sel) sel.focus({preventScroll: true});
+  document.body.style.overflow = 'hidden';
+}
+function closeSetup(){
+  SETUP_OPEN = false;
+  const box = el('setup'); if (!box) return;
+  box.hidden = true; box.innerHTML = '';
+  document.body.style.overflow = '';
+}
+/* SELECTING IS NOT CHOOSING. A phone's picker fires `change` as you scroll past a name, so the
+   commit is its own button -- the alternative is landing on whoever happened to be under your
+   thumb. */
+function setupCommit(){
+  const sel = el('setupWho');
+  const v = sel ? sel.value : '';
+  if (!v){
+    /* An absence is never an answer: say what is missing rather than doing nothing. */
+    const b = el('setupGo');
+    if (b) b.textContent = 'Pick a name first';
+    if (sel) sel.focus();
+    return;
+  }
+  closeSetup();
+  viewerSet(v);
+}
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && SETUP_OPEN) closeSetup(); });
+
 function viewerSet(seat){
   const [div, owner] = String(seat || '').split('|');
   VIEWER = (div && owner) ? {div, owner} : null;
@@ -929,9 +1004,11 @@ function renderChips(){
         VIEWER_SAVED === false ? '\n\nIt could NOT be saved (a private window, or storage is blocked), so you will be asked again next time.' : ''
         }">You are <b>${esc(VIEWER.owner)}</b>${VIEWER_SAVED === false ? ' (not saved)' : ''}
         <button class="f" style="margin-left:6px;padding:1px 6px;font-size:11px"
-          onclick="viewerSet('')" title="Forget who I am and ask again">change</button></span>`);
+          onclick="openSetup()" title="Pick a different owner">change</button></span>`);
     else
-      c.unshift(`<span class="chip warn" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are. Pick yourself from the list on the scores tab.">Pick who you are to see your teams</span>`);
+      c.unshift(`<span class="chip warn" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are.">Not signed in as anyone
+        <button class="f" style="margin-left:6px;padding:1px 6px;font-size:11px"
+          onclick="openSetup()" title="Say which owner you are">who am I?</button></span>`);
   }
   const ages = (DATA.inputs||[]).filter(x=>x.age!=null);
   if (ages.length){
@@ -1013,7 +1090,14 @@ const EP = {
    On a Saturday the board carries 130 college games and eleven of them are his. The filter row
    shows "My teams" pressed, so the state is visible rather than mysterious, and an empty result
    says so and offers the way out. */
-let FILTER = 'ME';
+/* THE LEAGUE PAGE OPENS ON EVERY GAME. Casey's own page opens on his eleven — that is his
+   answer to "what is on today". The league page has no eleven until a reader says who they are,
+   so opening on My-teams greeted every one of them with "None of your eleven teams appear in the
+   games ESPN is listing right now", which is a filter reporting an empty result before anybody
+   asked it a question. Casey, 6 Sep 2026: "it just default to all." Picking yourself does NOT
+   switch the board — the My-teams button is right there, and a page that re-filters itself under
+   you is worse than one that waits to be asked. */
+let FILTER = LEAGUE ? 'ALL' : 'ME';
 let GAMES = null, FETCH_ERR = null, UNMATCHED = [];
 
 /* THE NAME IS A CONTROL WHEN THE TEAM IS ON THE BOARD, and plain text when it is not.
@@ -1240,8 +1324,14 @@ async function loadScores(){
           const t = cs.find(x => x.homeAway === w) || {};
           const nm = resolve(t.team || {}, pool);
           if (!nm && (t.team||{}).location) unmatched.add((t.team||{}).displayName || t.team.location);
+          /* NO `mine` FIELD HERE, DELIBERATELY. It used to be stamped on at fetch time, and on
+             the league page the reader says who they are AFTER the scoreboard has loaded -- so
+             every game carried `mine: false` from before there was a "me", and My-teams came back
+             empty until the next poll happened to rebuild the list. Casey, 6 Sep 2026: "it did
+             eventually, but it didn't right away." A fact that can change while the data sits
+             still is not a field on the data; it is asked at render time, from the one definition
+             (isMine), which is also why there is nothing here to forget to re-stamp. */
           return {espn: (t.team||{}).displayName || '?', name: nm, owner: nm ? ownerOf(nm) : null,
-                  mine: nm ? isMine(nm) : false,
                   score: t.score == null ? null : Number(t.score), winner: !!t.winner};
         };
         const st = (ev.status || {}).type || {};
@@ -1488,7 +1578,7 @@ function renderScores(){
   const b = el('scoreBody');
   if (GAMES === null){ b.innerHTML = `<div class="card"><div class="empty">Loading scores from ESPN…</div></div>`; return; }
   let list = GAMES.slice();
-  if (FILTER === 'ME') list = list.filter(g => g.home.mine || g.away.mine);
+  if (FILTER === 'ME') list = list.filter(g => isMine(g.home.name) || isMine(g.away.name));
   else if (FILTER !== 'ALL') list = list.filter(g => g.pool === FILTER);
   list = list.filter(g => matchQ([g.home.name || g.home.espn, g.away.name || g.away.espn]));
   /* Newest first inside the two FINAL groups, soonest first inside the other two. */
@@ -1558,7 +1648,7 @@ function renderScores(){
       const w = g.done && s.winner;
       const nm = s.name || s.espn;
       return `<div class="t">
-        <span>${teamNameHTML(nm, s.mine)}
+        <span>${teamNameHTML(nm, isMine(s.name))}
           ${s.name ? ownerHTML(s.name) : '<span class="own nolink">not matched to the board</span>'}</span>
         <span class="s ${w?'win':''}" ${w?'title="Winner."':''}>${s.score==null?'':s.score}</span></div>`;
     };
@@ -4302,25 +4392,39 @@ function ownerBlock(o, rank, lead, showDiv){
   const detail = OPEN_OWNER === key ? `<tr><td colspan="${nCols}"><div class="dtl">
     ${projBlock}
     <div class="scr"><table class="ownertbl">
-      <thead><tr><th>Team</th><th class="num">Rec</th><th class="num">Bonus</th>
+      <colgroup><col style="width:38%"><col style="width:12%"><col style="width:14%">${
+        qs.map(() => `<col style="width:${Math.floor(24 / Math.max(qs.length, 1))}%">`).join('')
+        }<col style="width:12%"></colgroup>
+      <thead><tr><th title="Each team on this owner's roster. A team traded away is still listed, with the weeks they held it, because the points it earned in those weeks are theirs.">Team</th>
+        <th class="num" title="Won-lost, and ties after a second dash. The team's WHOLE season, not this owner's share of it.">Rec</th>
+        <th class="num">BO · SO <button type="button" class="qm" aria-expanded="${BOSO_OPEN}"
+          onclick="event.stopPropagation();toggleBoSo()"
+          title="What BO and SO stand for">?</button></th>
         ${qs.map(q => `<th class="num c-q" title="What this team earned for this owner in ${q}.">${q}</th>`).join('')}
-        <th class="num">Pts</th></tr></thead>
+        <th class="num" title="League points this team earned for this owner.">Pts</th></tr></thead>
       <tbody>${teams.map(t => `<tr data-team="${esc(t.team)}"${t.held === false ? ' class="g-before"' : ''}>
         <td><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${t.team}${spell(t)}${
           t.held === false ? ' <span class="gtag t-before" title="No longer on this roster. The points shown are the ones earned while it was — the weeks are on the row.">NO LONGER HELD</span>' : ''}${
           t.held && t.partial ? ' <span class="gtag t-hold" title="Picked up mid-season. Only the weeks since then are counted here; the earlier ones belong to the previous owner.">PART SEASON</span>' : ''}</td>
         <td class="num d">${t.w}-${t.l}${t.t ? '-' + t.t : ''}</td>
-        <td class="num d">${t.bl?`${t.bl} blowout `:''}${t.so?`${t.so} SO`:''}${!t.bl&&!t.so?'—':''}</td>
+        <td class="num d" title="${t.bl || 0} blowout win(s) and ${t.so || 0} shutout(s), 0.5 league points each.">${
+          t.bl || t.so ? `${t.bl ? t.bl + ' BO' : ''}${t.bl && t.so ? ' · ' : ''}${t.so ? t.so + ' SO' : ''}` : '—'}</td>
         ${qs.map(q => `<td class="num d c-q">${((t.q||{})[q] || 0).toFixed(1)}</td>`).join('')}
         <td class="num"><b>${t.pts.toFixed(1)}</b></td></tr>`).join('')}</tbody></table></div>
-    <div class="note">Bonus counts a 40+ NFL / 50+ college win and a shutout, 0.5 each.
-    A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
+    ${BOSO_OPEN ? `<div class="note"><b>BO</b> — a <b>blowout win</b>: an NFL win by 40 or more,
+      or a college win by 50 or more. Worth <b>0.5</b> league points each time.<br>
+      <b>SO</b> — a <b>shutout</b>: a win in which the opponent scored nothing. Worth <b>0.5</b>
+      each time.<br>They are counted for the team's <b>whole season</b>, the same as Rec. The
+      points they are worth are already inside the quarter columns and the Pts total beside
+      them — this column is the count, not a second helping of points.
+      <button class="f" onclick="toggleBoSo()">Close</button></div>` : ''}
+    <div class="note">A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
     <b>wk 3–7</b> after a team name is the stretch of weeks THIS owner held it; the quarter
     columns and Pts count only those weeks, so a traded team's two spells add back to its
     season total.
     ${nTrade ? `<br><b>Points follow ownership week by week.</b> A team that changed hands is
       listed under <b>both</b> owners, each with the weeks they held it, so the two halves add
-      back to the team's season total. <b>Rec</b> and <b>Bonus</b> are the team's whole season
+      back to the team's season total. <b>Rec</b> and <b>BO · SO</b> are the team's whole season
       either way — they are the team's record, not a share of it.` : ''}</div>
     </div></td></tr>` : '';
   return `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')">
@@ -4344,6 +4448,13 @@ function toggleOwner(k){ OPEN_OWNER = OPEN_OWNER === k ? null : k; renderStandin
 /* SORTED BY WHICHEVER COLUMN HE PICKED. Casey, 1 Sep 2026: "I should then be able to sort
    total points or by quarter." One key for the whole page, so the overall table and a division
    table never disagree about what "1st" means. */
+/* WHAT BO AND SO STAND FOR, BEHIND A REAL PANEL. Casey, 6 Sep 2026: the cell read "1 blowout
+   1 SO" -- one word spelled out in lower case and one abbreviated -- and neither said what it
+   was worth. A title alone is not an answer here: this page is read on a phone, where there is
+   no hover, and the project's own rule is that every clickable mark opens a real panel. */
+let BOSO_OPEN = false;
+function toggleBoSo(){ BOSO_OPEN = !BOSO_OPEN; renderStandings(); }
+
 let SORTBY = 'pts';
 function setSort(k){ SORTBY = k; renderStandings(); }
 
@@ -6195,5 +6306,8 @@ if (PROJ_ON) computeRerate();
 renderChips(); renderFilters(); renderScores(); renderStandings();
 if (PROJ_ON){ renderPick(); renderSlots(); renderRace(); }
 else { renderWeekly(); renderSummary(); renderTx(); }
+/* ASK ONCE, ON FIRST OPEN. After the page has drawn, so a reader who skips is looking at a
+   working dashboard and not a blank one, and so nothing here can stop the page rendering. */
+if (LEAGUE && !VIEWER) openSetup();
 pollNow();
 </script></body></html>
