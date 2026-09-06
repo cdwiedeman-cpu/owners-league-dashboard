@@ -4488,7 +4488,7 @@ function ownerBlock(o, rank, lead, showDiv){
   const kids = OPEN_OWNER !== key ? '' : slotGroups(o).map(g => {
     const sk = grpKey(o, g), open = OPEN_SLOT === sk, many = g.spells.length > 1;
     const rec = lRec(g.cur);
-    const head = `<tr class="own-kid clickable"
+    const head = `<tr class="own-kid clickable" data-team="${esc(g.cur.team)}"
         title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
         onclick="event.stopPropagation();toggleSlotRow('${esc(sk).replace(/'/g,"\\'")}')">
       <td class="num d c-rank"></td>
