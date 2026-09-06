@@ -729,10 +729,14 @@ const TABSETS = {
 };
 const TABS = TABSETS[MODE] || TABSETS.personal;
 const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','tx'];
+/* THE TAB IDS ARE A CONTRACT, NOT AN IMPLEMENTATION DETAIL. test_season_ui.js drives this page
+   by id — tabStand, tabPick — so making the bar data-driven must not rename them. The id is
+   derived the way it was always spelt, and the new tabs join the same scheme. */
+const tabId = k => 'tab' + k.charAt(0).toUpperCase() + k.slice(1);
 function buildTabs(){
   const bar = el('tabbar');
   if (bar) bar.innerHTML = TABS.map(([k, label], i) =>
-    `<button class="tab" role="tab" id="tab_${k}" aria-selected="${i === 0}"
+    `<button class="tab" role="tab" id="${tabId(k)}" aria-selected="${i === 0}"
        onclick="showTab('${k}')">${label}</button>`).join('');
   if (LEAGUE) document.title = 'Owners League — All Owners';
   const h = document.querySelector('header h1');
@@ -795,7 +799,7 @@ function showTab(which){
      active tab list, so a section that belongs to the OTHER mode can never be left visible. */
   for (const k of ALL_SECTIONS){ const n = el(k); if (n) n.hidden = which !== k; }
   for (const [k] of TABS){
-    const t = el('tab_' + k); if (t) t.setAttribute('aria-selected', String(which === k));
+    const t = el(tabId(k)); if (t) t.setAttribute('aria-selected', String(which === k));
   }
   if (['stand','slots','race','weekly','summary'].includes(which) && SEASON === null) loadSeason();
   if (which === 'slots') renderSlots();
@@ -5664,13 +5668,26 @@ function lRepaint(){
    quarter at a time is the same information with nothing dropped and nothing shrunk — the
    league's own definition of a quarter decides which weeks are in view (DATA.quarters, read out
    of the workbook at build time, never typed here). */
+/* AN NFL SCHEDULE ROW IS NUMBERED, A COLLEGE ONE IS DATED. `when` is an NFL WEEK NUMBER on an
+   NFL row and an ISO DATE on a college row -- feeding the number to weekOf() matched nothing, so
+   every NFL team read BYE in every week of the season. Found on the first render, 6 Sep 2026.
+   NFL week N IS league week N: the league week runs Tuesday to Monday from 2026-09-08 and NFL
+   week N runs Thursday to Monday inside it, Monday night included. Week 0 predates the NFL
+   entirely, which is why the workbook writes BYE there for all thirty-two. */
 function lWeekHasGame(team, wk){
   const t = BY.get(team);
-  if (!t) return null;                                   // unknown, and said so
+  if (!t) return {unknown: true};
+  if (t.pool === 'NFL'){
+    if (wk === 0) return {none: 'The NFL had not started yet — week 0 is college football only.'};
+    const row = (t.sched || []).find(g => Number(g.when) === wk);
+    if (!row) return {none: `No week ${wk} on this team's schedule.`};
+    if (row.bye) return {none: 'Bye week. A bye does not score, and it still costs a week of the roster slot.'};
+    return row;
+  }
   for (const g of (t.sched || [])){
     if (g.when && weekOf(t.pool, g.when) === wk) return g;
   }
-  return null;
+  return {none: 'No game scheduled — an open date.'};
 }
 function lSetQ(q){ LQ = q; const y = window.scrollY; renderWeekly(); window.scrollTo({top: y}); }
 
@@ -5701,8 +5718,10 @@ function renderWeekly(){
     const got = (t.wk || {})[wk];
     if (got != null) return `<td class="num ${got > 0 ? 'g' : 'd'}">${got.toFixed(1)}</td>`;
     const g = lWeekHasGame(t.team, wk);
-    if (!g) return `<td class="num d" title="No game scheduled in week ${wk} — a bye or an open date. A bye does not score, and it still costs a week of the roster slot.">BYE</td>`;
-    return `<td class="num d" title="${esc(g.opp || 'Scheduled')} on ${pretty(g.when)} — not played yet, or the result is not in.">–</td>`;
+    if (g.unknown) return `<td class="num d" title="This team is not on this build's board, so its schedule is unknown — which is not the same as having no game.">?</td>`;
+    if (g.none) return `<td class="num d" title="${esc(g.none)}">BYE</td>`;
+    const when = typeof g.when === 'number' ? `week ${g.when}` : pretty(g.when);
+    return `<td class="num d" title="${esc(g.opp || 'Scheduled')}, ${when} — not played yet, or the result is not in.">–</td>`;
   };
   const qTot = t => weeks.reduce((a, wk) => a + (((t.wk || {})[wk]) || 0), 0);
   const colTot = wk => teams.reduce((a, t) => a + (((t.wk || {})[wk]) || 0), 0);
@@ -5755,10 +5774,23 @@ let LOPEN = null;
 function lToggle(n){ LOPEN = LOPEN === n ? null : n; const y = window.scrollY; renderSummary(); window.scrollTo({top: y}); }
 
 const LIVEKEYS = ['win', 'tie', '50_pt_wins', '40_pt_wins', 'shut_outs'];
+/* UNKNOWN IS NOT ZERO, AND THIS IS WHERE IT BITES. `baked_points` is a points-per-WEEK table
+   with no win-or-lose in it, so a team scored from the offline fallback comes back with points
+   and a 0-0-0 record. Printed as it stands that is "0-0" on the same row as "2.0 points" -- a
+   label contradicting the arithmetic beside it, which is worse than either alone. So: a team
+   with games recorded but no results in them has an UNKNOWN record, and every count that is
+   read off a result is unknown with it. */
+function lKnown(t){ return !(t.games > 0 && (t.w + t.l + t.t) === 0); }
+const L_UNK = '<span class="d" title="Unknown, not zero. The points for this team came from the results baked into this build, which record points per week and not win-or-lose. Reload where ESPN is reachable and this fills in.">—</span>';
+function lRec(t){
+  if (!lKnown(t)) return L_UNK;
+  return `${t.w}-${t.l}${t.t ? '-' + t.t : ''}`;
+}
 function lRules(){ return (DATA.rules || {}).rows || (DATA.standings || {}).bonus_rules || []; }
 function lCount(t, key){
   /* Counts are the TEAM's season; the points credited are the owner's weeks. Where those differ
      the row says so rather than letting one contradict the other. */
+  if (!lKnown(t)) return undefined;          // unknown, and never rendered as 0
   if (key === 'win') return t.w;
   if (key === 'tie') return t.t;
   if (key === 'shut_outs') return t.so;
@@ -5776,6 +5808,9 @@ function lRuleTable(t){
         <td class="num d">—</td></tr>`;
     if (r.live){
       const n = lCount(t, r.key);
+      if (n === undefined)
+        return `<tr><td>${esc(r.label)}</td><td class="num d">${r.pay.toFixed(1)}</td>
+          <td class="num">${L_UNK}</td><td class="num">${L_UNK}</td></tr>`;
       return `<tr><td>${esc(r.label)}</td><td class="num d">${r.pay.toFixed(1)}</td>
         <td class="num ${n ? 'g' : 'd'}">${n == null ? '—' : n}</td>
         <td class="num ${n ? 'g' : 'd'}"><b>${n ? (n * r.pay).toFixed(1) : '0.0'}</b></td></tr>`;
@@ -5809,14 +5844,15 @@ function renderSummary(){
     const open = LOPEN === t.team;
     const cells = LIVEKEYS.map(k => {
       const n = lCount(t, k);
-      return `<td class="num d c-q">${n == null ? '<span class="d">n/a</span>' : (n || 0)}</td>`;
+      if (n === undefined) return `<td class="num c-q">${L_UNK}</td>`;
+      return `<td class="num d c-q">${n === null ? '<span class="d" title="No team in this pool can earn this category.">n/a</span>' : n}</td>`;
     }).join('');
     const main = `<tr class="clickable" onclick="lToggle('${esc(t.team).replace(/'/g, "\\'")}')">
       <td class="c-own"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
         <span class="d">${open ? '▾' : '▸'}</span>${
         t.held === false ? ' <span class="gtag t-before" title="No longer on this roster.">TRADED AWAY</span>' : ''}${
         t.held && t.partial ? ' <span class="gtag t-hold" title="Picked up mid-season — only the weeks since then are credited here.">PART SEASON</span>' : ''}</td>
-      <td class="num d">${t.w}-${t.l}${t.t ? '-' + t.t : ''}</td>
+      <td class="num d">${lRec(t)}</td>
       ${cells}
       ${qs.map(q => `<td class="num d c-q">${((t.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
       <td class="num d" title="Every end-of-season bonus — conference, bowls, the playoff ladders, undefeated and one-loss. Undecided until the season ends, so it is not a zero.">—</td>
@@ -5825,6 +5861,9 @@ function renderSummary(){
     const detail = open ? `<tr><td colspan="${nCols}"><div class="dtl">
       <div class="note"><b>${esc(t.team)}</b> — every one of the ${rules.length} scoring
       categories in the league rulebook, and where this team stands in each.${
+        !lKnown(t) ? ` <b class="y">This team's record is unknown on this device.</b> Its points
+        came from the results baked into this build, which record points per week and not
+        win-or-lose, so the counts below are shown as unknown rather than as zero.` : ''}${
         t.partial ? ` <b class="y">This team was not held all season by ${esc(o.owner)}.</b> The
         <b>Times</b> column counts the team's whole season; the <b>points credited</b> to this
         owner are only the weeks they held it, which is why the two do not multiply out.` : ''}</div>
@@ -5832,8 +5871,13 @@ function renderSummary(){
     return main + detail;
   };
 
+  const nUnk = teams.filter(t => !lKnown(t)).length;
+  /* A RUNNING TOTAL MUST SAY WHAT IT CANNOT CONTAIN. Teams whose record is unknown are not in
+     these counts, and the number of them is on the row rather than in a footnote. */
   const tot = k => teams.reduce((a, t) => a + (lCount(t, k) || 0), 0);
-  const foot = `<tr class="rbtot"><td><b>${esc(o.owner)}</b></td><td class="num"></td>
+  const foot = `<tr class="rbtot"><td><b>${esc(o.owner)}</b>${nUnk
+      ? ` <span class="d" style="font-weight:400">(${nUnk} team${nUnk === 1 ? '' : 's'} not counted)</span>` : ''}</td>
+    <td class="num"></td>
     ${LIVEKEYS.map(k => `<td class="num c-q"><b>${tot(k)}</b></td>`).join('')}
     ${qs.map(q => `<td class="num c-q"><b>${((o.q || {})[q] || 0).toFixed(1)}</b></td>`).join('')}
     <td class="num d">—</td>
@@ -5856,6 +5900,9 @@ function renderSummary(){
       team stands. A category its pool cannot earn reads <b>n/a</b> with the reason; a category
       that has not been decided yet reads <b>not yet</b>. Neither is written as a zero, because a
       zero is a thing you failed to earn and these are things nobody has earned yet.</p>
+      <p>The <b>Times</b> counts are the team's whole season; the <b>quarter</b> columns and the
+      <b>Total</b> are only the weeks this owner held the team. On a traded team those two do not
+      multiply out, and the row says so.</p>
       <p>The five columns with numbers in them are the ones a <b>final score</b> settles, so they
       update as games go final. Everything else — conference titles, bowls, the playoff ladders,
       undefeated and one-loss — is settled at the end of the season.</p>`)}</div>`;
