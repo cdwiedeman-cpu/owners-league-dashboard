@@ -4466,12 +4466,20 @@ function ownerBlock(o, rank, lead, showDiv){
      THREE LEVELS. Owner -> the eleven roster slots (named for the team held now) -> the teams
      that held that slot before it, with the weeks each was in it. Casey: "you click on the owner,
      it shows the teams. You click on the team, it shows the slot and lineage." */
-  const nBlank = (showDiv ? 1 : 0) + (PROJ_ON ? 1 : 0) + 1;   // Div, Proj, Behind
+  const nBlank = (showDiv ? 1 : 0) + 1;                        // Div, Behind
+  const projRow = new Map(((proj || {}).rows || []).map(r => [r.team, r]));
+  const projCell = g => {
+    if (!PROJ_ON) return '';
+    const r = projRow.get(g.cur.team);
+    return r ? `<td class="num c-proj" title="${g.cur.team}: ${r.banked.toFixed(1)} banked + ${r.rest.toFixed(1)} from the games still to play${r.post == null ? '' : ` + ${r.post.toFixed(1)} postseason`}.">${r.total.toFixed(1)}</td>`
+             : '<td class="num d c-proj">—</td>';
+  };
   const kidRow = (label, cls, ptsCell, qOf, tip) => `<tr class="${cls}"${tip ? ` title="${esc(tip)}"` : ''}>
       <td class="num d c-rank"></td>
       <td class="c-own">${label}</td>
-      ${'<td></td>'.repeat(nBlank - 1)}
+      ${showDiv ? '<td></td>' : ''}
       <td class="num c-tot">${ptsCell}</td>
+      ${PROJ_ON ? '<td class="num d c-proj"></td>' : ''}
       <td class="num d hide-s"></td>
       <td class="num d c-q">—</td>
       ${QKEYS().map(q => `<td class="num d c-q">${qOf(q)}</td>`).join('')}
@@ -4480,18 +4488,22 @@ function ownerBlock(o, rank, lead, showDiv){
   const kids = OPEN_OWNER !== key ? '' : slotGroups(o).map(g => {
     const sk = grpKey(o, g), open = OPEN_SLOT === sk, many = g.spells.length > 1;
     const rec = lRec(g.cur);
-    const head = `<tr class="own-kid${many ? ' clickable' : ''}"${
-        many ? ` onclick="event.stopPropagation();toggleSlotRow('${esc(sk).replace(/'/g,"\\'")}')"` : ''}>
+    const head = `<tr class="own-kid clickable"
+        title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
+        onclick="event.stopPropagation();toggleSlotRow('${esc(sk).replace(/'/g,"\\'")}')">
       <td class="num d c-rank"></td>
       <td class="c-own">↳ ${grpHeadLabel(o, g)}
         <span class="d" style="font-size:11px">${rec}</span></td>
-      ${'<td></td>'.repeat(nBlank - 1)}
+      ${showDiv ? '<td></td>' : ''}
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td>
+      ${projCell(g)}
       <td class="num d hide-s"></td>
       <td class="num d c-q">—</td>
       ${QKEYS().map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
       <td class="num d c-q">—</td></tr>`;
-    const lin = (!many || !open) ? '' : g.spells.slice().reverse().map(t => kidRow(
+    if (open && !many) return head + `<tr class="slot-kid"><td></td>
+      <td colspan="${nCols - 1}" style="font-size:11px;line-height:1.5">${grpOnlyNote(g)}</td></tr>`;
+    const lin = (!open) ? '' : g.spells.slice().reverse().map(t => kidRow(
       `<span class="d">↳↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
        <span class="d" style="font-size:11px">${grpSpan(t)} · ${lRec(t)}</span>${
        t.held === false ? ' <span class="gtag t-before">TRADED AWAY</span>' : ''}`,
@@ -4508,10 +4520,29 @@ function ownerBlock(o, rank, lead, showDiv){
       ${nTrade ? ' Points follow ownership week by week, so a traded team is listed under both owners.' : ''}
       </td></tr>`;
 
-  /* THE PROJECTION BREAKDOWN STAYS A CARD, and only on Casey's own page. It answers a different
-     question with four columns of its own that have no home in the standings table. */
-  const detail = (!PROJ_ON || OPEN_OWNER !== key || !proj) ? '' : `<div class="card ownercard">
-    <h2>${esc(o.owner)} — what the projection is made of</h2><div class="dtl">${projBlock}</div></div>`;
+  /* NO TABLE BELOW, ON EITHER PAGE. Casey, 6 Sep 2026, about his own dashboard too: "when I click
+     on a team name it shouldn't take me to a table below. It should just expand the teams."
+     So the projection numbers ride in the inline rows instead: Total is what the slot has banked,
+     the Proj column is that slot's projected finish, and the tooltip carries the two parts the
+     table has no column for -- the remaining schedule and the postseason. */
+  const detail = '';
+  const row = `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')"
+      title="${OPEN_OWNER === key ? 'Hide' : 'Show'} ${esc(o.owner)}'s eleven roster slots">
+      <td class="num d c-rank">${rank}</td>
+      <td class="c-own">${o.owner}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
+      ${showDiv ? `<td class="c-div"><span class="pill p-div${o.div === MY_DIV ? ' own' : ''}"
+        title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
+        ><span class="divshort">${o.div}</span></span></td>` : ''}
+      <td class="num c-tot ${SORTBY === 'pts' ? 'sorted' : ''}"><b>${o.pts.toFixed(1)}</b></td>
+      ${PROJ_ON ? `<td class="num c-proj ${SORTBY === 'proj' ? 'sorted' : ''}"
+          title="${proj ? `${o.pts.toFixed(1)} banked + ${(proj.rest).toFixed(1)} from the games still to play + ${(proj.post).toFixed(1)} postseason. Tap for the breakdown.` : 'This build ships no postseason vectors, so there is nothing to project from.'}"
+        >${proj ? proj.total.toFixed(1) : '<span class="d">—</span>'}</td>` : ''}
+      <td class="num d hide-s">${lead == null ? '—' : (lead === 0 ? '—' : '−' + lead.toFixed(1))}</td>
+      ${undecidedCell('bonus')}
+      ${QKEYS().map(q => `<td class="num d c-q ${SORTBY === q ? 'sorted' : ''}">${
+        ((o.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
+      ${postCell()}
+      </tr>`;
   return {row: row + kids, detail};
 }
 
@@ -6181,14 +6212,19 @@ function weeklyCard(o, weeks){
     /* A SLOT'S WEEK IS WHICHEVER TEAM HELD IT THAT WEEK -- they never overlap, so summing is the
        same as picking, and it means a traded slot reads as one continuous line across the season
        instead of two half-empty ones. */
-    const head = `<tr${many ? ` class="clickable" onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')"` : ''}>
+    const head = `<tr class="clickable"
+        title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
+        onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')">
       <td class="c-own">${grpHeadLabel(o, g)}</td>
       ${weeks.map(wk => {
         const own = g.spells.find(t => ((t.wk || {})[wk]) != null);
         return own ? `<td class="num g">${((own.wk || {})[wk]).toFixed(1)}</td>` : cell(g.cur, wk);
       }).join('')}
       <td class="num"><b>${weeks.reduce((a, wk) => a + slotWeek(g, wk), 0).toFixed(1)}</b></td></tr>`;
-    const kids = (!many || !open) ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
+    if (open && !many)
+      return head + `<tr class="slot-kid"><td colspan="${weeks.length + 2}"
+        style="font-size:11px;line-height:1.5">${grpOnlyNote(g)}</td></tr>`;
+    const kids = !open ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
         t.held === false ? ' g-before' : ''}">
       <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
         <span class="d" style="font-size:11px">${grpSpan(t)}</span></td>
@@ -6330,12 +6366,23 @@ function grpSpan(t){
   if (t.from_week == null) return t.weeks ? `wk ${t.weeks[0]}–${t.weeks[1]}` : '';
   return `wk ${t.from_week}${t.to_week == null ? '–now' : '–' + (t.to_week - 1)}`;
 }
+/* EVERY SLOT ROW OPENS, EVEN ONE THAT HAS NEVER BEEN TRADED. Casey, 6 Sep 2026: "I should be
+   able to click on the team name and see the slot lineage." With no trades a slot has one team
+   and there is nothing to list -- but a row that does nothing when tapped is indistinguishable
+   from one that is broken, and an absence is never an answer. It opens and says so. */
 function grpHeadLabel(o, g){
   const open = OPEN_SLOT === grpKey(o, g);
   const n = g.spells.length;
-  return `<span class="pill p-${g.cur.pool.toLowerCase()}">${g.cur.pool}</span> ${esc(g.cur.team)}${
-    n > 1 ? ` <span class="caret">${open ? '▾' : '▸'}</span> <span class="gtag t-yours" title="${n} teams have held this roster slot. Its points are all of theirs added together — tap to see each one and the weeks it was held.">${n - 1} before it</span>` : ''}${
+  return `<span class="pill p-${g.cur.pool.toLowerCase()}">${g.cur.pool}</span> ${esc(g.cur.team)}
+    <span class="caret">${open ? '▾' : '▸'}</span>${
+    n > 1 ? ` <span class="gtag t-yours" title="${n} teams have held this roster slot. Its points are all of theirs added together — tap to see each one and the weeks it was held.">${n - 1} before it</span>` : ''}${
     g.unplaced ? ' <span class="gtag t-hold" title="This team could not be matched to a roster slot from the ownership history — two moves in the same week cannot be told apart. Its points are shown on their own rather than dropped.">SLOT UNKNOWN</span>' : ''}`;
+}
+/* The one line a never-traded slot has to say. */
+function grpOnlyNote(g){
+  return `<span class="d">↳↳</span> <span class="d">${esc(g.cur.team)} has held this slot all
+    season — ${grpSpan(g.cur) || 'since the draft'}. Nothing has been traded into or out of it,
+    so its points are this team's alone.</span>`;
 }
 
 function slotLabel(t){
@@ -6399,14 +6446,19 @@ function summaryCard(o){
       if (n === null) return `<td class="num d c-cat">n/a</td>`;
       return `<td class="num ${n ? 'g' : 'd'} c-cat">${n}</td>`;
     }).join('');
-    const head = `<tr${many ? ` class="clickable" onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')"` : ''}>
+    const head = `<tr class="clickable"
+        title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
+        onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')">
       <td class="c-own">${grpHeadLabel(o, g)}</td>
       ${headCells}
       ${bonusCell()}
       ${qs.map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
       ${postCell()}
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td></tr>`;
-    const kids = (!many || !open) ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
+    if (open && !many)
+      return head + `<tr class="slot-kid"><td colspan="${cats.length + qs.length + 4}"
+        style="font-size:11px;line-height:1.5;white-space:normal">${grpOnlyNote(g)}</td></tr>`;
+    const kids = !open ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
         t.held === false ? ' g-before' : ''}">
       <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
         <span class="d" style="font-size:11px">${grpSpan(t)}</span></td>
