@@ -1317,8 +1317,14 @@ async function loadScores(){
           const t = cs.find(x => x.homeAway === w) || {};
           const nm = resolve(t.team || {}, pool);
           if (!nm && (t.team||{}).location) unmatched.add((t.team||{}).displayName || t.team.location);
+          /* NO `mine` FIELD HERE, DELIBERATELY. It used to be stamped on at fetch time, and on
+             the league page the reader says who they are AFTER the scoreboard has loaded -- so
+             every game carried `mine: false` from before there was a "me", and My-teams came back
+             empty until the next poll happened to rebuild the list. Casey, 6 Sep 2026: "it did
+             eventually, but it didn't right away." A fact that can change while the data sits
+             still is not a field on the data; it is asked at render time, from the one definition
+             (isMine), which is also why there is nothing here to forget to re-stamp. */
           return {espn: (t.team||{}).displayName || '?', name: nm, owner: nm ? ownerOf(nm) : null,
-                  mine: nm ? isMine(nm) : false,
                   score: t.score == null ? null : Number(t.score), winner: !!t.winner};
         };
         const st = (ev.status || {}).type || {};
@@ -1565,7 +1571,7 @@ function renderScores(){
   const b = el('scoreBody');
   if (GAMES === null){ b.innerHTML = `<div class="card"><div class="empty">Loading scores from ESPN…</div></div>`; return; }
   let list = GAMES.slice();
-  if (FILTER === 'ME') list = list.filter(g => g.home.mine || g.away.mine);
+  if (FILTER === 'ME') list = list.filter(g => isMine(g.home.name) || isMine(g.away.name));
   else if (FILTER !== 'ALL') list = list.filter(g => g.pool === FILTER);
   list = list.filter(g => matchQ([g.home.name || g.home.espn, g.away.name || g.away.espn]));
   /* Newest first inside the two FINAL groups, soonest first inside the other two. */
@@ -1635,7 +1641,7 @@ function renderScores(){
       const w = g.done && s.winner;
       const nm = s.name || s.espn;
       return `<div class="t">
-        <span>${teamNameHTML(nm, s.mine)}
+        <span>${teamNameHTML(nm, isMine(s.name))}
           ${s.name ? ownerHTML(s.name) : '<span class="own nolink">not matched to the board</span>'}</span>
         <span class="s ${w?'win':''}" ${w?'title="Winner."':''}>${s.score==null?'':s.score}</span></div>`;
     };
