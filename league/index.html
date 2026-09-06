@@ -717,6 +717,13 @@ details>summary::marker{color:var(--faint)}
      the team detail -- never a native dialog, for the same reason alert() is banned here: this is
      read on a phone inside a third-party browser app that may not draw one at all. -->
 <div id="setup" class="modal" hidden role="dialog" aria-modal="true" aria-label="Who are you"></div>
+<!-- THE ? PANELS. They used to be appended under the table they belong to, which on a 27-row
+     standings table or a 49-column summary meant the answer appeared somewhere off the bottom of
+     the page, and the re-render threw the sideways scroll back to the left. Casey, 6 Sep 2026:
+     "the ? for Bonus and Total do not have any text behind them when you click", and "when
+     clicking the ? it auto scrolls back to the beginning left of the page." Both are the same
+     fault. A modal cannot be off-screen and re-renders nothing underneath it. -->
+<div id="help" class="modal" hidden role="dialog" aria-modal="true" aria-label="What this column counts"></div>
 <main>
   <section id="scores">
     <div class="bar" id="sfilters"></div>
@@ -4439,7 +4446,7 @@ function ownerBlock(o, rank, lead, showDiv){
       ${proj.unpriced ? ` <b class="y">${proj.unpriced} remaining game(s) could not be priced</b>
       — an opponent this build has no rating for — and are in neither Rest nor Post.` : ''}</div>` : '';
 
-  const detail = OPEN_OWNER !== key ? '' : `<div class="card"><h2>${esc(o.owner)} — every team</h2><div class="dtl">
+  const detail = OPEN_OWNER !== key ? '' : `<div class="card ownercard"><h2>${esc(o.owner)} — every team</h2><div class="dtl">
     ${projBlock}
     <div class="scr"><table class="ownertbl">
       <colgroup><col style="width:38%"><col style="width:12%"><col style="width:14%">${
@@ -4450,22 +4457,32 @@ function ownerBlock(o, rank, lead, showDiv){
         <th class="num">Bonus ${helpQM('stand', 'bonus')}</th>
         ${qs.map(q => `<th class="num c-q" title="What this team earned for this owner in ${q}.">${q}</th>`).join('')}
         <th class="num" title="League points this team earned for this owner.">Pts</th></tr></thead>
-      <tbody>${teams.map(t => `<tr data-team="${esc(t.team)}"${t.held === false ? ' class="g-before"' : ''}>
-        <td><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${t.team}${spell(t)}${
-          t.held === false ? ' <span class="gtag t-before" title="No longer on this roster. The points shown are the ones earned while it was — the weeks are on the row.">NO LONGER HELD</span>' : ''}${
-          t.held && t.partial ? ' <span class="gtag t-hold" title="Picked up mid-season. Only the weeks since then are counted here; the earlier ones belong to the previous owner.">PART SEASON</span>' : ''}</td>
-        <td class="num d">${t.w}-${t.l}${t.t ? '-' + t.t : ''}</td>
-        ${bonusCell(t)}
-        ${qs.map(q => `<td class="num d c-q">${((t.q||{})[q] || 0).toFixed(1)}</td>`).join('')}
-        <td class="num"><b>${t.pts.toFixed(1)}</b></td></tr>`).join('')}</tbody></table></div>
-    ${String(BONUS_OPEN).startsWith('stand|') ? bonusHelpHTML(BONUS_OPEN) : ''}
-    <div class="note">Postseason points are per OWNER, in the <b>Post</b> column of the table
-    above — every category in it is undecided for every team until the season ends, so a column
-    of dashes here would say nothing.
+      <tbody>${slotGroups(o).map(g => {
+        const k = grpKey(o, g), open = OPEN_SLOT === k, many = g.spells.length > 1;
+        const head = `<tr data-team="${esc(g.cur.team)}"${many ? ` class="clickable" onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')"` : ''}>
+          <td>${grpHeadLabel(o, g)}</td>
+          <td class="num d">${lRec(g.cur)}</td>
+          ${bonusCell()}
+          ${qs.map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
+          <td class="num"><b>${grpPts(g).toFixed(1)}</b></td></tr>`;
+        /* THE TEAMS THAT HELD IT BEFORE, each with its own points and the weeks it was in the
+           slot. Shown only when the slot has had more than one, and only when opened. */
+        const kids = (!many || !open) ? '' : g.spells.slice().reverse().map((t, i) => `<tr class="slot-kid${
+            i === g.spells.length - 1 ? ' last' : ''}${t.held === false ? ' g-before' : ''}">
+          <td class="d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
+            <span class="d" style="font-size:11px">${grpSpan(t)}</span>${
+            t.held === false ? ' <span class="gtag t-before" title="Traded away. It keeps the points it earned while this owner held it.">TRADED AWAY</span>' : ''}</td>
+          <td class="num d">${lRec(t)}</td>
+          ${bonusCell()}
+          ${qs.map(q => `<td class="num d c-q">${((t.q||{})[q] || 0).toFixed(1)}</td>`).join('')}
+          <td class="num d">${(t.pts || 0).toFixed(1)}</td></tr>`).join('');
+        return head + kids;
+      }).join('')}</tbody></table></div>
+    <div class="note"><b>One row per roster slot</b>, named for the team in it now. A slot that
+    has held more than one team says so and opens to show each of them with the weeks it was
+    held — the slot's points are all of theirs added together, and each team keeps its own.
+    Postseason points are per OWNER, in the <b>Post</b> column of the table above.
     A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
-    <b>wk 3–7</b> after a team name is the stretch of weeks THIS owner held it; the quarter
-    columns and Pts count only those weeks, so a traded team's two spells add back to its
-    season total.
     ${nTrade ? `<br><b>Points follow ownership week by week.</b> A team that changed hands is
       listed under <b>both</b> owners, each with the weeks they held it, so the two halves add
       back to the team's season total. <b>Rec</b> and <b>Bonus</b> are the team's whole season
@@ -4495,7 +4512,18 @@ function ownerBlock(o, rank, lead, showDiv){
   return {row, detail};
 }
 
-function toggleOwner(k){ OPEN_OWNER = OPEN_OWNER === k ? null : k; renderStandings(); }
+function toggleOwner(k){
+  const opening = OPEN_OWNER !== k;
+  OPEN_OWNER = opening ? k : null;
+  renderStandings();
+  /* THE CARD IS NO LONGER A ROW INSIDE THE TABLE, so on a 27-row standings table it opens well
+     below the fold and looks like nothing happened. Casey, 6 Sep 2026: "I can no longer click on
+     an owner's name and see the teams underneath." It was there; it was off the bottom. */
+  if (opening) requestAnimationFrame(() => {
+    const card = document.querySelector('#standBody .ownercard');
+    if (card) card.scrollIntoView({block: 'start', behavior: 'smooth'});
+  });
+}
 
 /* SORTED BY WHICHEVER COLUMN HE PICKED. Casey, 1 Sep 2026: "I should then be able to sort
    total points or by quarter." One key for the whole page, so the overall table and a division
@@ -4545,11 +4573,29 @@ function undecidedCell(which){
 function bonusCell(){ return undecidedCell('bonus'); }
 function postCell(){ return undecidedCell('post'); }
 /* THE ? PANEL, BUILT FROM THE RULEBOOK so it cannot fall out of date with it. */
-let BONUS_OPEN = null;                   // '<where>|bonus' | '<where>|post' | null
+let BONUS_OPEN = null;                   // the key currently open, for the ?'s aria-expanded
 function toggleBonusHelp(key){
-  BONUS_OPEN = BONUS_OPEN === key ? null : key;
-  if (String(key).startsWith('summary')) renderSummary(); else renderStandings();
+  /* OPENS A MODAL, AND RE-RENDERS NOTHING. Re-rendering the tab to show a panel underneath the
+     table lost the table's sideways scroll position AND put the answer below the fold. */
+  if (BONUS_OPEN === key){ closeHelp(); return; }
+  BONUS_OPEN = key;
+  const box = el('help'); if (!box) return;
+  const which = String(key).split('|')[1];
+  box.hidden = false;
+  box.innerHTML = `<div class="modalbox">
+    <div class="modalhd"><div><h2>${which === 'post' ? 'Postseason' : 'Bonus'} — what is in this column</h2></div>
+      <button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button></div>
+    ${bonusHelpHTML(key)}</div>`;
+  const x = box.querySelector('.modalx'); if (x) x.focus({preventScroll: true});
+  document.body.style.overflow = 'hidden';
 }
+function closeHelp(){
+  BONUS_OPEN = null;
+  const box = el('help'); if (!box) return;
+  box.hidden = true; box.innerHTML = '';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && BONUS_OPEN) closeHelp(); });
 function helpQM(where, which){
   const key = where + '|' + which;
   return `<button type="button" class="qm" aria-expanded="${BONUS_OPEN === key}"
@@ -4569,7 +4615,7 @@ function bonusHelpHTML(key){
       <ul style="margin:4px 0 8px 18px">${rulesIn('post').map(li_).join('')}</ul>
       <p class="d">A conference championship game is played inside week 18, so winning it is an
       ordinary weekly win and lands in <b>Q4</b>; only the title bonus itself is a bonus.</p>
-      <button class="f" onclick="toggleBonusHelp('${esc(key)}')">Close</button></div>`;
+      <button class="f" onclick="closeHelp()">Close</button></div>`;
   }
   return `<div class="note"><b>Bonus — every bonus in the rulebook except the ones a final score
     already paid</b>${ver ? ` (rulebook v${esc(ver)})` : ''}. Each lands here as it is settled,
@@ -4581,7 +4627,7 @@ function bonusHelpHTML(key){
     twice. It is the one thing the commissioner's own sheet gets wrong, and it only looks right
     there because those columns are never filled in.</p>
     <p class="d">A team total is <b>Q1 + Q2 + Q3 + Q4 + Bonus + Post</b>.</p>
-    <button class="f" onclick="toggleBonusHelp('${esc(key)}')">Close</button></div>`;
+    <button class="f" onclick="closeHelp()">Close</button></div>`;
 }
 
 let SORTBY = 'pts';
@@ -4646,7 +4692,6 @@ function standTable(rows, title, note, showDiv){
         <th class="num c-q">Post ${helpQM('stand', 'post')}</th>
         </tr></thead>
       <tbody>${blocks.map(b => b.row).join('')}</tbody></table></div>
-    ${String(BONUS_OPEN).startsWith('stand|') ? bonusHelpHTML(BONUS_OPEN) : ''}
     ${note || ''}</div>` + blocks.map(b => b.detail).join('');
 }
 
@@ -6125,13 +6170,29 @@ function weeklyCard(o, weeks){
     return `<td class="num d" title="${esc(g.opp || 'Scheduled')}, ${when} — ${why}.">–</td>`;
   };
   const qTot = t => weeks.reduce((a, wk) => a + (((t.wk || {})[wk]) || 0), 0);
+  const slotWeek = (g, wk) => g.spells.reduce((a, t) => a + (((t.wk || {})[wk]) || 0), 0);
   const colTot = wk => teams.reduce((a, t) => a + (((t.wk || {})[wk]) || 0), 0);
 
-  const rows = teams.map(t => `<tr>
-    <td class="c-own"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}${
-      t.held === false ? ' <span class="gtag t-before" title="No longer on this roster. Only the weeks it was are counted.">TRADED AWAY</span>' : ''}</td>
-    ${weeks.map(wk => cell(t, wk)).join('')}
-    <td class="num"><b>${qTot(t).toFixed(1)}</b></td></tr>`).join('');
+  const rows = slotGroups(o).map(g => {
+    const k = grpKey(o, g), open = OPEN_SLOT === k, many = g.spells.length > 1;
+    /* A SLOT'S WEEK IS WHICHEVER TEAM HELD IT THAT WEEK -- they never overlap, so summing is the
+       same as picking, and it means a traded slot reads as one continuous line across the season
+       instead of two half-empty ones. */
+    const head = `<tr${many ? ` class="clickable" onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')"` : ''}>
+      <td class="c-own">${grpHeadLabel(o, g)}</td>
+      ${weeks.map(wk => {
+        const own = g.spells.find(t => ((t.wk || {})[wk]) != null);
+        return own ? `<td class="num g">${((own.wk || {})[wk]).toFixed(1)}</td>` : cell(g.cur, wk);
+      }).join('')}
+      <td class="num"><b>${weeks.reduce((a, wk) => a + slotWeek(g, wk), 0).toFixed(1)}</b></td></tr>`;
+    const kids = (!many || !open) ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
+        t.held === false ? ' g-before' : ''}">
+      <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
+        <span class="d" style="font-size:11px">${grpSpan(t)}</span></td>
+      ${weeks.map(wk => cell(t, wk)).join('')}
+      <td class="num d">${qTot(t).toFixed(1)}</td></tr>`).join('');
+    return head + kids;
+  }).join('');
 
   const foot = `<tr class="rbtot"><td><b>${esc(o.owner)} — ${LQ}</b></td>
     ${weeks.map(wk => `<td class="num"><b>${colTot(wk).toFixed(1)}</b></td>`).join('')}
@@ -6157,9 +6218,9 @@ function weeklyCard(o, weeks){
    41-column table is unreadable on any screen, and in September thirty-six of those columns are
    honestly empty. It is the five categories a FINAL SCORE settles, in a grid, and every team
    opens to show all forty-one rows with what it has earned and what is still undecided. */
-let LOPEN = null;
-function lToggle(n){ LOPEN = LOPEN === n ? null : n; const y = window.scrollY; renderSummary(); window.scrollTo({top: y}); }
-
+/* The per-team category drop-down that used to open under a row is gone: every category is a
+   column on the Season Summary now, and a column and a drawer saying the same thing is one of
+   them too many. Casey, 6 Sep 2026. */
 const LIVEKEYS = ['win', 'tie', '50_pt_wins', '40_pt_wins', 'shut_outs'];
 /* UNKNOWN IS NOT ZERO, AND THIS IS WHERE IT BITES. `baked_points` is a points-per-WEEK table
    with no win-or-lose in it, so a team scored from the offline fallback comes back with points
@@ -6185,36 +6246,6 @@ function lCount(t, key){
   if (key === '40_pt_wins') return t.pool === 'NFL' ? t.bl : null;
   return null;
 }
-function lRuleTable(t){
-  const rows = lRules();
-  const body = rows.map(r => {
-    const pools = r.pools || [];
-    if (!pools.includes(t.pool))
-      return `<tr><td class="d">${esc(r.label)}</td><td class="num d">${r.pay.toFixed(1)}</td>
-        <td class="num d" title="No ${t.pool} team can earn this — it is a ${pools.join('/')} rule.">n/a</td>
-        <td class="num d">—</td></tr>`;
-    if (r.live){
-      const n = lCount(t, r.key);
-      if (n === undefined)
-        return `<tr><td>${esc(r.label)}</td><td class="num d">${r.pay.toFixed(1)}</td>
-          <td class="num">${L_UNK}</td><td class="num">${L_UNK}</td></tr>`;
-      return `<tr><td>${esc(r.label)}</td><td class="num d">${r.pay.toFixed(1)}</td>
-        <td class="num ${n ? 'g' : 'd'}">${n == null ? '—' : n}</td>
-        <td class="num ${n ? 'g' : 'd'}"><b>${n ? (n * r.pay).toFixed(1) : '0.0'}</b></td></tr>`;
-    }
-    return `<tr><td class="d">${esc(r.label)}</td><td class="num d">${r.pay.toFixed(1)}</td>
-      <td class="num d" title="Settled at the end of the season. Not yet decided, so it is shown as undecided and not as a zero.">not yet</td>
-      <td class="num d">—</td></tr>`;
-  }).join('');
-  return `<div class="scr"><table class="ownertbl">
-    <colgroup><col style="width:52%"><col style="width:12%"><col style="width:16%"><col style="width:20%"></colgroup>
-    <thead><tr><th title="One of the league's scoring categories, in the order the rulebook lists them. Every category is shown for every team, including the ones this team cannot earn — an absence is never an answer.">Category</th>
-      <th class="num" title="What one of these is worth in league points.">Pays</th>
-      <th class="num" title="How many times this team has earned it so far this season. A category that is only decided at the end of the season reads 'not yet'; one this team's pool cannot earn reads 'n/a'.">Earned</th>
-      <th class="num" title="Pays multiplied by Earned — what this category has been worth to this team.">Points</th></tr></thead>
-    <tbody>${body}</tbody></table></div>`;
-}
-
 function renderSummary(){
   const b = el('summaryBody'); if (!b) return;
   const gate = lNoSeason('The season summary'); if (gate){ b.innerHTML = gate; return; }
@@ -6242,6 +6273,66 @@ function renderSummary(){
       team. <b>Bonus</b> is every other bonus in the rulebook. <b>Post</b> is wins in games played
       after league week 18. So <b>Total = Q1 + Q2 + Q3 + Q4 + Bonus + Post</b>, and the blowout and
       shutout halves are deliberately not in Bonus — they are already in the quarters.</p>`)}</div>`;
+}
+
+/* ---- ROSTER SLOTS, FOR ANY OWNER -----------------------------------------------------------
+   Casey, 6 Sep 2026: "each one of these dashboards is going to need to track these teams as
+   slots... if we're looking at a team and then that team gets traded out for a new team, the
+   points need to start tracking from that new team, keeping the points from the old team." And
+   on which way round to draw it: "you start with the team like you have on the slots page ...
+   that would probably be more visually appealing because everybody is looking at their teams
+   first, not slots."
+
+   So a row is the team an owner holds NOW, and it opens to show every team that has held that
+   roster position, with the weeks each was in it. The slot's points are all of theirs added
+   together; each team keeps its own.
+
+   THE LINEAGE IS NOT INVENTED HERE. `ownerLineage(div, owner)` already walks the ownership
+   snapshots and works for any of the twenty-seven -- it is what the Slots tab is built on. What
+   is new is that the other three tables ask it too, so a traded team reads the same way
+   everywhere. With no trades yet every slot holds one team and these tables look as they did.
+   A TEAM THE LINEAGE CANNOT PLACE IS STILL SHOWN, on its own, rather than dropped: an unplaceable
+   row is a question, not a licence to lose somebody's points. */
+let OPEN_SLOT = null;                   // 'DIV|Owner|slot' of the one expanded slot
+function toggleSlotRow(k){ OPEN_SLOT = OPEN_SLOT === k ? null : k; renderStandings(); lRepaint(); }
+
+function slotGroups(o){
+  const byTeam = new Map((o.teams || []).map(t => [t.team, t]));
+  const used = new Set();
+  const out = [];
+  let lin = null;
+  try { lin = ownerLineage(o.div, o.owner); } catch (e) { lin = null; }
+  for (const sl of ((lin || {}).lineage || [])){
+    const spells = [];
+    for (const sp of sl.spells){
+      const t = sp.team ? byTeam.get(sp.team) : null;
+      if (!t) continue;
+      used.add(t.team);
+      spells.push({...t, from_week: sp.from_week, to_week: sp.to_week});
+    }
+    if (!spells.length) continue;
+    out.push({slot: sl.slot, spells, cur: spells[spells.length - 1]});
+  }
+  for (const t of (o.teams || [])){
+    if (used.has(t.team)) continue;
+    out.push({slot: null, spells: [t], cur: t, unplaced: !!((lin || {}).lineage)});
+  }
+  return out.sort((a, b) => (POOL_ORDER(a.cur.pool) - POOL_ORDER(b.cur.pool))
+    || grpPts(b) - grpPts(a) || String(a.cur.team).localeCompare(String(b.cur.team)));
+}
+function grpPts(g){ return g.spells.reduce((a, t) => a + (t.pts || 0), 0); }
+function grpQ(g, q){ return g.spells.reduce((a, t) => a + ((t.q || {})[q] || 0), 0); }
+function grpKey(o, g){ return o.div + '|' + o.owner + '|' + (g.slot != null ? g.slot : g.cur.team); }
+function grpSpan(t){
+  if (t.from_week == null) return t.weeks ? `wk ${t.weeks[0]}–${t.weeks[1]}` : '';
+  return `wk ${t.from_week}${t.to_week == null ? '–now' : '–' + (t.to_week - 1)}`;
+}
+function grpHeadLabel(o, g){
+  const open = OPEN_SLOT === grpKey(o, g);
+  const n = g.spells.length;
+  return `<span class="pill p-${g.cur.pool.toLowerCase()}">${g.cur.pool}</span> ${esc(g.cur.team)}${
+    n > 1 ? ` <span class="caret">${open ? '▾' : '▸'}</span> <span class="gtag t-yours" title="${n} teams have held this roster slot. Its points are all of theirs added together — tap to see each one and the weeks it was held.">${n - 1} before it</span>` : ''}${
+    g.unplaced ? ' <span class="gtag t-hold" title="This team could not be matched to a roster slot from the ownership history — two moves in the same week cannot be told apart. Its points are shown on their own rather than dropped.">SLOT UNKNOWN</span>' : ''}`;
 }
 
 function slotLabel(t){
@@ -6280,13 +6371,49 @@ function summaryCard(o){
     return `<td class="num ${n ? 'g' : 'd'} c-cat">${n}</td>`;
   };
 
-  const rowOf = t => `<tr>
-      <td class="c-own">${slotLabel(t)}</td>
+  const rowOf = g => {
+    const k = grpKey(o, g), open = OPEN_SLOT === k, many = g.spells.length > 1;
+    /* A category count for a SLOT is every team that has held it added together — the slot is
+       what the owner scored with, and splitting it is what the child rows are for. */
+    const slotCount = r => {
+      let n = 0, any = false, unk = false;
+      for (const t of g.spells){
+        if (!(r.pools || []).includes(t.pool)) continue;
+        const v = lCount(t, r.key);
+        if (v === undefined){ unk = true; continue; }
+        if (v === null) continue;
+        n += v; any = true;
+      }
+      return unk && !any ? undefined : (any ? n : null);
+    };
+    const headCells = cats.map(r => {
+      if (!g.spells.some(t => (r.pools || []).includes(t.pool)))
+        return `<td class="num d c-cat" title="No team that has held this slot can earn it.">n/a</td>`;
+      if (r.bucket !== 'weekly')
+        return `<td class="num d c-cat" title="Settled after the regular season — not decided yet.">—</td>`;
+      const n = slotCount(r);
+      if (n === undefined) return `<td class="num c-cat">${L_UNK}</td>`;
+      if (n === null) return `<td class="num d c-cat">n/a</td>`;
+      return `<td class="num ${n ? 'g' : 'd'} c-cat">${n}</td>`;
+    }).join('');
+    const head = `<tr${many ? ` class="clickable" onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')"` : ''}>
+      <td class="c-own">${grpHeadLabel(o, g)}</td>
+      ${headCells}
+      ${bonusCell()}
+      ${qs.map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
+      ${postCell()}
+      <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td></tr>`;
+    const kids = (!many || !open) ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
+        t.held === false ? ' g-before' : ''}">
+      <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
+        <span class="d" style="font-size:11px">${grpSpan(t)}</span></td>
       ${cats.map(r => catCell(t, r)).join('')}
       ${bonusCell()}
       ${qs.map(q => `<td class="num d c-q">${((t.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
       ${postCell()}
-      <td class="num c-tot"><b>${t.pts.toFixed(1)}</b></td></tr>`;
+      <td class="num c-tot d">${(t.pts || 0).toFixed(1)}</td></tr>`).join('');
+    return head + kids;
+  };
 
   const totCat = r => {
     if (r.bucket !== 'weekly') return '—';
@@ -6315,7 +6442,7 @@ function summaryCard(o){
         ${qs.map(q => `<th class="num c-q" title="Points earned in ${q}: wins, ties and the blowout and shutout halves, for the weeks this owner held the team.">${q}</th>`).join('')}
         <th class="num">Post ${helpQM('summary', 'post')}</th>
         <th class="num c-tot" title="Q1 + Q2 + Q3 + Q4 + Bonus + Post. Nothing is counted twice.">Total</th></tr></thead>
-      <tbody>${teams.map(rowOf).join('')}${foot}</tbody></table></div></div>`;
+      <tbody>${slotGroups(o).map(rowOf).join('')}${foot}</tbody></table></div></div>`;
 }
 
 /* ---------- Transactions ------------------------------------------------------------------ */
@@ -6324,12 +6451,11 @@ function renderTx(){
   const tx = DATA.transactions || {}, hist = DATA.owner_history || {};
   const trades = tx.trades || [], wins = tx.windows || [], changes = hist.changes || [];
   const und = tx.undated || [];
-  /* WHAT A TRADE COSTS. Casey, 6 Sep 2026: "I believe each trade is two dollars." Believed, not
-     confirmed -- so the sheet's own figure wins wherever it has one, this is only the fallback,
-     and the page says which it used rather than presenting an assumption as a fact. */
+  /* WHAT A TRADE COSTS. Casey settled it on 6 Sep 2026: "It is $2 per transaction and you should
+     do the math when I load in the trades." A league rule, not an assumption -- every trade costs
+     the same and the page does the arithmetic. */
   const FEE = DATA.trade_cost != null ? DATA.trade_cost : 2;
-  const costOf = t => (t.paid != null && t.paid !== '' && Number(t.paid)) ? Number(t.paid) : FEE;
-  const assumed = trades.filter(t => !(t.paid != null && t.paid !== '' && Number(t.paid))).length;
+  const costOf = () => FEE;
   const money = n => (n < 0 ? '−$' : '$') + Math.abs(n).toFixed(0);
 
   const winByLabel = new Map(wins.map(w => [w.label, w]));
@@ -6349,14 +6475,12 @@ function renderTx(){
           <td class="d">${esc(t.div || '')}</td>
           <td>${esc(t.owner || '')}</td>
           <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}</td>
-          <td class="num">${money(costOf(t))}</td></tr>`).join('')}
+          <td class="num">${money(costOf())}</td></tr>`).join('')}
       </tbody></table></div>
     <div class="note">A trade takes effect the day after its window closes, and points follow
       ownership <b>week by week</b> from there — the team an owner sends away keeps the points it
       already earned for them, and the team they receive starts scoring for them from that week.
-      ${assumed ? `<br><b class="y">${assumed} trade${assumed === 1 ? '' : 's'} carry no fee in the
-      league sheet</b>, so they are costed at the standing <b>${money(FEE)}</b> per trade. If that
-      figure is wrong, it is wrong in one place.` : ''}</div></div>` : '';
+      <br>Every trade costs <b>${money(FEE)}</b>.</div></div>` : '';
 
   /* WHAT EACH OWNER OWES, WITH A TOTAL. Casey: "a table by owner that shows how much they owe
      with a total on the same window." Every owner with a trade appears; an owner with none does
@@ -6365,11 +6489,20 @@ function renderTx(){
   for (const t of trades){
     const k = t.div + '|' + t.owner;
     const r = byOwner.get(k) || {div: t.div, owner: t.owner, n: 0, owed: 0};
-    r.n++; r.owed += costOf(t); byOwner.set(k, r);
+    r.n++; r.owed += costOf(); byOwner.set(k, r);
   }
   const owners = [...byOwner.values()].sort((a, c) => c.owed - a.owed || a.owner.localeCompare(c.owner));
   const grand = owners.reduce((a, r) => a + r.owed, 0);
-  const owedTable = owners.length ? `<div class="card"><h2>What Each Owner Owes</h2>
+  /* ALWAYS ON THE PAGE. An empty table that says why beats no table at all -- Casey went looking
+     for it and found nothing, which reads as a page that failed rather than a league with no
+     trades in it yet. */
+  const owedTable = !owners.length
+    ? `<div class="card"><h2>What Each Owner Owes</h2><div class="empty">
+        <p><b>Nobody owes anything yet.</b> No trades have been made, and a trade is the only
+        thing charged for on this page.</p>
+        <p>Once trades are logged, this table lists every owner who made one, what they owe at
+        <b>${money(FEE)}</b> a trade, and the league total.</p></div></div>`
+    : `<div class="card"><h2>What Each Owner Owes</h2>
     <div class="scr"><table>
       <colgroup><col style="width:44%"><col style="width:24%"><col style="width:16%"><col style="width:16%"></colgroup>
       <thead><tr><th>Owner</th><th>Division</th><th class="num">Trades</th><th class="num">Owed</th></tr></thead>
@@ -6382,7 +6515,7 @@ function renderTx(){
           <td class="num"><b>${money(grand)}</b></td></tr>
       </tbody></table></div>
     <div class="note">Trade fees only. Dues, quarter and division payouts are not on this page.</div>
-    </div>` : '';
+    </div>`;
 
   const empty = trades.length ? '' : `<div class="card"><h2>No Trades Logged Yet</h2>
     <div class="empty"><p>The league's transaction log is empty, so every team still sits with the
