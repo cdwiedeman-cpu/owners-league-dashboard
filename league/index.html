@@ -742,9 +742,9 @@ const LEAGUE = MODE === 'league';
 const PROJ_ON = !LEAGUE;
 
 const TABSETS = {
-  personal: [['scores','Live scores'],['stand','Standings'],['pick','Pickups'],
+  personal: [['scores','Live Scores'],['stand','Standings'],['pick','Pickups'],
              ['slots','Slots'],['race','Race']],
-  league:   [['scores','Live scores'],['stand','Standings'],['weekly','Weekly / Quarterly'],
+  league:   [['scores','Live Scores'],['stand','Standings'],['weekly','Weekly / Quarterly'],
              ['summary','Season Summary'],['tx','Transactions']],
 };
 const TABS = TABSETS[MODE] || TABSETS.personal;
@@ -859,7 +859,7 @@ function openSetup(){
   SETUP_OPEN = true;
   box.hidden = false;
   box.innerHTML = `<div class="modalbox">
-    <div class="modalhd"><div><h2>Welcome to the Owners League dashboard</h2></div>
+    <div class="modalhd"><div><h2>${VIEWER ? 'Change Owner' : 'Welcome to the Owners League Dashboard'}</h2></div>
       <button class="modalx" onclick="closeSetup()" aria-label="Close">✕</button></div>
     <div class="note"><b>Which owner are you?</b> Once you say, this page highlights your eleven
       teams on the scoreboard, tags your row in the standings, and opens the Weekly and Season
@@ -870,6 +870,8 @@ function openSetup(){
         <option value="">Choose your name…</option>${groups}</select>
       <button class="f primary" id="setupGo" onclick="setupCommit()">That's me</button>
     </div>
+    ${VIEWER ? `<div style="margin-top:10px"><button class="f" onclick="closeSetup()">Keep
+      ${esc(VIEWER.owner)}</button> <span class="d" style="font-size:12px">— leave it as it is.</span></div>` : ''}
     <div class="note" style="margin-top:10px">This is remembered <b>in this browser only</b>.
       Nothing is sent anywhere and nothing is verified — it is a convenience, not a login, so
       there is no password and nothing to forget. You can pick a different owner whenever you
@@ -931,16 +933,18 @@ function isMine(name){
   return labelsOf(name).some(l => l.div === VIEWER.div && l.owner === VIEWER.owner);
 }
 function viewerPicker(){
-  const seats = (DATA.seats || []);
-  if (!seats.length) return '';
-  const groups = ['PFD', 'VFD', 'SFD'].filter(d => seats.some(s => s.div === d)).map(d =>
-    `<optgroup label="${DIVNAME[d] || d} division">${seats.filter(s => s.div === d).map(s => {
-      const k = s.div + '|' + s.owner;
-      return `<option value="${esc(k)}"${VIEWER && k === VIEWER.div + '|' + VIEWER.owner ? ' selected' : ''}>${esc(s.owner)}</option>`;
-    }).join('')}</optgroup>`).join('');
-  return `<select class="search" id="whoami" aria-label="Which owner are you"
-      onchange="viewerSet(this.value)">
-      <option value="">Who are you?…</option>${groups}</select>`;
+  /* WHERE HE LOOKED FOR IT. Casey, 6 Sep 2026: "I don't see a way to reset owner ... you should
+     have a reset owner option so that it can go back to the prompt page and somebody can repick
+     who they are." There WAS one, on a chip in the header, and he could not find it -- which
+     means there was not one. So the control sits in the filter row as well, beside the My-Teams
+     button it governs, and it REOPENS THE SETUP PANEL rather than being a second, subtly
+     different way of choosing. Two places, one action: both call openSetup(). */
+  if (!LEAGUE || !(DATA.seats || []).length) return '';
+  return VIEWER
+    ? `<button class="f" onclick="openSetup()"
+         title="Pick a different owner. This page will highlight their teams instead of ${esc(VIEWER.owner)}'s.">You: <b>${esc(VIEWER.owner)}</b> — Change</button>`
+    : `<button class="f primary" onclick="openSetup()"
+         title="Say which owner you are, and this page will highlight your teams">Pick Your Owner</button>`;
 }
 function ownerHTML(name){
   const ls = labelsOf(name);
@@ -1819,7 +1823,7 @@ function renderFilters(){
      highlighted Casey for all twenty-seven readers; offered before they have said who they are,
      it is a control that cannot work. */
   const fs = [['ALL','All'],['NFL','NFL'],['FBS','FBS'],['FCS','FCS']];
-  if (!LEAGUE || VIEWER) fs.push(['ME','My teams']);
+  if (!LEAGUE || VIEWER) fs.push(['ME','My Teams']);
   const owners = [];
   for (const [dv, list] of Object.entries(DATA.division_owners || {}))
     for (const o of list) owners.push(dv + ' · ' + o);
@@ -5983,7 +5987,7 @@ function lScopeBar(which){
       aria-pressed="${cur === k}" onclick="lSetScope('${k}', '${which}')"
       title="${title}">${label}</button>`;
   return `<div class="tabs subtabs">${VIEWER
-      ? btn('ME', 'My teams only',
+      ? btn('ME', 'My Teams Only',
             `Just ${esc(VIEWER.owner)} — the owner you picked at the top of the page.`)
       : ''}${
     divs.map(d => btn(d, DIVNAME[d] || d,
