@@ -4397,9 +4397,9 @@ function ownerBlock(o, rank, lead, showDiv){
         }<col style="width:12%"></colgroup>
       <thead><tr><th title="Each team on this owner's roster. A team traded away is still listed, with the weeks they held it, because the points it earned in those weeks are theirs.">Team</th>
         <th class="num" title="Won-lost, and ties after a second dash. The team's WHOLE season, not this owner's share of it.">Rec</th>
-        <th class="num">BO · SO <button type="button" class="qm" aria-expanded="${BOSO_OPEN}"
-          onclick="event.stopPropagation();toggleBoSo()"
-          title="What BO and SO stand for">?</button></th>
+        <th class="num">Bonus <button type="button" class="qm" aria-expanded="${BONUS_OPEN === 'stand'}"
+          onclick="event.stopPropagation();toggleBonusHelp('stand')"
+          title="Which bonus categories are in this number, and which are still undecided">?</button></th>
         ${qs.map(q => `<th class="num c-q" title="What this team earned for this owner in ${q}.">${q}</th>`).join('')}
         <th class="num" title="League points this team earned for this owner.">Pts</th></tr></thead>
       <tbody>${teams.map(t => `<tr data-team="${esc(t.team)}"${t.held === false ? ' class="g-before"' : ''}>
@@ -4407,24 +4407,17 @@ function ownerBlock(o, rank, lead, showDiv){
           t.held === false ? ' <span class="gtag t-before" title="No longer on this roster. The points shown are the ones earned while it was — the weeks are on the row.">NO LONGER HELD</span>' : ''}${
           t.held && t.partial ? ' <span class="gtag t-hold" title="Picked up mid-season. Only the weeks since then are counted here; the earlier ones belong to the previous owner.">PART SEASON</span>' : ''}</td>
         <td class="num d">${t.w}-${t.l}${t.t ? '-' + t.t : ''}</td>
-        <td class="num d" title="${t.bl || 0} blowout win(s) and ${t.so || 0} shutout(s), 0.5 league points each.">${
-          t.bl || t.so ? `${t.bl ? t.bl + ' BO' : ''}${t.bl && t.so ? ' · ' : ''}${t.so ? t.so + ' SO' : ''}` : '—'}</td>
+        ${bonusCell(t)}
         ${qs.map(q => `<td class="num d c-q">${((t.q||{})[q] || 0).toFixed(1)}</td>`).join('')}
         <td class="num"><b>${t.pts.toFixed(1)}</b></td></tr>`).join('')}</tbody></table></div>
-    ${BOSO_OPEN ? `<div class="note"><b>BO</b> — a <b>blowout win</b>: an NFL win by 40 or more,
-      or a college win by 50 or more. Worth <b>0.5</b> league points each time.<br>
-      <b>SO</b> — a <b>shutout</b>: a win in which the opponent scored nothing. Worth <b>0.5</b>
-      each time.<br>They are counted for the team's <b>whole season</b>, the same as Rec. The
-      points they are worth are already inside the quarter columns and the Pts total beside
-      them — this column is the count, not a second helping of points.
-      <button class="f" onclick="toggleBoSo()">Close</button></div>` : ''}
+    ${BONUS_OPEN === 'stand' ? bonusHelpHTML('stand') : ''}
     <div class="note">A team with no games yet shows 0-0 and scores nothing — not a zero it earned.
     <b>wk 3–7</b> after a team name is the stretch of weeks THIS owner held it; the quarter
     columns and Pts count only those weeks, so a traded team's two spells add back to its
     season total.
     ${nTrade ? `<br><b>Points follow ownership week by week.</b> A team that changed hands is
       listed under <b>both</b> owners, each with the weeks they held it, so the two halves add
-      back to the team's season total. <b>Rec</b> and <b>BO · SO</b> are the team's whole season
+      back to the team's season total. <b>Rec</b> and <b>Bonus</b> are the team's whole season
       either way — they are the team's record, not a share of it.` : ''}</div>
     </div></td></tr>` : '';
   return `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')">
@@ -4448,12 +4441,67 @@ function toggleOwner(k){ OPEN_OWNER = OPEN_OWNER === k ? null : k; renderStandin
 /* SORTED BY WHICHEVER COLUMN HE PICKED. Casey, 1 Sep 2026: "I should then be able to sort
    total points or by quarter." One key for the whole page, so the overall table and a division
    table never disagree about what "1st" means. */
-/* WHAT BO AND SO STAND FOR, BEHIND A REAL PANEL. Casey, 6 Sep 2026: the cell read "1 blowout
-   1 SO" -- one word spelled out in lower case and one abbreviated -- and neither said what it
-   was worth. A title alone is not an answer here: this page is read on a phone, where there is
-   no hover, and the project's own rule is that every clickable mark opens a real panel. */
-let BOSO_OPEN = false;
-function toggleBoSo(){ BOSO_OPEN = !BOSO_OPEN; renderStandings(); }
+/* THE BONUS COLUMN IS POINTS, NOT A DESCRIPTION. Casey, 6 Sep 2026: "how is that bonus column
+   gonna be used in the future once you start getting other bonuses like rankings and playoffs
+   and bowl game bonuses... shouldn't that column actually just have points in it? That's actually
+   how the spreadsheet is."
+   Right, and it settles what the column IS: one running total of every bonus category this team
+   has earned, which grows into the ranking, bowl and playoff rows as the season decides them,
+   rather than a description that would have to be rewritten every time a category lands.
+
+   TWO THINGS THE NUMBER MUST NOT BE TAKEN FOR.
+     * It is NOT extra on top of Pts. Blowouts and shutouts are already inside the points-to-date
+       walk, so Bonus is a COMPONENT of Pts, not an addition to it. The panel says so.
+     * It is NOT the team's final bonus. Most of the rulebook is settled at the END of the season,
+       so a 1.0 today is "1.0 so far", not "1.0 and no more". The panel lists what is still open,
+       by name -- an absence is never an answer, and a running total must say what it cannot
+       contain. */
+const BASE_KEYS = ['win', 'tie'];        // scoring, not bonuses
+function rulePay(key, dflt){
+  const r = lRules().find(x => x.key === key);
+  return r ? r.pay : dflt;
+}
+/* Priced off the rulebook, never off a 0.5 typed here: a payout written down twice is a rule that
+   can go unpaid, and that is how three FBS ranking bonuses went missing for a whole build. */
+function bonusOf(t){
+  if (!lKnown(t)) return {pts: null, known: false};
+  const blPay = t.pool === 'NFL' ? rulePay('40_pt_wins', 0.5) : rulePay('50_pt_wins', 0.5);
+  return {pts: r2((t.bl || 0) * blPay + (t.so || 0) * rulePay('shut_outs', 0.5)), known: true};
+}
+function bonusCell(t, cls){
+  const b = bonusOf(t);
+  if (!b.known) return `<td class="num ${cls || 'd'}">${L_UNK}</td>`;
+  const blPay = t.pool === 'NFL' ? rulePay('40_pt_wins', 0.5) : rulePay('50_pt_wins', 0.5);
+  const bits = [];
+  if (t.bl) bits.push(`${t.bl} × ${t.pool === 'NFL' ? '40+ point win' : '50+ point win'} (${blPay} each)`);
+  if (t.so) bits.push(`${t.so} × shutout (${rulePay('shut_outs', 0.5)} each)`);
+  const tip = bits.length ? bits.join(', ') + '. Already counted inside Pts, not on top of it.'
+    : 'No bonus category settled for this team yet. Most of them are decided at the end of the season.';
+  return `<td class="num ${b.pts ? 'g' : (cls || 'd')}" title="${esc(tip)}">${b.pts.toFixed(1)}</td>`;
+}
+/* THE ? PANEL, BUILT FROM THE RULEBOOK so it cannot fall out of date with it. */
+let BONUS_OPEN = null;                   // 'stand' | 'summary' | null
+function toggleBonusHelp(where){
+  BONUS_OPEN = BONUS_OPEN === where ? null : where;
+  if (where === 'summary') renderSummary(); else renderStandings();
+}
+function bonusHelpHTML(where){
+  const rows = lRules().filter(r => !BASE_KEYS.includes(r.key));
+  const now = rows.filter(r => r.live), later = rows.filter(r => !r.live);
+  const li = r => `<li><b>${esc(r.label)}</b> — ${r.pay.toFixed(1)}
+    <span class="d">(${(r.pools || []).join(' / ')})</span></li>`;
+  return `<div class="note"><b>Bonus is points, and it is part of Pts — not extra on top.</b>
+    Every category below is a bonus in the league rulebook${
+      (DATA.standings || {}).rules_version ? ` (v${esc(DATA.standings.rules_version)})` : ''}.
+    <p><b>Counted in this column now</b> — anything a final score settles, so it moves as games go
+    final:</p><ul style="margin:4px 0 8px 18px">${now.map(li).join('')}</ul>
+    <p><b>Not settled yet</b> — decided at the END of the season, and they drop into this same
+    column as they are. Until then they are shown as undecided, never as zero:</p>
+    <ul style="margin:4px 0 8px 18px">${later.map(li).join('')}</ul>
+    <p class="d">Wins and ties are not bonuses — they are the base scoring, and they are in Pts
+    but not in this column.</p>
+    <button class="f" onclick="toggleBonusHelp('${where}')">Close</button></div>`;
+}
 
 let SORTBY = 'pts';
 function setSort(k){ SORTBY = k; renderStandings(); }
@@ -6149,7 +6197,7 @@ function summaryCard(o){
       <td class="num d">${lRec(t)}</td>
       ${cells}
       ${qs.map(q => `<td class="num d c-q">${((t.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
-      <td class="num d" title="Every end-of-season bonus — conference, bowls, the playoff ladders, undefeated and one-loss. Undecided until the season ends, so it is not a zero.">—</td>
+      ${bonusCell(t, 'd')}
       <td class="num"><b>${t.pts.toFixed(1)}</b></td></tr>`;
     const nCols = 4 + LIVEKEYS.length + qs.length;
     const detail = open ? `<tr><td colspan="${nCols}"><div class="dtl">
@@ -6173,7 +6221,7 @@ function summaryCard(o){
     <td class="num"></td>
     ${LIVEKEYS.map(k => `<td class="num c-q"><b>${tot(k)}</b></td>`).join('')}
     ${qs.map(q => `<td class="num c-q"><b>${((o.q || {})[q] || 0).toFixed(1)}</b></td>`).join('')}
-    <td class="num d">—</td>
+    <td class="num"><b>${teams.reduce((a, t) => a + (bonusOf(t).pts || 0), 0).toFixed(1)}</b></td>
     <td class="num"><b>${o.pts.toFixed(1)}</b></td></tr>`;
 
   return `<div class="card">${lHead(o)}
@@ -6181,9 +6229,12 @@ function summaryCard(o){
     <div class="scr"><table class="standtbl">
       <thead><tr><th class="c-own">Team</th><th class="num">Rec</th>${head}
         ${qs.map(q => `<th class="num c-q">${q}</th>`).join('')}
-        <th class="num" title="End-of-season bonuses. Undecided until the season ends.">Bonus</th>
+        <th class="num">Bonus <button type="button" class="qm" aria-expanded="${BONUS_OPEN === 'summary'}"
+          onclick="event.stopPropagation();toggleBonusHelp('summary')"
+          title="Which bonus categories are in this number, and which are still undecided">?</button></th>
         <th class="num c-tot">Total</th></tr></thead>
-      <tbody>${teams.map(rowOf).join('')}${foot}</tbody></table></div></div>`;
+      <tbody>${teams.map(rowOf).join('')}${foot}</tbody></table></div>
+    ${BONUS_OPEN === 'summary' ? bonusHelpHTML('summary') : ''}</div>`;
 }
 
 /* ---------- Transactions ------------------------------------------------------------------ */
