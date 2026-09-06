@@ -913,7 +913,8 @@ function viewerSet(seat){
   } catch (e) { /* not saved. Said out loud in the chip rather than pretended. */ }
   VIEWER_SAVED = viewerSaved();
   FILTER = VIEWER ? 'ME' : (FILTER === 'ME' ? 'ALL' : FILTER);
-  LSEAT = VIEWER ? (VIEWER.div + '|' + VIEWER.owner) : LSEAT;
+  /* Changing who you are re-points "My teams only" rather than leaving it on the last person. */
+  LSCOPE = VIEWER ? 'ME' : (LSCOPE === 'ME' ? 'ALL' : LSCOPE);
   renderChips(); renderFilters(); renderScores(); renderStandings(); lRepaint();
 }
 let VIEWER_SAVED = null;
@@ -5855,7 +5856,6 @@ function renderSlots(){
    ========================================================================================= */
 
 const DIVORDER = ['PFD', 'VFD', 'SFD'];
-let LSEAT = null;                       // 'DIV|Owner' — whose grid is showing
 let LQ = null;                          // which quarter the weekly grid is showing
 
 function lSeats(){
@@ -5873,27 +5873,28 @@ function lSeats(){
 function lSeatOf(){
   const all = lSeats();
   if (!all.length) return null;
-  /* OPENS ON YOU. Twenty-seven owners and an alphabetical default means twenty-six people scroll
-     a dropdown before they see their own grid. */
-  if (!LSEAT && VIEWER) LSEAT = VIEWER.div + '|' + VIEWER.owner;
-  if (!LSEAT || !all.some(o => o.div + '|' + o.owner === LSEAT))
-    LSEAT = all[0].div + '|' + all[0].owner;
-  return all.find(o => o.div + '|' + o.owner === LSEAT);
+  /* WHOEVER THE READER SAID THEY ARE. There is no separate owner picker on these tabs any more --
+     Casey, 6 Sep 2026: "that doesn't really make sense because the owner is whoever is selected."
+     Two controls answering the same question is one control too many, and the second one was
+     sitting under a line that already gave the answer. */
+  if (VIEWER){
+    const mine = all.find(o => o.div === VIEWER.div && o.owner === VIEWER.owner);
+    if (mine) return mine;
+  }
+  return all[0];
 }
-function lSetSeat(k, which){
-  LSEAT = k;
-  LSCOPE = 'one';                       // choosing a name means you want that name
-  const before = window.scrollY;
-  if (which === 'weekly') renderWeekly(); else renderSummary();
-  window.scrollTo({top: before});
-}
-/* ONE OWNER, A WHOLE DIVISION, OR ALL TWENTY-SEVEN. Casey, 6 Sep 2026: "it feels like you need
-   to have something where you can filter on the division of predator scorpion or viper, and it
-   shows all the teams, similar to the grid in the spreadsheet. So you'd scroll down, and you'd
-   see all the teams or if you wanted to just see one team, then you could filter by the owner."
+
+/* MY TEAMS ONLY, A DIVISION, OR ALL TWENTY-SEVEN -- the same words as the scoreboard's filter,
+   because it is the same idea. Casey: "it should just be, like, the filter of my team like we
+   have on other tabs ... my team only, predator, viper, scorpion, and all twenty seven."
    The workbook's Weekly_Quarterly tab is one long scroll of every owner in a division, and that
-   IS how the league reads it. The dropdown narrows to one; these widen back out. */
-let LSCOPE = 'one';                     // 'one' | 'PFD' | 'VFD' | 'SFD' | 'ALL'
+   IS how the league reads it; this is that, plus a way to get straight to your own. */
+let LSCOPE = null;                      // 'ME' | 'PFD' | 'VFD' | 'SFD' | 'ALL'
+function lScope(){
+  if (LSCOPE === 'ME' && !VIEWER) LSCOPE = 'ALL';       // a "me" filter with no me cannot work
+  if (!LSCOPE) LSCOPE = VIEWER ? 'ME' : 'ALL';
+  return LSCOPE;
+}
 function lSetScope(k, which){
   LSCOPE = k;
   const before = window.scrollY;
@@ -5904,22 +5905,26 @@ function lScopeBar(which){
   const seats = DATA.seats || [];
   const divs = DIVORDER.filter(d => seats.some(x => x.div === d));
   const n = d => seats.filter(x => x.div === d).length;
-  const btn = (k, label, title) => `<button class="tab pick-tab ${LSCOPE === k ? 'on' : ''}"
-      aria-pressed="${LSCOPE === k}" onclick="lSetScope('${k}', '${which}')"
+  const cur = lScope();
+  const btn = (k, label, title) => `<button class="tab pick-tab ${cur === k ? 'on' : ''}"
+      aria-pressed="${cur === k}" onclick="lSetScope('${k}', '${which}')"
       title="${title}">${label}</button>`;
-  return `<div class="tabs subtabs">${btn('one', 'One owner',
-      'Just the owner picked below. Opens on you once you have said who you are.')}${
+  return `<div class="tabs subtabs">${VIEWER
+      ? btn('ME', 'My teams only',
+            `Just ${esc(VIEWER.owner)} — the owner you picked at the top of the page.`)
+      : ''}${
     divs.map(d => btn(d, DIVNAME[d] || d,
-      `All ${n(d)} owners in the ${DIVNAME[d] || d} division, one after another — the way the '
-      + 'league workbook lays it out.`)).join('')}${
+      `All ${n(d)} owners in the ${DIVNAME[d] || d} division, one after another — the way the `
+      + `league workbook lays it out.`)).join('')}${
     btn('ALL', 'All 27', 'Every owner in the league, grouped by division. A long scroll.')}</div>`;
 }
 /* WHOSE GRIDS ARE ON SCREEN. Ordered by points within a division, because a grid nobody can
    find their own row in is a grid nobody reads. */
 function lShown(){
   const all = lSeats();
-  if (LSCOPE === 'one'){ const o = lSeatOf(); return o ? [o] : []; }
-  const rows = LSCOPE === 'ALL' ? all : all.filter(o => o.div === LSCOPE);
+  const cur = lScope();
+  if (cur === 'ME'){ const o = lSeatOf(); return o ? [o] : []; }
+  const rows = cur === 'ALL' ? all : all.filter(o => o.div === cur);
   return rows.sort((a, b) => (DIVORDER.indexOf(a.div) - DIVORDER.indexOf(b.div))
     || b.pts - a.pts || a.owner.localeCompare(b.owner));
 }
@@ -5929,45 +5934,8 @@ function lHead(o){
     <span class="d" style="font-weight:400;font-size:13px">${DIVNAME[o.div] || o.div}
     · ${o.pts.toFixed(1)} pts</span></h2>`;
 }
-/* THE PICKER IS A <select>, NOT TWENTY-SEVEN BUTTONS. Nothing on this page scrolls sideways,
-   and a 27-button strip is a sideways scroll wearing a tab bar's clothes. Grouped by division
-   so the three are still visibly three. */
-function lPicker(which){
-  const all = lSeats(), cur = lSeatOf();
-  const groups = DIVORDER.filter(d => all.some(o => o.div === d)).map(d =>
-    `<optgroup label="${DIVNAME[d] || d} division">${all.filter(o => o.div === d).map(o => {
-      const k = o.div + '|' + o.owner;
-      return `<option value="${esc(k)}"${cur && k === LSEAT ? ' selected' : ''}>${esc(o.owner)}</option>`;
-    }).join('')}</optgroup>`).join('');
-  return lScopeBar(which) + `<div class="bar"${LSCOPE === 'one' ? '' : ' hidden'}>
-    <label class="d" for="lsel_${which}" style="align-self:center">Owner</label>
-    <select id="lsel_${which}" class="f" style="max-width:100%"
-      onchange="lSetSeat(this.value, '${which}')">${groups}</select>
-    ${cur ? `<span class="pill p-div" style="align-self:center">${DIVNAME[cur.div] || cur.div}</span>` : ''}
-    ${cur && meName() && cur.div === MY_DIV && cur.owner === meName()
-      ? '<span class="mytag" style="align-self:center">YOU</span>' : ''}
-  </div>`;
-}
-function lNoSeason(what){
-  if (SEASON === null) return `<div class="card"><div class="empty">
-    ${SEASON_PROGRESS || 'Reading every week played so far from ESPN…'}
-    <p>${what} is computed on this page from final scores — there is no macro to run and no
-    spreadsheet to open.</p></div></div>`;
-  if (SEASON.size === 0) return `<div class="card"><h2 class="y">No results to work from</h2>
-    <div class="empty"><p>ESPN could not be reached and this build has no verified results baked
-    in. A grid of zeros is not shown, because a zero nobody earned looks exactly like a zero
-    somebody did.</p><p class="d">${(SEASON_ERR || []).slice(0, 4).join(' · ')}</p></div></div>`;
-  return null;
-}
-
-/* Everything the standings repaint on also has to repaint these, and this is the ONE place
-   that knows which set is live. Personal mode keeps Slots and Race; league mode keeps the three
-   all-owners grids. A second copy of this list is a tab that silently stops updating. */
-function lRepaint(){
-  if (PROJ_ON){ if (typeof renderSlots === 'function') renderSlots();
-                if (typeof renderRace === 'function') renderRace(); }
-  else { renderWeekly(); renderSummary(); }
-}
+/* The strip IS the picker now; nothing else sits above these grids. */
+function lPicker(which){ return lScopeBar(which); }
 
 /* ---------- Weekly / Quarterly ---------------------------------------------------------- */
 /* The workbook tab this replaces is 19 week columns wide and cannot be read on a phone. One
@@ -6034,9 +6002,9 @@ function renderWeekly(){
   }).join('')}</div>`;
 
   b.innerHTML = lPicker('weekly') + `<div class="card"><h2>Week by week — ${LQ}</h2>${qbar}
-    <div class="note">${shown.length === 1 ? 'One owner.' :
-      `${shown.length} owners, ranked by points. ` + (LSCOPE === 'ALL'
-        ? 'Every division.' : `${DIVNAME[LSCOPE] || LSCOPE} division.`)}
+    <div class="note">${shown.length === 1 ? 'Your teams.' :
+      `${shown.length} owners, ranked by points. ` + (lScope() === 'ALL'
+        ? 'Every division.' : `${DIVNAME[lScope()] || lScope()} division.`)}
       A league week runs <b>Tuesday to Monday</b>; week 0 is everything played before the NFL
       opened. <b>BYE</b> = no game that week. <b>–</b> = a game with no result on this device
       yet. <b>·</b> = not on this owner's roster that week.</div></div>`
@@ -6163,9 +6131,9 @@ function renderSummary(){
     `<div class="card"><div class="empty">No owners to show.</div></div>`; return; }
   const rules = lRules();
   b.innerHTML = lPicker('summary') + `<div class="card"><h2>Season summary</h2>
-    <div class="note">${shown.length === 1 ? 'One owner.' :
-      `${shown.length} owners, ranked by points. ` + (LSCOPE === 'ALL'
-        ? 'Every division.' : `${DIVNAME[LSCOPE] || LSCOPE} division.`)}
+    <div class="note">${shown.length === 1 ? 'Your teams.' :
+      `${shown.length} owners, ranked by points. ` + (lScope() === 'ALL'
+        ? 'Every division.' : `${DIVNAME[lScope()] || lScope()} division.`)}
       The columns with numbers are the five a <b>final score</b> settles. <b>Tap any team</b> for
       all ${rules.length} categories in the rulebook.</div></div>`
     + shown.map(summaryCard).join('')
