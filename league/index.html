@@ -334,6 +334,14 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
  padding:7px 13px;font:600 12px inherit;cursor:pointer;min-height:34px}
 .f[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#06121f}
 .f.me[aria-pressed=true]{background:var(--mine);border-color:var(--mine)}
+/* THE ONE BUTTON ON A PANEL THAT IS THE POINT OF THE PANEL. `.f` is a quiet filter chip and it
+   reads as a label rather than a control -- Casey pressed "That's me" and said it did not look
+   like something you could press. A primary action is filled, not outlined, and it moves when
+   you press it. */
+.f.primary{background:var(--blue);border-color:var(--blue);color:#06121f;font-weight:700;
+  padding:9px 18px;min-height:40px;box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.f.primary:hover{filter:brightness(1.08)}
+.f.primary:active{transform:translateY(1px);box-shadow:none}
 .card{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
 .card h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:0 0 10px;font-weight:700}
 .note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:10px}
@@ -823,6 +831,17 @@ function viewerLoad(){
     }
   } catch (e) { /* private window, or storage blocked. They pick again; nothing breaks. */ }
   MY_DIV = VIEWER ? VIEWER.div : null;
+  /* ONCE THEY HAVE SAID WHO THEY ARE, THE BOARD OPENS ON THEIR TEAMS -- on EVERY load, not just
+     the one where they picked. Casey, 6 Sep 2026: "once they pick their name, they're gonna want
+     it to always start filter on my teams first."
+     THIS ALSO FIXES A BUG HE SAW SEPARATELY: "after a little while it automatically just
+     refiltered back to the all button." Nothing reset it. The PAGE RELOADED -- the version check
+     at the top of this file re-navigates when version.txt has changed, and it re-runs on
+     `pageshow` and on the tab becoming visible again, so it fires minutes after you opened it.
+     The filter was not remembered across that, so it came back on ALL. Deriving it from the
+     saved viewer means a reload lands where he left off. Before anyone has said who they are it
+     stays on ALL: a My-teams filter with no "me" is a control that cannot work. */
+  if (VIEWER) FILTER = 'ME';
 }
 /* ---- first-run setup ------------------------------------------------------------------- */
 let SETUP_OPEN = false;
@@ -849,15 +868,12 @@ function openSetup(){
       <select class="search" id="setupWho" style="flex:1 1 240px;max-width:100%"
         aria-label="Which owner are you">
         <option value="">Choose your name…</option>${groups}</select>
-      <button class="f me" id="setupGo" onclick="setupCommit()">That's me</button>
+      <button class="f primary" id="setupGo" onclick="setupCommit()">That's me</button>
     </div>
     <div class="note" style="margin-top:10px">This is remembered <b>in this browser only</b>.
       Nothing is sent anywhere and nothing is verified — it is a convenience, not a login, so
-      there is no password and nothing to forget. You can change it any time from the chip at the
-      top of the page.</div>
-    <div style="margin-top:12px"><button class="f" onclick="closeSetup()">Skip for now</button>
-      <span class="d" style="font-size:12px"> — every score, standing and grid works without it;
-      you just will not have a “my teams” to filter by.</span></div>
+      there is no password and nothing to forget. You can pick a different owner whenever you
+      like with <b>Change owner</b> at the top of the page.</div>
   </div>`;
   const sel = el('setupWho');
   if (sel) sel.focus({preventScroll: true});
@@ -896,7 +912,7 @@ function viewerSet(seat){
     else localStorage.removeItem(VIEWER_KEY);
   } catch (e) { /* not saved. Said out loud in the chip rather than pretended. */ }
   VIEWER_SAVED = viewerSaved();
-  if (!VIEWER && FILTER === 'ME') FILTER = 'ALL';
+  FILTER = VIEWER ? 'ME' : (FILTER === 'ME' ? 'ALL' : FILTER);
   LSEAT = VIEWER ? (VIEWER.div + '|' + VIEWER.owner) : LSEAT;
   renderChips(); renderFilters(); renderScores(); renderStandings(); lRepaint();
 }
@@ -1003,12 +1019,12 @@ function renderChips(){
       c.unshift(`<span class="chip" title="This page is showing YOUR teams highlighted, and the My-teams filter lists them. It is remembered in this browser only — nothing is sent anywhere and nothing is verified.${
         VIEWER_SAVED === false ? '\n\nIt could NOT be saved (a private window, or storage is blocked), so you will be asked again next time.' : ''
         }">You are <b>${esc(VIEWER.owner)}</b>${VIEWER_SAVED === false ? ' (not saved)' : ''}
-        <button class="f" style="margin-left:6px;padding:1px 6px;font-size:11px"
-          onclick="openSetup()" title="Pick a different owner">change</button></span>`);
+        <button class="f" style="margin-left:8px;padding:4px 10px;font-size:11px;min-height:26px"
+          onclick="openSetup()" title="Pick a different owner — this page will highlight their teams instead">Change owner</button></span>`);
     else
-      c.unshift(`<span class="chip warn" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are.">Not signed in as anyone
-        <button class="f" style="margin-left:6px;padding:1px 6px;font-size:11px"
-          onclick="openSetup()" title="Say which owner you are">who am I?</button></span>`);
+      c.unshift(`<span class="chip warn" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are.">No owner picked
+        <button class="f" style="margin-left:8px;padding:4px 10px;font-size:11px;min-height:26px"
+          onclick="openSetup()" title="Say which owner you are">Pick owner</button></span>`);
   }
   const ages = (DATA.inputs||[]).filter(x=>x.age!=null);
   if (ages.length){
