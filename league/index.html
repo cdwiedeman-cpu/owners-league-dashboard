@@ -5707,9 +5707,52 @@ function lSeatOf(){
 }
 function lSetSeat(k, which){
   LSEAT = k;
+  LSCOPE = 'one';                       // choosing a name means you want that name
   const before = window.scrollY;
   if (which === 'weekly') renderWeekly(); else renderSummary();
   window.scrollTo({top: before});
+}
+/* ONE OWNER, A WHOLE DIVISION, OR ALL TWENTY-SEVEN. Casey, 6 Sep 2026: "it feels like you need
+   to have something where you can filter on the division of predator scorpion or viper, and it
+   shows all the teams, similar to the grid in the spreadsheet. So you'd scroll down, and you'd
+   see all the teams or if you wanted to just see one team, then you could filter by the owner."
+   The workbook's Weekly_Quarterly tab is one long scroll of every owner in a division, and that
+   IS how the league reads it. The dropdown narrows to one; these widen back out. */
+let LSCOPE = 'one';                     // 'one' | 'PFD' | 'VFD' | 'SFD' | 'ALL'
+function lSetScope(k, which){
+  LSCOPE = k;
+  const before = window.scrollY;
+  if (which === 'weekly') renderWeekly(); else renderSummary();
+  window.scrollTo({top: before});
+}
+function lScopeBar(which){
+  const seats = DATA.seats || [];
+  const divs = DIVORDER.filter(d => seats.some(x => x.div === d));
+  const n = d => seats.filter(x => x.div === d).length;
+  const btn = (k, label, title) => `<button class="tab pick-tab ${LSCOPE === k ? 'on' : ''}"
+      aria-pressed="${LSCOPE === k}" onclick="lSetScope('${k}', '${which}')"
+      title="${title}">${label}</button>`;
+  return `<div class="tabs subtabs">${btn('one', 'One owner',
+      'Just the owner picked below. Opens on you once you have said who you are.')}${
+    divs.map(d => btn(d, DIVNAME[d] || d,
+      `All ${n(d)} owners in the ${DIVNAME[d] || d} division, one after another — the way the '
+      + 'league workbook lays it out.`)).join('')}${
+    btn('ALL', 'All 27', 'Every owner in the league, grouped by division. A long scroll.')}</div>`;
+}
+/* WHOSE GRIDS ARE ON SCREEN. Ordered by points within a division, because a grid nobody can
+   find their own row in is a grid nobody reads. */
+function lShown(){
+  const all = lSeats();
+  if (LSCOPE === 'one'){ const o = lSeatOf(); return o ? [o] : []; }
+  const rows = LSCOPE === 'ALL' ? all : all.filter(o => o.div === LSCOPE);
+  return rows.sort((a, b) => (DIVORDER.indexOf(a.div) - DIVORDER.indexOf(b.div))
+    || b.pts - a.pts || a.owner.localeCompare(b.owner));
+}
+function lHead(o){
+  const me = meName() && o.div === MY_DIV && o.owner === meName();
+  return `<h2>${esc(o.owner)}${me ? ' <span class="mytag">YOU</span>' : ''}
+    <span class="d" style="font-weight:400;font-size:13px">${DIVNAME[o.div] || o.div}
+    · ${o.pts.toFixed(1)} pts</span></h2>`;
 }
 /* THE PICKER IS A <select>, NOT TWENTY-SEVEN BUTTONS. Nothing on this page scrolls sideways,
    and a 27-button strip is a sideways scroll wearing a tab bar's clothes. Grouped by division
@@ -5721,7 +5764,8 @@ function lPicker(which){
       const k = o.div + '|' + o.owner;
       return `<option value="${esc(k)}"${cur && k === LSEAT ? ' selected' : ''}>${esc(o.owner)}</option>`;
     }).join('')}</optgroup>`).join('');
-  return `<div class="bar"><label class="d" for="lsel_${which}" style="align-self:center">Owner</label>
+  return lScopeBar(which) + `<div class="bar"${LSCOPE === 'one' ? '' : ' hidden'}>
+    <label class="d" for="lsel_${which}" style="align-self:center">Owner</label>
     <select id="lsel_${which}" class="f" style="max-width:100%"
       onchange="lSetSeat(this.value, '${which}')">${groups}</select>
     ${cur ? `<span class="pill p-div" style="align-self:center">${DIVNAME[cur.div] || cur.div}</span>` : ''}
@@ -5795,26 +5839,44 @@ function lSetQ(q){ LQ = q; const y = window.scrollY; renderWeekly(); window.scro
 function renderWeekly(){
   const b = el('weeklyBody'); if (!b) return;
   const gate = lNoSeason('The weekly grid'); if (gate){ b.innerHTML = gate; return; }
-  const o = lSeatOf();
-  if (!o){ b.innerHTML = `<div class="card"><div class="empty">No owners in this build.</div></div>`; return; }
   const qs = QKEYS();
   if (!LQ || !qs.includes(LQ)) LQ = qs[0];
-  const weeks = (DATA.quarters || {})[LQ] || [];
-  const teams = o.teams.slice().sort((a, b2) => (POOL_ORDER(a.pool) - POOL_ORDER(b2.pool))
-    || b2.pts - a.pts);
+  const shown = lShown();
+  if (!shown.length){ b.innerHTML = lPicker('weekly') +
+    `<div class="card"><div class="empty">No owners to show.</div></div>`; return; }
 
+  /* THE QUARTER STRIP IS ONE CONTROL FOR THE WHOLE TAB, not one per owner. Nineteen week columns
+     cannot be read on a phone and shrinking them is not reading them, so a quarter at a time is
+     the same information with nothing dropped. */
+  const weeks = (DATA.quarters || {})[LQ] || [];
   const qbar = `<div class="tabs subtabs">${qs.map(q => {
     const w = (DATA.quarters || {})[q] || [];
+    const tot = shown.reduce((a, o) => a + ((o.q || {})[q] || 0), 0);
     return `<button class="tab pick-tab ${LQ === q ? 'on' : ''}" aria-pressed="${LQ === q}"
-      onclick="lSetQ('${q}')" title="Weeks ${w[0]}–${w[w.length - 1]} of the league season.">${q}
-      <span class="d">${(o.q || {})[q] != null ? (o.q[q]).toFixed(1) : '—'}</span></button>`;
+      onclick="lSetQ('${q}')" title="Weeks ${w[0]}–${w[w.length - 1]} of the league season.${
+      shown.length > 1 ? ' The figure is the total for everyone on screen.' : ''}">${q}
+      <span class="d">${tot.toFixed(1)}</span></button>`;
   }).join('')}</div>`;
 
+  b.innerHTML = lPicker('weekly') + `<div class="card"><h2>Week by week — ${LQ}</h2>${qbar}
+    <div class="note">${shown.length === 1 ? 'One owner.' :
+      `${shown.length} owners, ranked by points. ` + (LSCOPE === 'ALL'
+        ? 'Every division.' : `${DIVNAME[LSCOPE] || LSCOPE} division.`)}
+      A league week runs <b>Tuesday to Monday</b>; week 0 is everything played before the NFL
+      opened. <b>BYE</b> = no game that week. <b>–</b> = a game with no result on this device
+      yet. <b>·</b> = not on this owner's roster that week.</div></div>`
+    + shown.map(o => weeklyCard(o, weeks)).join('');
+}
+
+function weeklyCard(o, weeks){
+  const teams = o.teams.slice().sort((a, b2) => (POOL_ORDER(a.pool) - POOL_ORDER(b2.pool))
+    || b2.pts - a.pts);
   /* A cell has FOUR states and they are four different sentences, not one number and three
      blanks. Unknown is not zero, an absence is never an answer. */
+  const noHist = !((DATA.owner_history || {}).snapshots || []).length;
   const cell = (t, wk) => {
-    const owned = (ownersInWeek(t.team, wk) || []).some(x => x[0] === o.div && x[1] === o.owner)
-      || !( (DATA.owner_history || {}).snapshots || [] ).length;
+    const owned = noHist
+      || (ownersInWeek(t.team, wk) || []).some(x => x[0] === o.div && x[1] === o.owner);
     if (!owned) return `<td class="num d" title="Not on this roster in week ${wk}.">·</td>`;
     const got = (t.wk || {})[wk];
     if (got != null) return `<td class="num ${got > 0 ? 'g' : 'd'}">${got.toFixed(1)}</td>`;
@@ -5823,8 +5885,8 @@ function renderWeekly(){
     if (g.none) return `<td class="num d" title="${esc(g.none)}">BYE</td>`;
     const when = typeof g.when === 'number' ? `week ${g.when}` : pretty(g.d || g.when);
     const why = g.played
-      ? `played, and the score has not reached this device yet — reload where ESPN is reachable`
-      : `not played yet`;
+      ? 'played, and the score has not reached this device yet — reload where ESPN is reachable'
+      : 'not played yet';
     return `<td class="num d" title="${esc(g.opp || 'Scheduled')}, ${when} — ${why}.">–</td>`;
   };
   const qTot = t => weeks.reduce((a, wk) => a + (((t.wk || {})[wk]) || 0), 0);
@@ -5840,14 +5902,8 @@ function renderWeekly(){
     ${weeks.map(wk => `<td class="num"><b>${colTot(wk).toFixed(1)}</b></td>`).join('')}
     <td class="num"><b>${((o.q || {})[LQ] || 0).toFixed(1)}</b></td></tr>`;
 
-  const season = `<div class="note"><b>${esc(o.owner)}</b> — ${qs.map(q =>
-    `${q} <b>${((o.q || {})[q] || 0).toFixed(1)}</b>`).join(' · ')} · season
-    <b>${o.pts.toFixed(1)}</b>. These are regular-season points: wins, ties, 40+/50+ blowouts and
-    shutouts. End-of-season bonuses are on the Season Summary tab and are not in these
-    numbers.</div>`;
-
-  b.innerHTML = lPicker('weekly') + `<div class="card"><h2>Week by week — ${LQ}</h2>
-    ${qbar}
+  const qs = QKEYS();
+  return `<div class="card">${lHead(o)}
     <div class="scr"><table class="standtbl">
       <colgroup><col style="width:34%">${weeks.map(() =>
         `<col style="width:${Math.floor(52 / Math.max(weeks.length, 1))}%">`).join('')}<col style="width:14%"></colgroup>
@@ -5855,17 +5911,9 @@ function renderWeekly(){
         ${weeks.map(w => `<th class="num" title="League week ${w}. The league week runs Tuesday to Monday.">${w}</th>`).join('')}
         <th class="num">${LQ}</th></tr></thead>
       <tbody>${rows}${foot}</tbody></table></div>
-    ${season}
-    ${explain('How to read this grid', `<p>One quarter at a time, because nineteen week columns
-      cannot be read on a phone and shrinking them is not reading them. The quarter buttons carry
-      the owner's total for that quarter, so you can see all four without changing view.</p>
-      <p><b>BYE</b> means no game was scheduled in that league week. <b>–</b> means there is a
-      game but no result yet. <b>·</b> means this owner did not hold the team that week — a
-      traded team scores for whoever held it, week by week, so both owners' halves add back to
-      the team's own season total.</p>
-      <p>A league week runs <b>Tuesday to Monday</b>. Week 0 is everything played before the NFL
-      opened, which this year is two and a half weekends of college football, so most college
-      teams have more than one game in it.</p>`)}</div>`;
+    <div class="note">${qs.map(q => `${q} <b>${((o.q || {})[q] || 0).toFixed(1)}</b>`).join(' · ')}
+      · season <b>${o.pts.toFixed(1)}</b>. Regular-season points only — end-of-season bonuses are
+      on the Season Summary tab.</div></div>`;
 }
 
 /* ---------- Season Summary --------------------------------------------------------------- */
@@ -5925,33 +5973,64 @@ function lRuleTable(t){
   }).join('');
   return `<div class="scr"><table class="ownertbl">
     <colgroup><col style="width:52%"><col style="width:12%"><col style="width:16%"><col style="width:20%"></colgroup>
-    <thead><tr><th>Category</th><th class="num">Pays</th><th class="num">Times</th><th class="num">Points</th></tr></thead>
+    <thead><tr><th>Category</th>
+      <th class="num" title="What one of these is worth in league points.">Pays</th>
+      <th class="num" title="How many times this team has earned it so far this season. A category that is only decided at the end of the season reads 'not yet'; one this team's pool cannot earn reads 'n/a'.">Earned</th>
+      <th class="num" title="Pays multiplied by Earned — what this category has been worth to this team.">Points</th></tr></thead>
     <tbody>${body}</tbody></table></div>`;
 }
 
 function renderSummary(){
   const b = el('summaryBody'); if (!b) return;
   const gate = lNoSeason('The season summary'); if (gate){ b.innerHTML = gate; return; }
-  const o = lSeatOf();
-  if (!o){ b.innerHTML = `<div class="card"><div class="empty">No owners in this build.</div></div>`; return; }
+  const shown = lShown();
+  if (!shown.length){ b.innerHTML = lPicker('summary') +
+    `<div class="card"><div class="empty">No owners to show.</div></div>`; return; }
+  const rules = lRules();
+  b.innerHTML = lPicker('summary') + `<div class="card"><h2>Season summary</h2>
+    <div class="note">${shown.length === 1 ? 'One owner.' :
+      `${shown.length} owners, ranked by points. ` + (LSCOPE === 'ALL'
+        ? 'Every division.' : `${DIVNAME[LSCOPE] || LSCOPE} division.`)}
+      The columns with numbers are the five a <b>final score</b> settles. <b>Tap any team</b> for
+      all ${rules.length} categories in the rulebook.</div></div>`
+    + shown.map(summaryCard).join('')
+    + `<div class="card">${explain('Why this looks different from the commissioner’s sheet',
+      `<p>Because it is the league's actual rulebook rather than a sixteen-column approximation of
+      it. There are <b>${rules.length}</b> scoring categories, and the FBS and FCS playoffs pay
+      <b>per round</b> — half a point to reach one, a full point to win it — which is a list no
+      spreadsheet column layout can hold. Rules version
+      <b>${esc((DATA.standings || {}).rules_version || '')}</b>.</p>
+      <p><b>Tap any team</b> to see all ${rules.length} categories, what each pays, and where that
+      team stands. A category its pool cannot earn reads <b>n/a</b> with the reason; one that has
+      not been decided yet reads <b>not yet</b>. Neither is written as a zero, because a zero is
+      something you failed to earn and these are things nobody has earned yet.</p>
+      <p><b>Earned</b> counts the team's whole season; the <b>quarter</b> columns and the
+      <b>Total</b> are only the weeks this owner held the team. On a traded team those two do not
+      multiply out, and the row says so.</p>
+      <p>The five columns with numbers update as games go final. Everything else — conference
+      titles, bowls, the playoff ladders, undefeated and one-loss — is settled at the end of the
+      season.</p>`)}</div>`;
+}
+
+function summaryCard(o){
   const qs = QKEYS();
   const teams = o.teams.slice().sort((a, b2) => (POOL_ORDER(a.pool) - POOL_ORDER(b2.pool))
     || b2.pts - a.pts);
   const rules = lRules();
-  const payOf = k => { const r = rules.find(x => x.key === k); return r ? r.pay : 0; };
   const head = LIVEKEYS.map(k => {
     const r = rules.find(x => x.key === k);
     return `<th class="num c-q" title="${esc((r && r.note) || '')} Pays ${(r ? r.pay : 0).toFixed(1)} each.">${esc(r ? r.label : k)}</th>`;
   }).join('');
 
   const rowOf = t => {
-    const open = LOPEN === t.team;
+    const open = LOPEN === o.div + '|' + o.owner + '|' + t.team;
     const cells = LIVEKEYS.map(k => {
       const n = lCount(t, k);
       if (n === undefined) return `<td class="num c-q">${L_UNK}</td>`;
       return `<td class="num d c-q">${n === null ? '<span class="d" title="No team in this pool can earn this category.">n/a</span>' : n}</td>`;
     }).join('');
-    const main = `<tr class="clickable" onclick="lToggle('${esc(t.team).replace(/'/g, "\\'")}')">
+    const key = (o.div + '|' + o.owner + '|' + t.team).replace(/'/g, "\\'");
+    const main = `<tr class="clickable" onclick="lToggle('${esc(key)}')">
       <td class="c-own"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
         <span class="d">${open ? '▾' : '▸'}</span>${
         t.held === false ? ' <span class="gtag t-before" title="No longer on this roster.">TRADED AWAY</span>' : ''}${
@@ -5969,15 +6048,14 @@ function renderSummary(){
         came from the results baked into this build, which record points per week and not
         win-or-lose, so the counts below are shown as unknown rather than as zero.` : ''}${
         t.partial ? ` <b class="y">This team was not held all season by ${esc(o.owner)}.</b> The
-        <b>Times</b> column counts the team's whole season; the <b>points credited</b> to this
+        <b>Earned</b> column counts the team's whole season; the <b>points credited</b> to this
         owner are only the weeks they held it, which is why the two do not multiply out.` : ''}</div>
       ${lRuleTable(t)}</div></td></tr>` : '';
     return main + detail;
   };
 
   const nUnk = teams.filter(t => !lKnown(t)).length;
-  /* A RUNNING TOTAL MUST SAY WHAT IT CANNOT CONTAIN. Teams whose record is unknown are not in
-     these counts, and the number of them is on the row rather than in a footnote. */
+  /* A RUNNING TOTAL MUST SAY WHAT IT CANNOT CONTAIN. */
   const tot = k => teams.reduce((a, t) => a + (lCount(t, k) || 0), 0);
   const foot = `<tr class="rbtot"><td><b>${esc(o.owner)}</b>${nUnk
       ? ` <span class="d" style="font-weight:400">(${nUnk} team${nUnk === 1 ? '' : 's'} not counted)</span>` : ''}</td>
@@ -5987,29 +6065,14 @@ function renderSummary(){
     <td class="num d">—</td>
     <td class="num"><b>${o.pts.toFixed(1)}</b></td></tr>`;
 
-  b.innerHTML = lPicker('summary') + `<div class="card"><h2>Season summary</h2>
+  return `<div class="card">${lHead(o)}
     <div class="scrhint"><b>Swipe</b> the table sideways for the quarters.</div>
     <div class="scr"><table class="standtbl">
       <thead><tr><th class="c-own">Team</th><th class="num">Rec</th>${head}
         ${qs.map(q => `<th class="num c-q">${q}</th>`).join('')}
         <th class="num" title="End-of-season bonuses. Undecided until the season ends.">Bonus</th>
         <th class="num c-tot">Total</th></tr></thead>
-      <tbody>${teams.map(rowOf).join('')}${foot}</tbody></table></div>
-    ${explain('Why this looks different from the commissioner’s sheet', `<p>Because it is the
-      league's actual rulebook rather than a sixteen-column approximation of it. There are
-      <b>${rules.length}</b> scoring categories, and the FBS and FCS playoffs pay <b>per
-      round</b> — half a point to reach one, a full point to win it — which is a list no
-      spreadsheet column layout can hold. Rules version <b>${esc((DATA.standings || {}).rules_version || '')}</b>.</p>
-      <p><b>Tap any team</b> to see all ${rules.length} categories, what it pays, and where that
-      team stands. A category its pool cannot earn reads <b>n/a</b> with the reason; a category
-      that has not been decided yet reads <b>not yet</b>. Neither is written as a zero, because a
-      zero is a thing you failed to earn and these are things nobody has earned yet.</p>
-      <p>The <b>Times</b> counts are the team's whole season; the <b>quarter</b> columns and the
-      <b>Total</b> are only the weeks this owner held the team. On a traded team those two do not
-      multiply out, and the row says so.</p>
-      <p>The five columns with numbers in them are the ones a <b>final score</b> settles, so they
-      update as games go final. Everything else — conference titles, bowls, the playoff ladders,
-      undefeated and one-loss — is settled at the end of the season.</p>`)}</div>`;
+      <tbody>${teams.map(rowOf).join('')}${foot}</tbody></table></div></div>`;
 }
 
 /* ---------- Transactions ------------------------------------------------------------------ */
