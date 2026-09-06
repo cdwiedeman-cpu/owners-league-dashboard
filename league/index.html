@@ -1013,7 +1013,14 @@ const EP = {
    On a Saturday the board carries 130 college games and eleven of them are his. The filter row
    shows "My teams" pressed, so the state is visible rather than mysterious, and an empty result
    says so and offers the way out. */
-let FILTER = 'ME';
+/* THE LEAGUE PAGE OPENS ON EVERY GAME. Casey's own page opens on his eleven — that is his
+   answer to "what is on today". The league page has no eleven until a reader says who they are,
+   so opening on My-teams greeted every one of them with "None of your eleven teams appear in the
+   games ESPN is listing right now", which is a filter reporting an empty result before anybody
+   asked it a question. Casey, 6 Sep 2026: "it just default to all." Picking yourself does NOT
+   switch the board — the My-teams button is right there, and a page that re-filters itself under
+   you is worse than one that waits to be asked. */
+let FILTER = LEAGUE ? 'ALL' : 'ME';
 let GAMES = null, FETCH_ERR = null, UNMATCHED = [];
 
 /* THE NAME IS A CONTROL WHEN THE TEAM IS ON THE BOARD, and plain text when it is not.
