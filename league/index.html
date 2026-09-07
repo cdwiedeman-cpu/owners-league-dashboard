@@ -6418,15 +6418,18 @@ const catPts = (n, r) => (n || 0) * r.pay;
    NO PS TIE COLUMN. A postseason game cannot end in a tie in any of the three pools -- college
    has had overtime since 1996 and an NFL playoff game plays on until somebody scores -- so the
    column could never take a number. The help panel says so rather than leaving a reader to
-   wonder where it went. */
+   wonder where it went.
+
+   WHERE THEY SIT: at the END of the categories, after the last rulebook row and immediately
+   before Bonus. Casey, 7 Sep 2026: "place the new PS columns between superbowl champ and bonus
+   columns." Beside their regular-season twins would put four postseason columns in front of
+   thirty-six that are read every week, and it also breaks the one promise the header makes --
+   that the categories run in RULEBOOK ORDER. At the end they read as what they are: the
+   postseason block, sitting next to the Post total they add into. */
 function catCols(){
   const rules = lRules();
-  const cols = rules.map(r => ({r, ps: false}));
-  let at = 0;
-  cols.forEach((c, i) => { if (c.r.post_too) at = i + 1; });
-  const ps = rules.filter(r => r.post_too && r.key !== 'tie').map(r => ({r, ps: true}));
-  cols.splice(at, 0, ...ps);
-  return cols;
+  return rules.map(r => ({r, ps: false}))
+    .concat(rules.filter(r => r.post_too && r.key !== 'tie').map(r => ({r, ps: true})));
 }
 const colLabel = c => (c.ps ? 'PS ' : '') + c.r.label;
 /* What this column is worth for one team: the REGULAR-SEASON share on a plain column, the
@@ -6473,11 +6476,11 @@ function renderSummary(){
       <p><b>Every category cell is POINTS, not a count.</b> One shutout reads <b>0.5</b>, not 1 —
       the rate is printed under the column name and the cell shows what the category has actually
       paid, so a row reads across in the same unit as its total.</p>
-      <p>The <b>PS</b> columns — <b>PS Win</b>, <b>PS 50 pt Wins</b>, <b>PS 40 pt Wins</b>,
-      <b>PS Shut Outs</b> — are the same categories earned in a <b>postseason</b> game. They are
-      not extra rules; they are where those points go instead of a quarter, and <b>they add into
-      the Post total</b>. A category's plain column and its PS column never both count the same
-      game.</p>`)}</div>`;
+      <p>The <b>PS</b> columns at the far right — <b>PS Win</b>, <b>PS 50 pt Wins</b>,
+      <b>PS 40 pt Wins</b>, <b>PS Shut Outs</b>, sitting just before <b>Bonus</b> — are the same
+      categories earned in a <b>postseason</b> game. They are not extra rules; they are where
+      those points go instead of a quarter, and <b>they add into the Post total</b>. A category's
+      plain column and its PS column never both count the same game.</p>`)}</div>`;
 }
 
 /* ---- ROSTER SLOTS, FOR ANY OWNER -----------------------------------------------------------
