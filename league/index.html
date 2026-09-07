@@ -4722,7 +4722,10 @@ function bonusHelpHTML(key){
   const which = String(key).split('|')[1];
   const ver = (DATA.standings || {}).rules_version;
   if (which === 'post'){
-    const both = lRules().filter(r => r.post_too);
+    /* A TIE IS NOT LISTED HERE. It is a `post_too` row like the rest, but no postseason game
+       in any of the three pools can end in one, so listing it and then explaining two
+       paragraphs later that it has no column is a contradiction the reader has to resolve. */
+    const both = lRules().filter(r => r.post_too && r.key !== 'tie');
     return `<div class="note"><b>Postseason — everything earned in a postseason game</b>${
       ver ? ` (rulebook v${esc(ver)})` : ''}. Nothing has been played, so the column reads a dash
       rather than a zero.
@@ -4736,7 +4739,7 @@ function bonusHelpHTML(key){
       rulePay('shut_outs', 0.5)).toFixed(1)}, all of it here:</p>
       <ul style="margin:4px 0 8px 18px">${both.map(li_).join('')}</ul>
       <p class="d">On the <b>Season Summary</b> these have their own columns —
-      ${both.filter(r => r.key !== 'tie').map(r => '<b>PS ' + esc(r.label) + '</b>').join(', ')} —
+      ${both.map(r => '<b>PS ' + esc(r.label) + '</b>').join(', ')} —
       and <b>they add into this total</b>. So Post = those columns + the bowl and playoff rows
       above. There is no <b>PS Tie</b> column because a postseason game cannot end in a tie:
       college football has played overtime since 1996 and an NFL playoff game continues until
