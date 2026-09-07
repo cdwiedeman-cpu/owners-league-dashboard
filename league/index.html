@@ -798,10 +798,10 @@ function buildTabs(){
   if (bar) bar.innerHTML = TABS.map(([k, label], i) =>
     `<button class="tab" role="tab" id="${tabId(k)}" aria-selected="${i === 0}"
        onclick="showTab('${k}')">${label}</button>`).join('');
-  /* THE TITLE IS NOT SET HERE ANY MORE. Both the tab title and the <h1> come out of the
-     Owners Football League head slot, filled at build time from make_icons.THEMES[mode]['page'], so the
-     page says the right thing before a line of JavaScript runs. This function used to overwrite
-     them on the league page and the static markup underneath it was wrong until it did. */
+  /* THE TITLE IS NOT SET HERE ANY MORE. The tab title comes from Owners Football League and the heading
+     from Owners Football League, both filled at build time out of make_icons.THEMES[mode], so the page says
+     the right thing before a line of JavaScript runs. This function used to overwrite them on the
+     league page and the static markup underneath it was wrong until it did. */
 }
 
 /* namefix.norm, in JavaScript. The Python build and this page must agree on what "the same
