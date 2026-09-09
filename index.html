@@ -371,6 +371,12 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
 .card{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
 .card h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:0 0 10px;font-weight:700}
 .note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:10px}
+.tiechip{display:inline-flex;align-items:center;justify-content:center;min-height:16px;
+  min-width:22px;padding:0 5px;margin-left:5px;border:1px solid var(--line);border-radius:4px;
+  background:transparent;color:var(--dim);font-family:inherit;font-size:10px;line-height:14px;
+  cursor:pointer;vertical-align:middle}
+.tiechip:hover,.tiechip:focus{border-color:var(--blue);color:var(--blue)}
+tr.tiehit>td{background:var(--pan2)}
 table{width:100%;border-collapse:collapse;table-layout:fixed}
 th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);font-size:13px;overflow-wrap:anywhere}
 th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:700}
@@ -4782,27 +4788,42 @@ function tieRec(o, sortKey){
   if (!o.rec) return null;
   return (QKEYS().includes(sortKey) ? o.rec[sortKey] : o.rec.all) || null;
 }
-/* THE LADDER, AS A COMPARATOR. Returns >0 if b should rank above a, matching the sort's own
-   direction. A step both owners cannot answer -- neither has played an NFL game yet, say -- is
-   skipped rather than counted as a draw at zero, because 0/0 is not a percentage. */
-function tieBreak(a, b, sortKey){
+/* THE LADDER AS DATA, NOT AS FOUR ANONYMOUS LAMBDAS. Bob's written rules NUMBER these steps, and
+   a page that ranks two owners apart on a rung it never shows is asking the reader to trust an
+   ordering it will not explain. One list, read by the comparator AND by the panel that explains
+   a rank -- a ladder written down twice is a ladder that drifts. */
+const TIE_STEPS = [
+  {key: 'all',   short: 'overall', label: 'winning percentage over all games',
+   get: r => winPct(r)},
+  {key: 'col',   short: 'college', label: 'winning percentage over COLLEGE games only',
+   get: r => winPct(r && r.col)},
+  {key: 'nfl',   short: 'NFL',     label: 'winning percentage over NFL games only',
+   get: r => winPct(r && r.nfl)},
+  {key: 'bonus', short: 'bonus',   label: 'most bonus points to date', pts: true,
+   get: (r, o) => (o && typeof o.bonus === 'number') ? o.bonus : null},
+];
+/* WHICH RUNG SEPARATES THESE TWO, and by what numbers. Null means the ladder ran out: genuinely
+   level, step 5, split the payout. A rung neither owner can answer -- neither has played an NFL
+   game yet, say -- is SKIPPED, not scored as a draw at zero, because 0/0 is not a percentage. */
+function tieSep(a, b, sortKey){
   const ra = tieRec(a, sortKey), rb = tieRec(b, sortKey);
-  const steps = [
-    x => winPct(x),
-    x => winPct(x && x.col),
-    x => winPct(x && x.nfl),
-  ];
-  for (const f of steps){
-    const va = f(ra), vb = f(rb);
+  for (let i = 0; i < TIE_STEPS.length; i++){
+    const st = TIE_STEPS[i];
+    const va = st.get(ra, a), vb = st.get(rb, b);
     if (va == null || vb == null) continue;      // unknown is not zero
-    if (Math.abs(va - vb) > 1e-9) return vb - va;
+    if (Math.abs(va - vb) > 1e-9) return {i, step: i + 1, key: st.key, short: st.short,
+                                          label: st.label, pts: !!st.pts, va, vb};
   }
-  /* Step 4: most bonus points to date. Undecided all season, so this is a dash in practice --
-     but it is the written rule and it is the last thing before the money is split. */
-  const ba = a.bonus, bb = b.bonus;
-  if (typeof ba === 'number' && typeof bb === 'number' && Math.abs(ba - bb) > 1e-9) return bb - ba;
-  return 0;                                      // step 5: genuinely level -- split the payout
+  return null;                                   // step 5: genuinely level -- split the payout
 }
+/* THE COMPARATOR. Returns >0 if b should rank above a, matching the sort's own direction. */
+function tieBreak(a, b, sortKey){
+  const st = tieSep(a, b, sortKey);
+  return st ? (st.vb - st.va) : 0;
+}
+/* Filled by standTable each render: owner key -> the pair whose rank was settled BELOW step 1. */
+let TIESEP = {};
+let TIE_OPEN = null;
 function ownerTotals(){
   /* A team owned in three divisions scores for all three owners -- that is the league, not a
      bug. What is NOT the league is one owner scoring another owner's weeks. */
@@ -4919,7 +4940,7 @@ function ownerTotals(){
 const DIVNAME = {PFD: 'Predator', VFD: 'Viper', SFD: 'Scorpion'};
 let OPEN_OWNER = null;
 
-function ownerBlock(o, rank, lead, showDiv){
+function ownerBlock(o, rank, lead, showDiv, tsep){
   const proj = projOf(o);
   const nTrade = ((DATA.owner_history || {}).changes || []).length;
   const mine = !!meName() && o.div === MY_DIV && o.owner === meName();
@@ -5051,7 +5072,7 @@ function ownerBlock(o, rank, lead, showDiv){
       ${PROJ_ON ? `<td class="num c-proj ${SORTBY === 'proj' ? 'sorted' : ''}"
           title="${proj ? `${o.pts.toFixed(1)} banked + ${(proj.rest).toFixed(1)} from the games still to play + ${(proj.post).toFixed(1)} postseason. Tap for the breakdown.` : 'This build ships no postseason vectors, so there is nothing to project from.'}"
         >${proj ? proj.total.toFixed(1) : '<span class="d">—</span>'}</td>` : ''}
-      ${pctCell(o)}
+      ${pctCell(o, tsep)}
       <td class="num d hide-s">${lead == null ? '—' : (lead === 0 ? '—' : '−' + lead.toFixed(1))}</td>
       ${undecidedCell('bonus')}
       ${QKEYS().map(q => `<td class="num d c-q ${SORTBY === q ? 'sorted' : ''}">${
@@ -5128,16 +5149,66 @@ function bonusCell(){ return undecidedCell('bonus'); }
    record that would settle it -- ranking on Q2 and showing a season percentage would be a number
    that does not decide the thing beside it. Unknown is not zero: an owner with no games played
    in that quarter gets a dash, not 0%. */
-function pctCell(o){
+function tieChip(e, key){
+  if (!e) return '';
+  return ` <button class="tiechip" onclick="event.stopPropagation();openTieHelp('${
+    key.replace(/'/g, "\\'")}')" title="${esc(
+    `Level with ${e.other.owner} on points AND on this percentage. The rank was settled one rung further down the ladder, on ${e.sep.label}. Tap for the whole ladder.`)}">${esc(e.sep.short)}</button>`;
+}
+function pctCell(o, e){
   const r = tieRec(o, SORTBY);
   const p = winPct(r);
+  const key = o.div + '|' + o.owner;
   const what = QKEYS().includes(SORTBY) ? SORTBY : 'the season';
   if (p == null) return `<td class="num d c-pct hide-s"><span class="d"
-      title="No games played in ${esc(what)} yet, so there is no percentage — not 0%.">—</span></td>`;
-  return `<td class="num d c-pct hide-s" title="${esc(
+      title="No games played in ${esc(what)} yet, so there is no percentage — not 0%.">—</span>${
+      tieChip(e, key)}</td>`;
+  return `<td class="num d c-pct hide-s"><span title="${esc(
     `${r.w} win${r.w === 1 ? '' : 's'} and ${r.t} tie${r.t === 1 ? '' : 's'} in ${r.n} game${
       r.n === 1 ? '' : 's'} across ${what}. A tie counts as half a win. Blowout and shutout halves are not in this number — it is a record, not a points total.`)}">${
-    (p * 100).toFixed(1)}%</td>`;
+    (p * 100).toFixed(1)}%</span>${tieChip(e, key)}</td>`;
+}
+/* THE LADDER, SHOWN. Every rung, in Bob's order, with both owners' numbers on it and the one that
+   settled the rank marked -- including the rungs that were never reached, because "not reached"
+   is a different message from "level" and an absence is never an answer. */
+function openTieHelp(key){
+  if (TIE_OPEN === key){ closeHelp(); return; }
+  const e = TIESEP[key]; if (!e) return;
+  const box = el('help'); if (!box) return;
+  TIE_OPEN = key;
+  const ra = tieRec(e.me, e.sortKey), rb = tieRec(e.other, e.sortKey);
+  const what = QKEYS().includes(e.sortKey) ? e.sortKey : 'the season';
+  const fmt = (v, pts) => v == null ? '<span class="d">—</span>'
+    : (pts ? Number(v).toFixed(1) : (v * 100).toFixed(1) + '%');
+  const body = TIE_STEPS.map((st, i) => {
+    const va = st.get(ra, e.me), vb = st.get(rb, e.other);
+    const decided = i === e.sep.i;
+    const reached = i <= e.sep.i;
+    const verdict = !reached ? '<span class="d">not reached</span>'
+      : decided ? `<b>${esc((va > vb ? e.me : e.other).owner)} ahead</b>`
+      : (va == null || vb == null) ? '<span class="d">nothing to compare</span>'
+      : '<span class="d">level</span>';
+    return `<tr${decided ? ' class="tiehit"' : ''}><td class="num d">${i + 1}</td>
+      <td>${esc(st.label)}</td><td class="num">${reached ? fmt(va, st.pts) : ''}</td>
+      <td class="num">${reached ? fmt(vb, st.pts) : ''}</td><td>${verdict}</td></tr>`;
+  }).join('') + `<tr><td class="num d">5</td><td>still level — the owners SPLIT the payout</td>
+    <td></td><td></td><td><span class="d">not reached</span></td></tr>`;
+  box.hidden = false;
+  box.innerHTML = `<div class="modalbox">
+    <div class="modalhd"><div><h2>Why these two are not level</h2></div>
+      <button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button></div>
+    <div class="note"><p><b>${esc(e.me.owner)}</b> and <b>${esc(e.other.owner)}</b> have the same
+      points across ${esc(what)}, and the same winning percentage. A payout tied on points goes
+      down this ladder until something separates them. This one got to
+      <b>step ${e.sep.step}</b>.</p>
+      <div class="scr"><table class="ownertbl"><thead><tr><th>#</th><th>Step</th>
+        <th class="num">${esc(e.me.owner)}</th><th class="num">${esc(e.other.owner)}</th>
+        <th>Result</th></tr></thead><tbody>${body}</tbody></table></div>
+      <p>A win is 1 and a tie is half. Blowout and shutout halves are <b>not</b> in any of these
+      percentages — they are already inside the points total that produced the tie, and
+      counting them again would only reproduce it.</p></div></div>`;
+  const x = box.querySelector('.modalx'); if (x) x.focus({preventScroll: true});
+  document.body.style.overflow = 'hidden';
 }
 /* THE POST COLUMN, once there is anything in it. Until the first bowl or playoff game is played
    it is a dash, because nobody has earned nothing -- it simply has not happened. After that it is
@@ -5172,11 +5243,12 @@ function toggleBonusHelp(key){
 }
 function closeHelp(){
   BONUS_OPEN = null;
+  TIE_OPEN = null;
   const box = el('help'); if (!box) return;
   box.hidden = true; box.innerHTML = '';
   document.body.style.overflow = '';
 }
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && BONUS_OPEN) closeHelp(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && (BONUS_OPEN || TIE_OPEN)) closeHelp(); });
 function helpQM(where, which){
   const key = where + '|' + which;
   return `<button type="button" class="qm" aria-expanded="${BONUS_OPEN === key}"
@@ -5304,7 +5376,23 @@ function standTable(rows, title, note, showDiv){
        Level on points but not on the tiebreaker is NOT a tie any more -- it has a winner. */
     ranks[i] = (i > 0 && level(o, rows[i - 1])) ? ranks[i - 1] : i + 1;
   });
-  const blocks = rows.map((o, i) => ownerBlock(o, ranks[i], top - sortVal(o, SORTBY), showDiv));
+  /* A RANK SETTLED BELOW STEP 1 IS INVISIBLE OTHERWISE. Two owners on the same points and the
+     same printed percentage, drawn one above the other, look like a sorting bug -- so the row
+     says which rung separated them. Only steps 2-4 are marked: step 1 is the column the reader
+     is already looking at, and step 5 is a SHARED rank with the note under the table. */
+  TIESEP = {};
+  rows.forEach((o, i) => {
+    for (const x of [rows[i - 1], rows[i + 1]]){
+      if (!x || Math.abs(sortVal(x, SORTBY) - sortVal(o, SORTBY)) > 1e-9) continue;
+      const st = tieSep(o, x, SORTBY);
+      if (st && st.step > 1){
+        TIESEP[o.div + '|' + o.owner] = {me: o, other: x, sortKey: SORTBY, sep: st};
+        break;
+      }
+    }
+  });
+  const blocks = rows.map((o, i) => ownerBlock(o, ranks[i], top - sortVal(o, SORTBY), showDiv,
+                                               TIESEP[o.div + '|' + o.owner] || null));
   return `<div class="card">
     <div class="scrhint"><b>Swipe</b> the table sideways for the quarters.</div>
     <div class="scr"><table class="standtbl">
