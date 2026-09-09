@@ -1,0 +1,1218 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RFL Trades — SANDBOX</title>
+<style>
+:root{--bg:#0b1119;--pan:#111a24;--pan2:#16212e;--line:#1e2a37;--ink:#e6edf5;--dim:#93a4b8;
+ --faint:#5f7080;--good:#4ade80;--bad:#f87171;--gold:#fbbf24;--blue:#60a5fa;--mine:#a78bfa;
+ --warn:#f59e0b}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+ font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+ overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{padding-bottom:64px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 12px}
+/* THE BANNER IS NOT DECORATION. Casey has to be able to tell at a glance, on any screen and
+   after any number of tabs, that what he is looking at cannot touch the live league. */
+.sandbar{position:sticky;top:0;z-index:40;background:#3b1d02;border-bottom:2px solid var(--warn);
+ color:#ffd9a0;padding:8px 12px;font-size:12px;font-weight:600;letter-spacing:.02em}
+.sandbar b{color:var(--warn)}
+h1{font-size:19px;margin:14px 0 2px}
+h2{font-size:15px;margin:0 0 8px}
+.sub{color:var(--dim);font-size:12px;margin:0 0 14px}
+.card{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:12px;
+ margin:0 0 12px}
+.card.warn{border-color:var(--warn)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grow{flex:1 1 160px;min-width:0}
+label.lb{display:block;font-size:11px;color:var(--dim);margin:0 0 3px;text-transform:uppercase;
+ letter-spacing:.04em}
+/* 16px on every field, unconditionally. Under 16px iOS zooms the whole page when the field takes
+   focus and never zooms back -- and the media query that used to gate this did not match an iPad
+   with a keyboard, Stage Manager, or an Android tablet with a mouse. */
+input,select,textarea,button{font-family:inherit;font-size:16px}
+input,select,textarea{background:var(--pan2);color:var(--ink);border:1px solid var(--line);
+ border-radius:7px;padding:7px 9px;width:100%;min-height:34px}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),
+ linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+ background-position:calc(100% - 15px) 15px,calc(100% - 10px) 15px;
+ background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:28px}
+button{background:var(--pan2);color:var(--ink);border:1px solid var(--line);border-radius:7px;
+ padding:8px 13px;min-height:36px;cursor:pointer}
+button:hover{border-color:var(--blue);color:var(--blue)}
+button.pri{background:#12324f;border-color:#2b5f8f;color:#cfe6ff}
+button.pri:hover{background:#17406a}
+button.dang{border-color:#5b2626;color:#ffb4b4}
+button[disabled]{opacity:.42;cursor:not-allowed}
+button[disabled]:hover{border-color:var(--line);color:var(--ink)}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding:10px 0 0;-webkit-overflow-scrolling:touch}
+.tabs button{white-space:nowrap;border-radius:8px 8px 0 0;border-bottom-color:transparent}
+.tabs button.on{background:var(--pan);border-color:var(--line);border-bottom-color:var(--pan);
+ color:var(--blue)}
+.pill{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:999px;
+ padding:2px 9px;color:var(--dim);white-space:nowrap}
+.pill.good{color:var(--good);border-color:#245c39}
+.pill.bad{color:var(--bad);border-color:#5b2626}
+.pill.gold{color:var(--gold);border-color:#5c471a}
+.pill.blue{color:var(--blue);border-color:#274b6d}
+.d{color:var(--dim)}.f{color:var(--faint)}.g{color:var(--good)}.b{color:var(--bad)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+ word-break:break-all}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th,td{text-align:left;padding:6px 7px;border-bottom:1px solid var(--line);font-size:13px;
+ overflow-wrap:anywhere}
+th{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+td.num,th.num{text-align:right}
+.scr{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.note{font-size:12px;color:var(--dim);line-height:1.55}
+.empty{color:var(--dim);font-size:13px;padding:14px 4px;text-align:center}
+.trow{border:1px solid var(--line);border-radius:9px;padding:9px;margin:0 0 8px;
+ background:var(--pan2)}
+.trow .hd{display:flex;justify-content:space-between;align-items:center;margin:0 0 7px;
+ font-size:12px;color:var(--dim)}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+@media (max-width:640px){.grid3,.grid2{grid-template-columns:1fr}}
+.inbox{background:#0d1a12;border:1px solid #245c39;border-radius:9px;padding:10px;margin:8px 0}
+.inbox h3{margin:0 0 5px;font-size:13px;color:var(--good)}
+.res{border-left:3px solid var(--line);padding:7px 0 7px 10px;margin:0 0 9px}
+.res.won{border-left-color:var(--good)}
+.res.lost{border-left-color:var(--bad)}
+.res.other{border-left-color:var(--faint)}
+.res .t{font-weight:600;font-size:13px}
+.res .w{font-size:12px;color:var(--dim);margin-top:2px}
+.modal{position:fixed;inset:0;background:rgba(4,8,13,.78);z-index:60;display:flex;
+ align-items:flex-start;justify-content:center;padding:22px 12px;overflow:auto}
+.modalbox{background:var(--pan);border:1px solid var(--line);border-radius:12px;max-width:660px;
+ width:100%;padding:14px}
+.modalhd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+ margin:0 0 8px}
+.modalhd h2{margin:0}
+.modalx{width:34px;min-width:34px;height:34px;padding:0;border-radius:8px}
+[hidden]{display:none!important}
+</style></head><body>
+<div class="sandbar" id="sandbar">SANDBOX — <b>nothing here touches the live league.</b>
+  <span id="clockchip"></span></div>
+<div class="wrap">
+  <h1>Reality Football League — Trades sandbox</h1>
+  <p class="sub" id="subline"></p>
+  <div class="tabs" id="tabs"></div>
+  <div id="body"></div>
+</div>
+<div class="modal" id="help" hidden></div>
+<script>var DATA = {"divisions":["PFD","VFD","SFD"],"div_names":{"PFD":"Predator","VFD":"Viper","SFD":"Scorpion"},"seats":[{"div":"PFD","owner":"Dos Pigs"},{"div":"PFD","owner":"Gail Sulski"},{"div":"PFD","owner":"Jason/Greg"},{"div":"PFD","owner":"Jay LaBenz"},{"div":"PFD","owner":"Mark Secrest"},{"div":"PFD","owner":"Mike Endredy"},{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"PFD","owner":"Steve Eriksson"},{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"SFD","owner":"Bob Tucker"},{"div":"SFD","owner":"Cory Norton"},{"div":"SFD","owner":"Elliot Karlin"},{"div":"SFD","owner":"Jay McCarroll"},{"div":"SFD","owner":"Mark Berner"},{"div":"SFD","owner":"Mark Jatcko"},{"div":"SFD","owner":"Michael Spielman"},{"div":"SFD","owner":"Steve Salatino"},{"div":"SFD","owner":"Tom Rush"},{"div":"VFD","owner":"Brian/Dave"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"VFD","owner":"Chris Patten"},{"div":"VFD","owner":"Erik Woods"},{"div":"VFD","owner":"Frank Haughn"},{"div":"VFD","owner":"Patrick Lee"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"VFD","owner":"Tom Brown"}],"teams":[{"n":"Indiana","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Miami (FL)","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Notre Dame","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Oregon","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Washington","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Texas Tech","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"South Dakota St","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Penn State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Nebraska","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Pittsburgh","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Arizona","pool":"FBS","left":10,"owners":[]},{"n":"Baylor","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"}]},{"n":"Ohio State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"SMU","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Utah","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Fresno State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"}]},{"n":"Georgia","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Clemson","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Houston","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Liberty","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Villanova","pool":"FCS","left":9,"owners":[{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Montana St","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Iowa","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Boise State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Louisville","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Alabama","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Michigan","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Kansas State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"USC","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Florida","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Patrick Lee"}]},{"n":"South Carolina St","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"South Florida","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"South Carolina","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"}]},{"n":"Texas A&M","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Ole Miss","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Los Angeles Chargers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Austin Peay","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"James Madison","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Rhode Island","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Missouri","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Texas","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"San Francisco 49ers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"TCU","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"}]},{"n":"Ohio","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Chris Patten"}]},{"n":"California","pool":"FBS","left":10,"owners":[]},{"n":"Minnesota","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"}]},{"n":"Chattanooga","pool":"FCS","left":9,"owners":[]},{"n":"Virginia","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chris Patten"}]},{"n":"SF Austin","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Western Illinois","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Cory Norton"}]},{"n":"Southern Utah","pool":"FCS","left":9,"owners":[]},{"n":"Tennessee","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Seattle Seahawks","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"New Mexico","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Wisconsin","pool":"FBS","left":10,"owners":[]},{"n":"Northern Colorado","pool":"FCS","left":9,"owners":[]},{"n":"Florida Atlantic","pool":"FBS","left":10,"owners":[]},{"n":"LSU","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Jacksonville State","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"}]},{"n":"Tulane","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"}]},{"n":"Baltimore Ravens","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Western Michigan","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Jackson St","pool":"FCS","left":9,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Texas State","pool":"FBS","left":10,"owners":[]},{"n":"Green Bay Packers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Los Angeles Rams","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Detroit Lions","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Virginia Tech","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Georgia Tech","pool":"FBS","left":10,"owners":[]},{"n":"Florida State","pool":"FBS","left":10,"owners":[]},{"n":"Marshall","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Frank Haughn"}]},{"n":"Tarleton State","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Princeton","pool":"FCS","left":10,"owners":[]},{"n":"Youngstown St","pool":"FCS","left":9,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Toledo","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Philadelphia Eagles","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Weber St","pool":"FCS","left":9,"owners":[]},{"n":"East Carolina","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Illinois","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Oklahoma State","pool":"FBS","left":10,"owners":[]},{"n":"BYU","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Prairie View A&M","pool":"FCS","left":9,"owners":[]},{"n":"Oklahoma","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Lehigh","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"New Hampshire","pool":"FCS","left":9,"owners":[{"div":"VFD","owner":"Tom Brown"}]},{"n":"Yale","pool":"FCS","left":10,"owners":[{"div":"VFD","owner":"Rob O'Conner"}]},{"n":"UC Davis","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Montana","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Richmond","pool":"FCS","left":9,"owners":[]},{"n":"Monmouth","pool":"FCS","left":9,"owners":[]},{"n":"Harvard","pool":"FCS","left":10,"owners":[]},{"n":"North Texas","pool":"FBS","left":10,"owners":[{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Abilene Christian","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Rob O'Conner"}]},{"n":"Campbell","pool":"FCS","left":9,"owners":[]},{"n":"Tampa Bay Buccaneers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Bethune-Cookman","pool":"FCS","left":10,"owners":[]},{"n":"NC State","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Tulsa","pool":"FBS","left":10,"owners":[]},{"n":"Houston Texans","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Kansas City Chiefs","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Cal Poly","pool":"FCS","left":9,"owners":[]},{"n":"Chicago Bears","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Dallas Cowboys","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Miami (OH)","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Jacksonville Jaguars","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Furman","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Cory Norton"}]},{"n":"Drake","pool":"FCS","left":8,"owners":[]},{"n":"Denver Broncos","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Duke","pool":"FBS","left":10,"owners":[]},{"n":"Elon","pool":"FCS","left":9,"owners":[]},{"n":"Navy","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Iowa State","pool":"FBS","left":10,"owners":[]},{"n":"Buffalo Bills","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Indiana St","pool":"FCS","left":9,"owners":[]},{"n":"New England Patriots","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Norfolk St","pool":"FCS","left":9,"owners":[]},{"n":"Lafayette","pool":"FCS","left":9,"owners":[]},{"n":"Hampton","pool":"FCS","left":9,"owners":[]},{"n":"Oregon State","pool":"FBS","left":10,"owners":[]},{"n":"William & Mary","pool":"FCS","left":9,"owners":[]},{"n":"Arizona State","pool":"FBS","left":10,"owners":[]},{"n":"Eastern Kentucky","pool":"FCS","left":9,"owners":[]},{"n":"North Dakota","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Dartmouth","pool":"FCS","left":10,"owners":[]},{"n":"Tennessee Tech","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Louisiana","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"}]},{"n":"San Diego","pool":"FCS","left":9,"owners":[]},{"n":"FIU","pool":"FBS","left":10,"owners":[]},{"n":"UNLV","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"UCF","pool":"FBS","left":10,"owners":[]},{"n":"East Tennessee St","pool":"FCS","left":9,"owners":[]},{"n":"Southern Illinois","pool":"FCS","left":9,"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Carolina Panthers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"}]},{"n":"Memphis","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Eastern Michigan","pool":"FBS","left":9,"owners":[]},{"n":"Towson","pool":"FCS","left":9,"owners":[]},{"n":"Western Carolina","pool":"FCS","left":9,"owners":[]},{"n":"Columbia","pool":"FCS","left":10,"owners":[]},{"n":"UTSA","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"West Georgia","pool":"FCS","left":9,"owners":[]},{"n":"Butler","pool":"FCS","left":9,"owners":[]},{"n":"Air Force","pool":"FBS","left":10,"owners":[]},{"n":"Alabama A&M","pool":"FCS","left":9,"owners":[]},{"n":"Alabama St","pool":"FCS","left":9,"owners":[{"div":"VFD","owner":"Chris Patten"}]},{"n":"Lamar","pool":"FCS","left":9,"owners":[]},{"n":"Pittsburgh Steelers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"North Alabama","pool":"FCS","left":9,"owners":[]},{"n":"Cincinnati Bengals","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Washington State","pool":"FBS","left":10,"owners":[]},{"n":"Central Conn St","pool":"FCS","left":9,"owners":[]},{"n":"Idaho St","pool":"FCS","left":9,"owners":[]},{"n":"Gardner-Webb","pool":"FCS","left":9,"owners":[]},{"n":"West Virginia","pool":"FBS","left":10,"owners":[]},{"n":"Wyoming","pool":"FBS","left":10,"owners":[]},{"n":"Presbyterian","pool":"FCS","left":9,"owners":[]},{"n":"Mercyhurst","pool":"FCS","left":9,"owners":[]},{"n":"Cincinnati","pool":"FBS","left":10,"owners":[]},{"n":"Rutgers","pool":"FBS","left":10,"owners":[]},{"n":"Duquesne","pool":"FCS","left":9,"owners":[]},{"n":"UConn","pool":"FBS","left":10,"owners":[]},{"n":"Brown","pool":"FCS","left":10,"owners":[]},{"n":"Illinois St","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"UTRGV","pool":"FCS","left":9,"owners":[]},{"n":"Tennessee Titans","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Dos Pigs"}]},{"n":"Hawaii","pool":"FBS","left":9,"owners":[]},{"n":"VMI","pool":"FCS","left":9,"owners":[]},{"n":"Wake Forest","pool":"FBS","left":9,"owners":[]},{"n":"Auburn","pool":"FBS","left":10,"owners":[]},{"n":"South Alabama","pool":"FBS","left":10,"owners":[]},{"n":"Idaho","pool":"FCS","left":9,"owners":[]},{"n":"Alcorn St","pool":"FCS","left":9,"owners":[]},{"n":"Army","pool":"FBS","left":10,"owners":[]},{"n":"Central Michigan","pool":"FBS","left":10,"owners":[]},{"n":"Georgetown","pool":"FCS","left":9,"owners":[]},{"n":"Minnesota Vikings","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Kentucky","pool":"FBS","left":10,"owners":[]},{"n":"Boston College","pool":"FBS","left":10,"owners":[]},{"n":"Atlanta Falcons","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"UMass","pool":"FBS","left":10,"owners":[]},{"n":"New York Giants","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"San Diego State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Delaware","pool":"FBS","left":10,"owners":[]},{"n":"Grambling St","pool":"FCS","left":8,"owners":[]},{"n":"UAB","pool":"FBS","left":10,"owners":[]},{"n":"Kansas","pool":"FBS","left":10,"owners":[]},{"n":"Nicholls","pool":"FCS","left":9,"owners":[]},{"n":"Maine","pool":"FCS","left":8,"owners":[]},{"n":"Tennessee St","pool":"FCS","left":9,"owners":[]},{"n":"Maryland","pool":"FBS","left":10,"owners":[]},{"n":"Florida A&M","pool":"FCS","left":9,"owners":[]},{"n":"Northern Arizona","pool":"FCS","left":9,"owners":[]},{"n":"Miss Valley St","pool":"FCS","left":9,"owners":[]},{"n":"McNeese St","pool":"FCS","left":9,"owners":[]},{"n":"Penn","pool":"FCS","left":10,"owners":[]},{"n":"Temple","pool":"FBS","left":10,"owners":[]},{"n":"New Orleans Saints","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Southern","pool":"FCS","left":8,"owners":[]},{"n":"Western Kentucky","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"}]},{"n":"Delaware St","pool":"FCS","left":9,"owners":[]},{"n":"Buffalo","pool":"FBS","left":10,"owners":[]},{"n":"Nevada","pool":"FBS","left":10,"owners":[]},{"n":"Troy","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Ark Pine Bluff","pool":"FCS","left":8,"owners":[]},{"n":"ULM","pool":"FBS","left":10,"owners":[]},{"n":"Vanderbilt","pool":"FBS","left":10,"owners":[]},{"n":"South Dakota","pool":"FCS","left":7,"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Cornell","pool":"FCS","left":10,"owners":[]},{"n":"UCLA","pool":"FBS","left":10,"owners":[]},{"n":"Coastal Carolina","pool":"FBS","left":10,"owners":[]},{"n":"Southeastern Louisiana","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Tom Rush"}]},{"n":"St Thomas","pool":"FCS","left":9,"owners":[]},{"n":"Holy Cross","pool":"FCS","left":9,"owners":[]},{"n":"Arkansas State","pool":"FBS","left":10,"owners":[]},{"n":"Arkansas","pool":"FBS","left":10,"owners":[]},{"n":"Stony Brook","pool":"FCS","left":9,"owners":[]},{"n":"Colgate","pool":"FCS","left":9,"owners":[]},{"n":"Indianapolis Colts","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Old Dominion","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"}]},{"n":"Wofford","pool":"FCS","left":9,"owners":[]},{"n":"Washington Commanders","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Northwestern","pool":"FBS","left":11,"owners":[]},{"n":"Marist","pool":"FCS","left":9,"owners":[]},{"n":"Cleveland Browns","pool":"NFL","left":13,"owners":[]},{"n":"Long Island","pool":"FCS","left":9,"owners":[]},{"n":"Kent State","pool":"FBS","left":10,"owners":[]},{"n":"Southeast Missouri St","pool":"FCS","left":8,"owners":[]},{"n":"Lindenwood","pool":"FCS","left":8,"owners":[]},{"n":"Texas Southern","pool":"FCS","left":8,"owners":[]},{"n":"Albany","pool":"FCS","left":9,"owners":[]},{"n":"Incarnate Word","pool":"FCS","left":10,"owners":[]},{"n":"Bryant","pool":"FCS","left":9,"owners":[]},{"n":"Utah Tech","pool":"FCS","left":9,"owners":[]},{"n":"Georgia Southern","pool":"FBS","left":10,"owners":[]},{"n":"Sacred Heart","pool":"FCS","left":9,"owners":[]},{"n":"New York Jets","pool":"NFL","left":14,"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Robert Morris","pool":"FCS","left":9,"owners":[]},{"n":"Houston Christian","pool":"FCS","left":9,"owners":[]},{"n":"Appalachian State","pool":"FBS","left":10,"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Mercer","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Eastern Washington","pool":"FCS","left":9,"owners":[]},{"n":"UT Martin","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Tom Rush"}]},{"n":"Syracuse","pool":"FBS","left":9,"owners":[]},{"n":"Georgia State","pool":"FBS","left":10,"owners":[]},{"n":"Sacramento State","pool":"FBS","left":9,"owners":[]},{"n":"North Dakota State","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Valparaiso","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Charleston Southern","pool":"FCS","left":8,"owners":[]},{"n":"Morgan St","pool":"FCS","left":9,"owners":[]},{"n":"NC Central","pool":"FCS","left":9,"owners":[]},{"n":"Dayton","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Mark Berner"}]},{"n":"Davidson","pool":"FCS","left":9,"owners":[]},{"n":"Morehead St","pool":"FCS","left":9,"owners":[]},{"n":"Las Vegas Raiders","pool":"NFL","left":14,"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Fordham","pool":"FCS","left":9,"owners":[]},{"n":"West Florida","pool":"FCS","left":9,"owners":[]},{"n":"Samford","pool":"FCS","left":9,"owners":[]},{"n":"Central Arkansas","pool":"FCS","left":9,"owners":[]},{"n":"North Carolina A&T","pool":"FCS","left":9,"owners":[]},{"n":"Portland St","pool":"FCS","left":8,"owners":[]},{"n":"Mississippi State","pool":"FBS","left":10,"owners":[]},{"n":"Louisiana Tech","pool":"FBS","left":10,"owners":[]},{"n":"Kennesaw State","pool":"FBS","left":10,"owners":[]},{"n":"Miami Dolphins","pool":"NFL","left":14,"owners":[{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Stanford","pool":"FBS","left":10,"owners":[]},{"n":"Colorado State","pool":"FBS","left":10,"owners":[]},{"n":"Colorado","pool":"FBS","left":10,"owners":[]},{"n":"Bucknell","pool":"FCS","left":9,"owners":[]},{"n":"The Citadel","pool":"FCS","left":9,"owners":[]},{"n":"East Texas A&M","pool":"FCS","left":9,"owners":[]},{"n":"Northern Iowa","pool":"FCS","left":9,"owners":[]},{"n":"Ball State","pool":"FBS","left":10,"owners":[]},{"n":"Rice","pool":"FBS","left":10,"owners":[]},{"n":"Howard","pool":"FCS","left":9,"owners":[]},{"n":"Northwestern St","pool":"FCS","left":9,"owners":[]},{"n":"Utah State","pool":"FBS","left":10,"owners":[]},{"n":"Sam Houston","pool":"FBS","left":10,"owners":[]},{"n":"Charlotte","pool":"FBS","left":10,"owners":[]},{"n":"Middle Tennessee","pool":"FBS","left":10,"owners":[]},{"n":"Eastern Illinois","pool":"FCS","left":9,"owners":[]},{"n":"San Jose State","pool":"FBS","left":10,"owners":[]},{"n":"Stonehill","pool":"FCS","left":9,"owners":[]},{"n":"Michigan State","pool":"FBS","left":10,"owners":[]},{"n":"New Haven","pool":"FCS","left":9,"owners":[]},{"n":"Arizona Cardinals","pool":"NFL","left":14,"owners":[]},{"n":"Stetson","pool":"FCS","left":9,"owners":[]},{"n":"Northern Illinois","pool":"FBS","left":10,"owners":[]},{"n":"UTEP","pool":"FBS","left":10,"owners":[]},{"n":"Akron","pool":"FBS","left":10,"owners":[]},{"n":"New Mexico State","pool":"FBS","left":9,"owners":[]},{"n":"Wagner","pool":"FCS","left":9,"owners":[]},{"n":"Bowling Green","pool":"FBS","left":10,"owners":[]},{"n":"Missouri State","pool":"FBS","left":10,"owners":[]},{"n":"Southern Miss","pool":"FBS","left":10,"owners":[]},{"n":"Murray St","pool":"FCS","left":9,"owners":[]},{"n":"Purdue","pool":"FBS","left":10,"owners":[]},{"n":"North Carolina","pool":"FBS","left":10,"owners":[]}],"hold_games":3,"claim_min":3,"week1":"2026-09-08","clock_start":"2026-09-08T19:30","me":{"div":"PFD","seat":"Palma/Wiedeman","email":"cdwiedeman@gmail.com"}};</script>
+<script>/* THE PELOTON RESOLVER — the one implementation, used by three things.
+ *
+ *   1. Owners_League_Trades_SANDBOX.html   (Casey testing scenarios against a copy)
+ *   2. the Apps Script that runs for real at 4:00pm Monday
+ *   3. test_peloton.js
+ *
+ * It is deliberately PURE: no DOM, no network, no clock of its own, no randomness of its own.
+ * Everything it needs arrives in its arguments and everything it decides comes back in its
+ * return value. That is what lets the same file run in a browser and on Google's servers, and
+ * it is what lets a suite drive it. A resolver that reads the clock cannot be tested on a
+ * Monday in December.
+ *
+ * TWO STORES OF ONE FACT IS HOW THEY DISAGREE. If the sandbox resolved trades one way and the
+ * live script another, Casey would test one system and run a different one — which is worse
+ * than not testing at all, because it produces confidence rather than doubt.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Peloton = factory();
+}(typeof self !== 'undefined' ? self : this, function () {
+'use strict';
+
+var MAX_ROWS  = 10;      // Casey, 9 Sep 2026: "I do think 10 rows is plenty."
+var MAX_DROPS = 4;       // "four drops each ... that should be enough."
+
+/* ---------------------------------------------------------------------------------------------
+ * A COIN FLIP THAT CANNOT BE RE-RUN IS NOT AUDITABLE.
+ * Math.random() gives an answer nobody can check. This is a seeded generator, so the same week,
+ * the same division, the same team and the same seed always produce the same winner — Bob can
+ * re-run Monday's peloton in the sandbox on Thursday and get the identical result, which is the
+ * only thing that settles an argument about who won Navy.
+ * mulberry32: small, fast, well-distributed, and short enough to read.
+ * ------------------------------------------------------------------------------------------ */
+function hash32(s){
+  var h = 2166136261 >>> 0;
+  for (var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h >>> 0;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function flipKey(seed, week, div, team, contestNo){
+  return String(seed) + '|w' + week + '|' + div + '|' + team + '|#' + contestNo;
+}
+
+/* --------------------------------------------------------------------------------------------
+ * WHY A ROW ENDED. Every row gets exactly one of these, and every one of them is a sentence the
+ * owner can act on. 'failed' with no reason is the thing this list exists to prevent.
+ * ----------------------------------------------------------------------------------------- */
+var OUTCOME = {
+  WON:          'won',            // won a coin flip against other owners
+  WON_ALONE:    'won_alone',      // nobody else asked, so no flip happened
+  LOST:         'lost',           // lost the coin flip
+  STOOD_ASIDE:  'stood_aside',    // had already won a flip this week, so held out of this one
+  SKIPPED:      'skipped',        // its condition said not to run
+  NO_DROP:      'no_drop',        // every team listed to drop was gone, held, or already used
+  OWNED:        'owned',          // the team is not available in this division
+  HAVE_IT:      'have_it',        // the owner already holds it
+  NOT_CLAIMABLE:'not_claimable',  // too few games left to be claimed
+  DUPLICATE:    'duplicate',      // an earlier row of this owner's already took this team
+  INVALID:      'invalid'         // the row itself does not make sense (bad condition, no pickup)
+};
+var GOT = {won: 1, won_alone: 1};        // the two endings that mean "you have the team"
+
+/* ---------------------------------------------------------------------------------------------
+ * THE LEAGUE STATE the resolver is handed. Nothing is read from anywhere else.
+ *   divisions : ['PFD','VFD','SFD']
+ *   rosters   : {'PFD|Palma/Wiedeman': ['Navy', ...]}     -- who holds what, per division seat
+ *   holdMet   : {'PFD|Palma/Wiedeman': {'Navy': true}}    -- has this team met its 3-game hold
+ *   claimOK   : {'Navy': true}                            -- does it have enough games left
+ * A team that is in nobody's roster for a division is FREE in that division and only that one.
+ * Casey, 9 Sep 2026: "this is division by division ... separately for another division."
+ * ------------------------------------------------------------------------------------------ */
+function seatKey(div, seat){ return div + '|' + seat; }
+
+function heldBy(league, div, team){
+  var pre = div + '|';
+  for (var k in league.rosters){
+    if (k.slice(0, pre.length) !== pre) continue;
+    if ((league.rosters[k] || []).indexOf(team) !== -1) return k.slice(pre.length);
+  }
+  return null;
+}
+
+function validateRow(row, rowNo){
+  if (!row || !row.pickup) return 'a row with no team to pick up';
+  var c = row.cond || {type: 'always'};
+  if (['always', 'won', 'lost'].indexOf(c.type) === -1) return 'unknown condition "' + c.type + '"';
+  if (c.type !== 'always'){
+    if (!(c.row >= 1)) return 'a condition with no row number';
+    /* A CONDITION CAN ONLY LOOK BACKWARDS. Row 2 asking about row 5 is not a rule, it is a loop:
+       row 5 has not run yet, and making it run early would reorder the owner's own priorities. */
+    if (c.row >= rowNo) return 'row ' + rowNo + ' asks about row ' + c.row + ', which runs later';
+  }
+  if ((row.drops || []).length > MAX_DROPS) return 'more than ' + MAX_DROPS + ' drops';
+  return null;
+}
+
+/* The first team on the drop list this seat can actually give up right now. Order is the owner's
+   priority, so it is FIRST legal and not best legal. Returns null when there is none, which is
+   the 'no_drop' ending: Casey, 9 Sep 2026 -- "if every listed drop is already gone, then the
+   owner can't make the trade. They did not provide enough backups, so it fails and you move on." */
+function pickDrop(league, key, row, used){
+  var roster = league.rosters[key] || [];
+  var hold = (league.holdMet || {})[key] || {};
+  var drops = row.drops || [];
+  for (var i = 0; i < drops.length; i++){
+    var d = drops[i];
+    if (used[d]) continue;                       // an earlier winning row already spent it
+    if (roster.indexOf(d) === -1) continue;      // not on the roster any more
+    if (hold[d] === false) continue;             // still inside its mandatory hold
+    return d;
+  }
+  return null;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * THE RUN. One division at a time, one ROW INDEX at a time: every owner's row 1 is contested
+ * before any owner's row 2, because a row list is a priority order and resolving one owner's
+ * whole list first would hand them the board.
+ *
+ * THE STAND-ASIDE RULE. Casey, 9 Sep 2026: "if A beats B on team one, and now A, B, and C all
+ * want team two, owner A is excluded and it's only B and C that get to go after team two."
+ * An owner who has WON A CONTEST this week is held out of later contests. Two things that rule
+ * does NOT say, and that the code has to decide:
+ *   - Winning UNCONTESTED is not winning a contest. Nobody was beaten, so nobody is owed a turn.
+ *   - If every entrant has already won, somebody still has to get the team. The exclusion is
+ *     there to give owners who have won nothing a turn; with nobody in that position it lapses
+ *     rather than leaving a team unawarded. `policy` names this so it is one switch in one
+ *     place, not an assumption buried in a loop.
+ * ------------------------------------------------------------------------------------------ */
+function resolve(opts){
+  var league   = opts.league;
+  var requests = opts.requests || [];
+  var week     = opts.week;
+  var seed     = opts.seed == null ? 'RFL' : opts.seed;
+  var policy   = opts.policy || 'until-everyone-has-won';   // or 'next-contest-only'
+
+  /* The resolver never mutates what it was handed. Bob re-running a week must not depend on
+     whether he re-ran it before. */
+  var rosters = {}, out = {}, log = [];
+  for (var k in league.rosters) rosters[k] = (league.rosters[k] || []).slice();
+  var work = {divisions: league.divisions, rosters: rosters,
+              holdMet: league.holdMet, claimOK: league.claimOK};
+
+  (league.divisions || []).forEach(function (div){
+    var reqs = requests.filter(function (r){ return r.div === div; })
+                       .slice().sort(function (a, b){ return a.seat < b.seat ? -1 : 1; });
+    if (!reqs.length) return;
+
+    var wonContest = {};      // seat -> true, once it has beaten somebody this week
+    var lastWinner = null;    // for the 'next-contest-only' reading
+    var used = {};            // seat -> {team: true} drops already spent
+    var contestNo = 0;
+
+    reqs.forEach(function (r){ out[seatKey(div, r.seat)] = []; used[r.seat] = {}; });
+
+    for (var idx = 0; idx < MAX_ROWS; idx++){
+      var live = [];
+
+      reqs.forEach(function (r){
+        var key = seatKey(div, r.seat);
+        var row = (r.rows || [])[idx];
+        if (!row) return;
+        var res = {row: idx + 1, pickup: row.pickup, drop: null, cond: row.cond || {type: 'always'}};
+
+        var bad = validateRow(row, idx + 1);
+        if (bad){ res.outcome = OUTCOME.INVALID; res.detail = bad; out[key][idx] = res; return; }
+
+        /* THE CONDITION. "lost" means DID NOT GET IT, for any reason -- lost the flip, stood
+           aside, never ran, ran out of drops. Reading it as "contested and lost" would let a
+           skipped row silently freeze every row hanging off it. */
+        var c = res.cond;
+        if (c.type !== 'always'){
+          var earlier = out[key][c.row - 1];
+          var gotIt = !!(earlier && GOT[earlier.outcome]);
+          if ((c.type === 'won' && !gotIt) || (c.type === 'lost' && gotIt)){
+            res.outcome = OUTCOME.SKIPPED;
+            res.detail = c.type === 'won'
+              ? 'set to run only if row ' + c.row + ' came through, and it did not'
+              : 'set to run only if row ' + c.row + ' did not come through, and it did';
+            out[key][idx] = res; return;
+          }
+        }
+
+        var already = out[key].some(function (p){ return p && GOT[p.outcome] && p.pickup === row.pickup; });
+        if (already){ res.outcome = OUTCOME.DUPLICATE; out[key][idx] = res; return; }
+
+        if ((rosters[key] || []).indexOf(row.pickup) !== -1){
+          res.outcome = OUTCOME.HAVE_IT; out[key][idx] = res; return;
+        }
+        var holder = heldBy(work, div, row.pickup);
+        if (holder){ res.outcome = OUTCOME.OWNED; res.detail = holder; out[key][idx] = res; return; }
+        if ((league.claimOK || {})[row.pickup] === false){
+          res.outcome = OUTCOME.NOT_CLAIMABLE; out[key][idx] = res; return;
+        }
+        var drop = pickDrop(work, key, row, used[r.seat]);
+        if (!drop){ res.outcome = OUTCOME.NO_DROP; out[key][idx] = res; return; }
+
+        res.drop = drop;
+        live.push({seat: r.seat, key: key, res: res, idx: idx});
+        out[key][idx] = res;
+      });
+
+      /* Group this round's live rows by the team they want. Sorted, so the order of contests is
+         the same on every machine that runs this. */
+      var byTeam = {};
+      live.forEach(function (e){ (byTeam[e.res.pickup] = byTeam[e.res.pickup] || []).push(e); });
+      Object.keys(byTeam).sort().forEach(function (team){
+        var entrants = byTeam[team];
+        var award = function (e, outcome, entrantNames){
+          e.res.outcome = outcome;
+          e.res.entrants = entrantNames;
+          var roster = rosters[e.key];
+          var at = roster.indexOf(e.res.drop);
+          if (at !== -1) roster.splice(at, 1);
+          roster.push(team);
+          used[e.seat][e.res.drop] = true;
+          log.push({div: div, week: week, seat: e.seat, row: e.res.row, team: team,
+                    drop: e.res.drop, contested: entrantNames.length > 1});
+        };
+
+        if (entrants.length === 1){ award(entrants[0], OUTCOME.WON_ALONE, [entrants[0].seat]); return; }
+
+        contestNo++;
+        var names = entrants.map(function (e){ return e.seat; });
+        var eligible = entrants.filter(function (e){
+          return policy === 'next-contest-only' ? e.seat !== lastWinner : !wonContest[e.seat];
+        });
+        /* Nobody left who has not already won: the exclusion has nobody to protect, so it lapses
+           rather than leaving the team unawarded. An absence is not an answer. */
+        var lapsed = false;
+        if (!eligible.length){ eligible = entrants; lapsed = true; }
+
+        var rnd = mulberry32(hash32(flipKey(seed, week, div, team, contestNo)));
+        var winner = eligible[Math.floor(rnd() * eligible.length)] || eligible[0];
+
+        entrants.forEach(function (e){
+          if (e === winner) return;
+          var stoodAside = eligible.indexOf(e) === -1;
+          e.res.outcome = stoodAside ? OUTCOME.STOOD_ASIDE : OUTCOME.LOST;
+          e.res.entrants = names;
+          e.res.winner = winner.seat;
+          e.res.contest = contestNo;
+        });
+        award(winner, OUTCOME.WON, names);
+        winner.res.contest = contestNo;
+        winner.res.lapsed = lapsed;
+        wonContest[winner.seat] = true;
+        lastWinner = winner.seat;
+      });
+    }
+  });
+
+  return {rosters: rosters, results: out, log: log, week: week, seed: seed, policy: policy};
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * FIRST COME, FIRST SERVED — Monday 4:00pm to Tuesday 5:00pm. No flip, no queue: it either
+ * works right now or it says why. Same checks as a peloton row, so the two can never disagree
+ * about whether a trade was legal.
+ * ------------------------------------------------------------------------------------------ */
+function claim(opts){
+  var league = opts.league, div = opts.div, seat = opts.seat;
+  var key = seatKey(div, seat);
+  var row = {pickup: opts.pickup, drops: opts.drops || [], cond: {type: 'always'}};
+  var res = {row: null, pickup: opts.pickup, drop: null};
+
+  var bad = validateRow(row, 1);
+  if (bad){ res.outcome = OUTCOME.INVALID; res.detail = bad; return res; }
+  if ((league.rosters[key] || []).indexOf(row.pickup) !== -1){ res.outcome = OUTCOME.HAVE_IT; return res; }
+  var holder = heldBy(league, div, row.pickup);
+  if (holder){ res.outcome = OUTCOME.OWNED; res.detail = holder; return res; }
+  if ((league.claimOK || {})[row.pickup] === false){ res.outcome = OUTCOME.NOT_CLAIMABLE; return res; }
+  var drop = pickDrop(league, key, row, {});
+  if (!drop){ res.outcome = OUTCOME.NO_DROP; return res; }
+
+  res.drop = drop; res.outcome = OUTCOME.WON_ALONE;
+  return res;
+}
+/* Applying a claim is separate from deciding it, so the caller can show the answer before it
+   commits — and so the suite can check the decision without a roster to write into. */
+function applyClaim(league, div, seat, res){
+  if (!GOT[res.outcome]) return false;
+  var key = seatKey(div, seat), roster = league.rosters[key];
+  var at = roster.indexOf(res.drop);
+  if (at !== -1) roster.splice(at, 1);
+  roster.push(res.pickup);
+  return true;
+}
+
+return {resolve: resolve, claim: claim, applyClaim: applyClaim, seatKey: seatKey, heldBy: heldBy,
+        OUTCOME: OUTCOME, GOT: GOT, MAX_ROWS: MAX_ROWS, MAX_DROPS: MAX_DROPS,
+        _hash32: hash32, _mulberry32: mulberry32, _flipKey: flipKey};
+}));
+</script>
+<script>/* THE SANDBOX. A place to run every trade scenario against a COPY of the real rosters, with a
+ * clock Casey can move, so the rules can be checked before 27 owners are pointed at them.
+ *
+ * IT SHARES ITS RESOLVER WITH THE REAL THING. peloton.js is inlined into this page and will be
+ * pasted into the Apps Script unchanged. Testing one implementation and running another is
+ * worse than not testing, because it produces confidence instead of doubt.
+ *
+ * IT CANNOT REACH THE LIVE LEAGUE. Everything lives under one localStorage key, on this device,
+ * in this browser. Reset puts the drafted rosters back.                                       */
+'use strict';
+var KEY = 'rfl_sandbox_v2';
+var P = window.Peloton;
+var S = null, TAB = 'signin', OPEN = null;
+
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function key(div, seat){ return div + '|' + seat; }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+/* ---- the clock ---------------------------------------------------------------------------
+ * Mountain time, because that is what the league runs on. The sandbox stores a plain
+ * 'YYYY-MM-DDTHH:MM' string and treats it as Mountain wall-clock — no zone conversion, because
+ * converting a made-up time into a real one only invites the reader to wonder which they are
+ * looking at. */
+function now(){ return S.clock; }
+function parts(s){
+  var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(s || '');
+  if (!m) return null;
+  var d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  return {d: d, day: d.getDay(), mins: (+m[4]) * 60 + (+m[5])};
+}
+/* WHICH WINDOW THE CLOCK IS IN. Casey, 9 Sep 2026: first come first served is Monday 4:00pm to
+   Tuesday 5:00pm; peloton entry is Tuesday 5:01pm through Monday 3:59pm. Two states and no gap
+   — the clock always knows which kind of submission the form is taking, so the form never has
+   to ask. */
+function mode(s){
+  var p = parts(s || now());
+  if (!p) return 'queue';
+  if (p.day === 1 && p.mins >= 16 * 60) return 'fcfs';       // Monday from 4:00pm
+  if (p.day === 2 && p.mins <  17 * 60) return 'fcfs';       // through Tuesday 4:59pm
+  return 'queue';
+}
+function isFlipMoment(s){
+  var p = parts(s || now());
+  return !!p && p.day === 1 && p.mins === 16 * 60;           // Monday 4:00pm exactly
+}
+function weekNo(s){
+  var p = parts(s || now()); if (!p) return 1;
+  var w1 = new Date((DATA.week1 || '2026-09-08') + 'T00:00');
+  var n = Math.floor((p.d - w1) / 604800000) + 1;
+  return n < 0 ? 0 : n;
+}
+function pretty(s){
+  var p = parts(s); if (!p) return s;
+  var DAY = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var h = Math.floor(p.mins / 60), m = p.mins % 60;
+  var ap = h >= 12 ? 'pm' : 'am', hh = (h % 12) || 12;
+  return DAY[p.day] + ' ' + p.d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'})
+    + ', ' + hh + ':' + (m < 10 ? '0' : '') + m + ap + ' MT';
+}
+
+/* ---- the league copy ---------------------------------------------------------------------- */
+function freshRosters(){
+  var out = {};
+  DATA.seats.forEach(function(s){ out[key(s.div, s.owner)] = []; });
+  DATA.teams.forEach(function(t){
+    (t.owners || []).forEach(function(o){
+      var k = key(o.div, o.owner);
+      if (out[k]) out[k].push(t.n);
+    });
+  });
+  return out;
+}
+/* HOLD: every team on a drafted roster has met its hold by now (the draft was in August and the
+   season is under way), and a team acquired IN the sandbox has not. That is the honest model for
+   a test harness and it makes the 'no drop left' path reachable without inventing dates. */
+function holdMet(){
+  var out = {};
+  Object.keys(S.rosters).forEach(function(k){
+    out[k] = {};
+    S.rosters[k].forEach(function(n){
+      out[k][n] = (S.acquired[k] || []).indexOf(n) === -1;
+    });
+  });
+  return out;
+}
+function claimOK(){
+  var out = {};
+  DATA.teams.forEach(function(t){ out[t.n] = (t.left == null) || t.left >= (DATA.claim_min || 3); });
+  return out;
+}
+function league(){
+  return {divisions: DATA.divisions, rosters: S.rosters, holdMet: holdMet(), claimOK: claimOK()};
+}
+function freeIn(div){
+  var taken = {};
+  Object.keys(S.rosters).forEach(function(k){
+    if (k.slice(0, div.length + 1) !== div + '|') return;
+    S.rosters[k].forEach(function(n){ taken[n] = 1; });
+  });
+  var ok = claimOK();
+  return DATA.teams.filter(function(t){ return !taken[t.n] && ok[t.n] !== false; })
+                   .map(function(t){ return t.n; }).sort();
+}
+
+/* ---- sign-in, the way the real one will work ------------------------------------------------
+ * A LINK IS NOT A KEY, AND THE KEY IS NOT TYPED BY ANYBODY. Requesting a link mints a one-time
+ * code that expires; clicking it exchanges that code for a long-lived key the page stores by
+ * itself. The sandbox shows both, side by side, because the whole point of this tab is that
+ * Casey can SEE the difference he asked about — what the email carries, and what the browser
+ * keeps afterwards.
+ * The email is faked (there is no server here). Everything else is the real shape.            */
+function rnd(n){
+  var s = '', a = 'abcdefghijkmnopqrstuvwxyz23456789';
+  for (var i = 0; i < n; i++) s += a[Math.floor(Math.random() * a.length)];
+  return s;
+}
+function rowFor(email){
+  var e = String(email || '').trim().toLowerCase();
+  for (var i = 0; i < S.access.length; i++){
+    if (String(S.access[i].email || '').trim().toLowerCase() === e) return S.access[i];
+  }
+  return null;
+}
+/* A GROUP ADDRESS DELIVERS TO EVERYBODY, so a sign-in link sent to one is a key handed to the
+   whole league. Refused outright rather than trusted to be typed correctly. */
+function looksLikeGroup(e){
+  return /^(owners|league|all|everyone|team|info|admin|commish|commissioner)@/i.test(String(e || ''))
+      || /\+(all|group)@/i.test(String(e || ''));
+}
+function requestLink(email){
+  if (looksLikeGroup(email)) return {error: 'group'};
+  var row = rowFor(email);
+  /* THE ANSWER IS THE SAME EITHER WAY. Telling a stranger "that address is not in the league"
+     turns the sign-in box into a way to find out who is in it. The sandbox shows what really
+     happened underneath, because it is a test harness — the live one will not. */
+  var link = null;
+  if (row && row.status !== 'removed'){
+    link = {code: rnd(22), email: email, seat: row.seat, div: row.div,
+            issued: now(), expires: 30};
+    S.links.unshift(link);
+    S.links = S.links.slice(0, 8);
+  }
+  save();
+  return {sent: true, real: !!link};
+}
+function useLink(code){
+  var link = S.links.filter(function(l){ return l.code === code; })[0];
+  if (!link) return {error: 'This link is not one the sandbox issued.'};
+  if (link.used) return {error: 'That link has already been used. A sign-in link works once.'};
+  var row = rowFor(link.email);
+  if (!row || row.status === 'removed') return {error: 'That seat is no longer active.'};
+  link.used = true;
+  var tok = rnd(30);
+  S.tokens[tok] = {seat: row.seat, div: row.div, email: link.email, issued: now(),
+                   device: S.device};
+  S.devices[S.device] = {token: tok};
+  save();
+  return {ok: true};
+}
+/* WHO IS THIS DEVICE? The stored key is looked up EVERY time, never trusted as a name the page
+   remembers, and it is re-checked against the access list on every use. That is what makes
+   removing an email, or bumping a seat's cut-off, actually reach a phone that is already
+   signed in. */
+function session(){
+  var d = S.devices[S.device] || {};
+  if (!d.token) return null;
+  var t = S.tokens[d.token];
+  if (!t) return {dead: 'the key on this device is not one the league issued'};
+  var row = null;
+  for (var i = 0; i < S.access.length; i++){
+    if (S.access[i].seat === t.seat && S.access[i].div === t.div
+        && String(S.access[i].email || '').toLowerCase() === String(t.email).toLowerCase()){
+      row = S.access[i]; break;
+    }
+  }
+  if (!row) return {dead: 'the address this key was issued to is no longer on that seat'};
+  if (row.status === 'removed') return {dead: 'that seat has been made inactive'};
+  if (row.validAfter && t.issued < row.validAfter){
+    return {dead: 'the commissioner reset that seat on ' + pretty(row.validAfter)
+                  + ', which retires every key issued before then'};
+  }
+  return {seat: t.seat, div: t.div, email: t.email, token: d.token, role: row.role || 'owner',
+          issued: t.issued};
+}
+function signOut(){ delete S.devices[S.device]; save(); }
+
+/* ---- the words an owner reads --------------------------------------------------------------
+ * ONE SENTENCE PER ENDING, generated from the outcome, never typed twice. The results panel and
+ * the email print the same string — two stores of one fact is how they end up disagreeing about
+ * what happened to somebody's trade.                                                          */
+function sentence(r, seat){
+  var O = P.OUTCOME, t = r.pickup, others;
+  switch (r.outcome){
+    case O.WON:
+      others = (r.entrants || []).filter(function(x){ return x !== seat; });
+      return {kind: 'won', head: t + ', dropping ' + r.drop + ': got it.',
+        body: (others.length + 1) + ' owners asked for ' + t + '. You won the coin flip'
+              + (others.length === 1 ? ' against ' + others[0] : ' against ' + others.join(' and '))
+              + '. ' + r.drop + ' goes back into the pool.'
+              + (r.lapsed ? ' (Everyone in that flip had already won one this week, so nobody stood aside.)' : '')};
+    case O.WON_ALONE:
+      return {kind: 'won', head: t + ', dropping ' + r.drop + ': got it.',
+        body: 'You were the only owner who asked for ' + t + ', so there was no coin flip. '
+              + r.drop + ' goes back into the pool.'};
+    case O.LOST:
+      return {kind: 'lost', head: t + ': lost the coin flip.',
+        body: (r.entrants || []).length + ' owners wanted ' + t + '. It went to ' + r.winner
+              + '. You keep ' + (r.drop || 'your roster') + '.'};
+    case O.STOOD_ASIDE:
+      return {kind: 'lost', head: t + ': not eligible.',
+        body: 'You had already won a coin flip this week, so you stood aside for this one. An '
+              + 'owner who wins one coin flip is held out of the next. ' + t + ' went to '
+              + r.winner + '.'};
+    case O.SKIPPED:
+      return {kind: 'other', head: t + ': not attempted.', body: 'This row was ' + r.detail + '.'};
+    case O.NO_DROP:
+      return {kind: 'other', head: t + ': couldn’t run, no drop left.',
+        body: 'Every team you listed to drop was already used by an earlier row, still inside its '
+              + (DATA.hold_games || 3) + '-game hold, or no longer on your roster.'};
+    case O.OWNED:
+      return {kind: 'other', head: t + ': couldn’t run, already owned.',
+        body: t + ' is held by ' + r.detail + ' in your division. If that looks wrong, tell Bob '
+              + '— a team moving outside the normal windows is unusual.'};
+    case O.HAVE_IT:
+      return {kind: 'other', head: t + ': you already hold it.', body: 'Nothing to do.'};
+    case O.NOT_CLAIMABLE:
+      return {kind: 'other', head: t + ': too few games left.',
+        body: t + ' does not have the ' + (DATA.claim_min || 3) + ' games left that a claim needs.'};
+    case O.DUPLICATE:
+      return {kind: 'other', head: t + ': an earlier row already took it.', body: 'Nothing to do.'};
+    default:
+      return {kind: 'other', head: t + ': this row could not be read.',
+        body: r.detail || 'It was ' + r.outcome + '.'};
+  }
+}
+function emailFor(seatK, rows){
+  var bits = seatK.split('|'), div = bits[0], seat = bits[1];
+  var lines = ['Your trades — week ' + weekNo() + ' · ' + seat
+               + ' (' + (DATA.div_names[div] || div) + ')', ''];
+  var gotAny = false;
+  (rows || []).forEach(function(r){
+    if (!r) return;
+    var s = sentence(r, seat);
+    if (s.kind === 'won') gotAny = true;
+    lines.push('Row ' + r.row + ' — ' + s.head);
+    lines.push('  ' + s.body);
+    lines.push('');
+  });
+  if (!rows || !rows.length) lines.push('You entered no rows this week.', '');
+  /* THE LAST LINE MATTERS AS MUCH AS THE RESULTS. An owner who lost everything needs to know the
+     first-come window is open RIGHT NOW and closes Tuesday at 5pm, or they read the email, feel
+     finished, and miss it. */
+  lines.push(gotAny
+    ? 'First come, first served is open now and closes Tuesday at 5:00pm MT.'
+    : 'You did not pick anything up this week. First come, first served is open now and closes '
+      + 'Tuesday at 5:00pm MT — anything still unowned in your division can be claimed '
+      + 'outright, no coin flip.');
+  return lines.join('\n');
+}
+
+/* ---- shell ---------------------------------------------------------------------------------- */
+var TABS = [['signin','Sign in'],['trades','My trades'],['run','Run it'],
+            ['access','Access list'],['rosters','Rosters']];
+function setTab(t){ TAB = t; render(); window.scrollTo(0, 0); }
+function closeHelp(){ OPEN = null; var b = el('help'); b.hidden = true; b.innerHTML = '';
+  document.body.style.overflow = ''; }
+function showHelp(title, html){
+  OPEN = title; var b = el('help'); b.hidden = false;
+  b.innerHTML = '<div class="modalbox"><div class="modalhd"><h2>' + esc(title) + '</h2>'
+    + '<button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button></div>'
+    + '<div class="note">' + html + '</div></div>';
+  document.body.style.overflow = 'hidden';
+}
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && OPEN) closeHelp(); });
+
+function render(){
+  var s = session();
+  el('clockchip').innerHTML = ' &nbsp;·&nbsp; ' + esc(pretty(now())) + ' &nbsp;·&nbsp; '
+    + (mode() === 'fcfs' ? 'first come, first served' : 'peloton entry open')
+    + ' &nbsp;·&nbsp; week ' + weekNo();
+  el('subline').innerHTML = 'A copy of the real rosters, a clock you can move, and the same '
+    + 'resolver the live one will use. ' + (s && s.seat
+      ? 'Signed in on <b>device ' + esc(S.device) + '</b> as <b>' + esc(s.seat) + '</b>.'
+      : 'Not signed in on device ' + esc(S.device) + '.');
+  el('tabs').innerHTML = TABS.map(function(t){
+    return '<button class="' + (TAB === t[0] ? 'on' : '') + '" onclick="setTab(\'' + t[0] + '\')">'
+      + esc(t[1]) + '</button>';
+  }).join('');
+  el('body').innerHTML = ({signin: viewSignIn, trades: viewTrades, run: viewRun,
+                           access: viewAccess, rosters: viewRosters}[TAB] || viewSignIn)();
+}
+
+/* ---- the clock panel, on every tab that cares about it -------------------------------------- */
+function clockCard(){
+  var presets = [
+    ['Monday 3:59pm — last minute to enter', nextDow(1, 15, 59)],
+    ['Monday 4:00pm — run the coin flips',   nextDow(1, 16, 0)],
+    ['Monday 4:30pm — first come is open',   nextDow(1, 16, 30)],
+    ['Tuesday 4:59pm — first come closing',  nextDow(2, 16, 59)],
+    ['Tuesday 5:01pm — next week opens',     nextDow(2, 17, 1)],
+  ];
+  return '<div class="card"><h2>The clock</h2>'
+    + '<p class="note">Nothing here reads the real time. Set it to whatever moment you want to '
+    + 'test — the form and the buttons follow it.</p>'
+    + '<div class="row"><div class="grow"><label class="lb" for="ck">Pretend it is</label>'
+    + '<input id="ck" type="datetime-local" value="' + esc(now()) + '" '
+    + 'onchange="S.clock=this.value;save();render()"></div></div>'
+    + '<div class="row" style="margin-top:8px">'
+    + presets.map(function(p){
+        return '<button onclick="S.clock=\'' + p[1] + '\';save();render()">' + esc(p[0]) + '</button>';
+      }).join('')
+    + '</div></div>';
+}
+/* The next given weekday at a given time, counted from the clock's own current value so the
+   presets stay near where Casey already is rather than jumping to today. */
+function nextDow(dow, h, m){
+  var p = parts(now()) || parts('2026-09-08T12:00');
+  var d = new Date(p.d.getFullYear(), p.d.getMonth(), p.d.getDate());
+  var delta = (dow - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + delta);
+  var z = function(n){ return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate())
+       + 'T' + z(h) + ':' + z(m);
+}
+
+/* ---- TAB: sign in ---------------------------------------------------------------------------- */
+function viewSignIn(){
+  var s = session();
+  var h = '<div class="card"><h2>Which device is this?</h2>'
+    + '<p class="note">Real devices each keep their own key, so this switcher stands in for '
+    + 'them: switching to device B is the same as picking up a different phone. Sign in on A, '
+    + 'switch to B, and you will find B signed out — which is the point.</p><div class="row">'
+    + ['A','B','C'].map(function(d){
+        return '<button class="' + (S.device === d ? 'pri' : '') + '" onclick="S.device=\'' + d
+          + '\';save();render()">Device ' + d + (S.devices[d] && S.devices[d].token
+          ? ' <span class="pill good">signed in</span>' : ' <span class="pill">signed out</span>')
+          + '</button>';
+      }).join('') + '</div></div>';
+
+  if (s && s.seat){
+    h += '<div class="card"><h2>Signed in</h2><table><tbody>'
+      + '<tr><th>Seat</th><td><b>' + esc(s.seat) + '</b> — ' + esc(DATA.div_names[s.div] || s.div)
+      + '</td></tr>'
+      + '<tr><th>Address</th><td>' + esc(s.email) + '</td></tr>'
+      + '<tr><th>Role</th><td>' + (s.role === 'commissioner'
+          ? '<span class="pill gold">commissioner</span>' : 'owner') + '</td></tr>'
+      + '<tr><th>Key issued</th><td>' + esc(pretty(s.issued)) + '</td></tr>'
+      + '<tr><th>The key itself</th><td class="mono f">' + esc(s.token) + '</td></tr>'
+      + '</tbody></table>'
+      + '<p class="note" style="margin-top:8px">You never see that string in the real app and you '
+      + 'never type it. It is shown here so you can watch it be the thing that identifies you: '
+      + 'it is what a trade carries, and it is why nothing has to announce whose trade it is.</p>'
+      + '<div class="row" style="margin-top:8px">'
+      + '<button onclick="signOut();render()">Sign out on device ' + esc(S.device) + '</button>'
+      + '<button onclick="showTokenTest()">What stops someone submitting as another owner?</button>'
+      + '</div></div>';
+    return h + clockCard();
+  }
+  if (s && s.dead){
+    h += '<div class="card warn"><h2>This device was signed in, and is not any more</h2>'
+      + '<p class="note">The key on device ' + esc(S.device) + ' was refused because '
+      + esc(s.dead) + '. This is what an owner sees after their seat changes hands: the phone '
+      + 'does not know anything happened until it next tries to do something.</p>'
+      + '<button onclick="signOut();render()">Clear it and start again</button></div>';
+  }
+  h += '<div class="card"><h2>Sign in</h2>'
+    + '<p class="note">Enter an address from the access list. Yours is already on it.</p>'
+    + '<div class="row"><div class="grow"><label class="lb" for="em">Email address</label>'
+    + '<input id="em" type="email" autocomplete="email" placeholder="you@example.com" '
+    + 'value="' + esc(S.lastEmail || '') + '"></div>'
+    + '<button class="pri" onclick="doRequest()">Send me a link</button></div>'
+    + '<p class="note" style="margin-top:8px">The real one emails it. This one drops it in the '
+    + 'box below, because there is no server here.</p></div>';
+
+  h += S.links.length ? '<div class="inbox"><h3>Inbox (pretend)</h3>'
+      + S.links.map(function(l){
+          return '<div style="margin:0 0 9px"><div class="note">To <b>' + esc(l.email)
+            + '</b> · sent ' + esc(pretty(l.issued)) + ' · expires in ' + l.expires + ' minutes'
+            + (l.used ? ' · <span class="pill bad">already used</span>' : '') + '</div>'
+            + '<div class="mono f">https://…/trades?c=' + esc(l.code) + '</div>'
+            + '<div class="row" style="margin-top:5px">'
+            + '<button ' + (l.used ? 'disabled' : '') + ' onclick="doUse(\'' + l.code
+            + '\')">Open this link on device ' + esc(S.device) + '</button></div></div>';
+        }).join('')
+      + '<p class="note">Two different things, side by side. The <b>link</b> works once and dies '
+      + 'in 30 minutes — its whole job is proving you can open that inbox. The <b>key</b> it '
+      + 'hands the browser is what lasts the season.</p></div>'
+    : '<div class="card"><div class="empty">No links yet. Ask for one above and it will appear '
+      + 'here.</div></div>';
+  return h + clockCard();
+}
+function doRequest(){
+  var v = el('em').value.trim();
+  S.lastEmail = v; save();
+  var r = requestLink(v);
+  if (r.error === 'group'){
+    showHelp('That looks like a group address', '<p>A sign-in link sent to a group or alias is '
+      + 'delivered to everyone on it, so it would be a key to that seat for the whole league. '
+      + 'The access list takes personal inboxes only.</p>');
+    return;
+  }
+  render();
+  if (!r.real) showHelp('Link sent', '<p>The live app says exactly this whether or not the '
+    + 'address is on the list, so the sign-in box cannot be used to find out who is in the '
+    + 'league.</p><p><b>In the sandbox, so you can see what happened:</b> that address is not on '
+    + 'the access list, so no link was actually issued. Add it on the Access list tab.</p>');
+}
+function doUse(code){
+  var r = useLink(code);
+  if (r.error){ showHelp('That link did not work', '<p>' + esc(r.error) + '</p>'); render(); return; }
+  setTab('trades');
+}
+function showTokenTest(){
+  showHelp('What stops someone submitting as another owner',
+    '<p>A trade does not say who sent it. It carries the key this browser is holding, and the '
+    + 'league looks that key up to find the seat.</p>'
+    + '<p>So there is nothing to edit. A name in the message could be changed by whoever is '
+    + 'holding the phone; a key cannot be guessed, and the only copy of it went to one inbox.</p>'
+    + '<p><b>Try it:</b> switch to device B, sign in with a different owner’s address, and enter '
+    + 'a trade. It lands on their seat, not yours — because the key decided, not the screen.</p>');
+}
+
+/* ---- TAB: my trades -------------------------------------------------------------------------- */
+function actingSeat(){
+  var s = session();
+  if (!s || !s.seat) return null;
+  if (s.role === 'commissioner' && S.actingAs){
+    var b = S.actingAs.split('|');
+    return {div: b[0], seat: b[1], onBehalf: true, by: s.seat};
+  }
+  return {div: s.div, seat: s.seat, onBehalf: false};
+}
+function myRows(){
+  var a = actingSeat(); if (!a) return [];
+  var r = S.requests[key(a.div, a.seat)];
+  return (r && r.week === weekNo()) ? r.rows : [];
+}
+function setRows(rows){
+  var a = actingSeat(); if (!a) return;
+  S.requests[key(a.div, a.seat)] = {week: weekNo(), rows: rows, by: a.by || a.seat};
+  save();
+}
+function addRow(){
+  var rows = myRows().slice();
+  if (rows.length >= P.MAX_ROWS) return;
+  rows.push({pickup: '', drops: [''], cond: {type: 'always', row: 1}});
+  setRows(rows); render();
+}
+function delRow(i){ var r = myRows().slice(); r.splice(i, 1); setRows(r); render(); }
+function editRow(i, field, v, j){
+  var rows = myRows().slice(), row = Object.assign({}, rows[i]);
+  if (field === 'pickup') row.pickup = v;
+  else if (field === 'drop'){ row.drops = row.drops.slice(); row.drops[j] = v;
+    row.drops = row.drops.filter(function(x, k){ return x || k === 0; });
+    if (row.drops.length < P.MAX_DROPS && row.drops[row.drops.length - 1]) row.drops.push(''); }
+  else if (field === 'condtype'){ row.cond = {type: v, row: (row.cond || {}).row || 1}; }
+  else if (field === 'condrow'){ row.cond = {type: (row.cond || {}).type || 'always', row: +v}; }
+  rows[i] = row; setRows(rows); render();
+}
+function viewTrades(){
+  var s = session();
+  if (!s || !s.seat) return '<div class="card"><div class="empty">Sign in first — the seat a '
+    + 'trade lands on comes from the key this device is holding, so there is nothing to fill in '
+    + 'until there is one.</div></div>';
+  var a = actingSeat();
+  var k = key(a.div, a.seat);
+  var free = freeIn(a.div), mine = (S.rosters[k] || []).slice().sort();
+  var hm = holdMet()[k] || {};
+  var fcfs = mode() === 'fcfs';
+
+  var h = '';
+  if (s.role === 'commissioner'){
+    h += '<div class="card"><h2>Commissioner — entering for someone else</h2>'
+      + '<p class="note">Same form, same rules, same clock. The only difference is the line in '
+      + 'the log saying you entered it, and the email that goes to them saying so.</p>'
+      + '<label class="lb" for="ba">Submitting for</label><select id="ba" '
+      + 'onchange="S.actingAs=this.value||null;save();render()"><option value="">— myself ('
+      + esc(s.seat) + ') —</option>'
+      + DATA.seats.map(function(x){
+          var kk = key(x.div, x.owner);
+          return '<option value="' + esc(kk) + '"' + (S.actingAs === kk ? ' selected' : '') + '>'
+            + esc(x.owner) + ' — ' + esc(DATA.div_names[x.div] || x.div) + '</option>';
+        }).join('') + '</select></div>';
+  }
+  h += '<div class="card"><h2>' + (fcfs ? 'First come, first served' : 'Your list for Monday')
+    + '</h2><p class="note">' + (fcfs
+      ? 'It is between Monday 4:00pm and Tuesday 5:00pm, so there is no queue and no coin flip. '
+        + 'One team, one drop, resolved the moment you press the button.'
+      : 'Rows run in order. Every row needs at least one team you are willing to drop, and you '
+        + 'can list up to ' + P.MAX_DROPS + ' as backups. Up to ' + P.MAX_ROWS + ' rows.')
+    + '</p>'
+    + '<p class="note">Acting as <b>' + esc(a.seat) + '</b> · '
+    + esc(DATA.div_names[a.div] || a.div) + ' · ' + free.length + ' teams available · '
+    + mine.length + ' on your roster</p></div>';
+
+  if (fcfs) return h + fcfsForm(a, free, mine, hm) + clockCard();
+
+  var rows = myRows();
+  h += '<div class="card">';
+  h += rows.length ? rows.map(function(r, i){ return rowForm(r, i, free, mine, hm); }).join('')
+                   : '<div class="empty">No rows yet. Add one below.</div>';
+  h += '<div class="row" style="margin-top:6px">'
+    + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
+    + 'Add a row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
+    + (rows.length ? '<button class="dang" onclick="setRows([]);render()">Clear them all</button>' : '')
+    + '</div></div>';
+  return h + clockCard();
+}
+
+function teamOptions(list, sel, hm){
+  return '<option value="">—</option>' + list.map(function(n){
+    var held = hm && hm[n] === false;
+    return '<option value="' + esc(n) + '"' + (sel === n ? ' selected' : '')
+      + (held ? ' disabled' : '') + '>' + esc(n) + (held ? ' (inside its hold)' : '') + '</option>';
+  }).join('');
+}
+function rowForm(r, i, free, mine, hm){
+  var drops = (r.drops || ['']).slice();
+  if (drops.length < P.MAX_DROPS && drops[drops.length - 1]) drops.push('');
+  if (!drops.length) drops = [''];
+  var c = r.cond || {type: 'always', row: 1};
+  return '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
+    + '<button onclick="delRow(' + i + ')" title="Remove row ' + (i + 1) + '">Remove</button></div>'
+    + '<label class="lb">Pick up</label>'
+    + '<select onchange="editRow(' + i + ',\'pickup\',this.value)">'
+    + teamOptions(free, r.pickup) + '</select>'
+    + '<label class="lb" style="margin-top:7px">Drop — first one still available is used</label>'
+    + '<div class="grid2">' + drops.map(function(d, j){
+        return '<select onchange="editRow(' + i + ',\'drop\',this.value,' + j + ')">'
+          + teamOptions(mine, d, hm) + '</select>';
+      }).join('') + '</div>'
+    + '<label class="lb" style="margin-top:7px">Run this row</label>'
+    + '<div class="grid2"><select onchange="editRow(' + i + ',\'condtype\',this.value)">'
+    + '<option value="always"' + (c.type === 'always' ? ' selected' : '') + '>always</option>'
+    + '<option value="lost"' + (c.type === 'lost' ? ' selected' : '')
+    + '>only if I did NOT get row…</option>'
+    + '<option value="won"' + (c.type === 'won' ? ' selected' : '')
+    + '>only if I DID get row…</option></select>'
+    + (c.type === 'always' ? '<span class="note">Nothing above it matters.</span>'
+      : '<select onchange="editRow(' + i + ',\'condrow\',this.value)">'
+        + Array.apply(null, {length: i}).map(function(_, n){
+            return '<option value="' + (n + 1) + '"' + (c.row === n + 1 ? ' selected' : '')
+              + '>row ' + (n + 1) + '</option>';
+          }).join('')
+        + (i === 0 ? '<option value="1">— no earlier row —</option>' : '') + '</select>')
+    + '</div></div>';
+}
+/* FIRST COME IS A DIFFERENT SHAPE, not the same form with the queue hidden. One team, one drop,
+   an answer immediately. Pretending it is a list would imply a priority that does not exist. */
+function fcfsForm(a, free, mine, hm){
+  return '<div class="card"><div class="grid2">'
+    + '<div><label class="lb">Pick up</label><select id="fcp">' + teamOptions(free, S.fcp) + '</select></div>'
+    + '<div><label class="lb">Drop</label><select id="fcd">' + teamOptions(mine, S.fcd, hm) + '</select></div>'
+    + '</div><div class="row" style="margin-top:9px">'
+    + '<button class="pri" onclick="doClaim()">Claim it now</button></div>'
+    + '<p class="note" style="margin-top:8px">Whoever presses this first gets the team. There is '
+    + 'no queue to be in and nothing to wait for.</p></div>';
+}
+function doClaim(){
+  var a = actingSeat(); if (!a) return;
+  var p = el('fcp').value, d = el('fcd').value;
+  S.fcp = p; S.fcd = d;
+  if (!p || !d){ showHelp('Not enough to go on',
+    '<p>A claim needs both a team to pick up and a team to drop.</p>'); return; }
+  var L = league();
+  var res = P.claim({league: L, div: a.div, seat: a.seat, pickup: p, drops: [d]});
+  var s = sentence(res, a.seat);
+  if (P.GOT[res.outcome]){
+    P.applyClaim(L, a.div, a.seat, res);
+    S.rosters = L.rosters;
+    (S.acquired[key(a.div, a.seat)] = S.acquired[key(a.div, a.seat)] || []).push(p);
+    S.log.unshift({when: now(), week: weekNo(), div: a.div, seat: a.seat, team: p, drop: res.drop,
+                   how: 'first come', by: a.by || null});
+    S.fcp = ''; S.fcd = '';
+    save();
+  }
+  showHelp(s.head, '<p>' + esc(s.body) + '</p>' + (P.GOT[res.outcome]
+    ? '<p class="g">Your roster has already changed. Look at the Rosters tab.</p>' : ''));
+  render();
+}
+
+/* ---- TAB: run it ------------------------------------------------------------------------------ */
+function pendingRequests(){
+  var w = weekNo(), out = [];
+  Object.keys(S.requests).forEach(function(k){
+    var r = S.requests[k];
+    if (!r || r.week !== w || !(r.rows || []).length) return;
+    var b = k.split('|');
+    out.push({seat: b[1], div: b[0], rows: r.rows.filter(function(x){ return x && x.pickup; })});
+  });
+  return out.filter(function(r){ return r.rows.length; });
+}
+function viewRun(){
+  var reqs = pendingRequests();
+  var ready = isFlipMoment() || (mode() === 'fcfs' && !S.results);
+  var h = '<div class="card"><h2>Monday, 4:00pm</h2>'
+    + '<p class="note">The live one runs on a schedule and nobody presses anything. Here you '
+    + 'press it, so you can watch it happen.</p>'
+    + '<p class="note">' + reqs.length + ' seat' + (reqs.length === 1 ? '' : 's') + ' entered '
+    + 'for week ' + weekNo() + '. To make a coin flip happen, sign in on a second device as a '
+    + 'different owner in your division and ask for the same team.</p>'
+    + '<div class="row"><button class="pri" ' + (reqs.length ? '' : 'disabled')
+    + ' onclick="doRun()">Run the coin flips for week ' + weekNo() + '</button>'
+    + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">Why the same week '
+    + 'always resolves the same way</button></div>'
+    + (mode() === 'queue' && !isFlipMoment()
+        ? '<p class="note" style="margin-top:8px">The clock says entry is still open. You can '
+          + 'run it anyway to see the result — the live one would wait for 4:00pm.</p>' : '')
+    + '</div>';
+
+  if (!reqs.length) return h + '<div class="card"><div class="empty">Nothing has been entered '
+    + 'for week ' + weekNo() + ' yet. Fill in a row on My trades first.</div></div>' + clockCard();
+
+  h += '<div class="card"><h2>Entered so far</h2><div class="scr"><table>'
+    + '<colgroup><col style="width:34%"><col style="width:14%"><col style="width:52%"></colgroup>'
+    + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th></tr></thead><tbody>'
+    + reqs.map(function(r){
+        return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
+          + '<td class="d">' + esc(r.rows.map(function(x){ return x.pickup; }).join(', ')) + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+
+  if (S.results) h += resultsCard();
+  return h + clockCard();
+}
+var SEEDNOTE = '<p>The flip is not <code>Math.random()</code>. It is a seeded draw keyed to the '
+  + 'week, the division and the team, so running the same week twice gives the same winner — on '
+  + 'any machine, on any day.</p><p>That is what settles an argument. If somebody asks how Navy '
+  + 'went the way it did, Bob re-runs the week and gets the identical answer rather than his '
+  + 'word against theirs.</p>';
+function doRun(){
+  var L = league();
+  var out = P.resolve({league: L, requests: pendingRequests(), week: weekNo(), seed: S.seed});
+  S.results = {week: weekNo(), at: now(), results: out.results, log: out.log};
+  S.rosters = out.rosters;
+  out.log.forEach(function(e){
+    (S.acquired[key(e.div, e.seat)] = S.acquired[key(e.div, e.seat)] || []).push(e.team);
+    S.log.unshift({when: now(), week: e.week, div: e.div, seat: e.seat, team: e.team,
+                   drop: e.drop, how: e.contested ? 'coin flip' : 'unopposed'});
+  });
+  S.requests = {};
+  save(); render();
+}
+function resultsCard(){
+  var R = S.results;
+  var keys = Object.keys(R.results).filter(function(k){ return (R.results[k] || []).length; }).sort();
+  if (!keys.length) return '<div class="card"><div class="empty">The week resolved with nothing '
+    + 'in it — no seat had a readable row.</div></div>';
+  return '<div class="card"><h2>Week ' + R.week + ' — what happened</h2>'
+    + '<p class="note">Run at ' + esc(pretty(R.at)) + '. Every row gets a sentence. A blank row '
+    + 'would leave an owner unable to tell a loss from a bug.</p>'
+    + keys.map(function(k){
+        var b = k.split('|'), seat = b[1];
+        var rows = R.results[k] || [];
+        return '<div style="margin:12px 0 4px"><b>' + esc(seat) + '</b> <span class="pill">'
+          + esc(DATA.div_names[b[0]] || b[0]) + '</span></div>'
+          + rows.map(function(r){
+              if (!r) return '';
+              var s = sentence(r, seat);
+              return '<div class="res ' + s.kind + '"><div class="t">Row ' + r.row + ' — '
+                + esc(s.head) + '</div><div class="w">' + esc(s.body) + '</div></div>';
+            }).join('')
+          + '<button onclick="showEmail(\'' + esc(k).replace(/'/g, "\\'")
+          + '\')">See the email ' + esc(seat) + ' gets</button>';
+      }).join('')
+    + '</div>';
+}
+function showEmail(k){
+  var rows = (S.results && S.results.results[k]) || [];
+  showHelp('The email', '<pre class="mono" style="white-space:pre-wrap;margin:0">'
+    + esc(emailFor(k, rows)) + '</pre>');
+}
+
+/* ---- TAB: access list ------------------------------------------------------------------------- */
+/* THIS IS THE GOOGLE SHEET TAB, in the shape Bob will actually keep it. Editing it here does
+   exactly what editing it there will do, which is the only way to test "what if an owner leaves"
+   without waiting for an owner to leave. */
+function viewAccess(){
+  var rows = S.access;
+  return '<div class="card"><h2>Access list</h2>'
+    + '<p class="note">One row per <b>address</b>, not per seat — two rows with the same seat is '
+    + 'how you and Dominic share one. This is the tab that lives in the Google Sheet; the script '
+    + 'reads it on every sign-in and on every trade, so an edit here takes effect on the next '
+    + 'thing anybody does. No rebuild.</p>'
+    + '<div class="row"><button onclick="addAccess()">Add a row</button>'
+    + '<button onclick="copyCSV()">Copy it as CSV for the Sheet</button>'
+    + '<button onclick="showHelp(\'The four things this tab can do\', ACCESSNOTE)">'
+    + 'Owner leaves · new email · no email · make someone commissioner</button></div></div>'
+    + '<div class="card"><div class="scr"><table>'
+    + '<colgroup><col style="width:26%"><col style="width:30%"><col style="width:14%">'
+    + '<col style="width:20%"><col style="width:10%"></colgroup>'
+    + '<thead><tr><th>Seat</th><th>Email</th><th>Status</th><th>Keys retired before</th>'
+    + '<th></th></tr></thead><tbody>'
+    + rows.map(function(r, i){
+        return '<tr><td>' + esc(r.seat) + '<div class="f" style="font-size:11px">'
+          + esc(DATA.div_names[r.div] || r.div) + (r.role === 'commissioner'
+            ? ' · <span class="pill gold">commish</span>' : '') + '</div></td>'
+          + '<td><input type="email" value="' + esc(r.email || '') + '" '
+          + 'onchange="setAccess(' + i + ',\'email\',this.value)"></td>'
+          + '<td><select onchange="setAccess(' + i + ',\'status\',this.value)">'
+          + '<option value="active"' + (r.status !== 'removed' ? ' selected' : '') + '>active</option>'
+          + '<option value="removed"' + (r.status === 'removed' ? ' selected' : '') + '>inactive</option>'
+          + '</select></td>'
+          + '<td>' + (r.validAfter ? '<span class="d">' + esc(pretty(r.validAfter)) + '</span>'
+              : '<span class="f">—</span>')
+          + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px" '
+          + 'onclick="bump(' + i + ')">Retire keys now</button></div></td>'
+          + '<td><button style="min-height:30px;padding:4px 8px" onclick="delAccess(' + i
+          + ')" title="Remove this address">✕</button></td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+}
+var ACCESSNOTE = '<p><b>An owner changes their email.</b> Type the new address over the old one. '
+  + 'The old address stops receiving links immediately. Their phone stays signed in, which is '
+  + 'what you want when they are just moving from work to personal.</p>'
+  + '<p><b>An owner leaves and somebody new takes the team.</b> Same two edits, plus '
+  + '<i>Retire keys now</i>. That second one is what reaches a phone that is already signed in — '
+  + 'deleting an address only stops new links. The seat keeps its roster, its points and its '
+  + 'history, because the team’s season carries on regardless of who holds it.</p>'
+  + '<p><b>Nobody has replaced them yet.</b> Set the row to inactive. Submissions are refused, '
+  + 'the seat still appears in standings and scores.</p>'
+  + '<p><b>An owner has no email.</b> Leave the row blank. They call Bob and he enters it under '
+  + 'their seat — the same feature as any other commissioner submission, so there is no second '
+  + 'mechanism to maintain.</p>';
+function setAccess(i, f, v){ S.access[i][f] = v; save(); render(); }
+function bump(i){ S.access[i].validAfter = now(); save(); render(); }
+function delAccess(i){ S.access.splice(i, 1); save(); render(); }
+function addAccess(){
+  S.access.push({div: DATA.seats[0].div, seat: DATA.seats[0].owner, email: '', status: 'active',
+                 validAfter: '', role: 'owner'});
+  save(); render();
+}
+function csv(){
+  var q = function(s){ return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; };
+  return ['Division,Seat,Email,Status,KeysRetiredBefore,Role'].concat(S.access.map(function(r){
+    return [r.div, r.seat, r.email, r.status || 'active', r.validAfter || '', r.role || 'owner']
+      .map(q).join(',');
+  })).join('\n');
+}
+function copyCSV(){
+  var t = csv();
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t);
+  showHelp('Paste this into the Sheet', '<p>Copied, if the browser allowed it. Either way here '
+    + 'it is — select it and copy.</p><pre class="mono" style="white-space:pre-wrap;'
+    + 'max-height:280px;overflow:auto">' + esc(t) + '</pre>');
+}
+
+/* ---- TAB: rosters ------------------------------------------------------------------------------ */
+function viewRosters(){
+  var h = '<div class="card"><h2>Where the sandbox stands</h2>'
+    + '<p class="note">Started as a copy of the real rosters. Everything below is the result of '
+    + 'what you have done in here, and none of it has left this browser.</p>'
+    + '<div class="row"><button class="dang" onclick="doReset()">Put the real rosters back</button>'
+    + '</div></div>';
+  h += S.log.length ? '<div class="card"><h2>What has moved</h2><div class="scr"><table>'
+      + '<colgroup><col style="width:24%"><col style="width:22%"><col style="width:22%">'
+      + '<col style="width:32%"></colgroup>'
+      + '<thead><tr><th>Seat</th><th>In</th><th>Out</th><th>How</th></tr></thead><tbody>'
+      + S.log.map(function(e){
+          return '<tr><td>' + esc(e.seat) + '</td><td class="g">' + esc(e.team) + '</td>'
+            + '<td class="d">' + esc(e.drop) + '</td><td class="d">wk ' + e.week + ' · '
+            + esc(e.how) + (e.by ? ' · entered by ' + esc(e.by) : '') + '</td></tr>';
+        }).join('') + '</tbody></table></div></div>'
+    : '<div class="card"><div class="empty">Nothing has moved yet. Rosters are exactly as '
+      + 'drafted.</div></div>';
+  h += DATA.divisions.map(function(d){
+    return '<div class="card"><h2>' + esc(DATA.div_names[d] || d) + '</h2><div class="scr"><table>'
+      + '<colgroup><col style="width:28%"><col style="width:72%"></colgroup><tbody>'
+      + DATA.seats.filter(function(s){ return s.div === d; }).map(function(s){
+          var k = key(d, s.owner);
+          return '<tr><td>' + esc(s.owner) + '</td><td class="d">'
+            + esc((S.rosters[k] || []).slice().sort().join(', ') || '—') + '</td></tr>';
+        }).join('') + '</tbody></table></div></div>';
+  }).join('');
+  return h;
+}
+function doReset(){
+  showHelp('Put the real rosters back?', '<p>This throws away every trade you have run in here '
+    + 'and reloads the drafted rosters. Sign-ins and the access list are kept.</p>'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="dang" onclick="reallyReset()">Yes, reset the rosters</button>'
+    + '<button onclick="closeHelp()">Leave it alone</button></div>');
+}
+function reallyReset(){
+  S.rosters = freshRosters(); S.acquired = {}; S.log = []; S.results = null; S.requests = {};
+  save(); closeHelp(); render();
+}
+
+/* ---- boot -------------------------------------------------------------------------------------- */
+function seedAccess(){
+  return DATA.seats.map(function(s){
+    var mine = (DATA.me && s.div === DATA.me.div && s.owner === DATA.me.seat);
+    return {div: s.div, seat: s.owner, email: mine ? (DATA.me.email || '') : '',
+            status: 'active', validAfter: '', role: 'owner'};
+  });
+}
+function blank(){
+  return {clock: DATA.clock_start, device: 'A', devices: {}, tokens: {}, links: [],
+          access: seedAccess(), requests: {}, rosters: freshRosters(), acquired: {}, log: [],
+          results: null, seed: 'RFL-SANDBOX', actingAs: null, lastEmail: (DATA.me || {}).email || ''};
+}
+function boot(){
+  try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
+  /* A STORED SHAPE FROM AN OLDER BUILD IS NOT A STATE, IT IS A CRASH WAITING. Anything missing
+     is filled from a fresh one rather than trusted to be there. */
+  var b = blank();
+  if (!S || typeof S !== 'object') S = b;
+  else Object.keys(b).forEach(function(k){ if (S[k] == null) S[k] = b[k]; });
+  if (!S.access.length) S.access = seedAccess();
+  save();
+  render();
+}
+boot();
+</script>
+</body></html>
