@@ -1331,9 +1331,24 @@ function draftSeats(){
 function viewRun(){
   var reqs = pendingRequests();
   var ready = isFlipMoment() || (mode() === 'fcfs' && !S.results);
+  /* AUTOMATIC OR BY HAND, AND IT IS A SETTING RATHER THAN A STAGE OF THE PROJECT.
+     Casey, 10 Sep 2026: during the first few weeks Bob types in the requests he has been emailed
+     and runs it himself after 4:00pm; later the schedule does it. "But it would be good to keep
+     a feature that allows him to turn off the automated peloton so he can do it manually after
+     4pm if some future need arises." So there is no pilot mode to dismantle later — one switch,
+     both ways, forever. */
+  var auto = S.autoPeloton !== false;
   var h = '<div class="card"><h2>Monday, 4:00pm</h2>'
-    + '<p class="note">The live one runs on a schedule and nobody presses anything. Here you '
-    + 'press it, so you can watch it happen.</p>'
+    + '<div class="row"><button onclick="S.autoPeloton=' + (auto ? 'false' : 'true')
+    + ';save();render()" title="'
+    + esc(auto ? 'Switch to running it by hand. The schedule will stop settling weeks on its own.'
+               : 'Switch back to the schedule settling it automatically just after 4:00pm Monday.')
+    + '">' + (auto ? 'Automatic — the schedule settles it' : 'By hand — you settle it')
+    + '</button><span class="note">' + (auto
+        ? 'It runs itself a few minutes after 4:00pm every Monday. The button below is still '
+          + 'here for when you want it early or something was missed.'
+        : 'The schedule will NOT settle anything. Nothing happens until you press the button '
+          + 'below.') + '</span></div>'
     + '<p class="note">' + reqs.length + ' seat' + (reqs.length === 1 ? '' : 's') + ' entered '
     + 'for week ' + weekNo() + '. To make a coin flip happen, sign in on a second device as a '
     + 'different owner in your division and ask for the same team.</p>'
@@ -1346,8 +1361,9 @@ function viewRun(){
     + '<div class="row"><button class="pri" ' + (reqs.length ? '' : 'disabled')
     + ' title="' + (reqs.length ? 'Settle every list that has been sent for week ' + weekNo()
                                 : 'Nothing has been sent for week ' + weekNo() + ' yet')
-    + '" onclick="doRun()">' + (reqs.length
-        ? 'Run the coin flips for week ' + weekNo()
+    + '" onclick="askRun()">' + (reqs.length
+        ? (ranBefore() ? 'Run again for week ' + weekNo()
+                       : 'Run the coin flips for week ' + weekNo())
         : 'Nothing sent yet for week ' + weekNo()) + '</button>'
     + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">Why the same week '
     + 'always resolves the same way</button></div>'
@@ -1386,6 +1402,27 @@ var SEEDNOTE = '<p>The flip is not <code>Math.random()</code>. It is a seeded dr
   + 'any machine, on any day.</p><p>That is what settles an argument. If somebody asks how Navy '
   + 'went the way it did, Bob re-runs the week and gets the identical answer rather than his '
   + 'word against theirs.</p>';
+/* RUNNING A WEEK TWICE IS NOT A REDO, IT IS A SECOND, SMALLER RUN. The resolver works on what
+   is entered NOW against the rosters as they stand NOW, so a second press settles only what has
+   arrived since — it cannot undo or repeat what the first one did. There is a real reason to
+   want it (Bob presses run, then remembers an owner whose email he had not opened yet) so it is
+   not blocked; it is explained and confirmed, because "already ran" and "nothing happened" look
+   identical from the outside. */
+function ranBefore(){ return (S.ranWeeks || {})[weekNo()] || null; }
+function askRun(){
+  var prev = ranBefore();
+  if (!prev) return doRun();
+  showHelp('Week ' + weekNo() + ' has already been settled',
+    '<p>It ran at <b>' + esc(pretty(prev.at)) + '</b> and moved ' + prev.n + ' team'
+    + (prev.n === 1 ? '' : 's') + '. Running again does <b>not</b> redo it — everything already '
+    + 'settled stands.</p>'
+    + '<p>What it will do is settle the ' + pendingRequests().length + ' list'
+    + (pendingRequests().length === 1 ? '' : 's') + ' entered since, against the rosters as they '
+    + 'are now. Use it when somebody was missed.</p>'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="closeHelp();doRun()">Settle what has come in since</button>'
+    + '<button onclick="closeHelp()">Leave it</button></div>');
+}
 function doRun(){
   var L = league();
   var out = P.resolve({league: L, requests: pendingRequests(), week: weekNo(), seed: S.seed});
@@ -1399,6 +1436,9 @@ function doRun(){
     S.log.unshift(Object.assign({when: now()}, e));
   });
   S.requests = {};
+  S.ranWeeks = S.ranWeeks || {};
+  var prev = S.ranWeeks[weekNo()];
+  S.ranWeeks[weekNo()] = {at: now(), n: (prev ? prev.n : 0) + out.log.length};
   save(); render();
 }
 function resultsCard(){
@@ -1611,7 +1651,7 @@ function blank(){
   return {clock: DATA.clock_start, device: 'A', devices: {}, tokens: {}, links: [], seq: 0,
           access: seedAccess(), former: [], requests: {}, rosters: freshRosters(),
           acquired: {}, log: [],
-          results: null, seed: 'RFL-SANDBOX', actingAs: null, lastEmail: (DATA.me || {}).email || ''};
+          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, ranWeeks: {}, lastEmail: (DATA.me || {}).email || ''};
 }
 function boot(){
   try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
