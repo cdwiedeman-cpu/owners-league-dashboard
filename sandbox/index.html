@@ -258,6 +258,9 @@ function resolve(opts){
   var week     = opts.week;
   var seed     = opts.seed == null ? 'RFL' : opts.seed;
   var policy   = opts.policy || 'pairwise';        // or 'any-win', the earlier reading
+  /* The window this run belongs to, stamped onto every transaction it produces. The
+     resolver does not own a calendar -- whoever calls it does. */
+  var win      = opts.window || {};
 
   /* The resolver never mutates what it was handed. Bob re-running a week must not depend on
      whether he re-ran it before. */
@@ -352,8 +355,18 @@ function resolve(opts){
              aside while B wins the next one, and by the third they are level again. Any
              acquisition settles it -- the promise was that B gets a turn, and B has had one. */
           settle(e.seat);
-          log.push({div: div, week: week, seat: e.seat, row: e.res.row, team: team,
-                    drop: e.res.drop, contested: entrantNames.length > 1});
+          /* THE LOG ROW *IS* A TRANSACTION ROW. The Transactions tab already lists every trade
+             and what each owner owes at the league's per-trade fee; it reads `owner`, `out`,
+             `in`, `div`, `window` and `effective`. Emitting anything else here would mean a
+             translation step somewhere, and a translation step is a second place the same fact
+             is written down. Casey, 10 Sep 2026: "as a trade commits ... you're tying that to
+             update the transactions tab to keep track of the trades that have happened as well
+             as what each owner owes." */
+          log.push({div: div, week: week, owner: e.seat, row: e.res.row,
+                    'in': team, out: e.res.drop,
+                    how: entrantNames.length > 1 ? 'coin flip' : 'unopposed',
+                    contested: entrantNames.length > 1,
+                    window: win.label || null, effective: win.effective || null});
         };
 
         if (entrants.length === 1){ award(entrants[0], OUTCOME.WON_ALONE, [entrants[0].seat]); return; }
@@ -435,8 +448,17 @@ function applyClaim(league, div, seat, res){
   roster.push(res.pickup);
   return true;
 }
+/* A first-come claim produces the SAME transaction row as a coin flip, so the tab that lists
+   them does not have to know which kind it was looking at. */
+function claimRow(div, seat, res, opts){
+  opts = opts || {};
+  return {div: div, week: opts.week == null ? null : opts.week, owner: seat, row: null,
+          'in': res.pickup, out: res.drop, how: 'first come', contested: false,
+          window: opts.window || null, effective: opts.effective || null};
+}
 
-return {resolve: resolve, claim: claim, applyClaim: applyClaim, seatKey: seatKey, heldBy: heldBy,
+return {resolve: resolve, claim: claim, applyClaim: applyClaim, claimRow: claimRow,
+        seatKey: seatKey, heldBy: heldBy,
         OUTCOME: OUTCOME, GOT: GOT, MAX_ROWS: MAX_ROWS, MAX_DROPS: MAX_DROPS,
         _hash32: hash32, _mulberry32: mulberry32, _flipKey: flipKey};
 }));
@@ -1095,8 +1117,8 @@ function doClaim(){
     P.applyClaim(L, a.div, a.seat, res);
     S.rosters = L.rosters;
     (S.acquired[key(a.div, a.seat)] = S.acquired[key(a.div, a.seat)] || []).push(p);
-    S.log.unshift({when: now(), week: weekNo(), div: a.div, seat: a.seat, team: p, drop: res.drop,
-                   how: 'first come', by: a.by || null});
+    S.log.unshift(Object.assign({when: now(), by: a.by || null},
+      P.claimRow(a.div, a.seat, res, {week: weekNo()})));
     S.fcp = ''; S.fcd = '';
     save();
   }
@@ -1190,10 +1212,12 @@ function doRun(){
   var out = P.resolve({league: L, requests: pendingRequests(), week: weekNo(), seed: S.seed});
   S.results = {week: weekNo(), at: now(), results: out.results, log: out.log};
   S.rosters = out.rosters;
+  /* THE RESOLVER'S LOG ROWS ARE ALREADY TRANSACTION ROWS -- owner / in / out / how / window --
+     so nothing is renamed on the way past. A translation step here would be a second place the
+     same fact is written down, and the Transactions tab on the live page reads these names. */
   out.log.forEach(function(e){
-    (S.acquired[key(e.div, e.seat)] = S.acquired[key(e.div, e.seat)] || []).push(e.team);
-    S.log.unshift({when: now(), week: e.week, div: e.div, seat: e.seat, team: e.team,
-                   drop: e.drop, how: e.contested ? 'coin flip' : 'unopposed'});
+    (S.acquired[key(e.div, e.owner)] = S.acquired[key(e.div, e.owner)] || []).push(e['in']);
+    S.log.unshift(Object.assign({when: now()}, e));
   });
   S.requests = {};
   save(); render();
@@ -1313,8 +1337,8 @@ function viewRosters(){
       + '<col style="width:32%"></colgroup>'
       + '<thead><tr><th>Seat</th><th>In</th><th>Out</th><th>How</th></tr></thead><tbody>'
       + S.log.map(function(e){
-          return '<tr><td>' + esc(e.seat) + '</td><td class="g">' + esc(e.team) + '</td>'
-            + '<td class="d">' + esc(e.drop) + '</td><td class="d">wk ' + e.week + ' · '
+          return '<tr><td>' + esc(e.owner) + '</td><td class="g">' + esc(e['in']) + '</td>'
+            + '<td class="d">' + esc(e.out) + '</td><td class="d">wk ' + e.week + ' · '
             + esc(e.how) + (e.by ? ' · entered by ' + esc(e.by) : '') + '</td></tr>';
         }).join('') + '</tbody></table></div></div>'
     : '<div class="card"><div class="empty">Nothing has moved yet. Rosters are exactly as '
