@@ -879,15 +879,59 @@ function actingSeat(){
   }
   return {div: s.div, seat: s.seat, onBehalf: false};
 }
-function myRows(){
-  var a = actingSeat(); if (!a) return [];
+/* A LIST IS A DRAFT UNTIL IT IS SUBMITTED. Casey, 10 Sep 2026: "it feels like there needs to be
+   a submit button ... owners are going to put this in and then think, oh, I need to submit it,
+   because that's how all their websites work." He is right, and the fix is not only a button:
+   a form that saves silently gives an owner NO WAY TO TELL whether they are entered. So there
+   are two states, they are named on the screen, and only a submitted list goes into Monday.
+   Typing still saves as it goes, so a dead phone loses nothing -- but saving is not entering. */
+function myReq(){
+  var a = actingSeat(); if (!a) return null;
   var r = S.requests[key(a.div, a.seat)];
-  return (r && r.week === weekNo()) ? r.rows : [];
+  return (r && r.week === weekNo()) ? r : null;
 }
+function myRows(){ var r = myReq(); return r ? r.rows : []; }
+function isSubmitted(){ var r = myReq(); return !!(r && r.submitted); }
 function setRows(rows){
   var a = actingSeat(); if (!a) return;
-  S.requests[key(a.div, a.seat)] = {week: weekNo(), rows: rows, by: a.by || a.seat};
+  var prev = myReq();
+  S.requests[key(a.div, a.seat)] = {week: weekNo(), rows: rows, by: a.by || a.seat,
+                                    submitted: prev ? prev.submitted : null};
   save();
+}
+/* WHAT IS WRONG WITH THIS LIST, in the owner's words. Returned as a list of sentences rather
+   than a boolean, because "Submit is greyed out" is not a reason. */
+function listProblems(rows){
+  var out = [];
+  (rows || []).forEach(function(r, i){
+    if (!r) return;
+    var n = 'Row ' + (i + 1);
+    if (!r.pickup) out.push(n + ' has no team to pick up.');
+    else if (!(r.drops || []).filter(Boolean).length)
+      out.push(n + ' has no team to drop for ' + r.pickup + '.');
+  });
+  if (!(rows || []).length) out.push('There is nothing on your list yet.');
+  return out;
+}
+function submitList(){
+  var rows = myRows(), bad = listProblems(rows);
+  if (bad.length){
+    showHelp('Not ready to send', '<p>' + bad.map(esc).join('</p><p>') + '</p>');
+    return;
+  }
+  var a = actingSeat();
+  S.requests[key(a.div, a.seat)].submitted = now();
+  save();
+  showHelp('You are entered for Monday',
+    '<p>Your list is in for week ' + weekNo() + '. Nothing happens until Monday at 4:00pm.</p>'
+    + '<p>You can change it any time before then — press <b>Change my list</b>, make the change, '
+    + 'and send it again.</p>');
+  render();
+}
+function unsubmit(){
+  var a = actingSeat(); if (!a) return;
+  var r = myReq(); if (!r) return;
+  r.submitted = null; save(); render();
 }
 function addRow(){
   var rows = myRows().slice();
@@ -944,15 +988,48 @@ function viewTrades(){
 
   if (fcfs) return h + fcfsForm(a, free, mine, hm) + clockCard();
 
-  var rows = myRows();
+  var rows = myRows(), req = myReq(), sent = isSubmitted();
+
+  /* THE STATUS LINE COMES FIRST AND IS NEVER ABSENT. The one question an owner has when they
+     open this tab is "am I in?", and a form that only shows fields answers it by implication. */
+  h += sent
+    ? '<div class="card" style="border-color:#245c39"><h2 class="g">You are entered for '
+      + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. Nothing happens '
+      + 'until Monday at 4:00pm, and you can change it any time before then.</p>'
+      + '<div class="row"><button onclick="unsubmit()">Change my list</button></div></div>'
+    : '<div class="card warn"><h2>Not sent yet</h2><p class="note">'
+      + (rows.length
+          ? 'Your list is saved on this device, but it has <b>not</b> been entered for Monday. '
+            + 'Press <b>Send my list</b> at the bottom when it is ready.'
+          : 'Add what you want below, then press <b>Send my list</b>.')
+      + '</p></div>';
+
   h += '<div class="card">';
-  h += rows.length ? rows.map(function(r, i){ return rowForm(r, i, free, mine, hm); }).join('')
-                   : '<div class="empty">No rows yet. Add one below.</div>';
-  h += '<div class="row" style="margin-top:6px">'
-    + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
-    + 'Add a row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
-    + (rows.length ? '<button class="dang" onclick="setRows([]);render()">Clear them all</button>' : '')
-    + '</div></div>';
+  if (sent){
+    /* SUBMITTED MEANS SUBMITTED. The rows go read-only rather than staying editable behind a
+       green banner -- a form you can still type into is a form you can leave half-changed
+       without noticing you never sent it again. */
+    h += rows.map(function(r, i){
+      var c = r.cond || {type: 'always'};
+      return '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
+        + (c.type === 'always' ? '' : '<span>only if you '
+            + (c.type === 'won' ? 'DID' : 'did NOT') + ' get row ' + c.row + '</span>') + '</div>'
+        + '<div><b>' + esc(r.pickup) + '</b> <span class="d">for</span> '
+        + esc((r.drops || []).filter(Boolean).join(' or ')) + '</div></div>';
+    }).join('');
+  } else {
+    h += rows.length ? rows.map(function(r, i){ return rowForm(r, i, free, mine, hm); }).join('')
+                     : '<div class="empty">Nothing on your list yet. Add a row below.</div>';
+    h += '<div class="row" style="margin-top:6px">'
+      + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
+      + 'Add a row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
+      + (rows.length ? '<button class="dang" onclick="setRows([]);render()">Clear them all</button>'
+                     : '') + '</div>';
+    h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
+      + 'padding-top:12px"><button class="pri" onclick="submitList()">Send my list</button>'
+      + '<span class="note">Until you press this, nothing is entered.</span></div>';
+  }
+  h += '</div>';
   return h + clockCard();
 }
 
@@ -1034,10 +1111,21 @@ function pendingRequests(){
   Object.keys(S.requests).forEach(function(k){
     var r = S.requests[k];
     if (!r || r.week !== w || !(r.rows || []).length) return;
+    if (!r.submitted) return;                 // a draft is not an entry
     var b = k.split('|');
     out.push({seat: b[1], div: b[0], rows: r.rows.filter(function(x){ return x && x.pickup; })});
   });
   return out.filter(function(r){ return r.rows.length; });
+}
+/* Typed but never sent. Shown on the Run tab so an owner missing from a week is explained on
+   the screen rather than found by reading the code. */
+function draftSeats(){
+  var w = weekNo(), out = [];
+  Object.keys(S.requests).forEach(function(k){
+    var r = S.requests[k];
+    if (r && r.week === w && (r.rows || []).length && !r.submitted) out.push(k.split('|')[1]);
+  });
+  return out.sort();
 }
 function viewRun(){
   var reqs = pendingRequests();
@@ -1048,6 +1136,12 @@ function viewRun(){
     + '<p class="note">' + reqs.length + ' seat' + (reqs.length === 1 ? '' : 's') + ' entered '
     + 'for week ' + weekNo() + '. To make a coin flip happen, sign in on a second device as a '
     + 'different owner in your division and ask for the same team.</p>'
+    + (draftSeats().length
+        ? '<p class="note b">' + draftSeats().length + ' seat'
+          + (draftSeats().length === 1 ? ' has a list' : 's have lists')
+          + ' that were typed but never sent, so ' + (draftSeats().length === 1 ? 'it is' : 'they are')
+          + ' NOT in this week: ' + esc(draftSeats().join(', ')) + '.</p>'
+        : '')
     + '<div class="row"><button class="pri" ' + (reqs.length ? '' : 'disabled')
     + ' onclick="doRun()">Run the coin flips for week ' + weekNo() + '</button>'
     + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">Why the same week '
