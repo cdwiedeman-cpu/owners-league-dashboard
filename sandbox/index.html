@@ -190,6 +190,8 @@ var OUTCOME = {
   NO_DROP:      'no_drop',        // every team listed to drop was gone, held, or already used
   OWNED:        'owned',          // the team is not available in this division
   HAVE_IT:      'have_it',        // the owner already holds it
+  WRONG_POOL:   'wrong_pool',     // college trades for college, NFL for NFL -- 8/3 is a rule
+  JUST_DROPPED: 'just_dropped',   // dropped this week; has to play a game before it can be had
   NOT_CLAIMABLE:'not_claimable',  // too few games left to be claimed
   DUPLICATE:    'duplicate',      // an earlier row of this owner's already took this team
   INVALID:      'invalid'         // the row itself does not make sense (bad condition, no pickup)
@@ -206,6 +208,19 @@ var GOT = {won: 1, won_alone: 1};        // the two endings that mean "you have 
  * Casey, 9 Sep 2026: "this is division by division ... separately for another division."
  * ------------------------------------------------------------------------------------------ */
 function seatKey(div, seat){ return div + '|' + seat; }
+
+/* LIKE FOR LIKE. From the commissioner's written rules: "Only college teams may be traded for
+   college teams and NFL teams for NFL teams, to sustain the 8 college teams / 3 NFL teams
+   requirement." FBS and FCS are BOTH college, so the test is NFL-or-not rather than an exact
+   pool match. Without this a roster silently stops being 8 and 3, which is not a trade rule so
+   much as the shape of the team -- and nothing else in the system would have noticed.
+   A team whose pool is unknown does not block the trade: unknown is not "wrong". */
+function sameSide(league, a, b){
+  var pools = league.pools || {};
+  var pa = pools[a], pb = pools[b];
+  if (!pa || !pb) return true;
+  return (pa === 'NFL') === (pb === 'NFL');
+}
 
 function heldBy(league, div, team){
   var pre = div + '|';
@@ -238,14 +253,21 @@ function pickDrop(league, key, row, used){
   var roster = league.rosters[key] || [];
   var hold = (league.holdMet || {})[key] || {};
   var drops = row.drops || [];
+  /* WHY each name was passed over, so 'no drop left' can say which rule did it rather than
+     leaving the owner to guess between four of them. */
+  var why = [];
   for (var i = 0; i < drops.length; i++){
     var d = drops[i];
-    if (used[d]) continue;                       // an earlier winning row already spent it
-    if (roster.indexOf(d) === -1) continue;      // not on the roster any more
-    if (hold[d] === false) continue;             // still inside its mandatory hold
-    return d;
+    if (!d) continue;
+    if (used[d]){ why.push(d + ' was already used by an earlier request'); continue; }
+    if (roster.indexOf(d) === -1){ why.push(d + ' is not on the roster'); continue; }
+    if (hold[d] === false){ why.push(d + ' has not finished its hold'); continue; }
+    if (!sameSide(league, row.pickup, d)){
+      why.push(d + ' is not the same kind of team as ' + row.pickup); continue;
+    }
+    return {drop: d, why: why};
   }
-  return null;
+  return {drop: null, why: why};
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -293,7 +315,11 @@ function resolve(opts){
      whether he re-ran it before. */
   var rosters = {}, out = {}, log = [];
   for (var k in league.rosters) rosters[k] = (league.rosters[k] || []).slice();
-  var work = {divisions: league.divisions, rosters: rosters,
+  /* THE WORKING COPY CARRIES EVERY FIELD THE CHECKS READ. `pools` was left off when it was
+     added, so sameSide() saw no pools, returned true for everything, and the like-for-like rule
+     silently did nothing -- the suite caught it, which is the whole reason it exists. A copy
+     built by listing fields by hand goes stale every time a field is added. */
+  var work = {divisions: league.divisions, rosters: rosters, pools: league.pools,
               holdMet: league.holdMet, claimOK: league.claimOK};
 
   (league.divisions || []).forEach(function (div){
@@ -305,6 +331,7 @@ function resolve(opts){
        one. Beating somebody creates the debt; that person acquiring ANY team settles it. */
     var owes = {};
     var used = {};            // seat -> {team: true} drops already spent
+    var dropped = {};         // team -> why, once it has left a roster THIS run
     var contestNo = 0;
     var settle = function(seat){                  // this seat got a team: nobody owes them now
       for (var s in owes) delete owes[s][seat];
@@ -356,8 +383,25 @@ function resolve(opts){
         if ((league.claimOK || {})[row.pickup] === false){
           res.outcome = OUTCOME.NOT_CLAIMABLE; out[key][idx] = res; return;
         }
-        var drop = pickDrop(work, key, row, used[r.seat]);
-        if (!drop){ res.outcome = OUTCOME.NO_DROP; out[key][idx] = res; return; }
+        if (dropped[row.pickup]){
+          /* DROPPED THIS WEEK. From the commissioner's rules: a dropped team is frozen for a
+             game before anybody can pick it up. Inside one Monday that is absolute -- nothing
+             has been played between the two rows. */
+          res.outcome = OUTCOME.JUST_DROPPED; res.detail = dropped[row.pickup];
+          out[key][idx] = res; return;
+        }
+        var pick = pickDrop(work, key, row, used[r.seat]);
+        if (!pick.drop){
+          /* THE POOL RULE GETS ITS OWN ANSWER when that is the only thing standing in the way.
+             "No drop left" and "you offered an NFL team for a college team" are different
+             mistakes and the owner fixes them differently. */
+          var onlyPool = pick.why.length
+            && pick.why.every(function(w){ return /not the same kind of team/.test(w); });
+          res.outcome = onlyPool ? OUTCOME.WRONG_POOL : OUTCOME.NO_DROP;
+          res.detail = pick.why.join('; ');
+          out[key][idx] = res; return;
+        }
+        var drop = pick.drop;
 
         res.drop = drop;
         live.push({seat: r.seat, key: key, res: res, idx: idx});
@@ -378,6 +422,7 @@ function resolve(opts){
           if (at !== -1) roster.splice(at, 1);
           roster.push(team);
           used[e.seat][e.res.drop] = true;
+          dropped[e.res.drop] = e.seat + ' dropped it earlier the same afternoon';
           /* GETTING A TEAM SETTLES WHAT ANYONE OWED YOU. Casey, 10 Sep 2026: A beats B, stands
              aside while B wins the next one, and by the third they are level again. Any
              acquisition settles it -- the promise was that B gets a turn, and B has had one. */
@@ -459,10 +504,15 @@ function claim(opts){
   var holder = heldBy(league, div, row.pickup);
   if (holder){ res.outcome = OUTCOME.OWNED; res.detail = holder; return res; }
   if ((league.claimOK || {})[row.pickup] === false){ res.outcome = OUTCOME.NOT_CLAIMABLE; return res; }
-  var drop = pickDrop(league, key, row, {});
-  if (!drop){ res.outcome = OUTCOME.NO_DROP; return res; }
-
-  res.drop = drop; res.outcome = OUTCOME.WON_ALONE;
+  var pick = pickDrop(league, key, row, {});
+  if (!pick.drop){
+    var onlyPool = pick.why.length
+      && pick.why.every(function(w){ return /not the same kind of team/.test(w); });
+    res.outcome = onlyPool ? OUTCOME.WRONG_POOL : OUTCOME.NO_DROP;
+    res.detail = pick.why.join('; ');
+    return res;
+  }
+  res.drop = pick.drop; res.outcome = OUTCOME.WON_ALONE;
   return res;
 }
 /* Applying a claim is separate from deciding it, so the caller can show the answer before it
@@ -487,6 +537,7 @@ function claimRow(div, seat, res, opts){
 return {resolve: resolve, claim: claim, applyClaim: applyClaim, claimRow: claimRow,
         seatKey: seatKey, heldBy: heldBy,
         OUTCOME: OUTCOME, GOT: GOT, MAX_ROWS: MAX_ROWS, MAX_DROPS: MAX_DROPS,
+        sameSide: sameSide,
         _hash32: hash32, _mulberry32: mulberry32, _flipKey: flipKey};
 }));
 </script>
@@ -586,8 +637,14 @@ function claimOK(){
   DATA.teams.forEach(function(t){ out[t.n] = (t.left == null) || t.left >= (DATA.claim_min || 3); });
   return out;
 }
+function pools(){
+  var out = {};
+  DATA.teams.forEach(function(t){ out[t.n] = t.pool; });
+  return out;
+}
 function league(){
-  return {divisions: DATA.divisions, rosters: S.rosters, holdMet: holdMet(), claimOK: claimOK()};
+  return {divisions: DATA.divisions, rosters: S.rosters, pools: pools(),
+          holdMet: holdMet(), claimOK: claimOK()};
 }
 function freeIn(div){
   var taken = {};
@@ -762,6 +819,15 @@ function sentence(r, seat){
               + '— a team moving outside the normal windows is unusual.'};
     case O.HAVE_IT:
       return {kind: 'other', head: t + ': you already hold it.', body: 'Nothing to do.'};
+    case O.WRONG_POOL:
+      return {kind: 'other', head: t + ': the wrong kind of team to drop for it.',
+        body: 'College teams trade for college teams and NFL teams for NFL teams, so that every '
+              + 'roster stays at 8 college and 3 NFL. None of the teams you offered to drop was '
+              + 'the same kind as ' + t + '.'};
+    case O.JUST_DROPPED:
+      return {kind: 'other', head: t + ': dropped this week, not available yet.',
+        body: 'A team that has just been dropped has to play a game before anybody can pick it '
+              + 'up' + (r.detail ? ' — ' + r.detail : '') + '.'};
     case O.NOT_CLAIMABLE:
       return {kind: 'other', head: t + ': too few games left.',
         body: t + ' does not have the ' + (DATA.claim_min || 3) + ' games left that a claim needs.'};
@@ -1161,6 +1227,20 @@ function teamOptions(list, sel, hm){
       + (held ? ' disabled' : '') + '>' + esc(n) + (held ? ' (inside its hold)' : '') + '</option>';
   }).join('');
 }
+/* THE DROP LIST FOR A GIVEN PICKUP. Offering a college team as a drop for an NFL pickup is
+   offering a move the rules forbid, and a form that offers an illegal move is a form that
+   teaches the wrong rule. Wrong-kind teams stay VISIBLE but disabled, with the reason on them —
+   Casey's standing rule: show the constraint as a dimmed cue, never as a silent absence. */
+function dropOptions(mine, sel, hm, pickup, pl){
+  return '<option value="">—</option>' + mine.map(function(n){
+    var held = hm && hm[n] === false;
+    var wrong = pickup && pl[pickup] && pl[n] && ((pl[pickup] === 'NFL') !== (pl[n] === 'NFL'));
+    var why = held ? ' (inside its hold)' : wrong ? ' (' + (pl[n] === 'NFL' ? 'NFL' : 'college')
+              + ' — must match ' + pickup + ')' : '';
+    return '<option value="' + esc(n) + '"' + (sel === n ? ' selected' : '')
+      + (held || wrong ? ' disabled' : '') + '>' + esc(n) + esc(why) + '</option>';
+  }).join('');
+}
 function rowForm(r, i, free, mine, hm){
   var drops = (r.drops || ['']).slice();
   if (drops.length < P.MAX_DROPS && drops[drops.length - 1]) drops.push('');
@@ -1174,7 +1254,7 @@ function rowForm(r, i, free, mine, hm){
     + '<label class="lb" style="margin-top:7px">Drop — first one still available is used</label>'
     + '<div class="grid2">' + drops.map(function(d, j){
         return '<select onchange="editRow(' + i + ',\'drop\',this.value,' + j + ')">'
-          + teamOptions(mine, d, hm) + '</select>';
+          + dropOptions(mine, d, hm, r.pickup, pools()) + '</select>';
       }).join('') + '</div>'
     + '<label class="lb" style="margin-top:7px">Run this row</label>'
     + '<div class="grid2"><select onchange="editRow(' + i + ',\'condtype\',this.value)">'
