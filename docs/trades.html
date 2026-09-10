@@ -278,6 +278,32 @@ ol li,ul li{margin:0 0 7px}
 <p><b>Casey does step 6.</b> It needs the account password rather than just edit access to the
    Sheet, and it is the part he can work through with Claude.</p>
 
+<h3>The Access tab&rsquo;s columns</h3>
+<p>Four of them you type. Two the script writes, and you leave those alone.</p>
+<table><thead><tr><th>Column</th><th>What it is</th></tr></thead><tbody>
+<tr><td><b>Division, Seat</b></td><td>Already filled in from the CSV. Never edited.</td></tr>
+<tr><td><b>Email</b></td><td>The owner&rsquo;s personal inbox. Blank means they cannot sign in and
+    you enter their trades for them.</td></tr>
+<tr><td><b>Status</b></td><td><span class="kbd">active</span> is normal.
+    <span class="kbd">inactive</span> refuses anything that seat tries to submit and changes
+    nothing else &mdash; the team still appears in the standings and the scores.</td></tr>
+<tr><td><b>Role</b></td><td><span class="kbd">owner</span> for everybody except Bob, whose row
+    says <span class="kbd">commissioner</span>.</td></tr>
+<tr><td><b>Retire?</b></td><td>Type an <b>x</b> here to turn away every device already signed in
+    to that seat. Within five minutes the script does it, <b>empties the cell again</b>, and
+    writes a line on the Log tab. The empty cell is the receipt: while the x is still sitting
+    there, it has not happened yet.</td></tr>
+<tr><td><b>Signed in</b></td><td>Written by the script. How many devices are holding a working key
+    for that seat, as of the last time the script ran, which is never more than five minutes ago.
+    This is the column to look at before you retire anything &mdash; it tells you whether there is
+    anything to turn away, and it goes to <span class="kbd">0</span> when the retirement has
+    happened.</td></tr>
+</tbody></table>
+<p>There is deliberately no &ldquo;date the keys were retired&rdquo; column. The script keeps that
+   date where nobody can type over it, and the Log tab is where you read the history. A column
+   Bob looks at before acting should say what is true now; what happened in August belongs in a
+   log.</p>
+
 <h3>What the trigger is</h3>
 <p>A trigger is a schedule Google keeps on its own servers. It runs a piece of the script without
    anybody opening anything &mdash; no computer has to be switched on, and nobody has to
@@ -296,9 +322,11 @@ ol li,ul li{margin:0 0 7px}
 
 <h3>After that</h3>
 <p>The only thing anybody edits by hand is the Access tab, and Bob can do that with ordinary edit
-   access to the Sheet &mdash; no password needed. Two other tabs appear on their own:
-   <b>Requests</b>, which the page fills in when owners submit, and <b>Results</b>, which is
-   written every Monday and becomes the transaction record. Leave both alone.</p>
+   access to the Sheet &mdash; no password needed. Three other tabs appear on their own:
+   <b>Requests</b>, which the page fills in when owners submit; <b>Results</b>, which is written
+   every Monday and becomes the transaction record; and <b>Log</b>, a dated line for every address
+   change and every retirement. Leave all three alone — Log is there to be read, not
+   edited.</p>
 </section>
 
 <section><h2>What happens each week</h2><p class="lead">You do nothing. This is just so you know.</p>
@@ -397,8 +425,10 @@ ol li,ul li{margin:0 0 7px}
 <h3>An owner leaves and somebody new takes the team</h3>
 <ol>
   <li>Type the new owner's address over the old one.</li>
-  <li>Press <b>Retire keys now</b> on that row.</li>
+  <li>Type an <b>x</b> in the <b>Retire?</b> cell on that row.</li>
 </ol>
+<p>Within five minutes the x disappears and <b>Signed in</b> reads
+   <span class="kbd">0</span>. That is the confirmation; nothing else needs checking.</p>
 <p>Step 2 is the one people forget, and it is the important one. Step 1 stops the old owner
    getting new links, but it does not reach the phone he is already signed in on. Step 2 does.</p>
 <p>The seat keeps its roster, its points and its history. Only the person changes.</p>
@@ -424,7 +454,7 @@ ol li,ul li{margin:0 0 7px}
 <ol>
   <li>Check their row on the Access tab. Their email address is almost certainly on the wrong
       seat.</li>
-  <li>Fix it and press <b>Retire keys now</b> on both rows involved.</li>
+  <li>Fix it, then type an <b>x</b> in <b>Retire?</b> on both rows involved.</li>
 </ol>
 </section>
 
