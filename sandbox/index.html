@@ -1143,7 +1143,11 @@ function viewRun(){
           + ' NOT in this week: ' + esc(draftSeats().join(', ')) + '.</p>'
         : '')
     + '<div class="row"><button class="pri" ' + (reqs.length ? '' : 'disabled')
-    + ' onclick="doRun()">Run the coin flips for week ' + weekNo() + '</button>'
+    + ' title="' + (reqs.length ? 'Settle every list that has been sent for week ' + weekNo()
+                                : 'Nothing has been sent for week ' + weekNo() + ' yet')
+    + '" onclick="doRun()">' + (reqs.length
+        ? 'Run the coin flips for week ' + weekNo()
+        : 'Nothing sent yet for week ' + weekNo()) + '</button>'
     + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">Why the same week '
     + 'always resolves the same way</button></div>'
     + (mode() === 'queue' && !isFlipMoment()
@@ -1151,18 +1155,29 @@ function viewRun(){
           + 'run it anyway to see the result — the live one would wait for 4:00pm.</p>' : '')
     + '</div>';
 
-  if (!reqs.length) return h + '<div class="card"><div class="empty">Nothing has been entered '
-    + 'for week ' + weekNo() + ' yet. Fill in a row on My trades first.</div></div>' + clockCard();
-
-  h += '<div class="card"><h2>Entered so far</h2><div class="scr"><table>'
-    + '<colgroup><col style="width:34%"><col style="width:14%"><col style="width:52%"></colgroup>'
-    + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th></tr></thead><tbody>'
-    + reqs.map(function(r){
-        return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
-          + '<td class="d">' + esc(r.rows.map(function(x){ return x.pickup; }).join(', ')) + '</td></tr>';
-      }).join('') + '</tbody></table></div></div>';
-
+  /* THE RESULTS COME FIRST, AND THEY ARE NOT BEHIND THE ENTRY CHECK.
+     Casey, 10 Sep 2026: "I pressed run the coin flips, and then I get to step 12 and I don't see
+     the email under either name." Running a week CLEARS the entries, and this function was
+     returning early on "no entries" -- so the one screen he had just asked for was the one it
+     skipped, and it told him nothing had been entered, which was true and completely
+     unhelpful. Whatever last happened is the thing the reader came here for. */
   if (S.results) h += resultsCard();
+
+  h += reqs.length
+    ? '<div class="card"><h2>Waiting for the next run</h2><div class="scr"><table>'
+      + '<colgroup><col style="width:34%"><col style="width:14%"><col style="width:52%"></colgroup>'
+      + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th></tr></thead><tbody>'
+      + reqs.map(function(r){
+          return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
+            + '<td class="d">' + esc(r.rows.map(function(x){ return x.pickup; }).join(', '))
+            + '</td></tr>';
+        }).join('') + '</tbody></table></div></div>'
+    : '<div class="card"><div class="empty">' + (S.results
+        ? 'Week ' + S.results.week + ' has been run and its results are above. Nothing has been '
+          + 'entered since — to run another week, move the clock past Tuesday 5:00pm and send a '
+          + 'new list on My trades.'
+        : 'Nothing has been entered yet. Fill in a list on My trades and press Send my list.')
+      + '</div></div>';
   return h + clockCard();
 }
 var SEEDNOTE = '<p>The flip is not <code>Math.random()</code>. It is a seeded draw keyed to the '
