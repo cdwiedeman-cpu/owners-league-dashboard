@@ -619,7 +619,7 @@ function useLink(code){
   link.used = true;
   var tok = rnd(30);
   S.tokens[tok] = {seat: row.seat, div: row.div, email: link.email, issued: now(),
-                   device: S.device};
+                   seq: nextSeq(), device: S.device};
   S.devices[S.device] = {token: tok};
   save();
   return {ok: true};
@@ -642,9 +642,22 @@ function session(){
   }
   if (!row) return {dead: 'the address this key was issued to is no longer on that seat'};
   if (row.status === 'removed') return {dead: 'that seat has been made inactive'};
-  if (row.validAfter && t.issued < row.validAfter){
-    return {dead: 'the commissioner reset that seat on ' + pretty(row.validAfter)
-                  + ', which retires every key issued before then'};
+  /* ORDER BY WHAT HAPPENED FIRST, NOT BY THE CLOCK. The sandbox clock is a toy: Casey can set
+     it to any minute, freeze it, and move it backwards. On 10 Sep 2026 he retired his keys and
+     signed straight back in at the same frozen minute, then retired them again and stayed
+     signed in — because `issued < validAfter` was false when the two were equal, and would go
+     false again the moment he wound the clock back. A DISPLAYED TIME AND AN ORDERING ARE
+     DIFFERENT JOBS. `validAfter` stays for the reader; `retiredSeq` decides, and a counter
+     cannot be set backwards. The live one runs on a real monotonic clock and needs only the
+     timestamp — this is the price of letting the clock be moved. */
+  if (row.retiredSeq && (t.seq || 0) < row.retiredSeq){
+    return {dead: 'the keys on that seat were retired'
+                  + (row.validAfter ? ' on ' + pretty(row.validAfter) : '')
+                  + ', which turns away every device signed in before that'};
+  }
+  if (!row.retiredSeq && row.validAfter && t.issued < row.validAfter){
+    return {dead: 'the keys on that seat were retired on ' + pretty(row.validAfter)
+                  + ', which turns away every device signed in before that'};
   }
   return {seat: t.seat, div: t.div, email: t.email, token: d.token, role: row.role || 'owner',
           issued: t.issued};
@@ -1303,7 +1316,26 @@ var ACCESSNOTE = '<p><b>An owner changes their email.</b> Type the new address o
   + 'their seat — the same feature as any other commissioner submission, so there is no second '
   + 'mechanism to maintain.</p>';
 function setAccess(i, f, v){ S.access[i][f] = v; save(); render(); }
-function bump(i){ S.access[i].validAfter = now(); save(); render(); }
+function nextSeq(){ S.seq = (S.seq || 0) + 1; save(); return S.seq; }
+/* RETIRING KEYS DOES NOT REMOVE THE ADDRESS, and it is not meant to. It ends every session that
+   exists right now; the address on the row can still ask for a new link. Replacing an owner is
+   TWO edits — change the address, then retire — and doing only the second one signs the same
+   person out and lets them straight back in, which is exactly what Casey saw. */
+function bump(i){
+  S.access[i].validAfter = now();
+  S.access[i].retiredSeq = nextSeq();
+  save();
+  var stillOurs = String(S.access[i].email || '').trim();
+  showHelp('Keys retired on that seat',
+    '<p>Every device signed in to <b>' + esc(S.access[i].seat) + '</b> has been turned away.</p>'
+    + (stillOurs
+        ? '<p><b>' + esc(stillOurs) + ' is still the address on this seat</b>, so that person '
+          + 'can ask for a new link and sign back in. That is correct: retiring keys ends the '
+          + 'sessions that exist, it does not remove anybody.</p>'
+          + '<p>To hand the seat to somebody else, change the address first and then retire.</p>'
+        : '<p>The seat has no address, so nobody can sign in to it until one is added.</p>'));
+  render();
+}
 function delAccess(i){ S.access.splice(i, 1); save(); render(); }
 function addAccess(){
   S.access.push({div: DATA.seats[0].div, seat: DATA.seats[0].owner, email: '', status: 'active',
@@ -1375,7 +1407,7 @@ function seedAccess(){
   });
 }
 function blank(){
-  return {clock: DATA.clock_start, device: 'A', devices: {}, tokens: {}, links: [],
+  return {clock: DATA.clock_start, device: 'A', devices: {}, tokens: {}, links: [], seq: 0,
           access: seedAccess(), requests: {}, rosters: freshRosters(), acquired: {}, log: [],
           results: null, seed: 'RFL-SANDBOX', actingAs: null, lastEmail: (DATA.me || {}).email || ''};
 }
