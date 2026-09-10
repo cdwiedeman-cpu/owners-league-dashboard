@@ -48,6 +48,30 @@ button[disabled]:hover{border-color:var(--line);color:var(--ink)}
 .tabs button{white-space:nowrap;border-radius:8px 8px 0 0;border-bottom-color:transparent}
 .tabs button.on{background:var(--pan);border-color:var(--line);border-bottom-color:var(--pan);
  color:var(--blue)}
+/* A SETTING HAS TO LOOK LIKE A SETTING. Casey, 10 Sep 2026: "it took me a while to figure out
+   that's actually a button I need to click." A lone button whose label describes the CURRENT
+   state reads as a status line — there is nothing to say the other state exists, let alone that
+   the words are the way to reach it. Both choices are shown, the chosen one is filled in, and
+   the row carries a name on the left so it is obvious what is being chosen. */
+.setrow{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-start;padding:12px 0;
+ border-top:1px solid var(--line)}
+.setrow:first-of-type{border-top:0;padding-top:2px}
+.setlab{flex:0 0 148px;font-weight:600;font-size:13px;color:var(--ink);padding-top:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;
+ flex:0 0 auto}
+.seg button{border:0;border-radius:0;background:transparent;color:var(--dim);padding:8px 13px;
+ min-height:38px;font-size:13px;white-space:nowrap}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:#12324f;color:#cfe6ff;font-weight:600}
+.seg button:hover:not(.on){color:var(--ink);background:var(--pan2)}
+.setwhy{flex:1 1 210px;font-size:12px;color:var(--dim);line-height:1.5;padding-top:7px;
+ min-width:0}
+@media (max-width:600px){
+  .setlab{flex:1 1 100%;padding-top:0}
+  .setwhy{flex:1 1 100%;padding-top:0}
+}
+.statline{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+.big{font-size:15px;font-weight:600;color:var(--ink)}
 .pill{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:999px;
  padding:2px 9px;color:var(--dim);white-space:nowrap}
 .pill.good{color:var(--good);border-color:#245c39}
@@ -1338,98 +1362,96 @@ function draftSeats(){
   });
   return out.sort();
 }
+/* ONE ROW PER SETTING: what it is called, both choices with the live one filled in, and one
+   sentence saying what happens NOW — not what the button would do. Buttons are referred to by
+   the words printed on them; "the button below" was a real complaint and a fair one. */
+function setting(label, opts, why){
+  return '<div class="setrow"><div class="setlab">' + esc(label) + '</div>'
+    + '<div class="seg">' + opts.map(function(o){
+        return '<button class="' + (o.on ? 'on' : '') + '"'
+          + (o.on ? ' aria-pressed="true"' : ' aria-pressed="false"')
+          + ' onclick="' + o.act + '" title="' + esc(o.title || '') + '">' + esc(o.label)
+          + '</button>';
+      }).join('') + '</div>'
+    + '<div class="setwhy">' + why + '</div></div>';
+}
 function viewRun(){
   var reqs = pendingRequests();
-  var ready = isFlipMoment() || (mode() === 'fcfs' && !S.results);
-  /* AUTOMATIC OR BY HAND, AND IT IS A SETTING RATHER THAN A STAGE OF THE PROJECT.
-     Casey, 10 Sep 2026: during the first few weeks Bob types in the requests he has been emailed
-     and runs it himself after 4:00pm; later the schedule does it. "But it would be good to keep
-     a feature that allows him to turn off the automated peloton so he can do it manually after
-     4pm if some future need arises." So there is no pilot mode to dismantle later — one switch,
-     both ways, forever. */
   var auto = S.autoPeloton !== false;
-  /* OFF MEANS "HAND THEM TO ME", NOT "SAY NOTHING".
-     Casey, 10 Sep 2026: while the league is being tried out, Bob sends the results himself. A
-     switch that only suppressed the emails would leave him with nothing to send and he would be
-     retyping twenty-seven messages — so turning it off puts the text on screen instead, ready to
-     copy in one block.
-     SIGN-IN LINKS ARE NOT TOUCHED BY THIS and cannot be. They are how anybody gets in, including
-     Bob; a switch that silently turned them off would lock the league out of its own tool. */
   var mail = S.autoEmail !== false;
-  var h = '<div class="card"><h2>Monday, 4:00pm</h2>'
-    + '<div class="row"><button onclick="S.autoPeloton=' + (auto ? 'false' : 'true')
-    + ';save();render()" title="'
-    + esc(auto ? 'Switch to running it by hand. The schedule will stop settling weeks on its own.'
-               : 'Switch back to the schedule settling it automatically just after 4:00pm Monday.')
-    + '">' + (auto ? 'Automatic — the schedule settles it' : 'By hand — you settle it')
-    + '</button><span class="note">' + (auto
-        ? 'It runs itself a few minutes after 4:00pm every Monday. The button below is still '
-          + 'here for when you want it early or something was missed.'
-        : 'The schedule will NOT settle anything. Nothing happens until you press the button '
-          + 'below.') + '</span></div>'
-    + '<div class="row" style="margin-top:8px"><button onclick="S.autoEmail=' + (mail ? 'false' : 'true')
-    + ';save();render()" title="'
-    + esc(mail ? 'Stop the tool emailing owners their results. The text appears here for you to '
-               + 'send yourself. Sign-in links are not affected.'
-               : 'Let the tool email each owner their results again as soon as a week is settled.')
-    + '">' + (mail ? 'Emails on — owners are told automatically'
-                   : 'Emails off — you send them yourself') + '</button>'
-    + '<span class="note">' + (mail
-        ? 'Each owner is emailed their results within a minute of a week being settled.'
-        : 'Nobody is emailed. After a run, use <b>Copy every owner\'s email</b> below and send '
-          + 'them yourself. <b>Sign-in links still work</b> — this only covers results.')
-    + '</span></div>'
-    + '<p class="note">' + reqs.length + ' seat' + (reqs.length === 1 ? '' : 's') + ' entered '
-    + 'for week ' + weekNo() + '. To make a coin flip happen, sign in on a second device as a '
-    + 'different owner in your division and ask for the same team.</p>'
-    + (draftSeats().length
-        ? '<p class="note b">' + draftSeats().length + ' seat'
-          + (draftSeats().length === 1 ? ' has a list' : 's have lists')
-          + ' that were typed but never sent, so ' + (draftSeats().length === 1 ? 'it is' : 'they are')
-          + ' NOT in this week: ' + esc(draftSeats().join(', ')) + '.</p>'
-        : '')
-    + '<div class="row"><button class="pri" ' + (reqs.length ? '' : 'disabled')
-    + ' title="' + (reqs.length ? 'Settle every list that has been sent for week ' + weekNo()
-                                : 'Nothing has been sent for week ' + weekNo() + ' yet')
-    + '" onclick="askRun()">' + (reqs.length
-        ? (ranBefore() ? 'Run again for week ' + weekNo()
-                       : 'Run the coin flips for week ' + weekNo())
-        : 'Nothing sent yet for week ' + weekNo()) + '</button>'
-    + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">Why the same week '
-    + 'always resolves the same way</button>'
-    + (ranBefore() && canUndo() && !canUndo().blocked
-        ? '<button class="dang" onclick="askUndo()" title="Put every roster back to 4:00pm and '
-          + 'keep every list exactly as it was typed">Undo week ' + weekNo() + '</button>' : '')
-    + '</div>'
-    + (mode() === 'queue' && !isFlipMoment()
-        ? '<p class="note" style="margin-top:8px">The clock says entry is still open. You can '
-          + 'run it anyway to see the result — the live one would wait for 4:00pm.</p>' : '')
+  var prev = ranBefore();
+  var drafts = draftSeats();
+
+  var h = '<div class="card"><h2>How Monday runs</h2>'
+    + setting('Settling Monday',
+        [{label: 'Automatically', on: auto, act: "S.autoPeloton=true;save();render()",
+          title: 'The schedule settles the week a few minutes after 4:00pm every Monday'},
+         {label: 'I do it myself', on: !auto, act: "S.autoPeloton=false;save();render()",
+          title: 'Nothing is settled until you press Run the coin flips'}],
+        auto ? 'The week settles itself a few minutes after 4:00pm every Monday. You do nothing.'
+             : 'Nothing will be settled on its own. Press <b>Run the coin flips</b> below when '
+               + 'you have entered everything.')
+    + setting('Results emails',
+        [{label: 'The tool sends them', on: mail, act: "S.autoEmail=true;save();render()",
+          title: 'Each owner is emailed their own results as soon as a week is settled'},
+         {label: 'I send them', on: !mail, act: "S.autoEmail=false;save();render()",
+          title: 'Nobody is emailed; the messages appear here for you to copy'}],
+        mail ? 'Each owner is emailed their own results within a minute of a week being settled.'
+             : 'Nobody is emailed. After you settle a week, <b>Copy every owner\'s email</b> '
+               + 'appears with all the messages ready to paste.<br><b>Sign-in links still '
+               + 'work</b> — this covers results only.')
     + '</div>';
 
-  /* THE RESULTS COME FIRST, AND THEY ARE NOT BEHIND THE ENTRY CHECK.
-     Casey, 10 Sep 2026: "I pressed run the coin flips, and then I get to step 12 and I don't see
-     the email under either name." Running a week CLEARS the entries, and this function was
-     returning early on "no entries" -- so the one screen he had just asked for was the one it
-     skipped, and it told him nothing had been entered, which was true and completely
-     unhelpful. Whatever last happened is the thing the reader came here for. */
+  /* WHERE THE WEEK STANDS, in a sentence, before any button. The question somebody opens this
+     tab with is "has it run yet and is everything in", and a row of controls does not answer it. */
+  h += '<div class="card"><h2>Week ' + weekNo() + '</h2><div class="statline">'
+    + '<span class="big">' + (prev
+        ? 'Settled at ' + esc(pretty(prev.at))
+        : reqs.length ? 'Not settled yet' : 'Nothing entered yet') + '</span>'
+    + '<span class="pill' + (reqs.length ? ' blue' : '') + '">' + reqs.length + ' seat'
+    + (reqs.length === 1 ? '' : 's') + ' waiting to be settled</span>'
+    + (prev ? '<span class="pill good">' + prev.n + ' team'
+              + (prev.n === 1 ? '' : 's') + ' moved</span>' : '')
+    + (drafts.length ? '<span class="pill bad">' + drafts.length + ' typed but not sent</span>'
+                     : '') + '</div>'
+    + (drafts.length
+        ? '<p class="note b">Typed a list but never pressed <b>Send my list</b>, so they are NOT '
+          + 'in this week: ' + esc(drafts.join(', ')) + '.</p>' : '')
+    + '<div class="row">'
+    + '<button class="pri" ' + (reqs.length ? '' : 'disabled')
+    + ' title="' + esc(reqs.length
+        ? 'Settle every list that has been sent for week ' + weekNo()
+        : 'Nothing has been sent for week ' + weekNo() + ' yet')
+    + '" onclick="askRun()">Run the coin flips</button>'
+    + (prev && canUndo()
+        ? '<button class="dang" onclick="askUndo()" title="Put every roster back to how it stood '
+          + 'at 4:00pm and keep every list exactly as it was typed">Undo week ' + weekNo()
+          + '</button>' : '')
+    + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">How the coin flip '
+    + 'works</button></div>'
+    + '<p class="note">' + (reqs.length
+        ? 'Settles all ' + reqs.length + ' list' + (reqs.length === 1 ? '' : 's') + ' at once, '
+          + 'running a coin flip wherever more than one owner asked for the same team.'
+          + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm.' : '')
+        : 'Nothing has been sent for week ' + weekNo() + ' yet. Enter a list on <b>My trades</b> '
+          + 'and press <b>Send my list</b>.')
+    + '</p></div>';
+
   h += claimQueueCard();
   if (S.results) h += resultsCard();
 
-  h += reqs.length
-    ? '<div class="card"><h2>Waiting for the next run</h2><div class="scr"><table>'
+  if (reqs.length){
+    h += '<div class="card"><h2>Waiting to be settled</h2><div class="scr"><table>'
       + '<colgroup><col style="width:34%"><col style="width:14%"><col style="width:52%"></colgroup>'
       + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th></tr></thead><tbody>'
       + reqs.map(function(r){
           return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
             + '<td class="d">' + esc(r.rows.map(function(x){ return x.pickup; }).join(', '))
             + '</td></tr>';
-        }).join('') + '</tbody></table></div></div>'
-    : '<div class="card"><div class="empty">' + (S.results
-        ? 'Week ' + S.results.week + ' has been run and its results are above. Nothing has been '
-          + 'entered since — to run another week, move the clock past Tuesday 5:00pm and send a '
-          + 'new list on My trades.'
-        : 'Nothing has been entered yet. Fill in a list on My trades and press Send my list.')
-      + '</div></div>';
+        }).join('') + '</tbody></table></div>'
+      + '<p class="note">To make a coin flip happen, sign in on another device as a different '
+      + 'owner in the same division and ask for the same team.</p></div>';
+  }
   return h + clockCard();
 }
 var SEEDNOTE = '<p>The flip is not <code>Math.random()</code>. It is a seeded draw keyed to the '
