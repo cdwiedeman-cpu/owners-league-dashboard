@@ -1418,15 +1418,24 @@ function viewRun(){
         auto ? 'The week settles itself a few minutes after 4:00pm every Monday. You do nothing.'
              : 'Nothing will be settled on its own. Press <b>Run the coin flips</b> below when '
                + 'you have entered everything.')
+    /* NAME THE SECTION AND THE BUTTON, NOT "IT APPEARS". Casey, 10 Sep 2026: "copy every owner's
+       email appears with the messages ready to paste — what are you talking about? Where should
+       he be looking?" A promise that something will show up, with no name for the thing or the
+       place, is worse than saying nothing: the reader now knows to hunt for something.
+       AND THE SIGN-IN LINE IS GONE FROM HERE. It answered a question nobody has asked at the
+       moment they are choosing this setting. It lives in the hover text on the option that
+       raises it, and in Bob's guide, where somebody who IS wondering will be. */
     + setting('Results emails',
         [{label: 'The tool sends them', on: mail, act: "S.autoEmail=true;save();render()",
           title: 'Each owner is emailed their own results as soon as a week is settled'},
          {label: 'I send them', on: !mail, act: "S.autoEmail=false;save();render()",
-          title: 'Nobody is emailed; the messages appear here for you to copy'}],
+          title: 'Nobody is emailed their results. Sign-in links are not affected — people can '
+                 + 'still sign in.'}],
         mail ? 'Each owner is emailed their own results within a minute of a week being settled.'
-             : 'Nobody is emailed. After you settle a week, <b>Copy every owner\'s email</b> '
-               + 'appears with all the messages ready to paste.<br><b>Sign-in links still '
-               + 'work</b> — this covers results only.')
+             : 'Nobody is emailed. When you settle a week, the <b>Week ' + weekNo()
+               + ' — what happened</b> section further down this page gains a <b>Copy every '
+               + 'owner\'s email</b> button: every message at once, each with the address it '
+               + 'goes to.')
     + '</div>';
 
   /* WHERE THE WEEK STANDS, in a sentence, before any button. The question somebody opens this
@@ -1650,8 +1659,9 @@ function resultsCard(){
     + (mailed
         ? '<p class="note g">Each owner has been emailed their own results.</p>'
         : '<div class="card warn" style="margin:0 0 10px"><b>Nobody has been emailed.</b>'
-          + '<p class="note">Emails are switched off, so these results have not gone anywhere. '
-          + 'Copy them below and send them yourself.</p>'
+          + '<p class="note">Results emails are set to <b>I send them</b>, so none of this has '
+          + 'gone anywhere yet. The button below puts every owner&#39;s message on your '
+          + 'clipboard at once, each one headed with the address it goes to.</p>'
           + '<div class="row"><button class="pri" onclick="copyAllEmails()">Copy every owner\'s '
           + 'email</button></div></div>')
     + keys.map(function(k){
