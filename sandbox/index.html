@@ -1213,9 +1213,15 @@ function viewTrades(){
         + 'Tuesday. Whoever asks first gets the team, so one at a time is all there is.</p>'
       : '<ol class="note"><li>Press <b>Add a row</b> for each team you want. One row is one '
         + 'team.</li>'
-        + '<li>On each row, choose the team to <b>pick up</b> and up to ' + P.MAX_DROPS
-        + ' teams you would be willing to <b>drop</b> for it. The first one still available is '
-        + 'the one used, so extra names are insurance.</li>'
+        /* "THE FIRST ONE" HAD TWO CANDIDATES IN THE SAME SENTENCE. Casey, 10 Sep 2026: "it
+           makes it sound like the first pickup is the one used — that's also true, but that's
+           not what you mean." A pronoun with two live antecedents is a coin flip the reader has
+           to call. Name the list. */
+        + '<li>On each row, choose the team to <b>pick up</b>, then up to ' + P.MAX_DROPS
+        + ' teams you would be willing to <b>drop</b> for it. Only one of them is dropped: '
+        + 'working down your drop list, <b>the first team you still hold and are allowed to '
+        + 'drop</b> is the one that goes. The rest are backups, in case an earlier row has '
+        + 'already used one.</li>'
         + '<li>Rows are settled <b>top to bottom</b>, so put what you want most at the top. You '
         + 'can also set a row to run only if an earlier one did, or did not, come through.</li>'
         + '<li>Press <b>Send my list</b>. Nothing is entered until you do.</li></ol>'
