@@ -1271,19 +1271,21 @@ function viewTrades(){
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
 
-  /* THE STATUS LINE COMES FIRST AND IS NEVER ABSENT. The one question an owner has when they
-     open this tab is "am I in?", and a form that only shows fields answers it by implication. */
-  h += sent
-    ? '<div class="card" style="border-color:#245c39"><h2 class="g">You are entered for '
+  /* WHERE THE STATUS GOES DEPENDS ON WHETHER THERE IS ONE.
+     Casey, 10 Sep 2026: "I don't think I've saved anything on this device ... I would think that
+     after the instructions you then make the trade, and then next to Send my list is where it
+     tells you if the list has been sent."
+     Both fair. **A STATUS ABOUT SOMETHING THAT DOES NOT EXIST YET IS NOISE** — an empty list has
+     no state worth a banner, and "saved on this device" is a fact about the machinery that
+     answers a worry nobody had. Once the list IS sent, the status becomes the answer to the
+     question they arrived with, so then it goes at the top. Until then it belongs beside the
+     button that changes it, and nowhere else. */
+  if (sent){
+    h += '<div class="card" style="border-color:#245c39"><h2 class="g">You are entered for '
       + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. Nothing happens '
       + 'until Monday at 4:00pm, and you can change it any time before then.</p>'
-      + '<div class="row"><button onclick="unsubmit()">Change my list</button></div></div>'
-    : '<div class="card warn"><h2>Not sent yet</h2><p class="note">'
-      + (rows.length
-          ? 'Your list is saved on this device, but it is <b>not</b> in Monday&rsquo;s coin '
-            + 'flips. Press <b>Send my list</b> when it is ready.'
-          : 'Build your list, then press <b>Send my list</b>.')
-      + '</p></div>';
+      + '<div class="row"><button onclick="unsubmit()">Change my list</button></div></div>';
+  }
 
   h += '<div class="card">';
   if (sent){
@@ -1313,10 +1315,14 @@ function viewTrades(){
         + '<button class="dang" onclick="setRows([]);render()">Clear them all</button></div>';
     }
     if (rows.length){
+      /* THE STATUS SITS WITH THE BUTTON THAT CHANGES IT. Nowhere else on the page needs to
+         carry it while the list is still being built. */
       h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
         + 'padding-top:12px"><button class="pri" onclick="submitList()">Send my list</button>'
-        + '<span class="note">Until you press <b>Send my list</b>, this is only saved on your '
-        + 'own device. It is not in Monday&rsquo;s coin flips.</span></div>';
+        + '<span class="pill bad">Not sent yet</span>'
+        + '<span class="note">This list is <b>not</b> in Monday&rsquo;s coin flips until you '
+        + 'press <b>Send my list</b>. You can change it and send it again as often as you like, '
+        + 'up to 3:59pm Monday.</span></div>';
     }
   }
   h += '</div>';
