@@ -1435,7 +1435,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '09 Sep 2026, 10:57 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '09 Sep 2026, 10:59 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7598,11 +7598,20 @@ function openLeagueScout(n){
     ? `<a class="f" href="${url}" target="_blank" rel="noopener"
          title="${esc(n)}'s full season schedule on ESPN, in a new tab">Full schedule on ESPN ↗</a>`
     : '';
+  /* THE CLASSES HAVE TO BE THE ONES THE STYLESHEET HAS. This panel was built with `.sheet`,
+     `.shead` and `.sbody`, and NONE OF THE THREE EXISTS in the CSS -- so it rendered as bare,
+     unpositioned text lying across the scoreboard with the page dimmed behind it. That is
+     exactly what Casey described on 10 Sep 2026: "the screen looks all messed up ... you still
+     see the scoreboard in the background, but it's greyed out." The rest of the page uses
+     `.modalbox` / `.modalhd` / `.modalx`, so this uses them too. A class name is not a
+     decoration; an unmatched one is a missing feature that still renders. */
   box.hidden = false;
-  box.innerHTML = `<div class="sheet"><div class="shead">
-      <b><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(n)}</b>
-      <button class="f" onclick="closeScout()">Close</button></div>
-    <div class="sbody">
+  document.body.style.overflow = 'hidden';
+  box.innerHTML = `<div class="modalbox"><div class="modalhd">
+      <div><h2>${esc(n)} <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span></h2></div>
+      <button class="modalx" onclick="closeScout()" title="Close and go back to the scoreboard"
+        aria-label="Close this panel">✕</button></div>
+    <div>
       <div class="note">${ownerHTML(n)}${got ? ` · <b>${got.w}-${got.l}${got.t ? '-' + got.t : ''}</b>
         · <b>${got.pts.toFixed(1)}</b> league points so far` : ''}</div>
       ${espnBtn ? `<div class="row" style="margin:8px 0">${espnBtn}</div>` : ''}
