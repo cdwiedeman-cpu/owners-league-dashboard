@@ -1253,9 +1253,9 @@ function viewTrades(){
       + '<div class="row"><button onclick="unsubmit()">Change my list</button></div></div>'
     : '<div class="card warn"><h2>Not sent yet</h2><p class="note">'
       + (rows.length
-          ? 'Your list is saved on this device, but it has <b>not</b> been entered for Monday. '
-            + 'Press <b>Send my list</b> at the bottom when it is ready.'
-          : 'Add what you want below, then press <b>Send my list</b>.')
+          ? 'Your list is saved on this device, but it is <b>not</b> in Monday&rsquo;s coin '
+            + 'flips. Press <b>Send my list</b> when it is ready.'
+          : 'Build your list, then press <b>Send my list</b>.')
       + '</p></div>';
 
   h += '<div class="card">';
@@ -1288,8 +1288,8 @@ function viewTrades(){
     if (rows.length){
       h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
         + 'padding-top:12px"><button class="pri" onclick="submitList()">Send my list</button>'
-        + '<span class="note">Until you press <b>Send my list</b>, nothing is entered for '
-        + 'Monday.</span></div>';
+        + '<span class="note">Until you press <b>Send my list</b>, this is only saved on your '
+        + 'own device. It is not in Monday&rsquo;s coin flips.</span></div>';
     }
   }
   h += '</div>';
