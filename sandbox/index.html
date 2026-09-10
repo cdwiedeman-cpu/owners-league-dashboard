@@ -1233,7 +1233,10 @@ function viewTrades(){
         + 'if I got row 1</b>, or <b>only if I did not get row 1</b>. That is how you say '
         + '&ldquo;if I miss out on Navy, try Alabama instead&rdquo;, or &ldquo;if I do get Navy, '
         + 'go after Alabama as well&rdquo;.</li>'
-        + '<li>Press <b>Send my list</b>. Nothing is entered until you do.</li></ol>'
+        /* NAME THE PLACE AND THE ACTION. Casey, 10 Sep 2026: "nothing is entered WHERE until
+           you do. Do WHAT?" Both halves were pronouns pointing at nothing. */
+        + '<li>Press <b>Send my list</b>. Until you press it, your list is only saved on this '
+        + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
         + '<p class="note">Up to ' + P.MAX_ROWS + ' rows. You can change and re-send as often as '
         + 'you like, right up to 3:59pm Monday.</p>')
     + '<p class="note" style="border-top:1px solid var(--line);padding-top:9px">You are '
@@ -1327,7 +1330,8 @@ function rowForm(r, i, free, mine, hm){
     + '<label class="lb">Pick up</label>'
     + '<select onchange="editRow(' + i + ',\'pickup\',this.value)">'
     + teamOptions(free, r.pickup) + '</select>'
-    + '<label class="lb" style="margin-top:7px">Drop — first one still available is used</label>'
+    + '<label class="lb" style="margin-top:7px">Drop &mdash; only one of these goes, the first '
+    + 'you still hold</label>'
     + '<div class="grid2">' + drops.map(function(d, j){
         return '<select onchange="editRow(' + i + ',\'drop\',this.value,' + j + ')">'
           + dropOptions(mine, d, hm, r.pickup, pools()) + '</select>';
