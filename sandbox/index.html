@@ -963,9 +963,13 @@ function doRequest(){
         ? '<p>Because the league has used that address before, it did get an <b>email saying '
           + 'why</b> — look in the pretend inbox. A message to an inbox tells whoever typed the '
           + 'address nothing, so answering a former owner honestly gives nothing away.</p>'
-        : '<p>That address has never been on the access list, so <b>nothing was emailed at '
-          + 'all</b>. Mailing every string somebody types would turn the sign-in box into a way '
-          + 'to send mail to strangers.</p>'));
+        : '<p>That address is not on the access list <b>and the league has no record of ever '
+          + 'having used it</b>, so nothing was emailed at all. Mailing every string somebody '
+          + 'types would turn the sign-in box into a way to send mail to strangers.</p>'
+          + '<p class="d"><b>Expecting it to be recognised as a former owner?</b> An old address '
+          + 'is remembered at the moment it is <i>changed on the Access list tab</i>. An address '
+          + 'that was replaced before this page learned to do that is not on the record — change '
+          + 'a row now and try again, and it will be.</p>'));
 }
 function doUse(code){
   var r = useLink(code);
