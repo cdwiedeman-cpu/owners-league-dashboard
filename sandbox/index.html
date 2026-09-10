@@ -226,22 +226,38 @@ function pickDrop(league, key, row, used){
  * before any owner's row 2, because a row list is a priority order and resolving one owner's
  * whole list first would hand them the board.
  *
- * THE STAND-ASIDE RULE. Casey, 9 Sep 2026: "if A beats B on team one, and now A, B, and C all
- * want team two, owner A is excluded and it's only B and C that get to go after team two."
- * An owner who has WON A CONTEST this week is held out of later contests. Two things that rule
- * does NOT say, and that the code has to decide:
- *   - Winning UNCONTESTED is not winning a contest. Nobody was beaten, so nobody is owed a turn.
- *   - If every entrant has already won, somebody still has to get the team. The exclusion is
- *     there to give owners who have won nothing a turn; with nobody in that position it lapses
- *     rather than leaving a team unawarded. `policy` names this so it is one switch in one
- *     place, not an assumption buried in a loop.
+ * THE STAND-ASIDE RULE IS BETWEEN TWO OWNERS, NOT ACROSS THE WHOLE WEEK.
+ * Casey, 10 Sep 2026: "I only get excluded if I won and I'm going up against one of the owners
+ * that lost to me in the previous Peloton ... if I win the first Peloton, and then in the second
+ * Peloton I am going up against an owner that was not in the first Peloton, then I get to be in
+ * that Peloton again."
+ *
+ * So beating somebody creates a DEBT to that person and to nobody else. Read it as: you beat me,
+ * so the next one we both want is mine.
+ *   - You are held out of a contest only if somebody you owe is IN that contest.
+ *   - Winning against different owners does not hold you out. This was the first reading and it
+ *     was wrong: it benched an owner against people who had never lost anything to them.
+ *   - The debt is settled the moment the owner you owe GETS A TEAM. Casey's own example: A beats
+ *     B, A stands aside while B wins the next one, and then "if team A and team B go for the
+ *     same team again in the third Peloton, because they too both won ... there is no exclusion
+ *     at that point." Any acquisition settles it, contested or not -- the promise was that B
+ *     gets a turn, and B has had one.
+ *   - Winning UNCONTESTED creates no debt. Nobody was beaten, so nobody is owed anything.
+ *
+ * `policy` keeps the earlier reading available as 'any-win' so the two can be compared side by
+ * side rather than argued about. 'pairwise' is the rule.
+ *
+ * THE LAPSE IS A SAFETY NET, NOT A CASE. If every entrant is excluded the exclusion steps aside
+ * rather than leaving a team awarded to nobody -- an absence is not an answer. Under 'pairwise'
+ * that should be unreachable: beating somebody CLEARS what you owed them, so debts cannot form a
+ * closed ring. It stays because "should be unreachable" is a claim about today's rules.
  * ------------------------------------------------------------------------------------------ */
 function resolve(opts){
   var league   = opts.league;
   var requests = opts.requests || [];
   var week     = opts.week;
   var seed     = opts.seed == null ? 'RFL' : opts.seed;
-  var policy   = opts.policy || 'until-everyone-has-won';   // or 'next-contest-only'
+  var policy   = opts.policy || 'pairwise';        // or 'any-win', the earlier reading
 
   /* The resolver never mutates what it was handed. Bob re-running a week must not depend on
      whether he re-ran it before. */
@@ -255,10 +271,19 @@ function resolve(opts){
                        .slice().sort(function (a, b){ return a.seat < b.seat ? -1 : 1; });
     if (!reqs.length) return;
 
-    var wonContest = {};      // seat -> true, once it has beaten somebody this week
-    var lastWinner = null;    // for the 'next-contest-only' reading
+    /* WHO OWES A TURN TO WHOM. owes['A'] = {'B': 1} means A beat B and has not yet let B have
+       one. Beating somebody creates the debt; that person acquiring ANY team settles it. */
+    var owes = {};
     var used = {};            // seat -> {team: true} drops already spent
     var contestNo = 0;
+    var settle = function(seat){                  // this seat got a team: nobody owes them now
+      for (var s in owes) delete owes[s][seat];
+    };
+    var blockedBy = function(seat, present){      // who, in THIS contest, is this seat holding up
+      var d = owes[seat] || {}, out = [];
+      present.forEach(function(x){ if (x !== seat && d[x]) out.push(x); });
+      return out;
+    };
 
     reqs.forEach(function (r){ out[seatKey(div, r.seat)] = []; used[r.seat] = {}; });
 
@@ -323,6 +348,10 @@ function resolve(opts){
           if (at !== -1) roster.splice(at, 1);
           roster.push(team);
           used[e.seat][e.res.drop] = true;
+          /* GETTING A TEAM SETTLES WHAT ANYONE OWED YOU. Casey, 10 Sep 2026: A beats B, stands
+             aside while B wins the next one, and by the third they are level again. Any
+             acquisition settles it -- the promise was that B gets a turn, and B has had one. */
+          settle(e.seat);
           log.push({div: div, week: week, seat: e.seat, row: e.res.row, team: team,
                     drop: e.res.drop, contested: entrantNames.length > 1});
         };
@@ -331,21 +360,28 @@ function resolve(opts){
 
         contestNo++;
         var names = entrants.map(function (e){ return e.seat; });
-        var eligible = entrants.filter(function (e){
-          return policy === 'next-contest-only' ? e.seat !== lastWinner : !wonContest[e.seat];
+        /* PAIRWISE. You are held out only if somebody you owe is in THIS contest -- not because
+           you won something earlier against people who are not here. */
+        var held = {};
+        entrants.forEach(function (e){
+          var by = policy === 'any-win' ? (owes[e.seat] && Object.keys(owes[e.seat]).length
+                                           ? ['an earlier contest'] : [])
+                                        : blockedBy(e.seat, names);
+          if (by.length) held[e.seat] = by;
         });
-        /* Nobody left who has not already won: the exclusion has nobody to protect, so it lapses
+        var eligible = entrants.filter(function (e){ return !held[e.seat]; });
+        /* Every entrant held out: the exclusion has nobody left to protect, so it steps aside
            rather than leaving the team unawarded. An absence is not an answer. */
         var lapsed = false;
-        if (!eligible.length){ eligible = entrants; lapsed = true; }
+        if (!eligible.length){ eligible = entrants; lapsed = true; held = {}; }
 
         var rnd = mulberry32(hash32(flipKey(seed, week, div, team, contestNo)));
         var winner = eligible[Math.floor(rnd() * eligible.length)] || eligible[0];
 
         entrants.forEach(function (e){
           if (e === winner) return;
-          var stoodAside = eligible.indexOf(e) === -1;
-          e.res.outcome = stoodAside ? OUTCOME.STOOD_ASIDE : OUTCOME.LOST;
+          e.res.outcome = held[e.seat] ? OUTCOME.STOOD_ASIDE : OUTCOME.LOST;
+          e.res.owedTo = held[e.seat] || null;      // who this seat was standing aside FOR
           e.res.entrants = names;
           e.res.winner = winner.seat;
           e.res.contest = contestNo;
@@ -353,8 +389,12 @@ function resolve(opts){
         award(winner, OUTCOME.WON, names);
         winner.res.contest = contestNo;
         winner.res.lapsed = lapsed;
-        wonContest[winner.seat] = true;
-        lastWinner = winner.seat;
+        /* The winner now owes everyone they actually BEAT. Nobody who stood aside was beaten, so
+           no debt is created towards them. */
+        owes[winner.seat] = owes[winner.seat] || {};
+        entrants.forEach(function (e){
+          if (e !== winner && !held[e.seat]) owes[winner.seat][e.seat] = 1;
+        });
       });
     }
   });
