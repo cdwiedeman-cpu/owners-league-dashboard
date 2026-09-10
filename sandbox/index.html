@@ -1412,6 +1412,7 @@ function viewRun(){
      returning early on "no entries" -- so the one screen he had just asked for was the one it
      skipped, and it told him nothing had been entered, which was true and completely
      unhelpful. Whatever last happened is the thing the reader came here for. */
+  h += claimQueueCard();
   if (S.results) h += resultsCard();
 
   h += reqs.length
@@ -1489,28 +1490,53 @@ function snapshot(){
           logLen: (S.log || []).length,
           week: weekNo(), at: now()};
 }
+/* WHAT HAS HAPPENED SINCE THE FLIPS RAN. The log is newest-first, so anything added after the
+   run sits at the front. */
+function sinceRun(){
+  var u = S.undo;
+  if (!u || u.week !== weekNo()) return [];
+  var n = (S.log || []).length - u.since;
+  return n > 0 ? S.log.slice(0, n) : [];
+}
 function canUndo(){
   var u = S.undo;
   if (!u || u.week !== weekNo()) return null;
-  /* ONLY WHILE NOTHING HAS HAPPENED SINCE. A first-come claim lands on the rosters this would
-     put back, so undoing after one would silently erase it. Refused rather than risked. */
-  if ((S.log || []).length !== u.since) return {blocked: (S.log || []).length - u.since};
   return u;
 }
 function askUndo(){
   var u = canUndo();
   if (!u) return;
-  if (u.blocked){
-    showHelp('Too late to undo this week',
-      '<p>' + u.blocked + ' thing' + (u.blocked === 1 ? ' has' : 's have') + ' happened since '
-      + 'the coin flips ran — first come, first served claims, most likely. Undoing would put '
-      + 'the rosters back to 4:00pm and erase them.</p>'
-      + '<p>Fix the individual trade with <b>Record a trade</b> or a correction instead.</p>');
-    return;
-  }
+  var after = sinceRun();
+  /* FIRST-COME CLAIMS MADE AFTER THE FLIPS COME BACK OFF THE ROSTERS TOO — and are handed back
+     rather than thrown away. Casey, 10 Sep 2026: "ideally they don't get wiped out, but they're
+     still sitting there available for him to push the button to do the first come first serve
+     trade. And then if that team was taken during the Peloton, then obviously it would reject
+     the trade for him."
+     They cannot simply be kept: they were granted against rosters that are about to stop
+     existing. So each one is put back in a queue and RE-DECIDED against the new rosters, which
+     is the only honest thing to do with a claim whose premise has changed. */
+  var claims = after.filter(function(e){ return e.how === 'first come'; });
+  var other = after.length - claims.length;
   showHelp('Undo Monday and start again?',
     '<p>This puts every roster back to how it stood at 4:00pm and <b>keeps every list exactly as '
     + 'it was typed</b>. Nobody re-enters anything.</p>'
+    + (claims.length
+        ? '<div class="card warn" style="margin:10px 0"><b>' + claims.length
+          + ' first come, first served claim' + (claims.length === 1 ? '' : 's')
+          + ' came in after the flips ran.</b>'
+          + '<p class="note">' + (claims.length === 1 ? 'It comes' : 'They come')
+          + ' off the rosters too — ' + (claims.length === 1 ? 'it was' : 'they were')
+          + ' granted against a week that is about to be settled differently. '
+          + (claims.length === 1 ? 'It is' : 'They are') + ' <b>not lost</b>: after you re-run '
+          + 'the week ' + (claims.length === 1 ? 'it waits' : 'they wait')
+          + ' on the Run tab for you to try again, and if the team went to somebody else in the '
+          + 'new flips you will be told exactly that.</p>'
+          + '<ul class="note">' + claims.map(function(e){
+              return '<li>' + esc(e.owner) + ': ' + esc(e['in']) + ' for ' + esc(e.out) + '</li>';
+            }).join('') + '</ul></div>'
+        : '')
+    + (other ? '<p class="b">' + other + ' other change' + (other === 1 ? '' : 's')
+             + ' since the flips will also be undone.</p>' : '')
     + '<p>Then add the request you missed and run it again. The whole week is settled from '
     + 'scratch with everything in it, which is the only way to get the answer the week should '
     + 'have had — a late request can join a contest somebody else won, and that changes who won '
@@ -1525,7 +1551,13 @@ function askUndo(){
 }
 function doUndo(){
   var u = canUndo();
-  if (!u || u.blocked) { closeHelp(); return; }
+  if (!u) { closeHelp(); return; }
+  /* Take the claims off the rosters WITH the week, but keep them as things still to decide. */
+  S.claimQueue = sinceRun().filter(function(e){ return e.how === 'first come'; })
+    .map(function(e){
+      return {div: e.div, owner: e.owner, pickup: e['in'], drop: e.out, at: e.when || null,
+              by: e.by || null, state: 'waiting'};
+    }).reverse();                       // back into the order they arrived
   S.rosters = JSON.parse(JSON.stringify(u.rosters));
   S.requests = JSON.parse(JSON.stringify(u.requests));
   S.acquired = JSON.parse(JSON.stringify(u.acquired));
@@ -1591,6 +1623,62 @@ function resultsCard(){
 }
 /* ALL OF THEM AT ONCE, separated so they can be pasted one at a time. Twenty-seven messages
    retyped by hand is not a workflow anybody sustains for three weeks. */
+/* THE FIRST-COME CLAIMS THAT AN UNDO TOOK OFF THE ROSTERS, waiting to be decided again against
+   the week as it now stands. Each one is re-run through the SAME check a live claim goes through,
+   so a team that went elsewhere in the new flips is refused with the ordinary reason rather than
+   quietly reinstated. */
+function claimQueueCard(){
+  var q = S.claimQueue || [];
+  if (!q.length) return '';
+  var waiting = q.filter(function(c){ return c.state === 'waiting'; }).length;
+  return '<div class="card warn"><h2>First come claims to decide again</h2>'
+    + '<p class="note">These came in after the flips and were taken off the rosters when you '
+    + 'undid the week. Re-run the week first, then try each one — the team may have gone to '
+    + 'somebody else this time.</p>'
+    + q.map(function(c, i){
+        var done = c.state !== 'waiting';
+        return '<div class="trow"><div class="hd"><span>' + esc(c.owner) + '</span>'
+          + '<span>' + (c.state === 'waiting' ? 'waiting'
+              : c.state === 'done' ? '<span class="g">done</span>'
+              : '<span class="b">refused</span>') + '</span></div>'
+          + '<div><b>' + esc(c.pickup) + '</b> <span class="d">for</span> ' + esc(c.drop)
+          + (c.by ? ' <span class="d">· entered by ' + esc(c.by) + '</span>' : '') + '</div>'
+          + (c.why ? '<div class="note">' + esc(c.why) + '</div>' : '')
+          + (done ? '' : '<div class="row" style="margin-top:6px">'
+              + '<button class="pri" onclick="retryClaim(' + i + ')">Try this one again</button>'
+              + '<button onclick="dropClaim(' + i + ')" title="Take it off the list without '
+              + 'granting it">Drop it</button></div>')
+          + '</div>';
+      }).join('')
+    + (waiting ? '' : '<div class="row"><button onclick="S.claimQueue=[];save();render()">'
+        + 'Clear the list</button></div>')
+    + '</div>';
+}
+function retryClaim(i){
+  var c = (S.claimQueue || [])[i]; if (!c || c.state !== 'waiting') return;
+  var L = league();
+  var res = P.claim({league: L, div: c.div, seat: c.owner, pickup: c.pickup, drops: [c.drop]});
+  var sent = sentence(res, c.owner);
+  if (P.GOT[res.outcome]){
+    P.applyClaim(L, c.div, c.owner, res);
+    S.rosters = L.rosters;
+    (S.acquired[key(c.div, c.owner)] = S.acquired[key(c.div, c.owner)] || []).push(c.pickup);
+    S.log.unshift(Object.assign({when: now(), by: c.by},
+      P.claimRow(c.div, c.owner, res, {week: weekNo(), fee: DATA.trade_cost})));
+    c.state = 'done'; c.why = 'Granted again — ' + c.pickup + ' for ' + res.drop + '.';
+  } else {
+    c.state = 'refused'; c.why = sent.head + ' ' + sent.body;
+  }
+  save();
+  showHelp(c.state === 'done' ? 'Granted' : 'Refused', '<p>' + esc(c.why) + '</p>'
+    + (c.state === 'refused' ? '<p>Tell ' + esc(c.owner) + ' — this claim was good when they '
+        + 'made it and is not any more, which is not their mistake.</p>' : ''));
+  render();
+}
+function dropClaim(i){
+  var c = (S.claimQueue || [])[i]; if (!c) return;
+  c.state = 'refused'; c.why = 'Taken off the list by hand.'; save(); render();
+}
 function copyAllEmails(){
   var R = S.results; if (!R) return;
   var keys = Object.keys(R.results).filter(function(k){ return (R.results[k] || []).length; }).sort();
@@ -1793,7 +1881,7 @@ function blank(){
   return {clock: DATA.clock_start, device: 'A', devices: {}, tokens: {}, links: [], seq: 0,
           access: seedAccess(), former: [], requests: {}, rosters: freshRosters(),
           acquired: {}, log: [],
-          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, autoEmail: true, ranWeeks: {}, lastEmail: (DATA.me || {}).email || ''};
+          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, autoEmail: true, ranWeeks: {}, claimQueue: [], lastEmail: (DATA.me || {}).email || ''};
 }
 function boot(){
   try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
