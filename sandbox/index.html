@@ -1283,7 +1283,10 @@ function viewAccess(){
     + '<div class="card"><div class="scr"><table>'
     + '<colgroup><col style="width:26%"><col style="width:30%"><col style="width:14%">'
     + '<col style="width:20%"><col style="width:10%"></colgroup>'
-    + '<thead><tr><th>Seat</th><th>Email</th><th>Status</th><th>Keys retired before</th>'
+    + '<thead><tr><th>Seat</th><th>Email</th><th>Status</th>'
+    + '<th title="When the keys on this seat were last retired. It is a permanent '
+    + 'cut-off, not a pending state — it never clears, because clearing it would bring '
+    + 'every retired device back.">Keys last retired</th>'
     + '<th></th></tr></thead><tbody>'
     + rows.map(function(r, i){
         return '<tr><td>' + esc(r.seat) + '<div class="f" style="font-size:11px">'
@@ -1295,7 +1298,15 @@ function viewAccess(){
           + '<option value="active"' + (r.status !== 'removed' ? ' selected' : '') + '>active</option>'
           + '<option value="removed"' + (r.status === 'removed' ? ' selected' : '') + '>inactive</option>'
           + '</select></td>'
-          + '<td>' + (r.validAfter ? '<span class="d">' + esc(pretty(r.validAfter)) + '</span>'
+          + '<td>' + (r.validAfter
+              ? '<span class="d" title="' + esc(
+                  'This is a permanent line in the sand, not a pending state. Every key handed '
+                  + 'out before this moment stays dead — clearing it would bring them all back, '
+                  + 'so it never goes away. Anyone signing in after it gets a new key and is '
+                  + 'unaffected.') + '">' + esc(pretty(r.validAfter)) + '</span>'
+                + '<div class="f" style="font-size:11px">' + (r.retiredN
+                    ? r.retiredN + ' session' + (r.retiredN === 1 ? '' : 's') + ' ended'
+                    : 'nothing was signed in') + '</div>'
               : '<span class="f">—</span>')
           + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px" '
           + 'onclick="bump(' + i + ')">Retire keys now</button></div></td>'
@@ -1322,12 +1333,24 @@ function nextSeq(){ S.seq = (S.seq || 0) + 1; save(); return S.seq; }
    TWO edits — change the address, then retire — and doing only the second one signs the same
    person out and lets them straight back in, which is exactly what Casey saw. */
 function bump(i){
-  S.access[i].validAfter = now();
-  S.access[i].retiredSeq = nextSeq();
+  var row = S.access[i];
+  /* HOW MANY SESSIONS THIS ACTUALLY ENDED, counted at the moment it happens. A watermark with no
+     count reads as a pending state; "1 session ended" reads as something that has finished. */
+  var seq = nextSeq(), n = 0;
+  Object.keys(S.tokens).forEach(function(k){
+    var t = S.tokens[k];
+    if (t.seat === row.seat && t.div === row.div && (t.seq || 0) < seq) n++;
+  });
+  row.validAfter = now();
+  row.retiredSeq = seq;
+  row.retiredN = n;
   save();
   var stillOurs = String(S.access[i].email || '').trim();
   showHelp('Keys retired on that seat',
     '<p>Every device signed in to <b>' + esc(S.access[i].seat) + '</b> has been turned away.</p>'
+    + '<p class="d">The date now shown against this row is a permanent cut-off, not something '
+    + 'waiting to happen. It never clears — clearing it would bring every retired device back. '
+    + 'Anyone who signs in after it gets a new key and is unaffected by it.</p>'
     + (stillOurs
         ? '<p><b>' + esc(stillOurs) + ' is still the address on this seat</b>, so that person '
           + 'can ask for a new link and sign back in. That is correct: retiring keys ends the '
