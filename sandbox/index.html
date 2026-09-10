@@ -1838,6 +1838,90 @@ function showEmail(k){
 /* THIS IS THE GOOGLE SHEET TAB, in the shape Bob will actually keep it. Editing it here does
    exactly what editing it there will do, which is the only way to test "what if an owner leaves"
    without waiting for an owner to leave. */
+/* WHO IS ACTUALLY SIGNED IN, RIGHT NOW. The same three tests `session()` applies, asked of the
+   whole key store instead of one device. A status column that reasons differently from the gate
+   is a second store of one fact, and one of them would eventually lie.
+   THIS REPLACED A PERMANENT `Keys last retired` DATE. Casey, 10 Sep 2026: he retired his keys,
+   changed his address, signed back in, and the row still read "Tue 15 Sep 5:01pm" forever after
+   — "it looks like it's been retired". The stored cut-off HAS to be permanent; the column does
+   not have to be the place it is shown. A column Bob reads before acting should say what is true
+   now; what happened once belongs in a history. */
+function liveSessions(row){
+  var n = 0, since = '';
+  Object.keys(S.tokens).forEach(function(k){
+    var t = S.tokens[k];
+    if (t.seat !== row.seat || t.div !== row.div) return;
+    /* THE ADDRESS THE KEY WAS ISSUED TO MUST STILL BE THE ONE ON THE SEAT — the same test the
+       gate makes, so changing an address drops the count without a retire. */
+    if (String(t.email || '').toLowerCase() !== String(row.email || '').toLowerCase()) return;
+    if (row.retiredSeq && (t.seq || 0) < row.retiredSeq) return;
+    if (!row.retiredSeq && row.validAfter && t.issued < row.validAfter) return;
+    /* A KEY NOBODY IS HOLDING IS NOT A SESSION. Signing out leaves the key in the store. */
+    var held = false;
+    Object.keys(S.devices).forEach(function(d){
+      if (S.devices[d] && S.devices[d].token === k) held = true;
+    });
+    if (!held) return;
+    n++;
+    if (!since || t.issued < since) since = t.issued;
+  });
+  return {n: n, since: since};
+}
+/* THE HISTORY. Every retirement and every address change, dated, newest first. Bob asked the
+   question this answers: is anybody keeping track of what was retired against that email? Yes —
+   here, where a history belongs, and not in a status column. */
+function note(row, what){
+  S.log = ([{at: now(), seat: row.seat, div: row.div, what: what}]).concat(S.log || [])
+            .slice(0, 80);
+}
+function logCard(){
+  var L = S.log || [];
+  if (!L.length){
+    return '<div class="card"><h2>Recent changes</h2><p class="note">Nothing on this list has '
+      + 'been changed yet. Every address change and every retirement is recorded here with its '
+      + 'date, so a seat that has changed hands has a history you can read — which is why '
+      + 'none of that has to sit in the columns above.</p></div>';
+  }
+  return '<div class="card"><h2>Recent changes</h2>'
+    + '<p class="note">Newest first. In the Google Sheet this is the <b>Log</b> tab, written by '
+    + 'the script.</p><div class="scr"><table>'
+    + '<colgroup><col style="width:30%"><col style="width:26%"><col style="width:44%"></colgroup>'
+    + '<thead><tr><th>When</th><th>Seat</th><th>What</th></tr></thead><tbody>'
+    + L.map(function(e){
+        return '<tr><td class="d">' + esc(pretty(e.at)) + '</td><td>' + esc(e.seat)
+          + '<div class="f" style="font-size:11px">'
+          + esc(DATA.div_names[e.div] || e.div) + '</div></td>'
+          + '<td class="d">' + esc(e.what) + '</td></tr>';
+      }).join('')
+    + '</tbody></table></div></div>';
+}
+/* WHAT THIS LOOKS LIKE IN THE SHEET. Casey, 10 Sep 2026: "if this is in the Google Sheet,
+   nobody's going to see this tab... does Bob retire the keys in here, or is there something in
+   the Google Sheet where he's telling it to retire the keys?" A spreadsheet has no buttons, so
+   the answer has to be written down rather than implied by a page that has them. */
+function sheetCard(){
+  return '<div class="card"><h2>The same thing in the Google Sheet</h2>'
+    + '<p class="note">A spreadsheet has no buttons, so in the live league the two buttons on '
+    + 'this page are <b>typed</b> instead. The Sheet has one row per seat and these columns:</p>'
+    + '<div class="scr"><table>'
+    + '<colgroup><col style="width:30%"><col style="width:70%"></colgroup><tbody>'
+    + [['Division, Seat', 'Written once when the season is set up. Bob never touches them.'],
+       ['Email, Status, Role', 'Bob types these. The same three columns as above.'],
+       ['Retire?', 'Bob types an <b>x</b> here instead of pressing <b>Retire keys now</b>. Within '
+        + 'five minutes the script turns away every device signed in to that seat, empties the '
+        + 'cell again, and writes a line on the <b>Log</b> tab. <b>The empty cell is the '
+        + 'receipt</b> — while the x is still sitting there it has not happened yet.'],
+       ['Signed in', 'Written by the script, never typed. The same count as above, as of the last '
+        + 'time the script ran, which is never more than five minutes ago.']]
+      .map(function(r){
+        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
+      }).join('')
+    + '</tbody></table></div>'
+    + '<p class="note"><b>The cut-off date is not a column at all.</b> The script keeps it where '
+    + 'nobody can type over it or paste it away, and writes the retirement on the <b>Log</b> tab '
+    + 'with its date. Bob never needs to read the date to do his job — he needs to know '
+    + 'whether anybody is signed in, which is the column above.</p></div>';
+}
 function viewAccess(){
   var rows = S.access;
   var filled = rows.filter(function(r){ return String(r.email || '').trim(); }).length;
@@ -1846,9 +1930,12 @@ function viewAccess(){
      keys last retired means and what to do with that." A grid of editable cells with no key is
      a form that assumes the reader already knows the model. */
   return '<div class="card"><h2>Access list</h2>'
-    + '<p class="note">This is the tab that lives in the Google Sheet. The script reads it on '
-    + 'every sign-in and every trade, so <b>an edit takes effect on the next thing anybody '
-    + 'does</b> — nothing is rebuilt and nobody else has to be involved.</p>'
+    + '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
+    + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
+    + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
+    + 'league Bob edits the Sheet itself. The script reads it on every sign-in and every trade, '
+    + 'so <b>an edit takes effect on the next thing anybody does</b> — nothing is rebuilt and '
+    + 'nobody else has to be involved.</p>'
     + '<ol class="note"><li>Type each owner&#39;s email into the <b>Email</b> column. '
     + '<b>Personal inboxes only</b> — not the league list, and not an address that forwards to '
     + 'several people.</li>'
@@ -1871,10 +1958,12 @@ function viewAccess(){
        ['Status', '<b>active</b> is normal. <b>inactive</b> refuses everything that seat tries '
                   + 'to submit and changes nothing else — the seat still appears in standings '
                   + 'and scores. Use it when an owner leaves and nobody has taken over.'],
-       ['Keys last retired', 'Press <b>Retire keys now</b> when a seat changes hands. It turns '
-                  + 'away every device already signed in to that seat — changing the address '
-                  + 'alone does not, because a phone that is already in never asks for a new '
-                  + 'link. The date it leaves behind is permanent and is meant to be.'],
+       ['Signed in', 'How many devices are holding a working key for that seat right now, and '
+                  + 'since when. It answers the one question worth asking before you retire '
+                  + 'keys: is there anything to turn away? <b>Retire keys now</b> sends it to '
+                  + '<i>nobody signed in</i>, and that is how you know it worked. Retire when a '
+                  + 'seat changes hands — changing the address alone does not reach a phone '
+                  + 'that is already signed in, because it never asks for a new link.'],
        ['Role', '<b>owner</b> for everybody except the commissioner, whose row says '
                   + '<b>commissioner</b>. That is what lets him submit for any seat and enter a '
                   + 'correction.']]
@@ -1886,11 +1975,11 @@ function viewAccess(){
     + '<colgroup><col style="width:26%"><col style="width:30%"><col style="width:14%">'
     + '<col style="width:20%"><col style="width:10%"></colgroup>'
     + '<thead><tr><th>Seat</th><th>Email</th><th>Status</th>'
-    + '<th title="When the keys on this seat were last retired. It is a permanent '
-    + 'cut-off, not a pending state — it never clears, because clearing it would bring '
-    + 'every retired device back.">Keys last retired</th>'
+    + '<th title="How many devices are holding a working key for this seat right now. '
+    + 'Retiring keys sends this to nobody signed in.">Signed in</th>'
     + '<th></th></tr></thead><tbody>'
     + rows.map(function(r, i){
+        var L = liveSessions(r);
         return '<tr><td>' + esc(r.seat) + '<div class="f" style="font-size:11px">'
           + esc(DATA.div_names[r.div] || r.div) + (r.role === 'commissioner'
             ? ' · <span class="pill gold">commish</span>' : '') + '</div></td>'
@@ -1900,21 +1989,19 @@ function viewAccess(){
           + '<option value="active"' + (r.status !== 'removed' ? ' selected' : '') + '>active</option>'
           + '<option value="removed"' + (r.status === 'removed' ? ' selected' : '') + '>inactive</option>'
           + '</select></td>'
-          + '<td>' + (r.validAfter
-              ? '<span class="d" title="' + esc(
-                  'This is a permanent line in the sand, not a pending state. Every key handed '
-                  + 'out before this moment stays dead — clearing it would bring them all back, '
-                  + 'so it never goes away. Anyone signing in after it gets a new key and is '
-                  + 'unaffected.') + '">' + esc(pretty(r.validAfter)) + '</span>'
-                + '<div class="f" style="font-size:11px">' + (r.retiredN
-                    ? r.retiredN + ' session' + (r.retiredN === 1 ? '' : 's') + ' ended'
-                    : 'nothing was signed in') + '</div>'
-              : '<span class="f">—</span>')
-          + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px" '
-          + 'onclick="bump(' + i + ')">Retire keys now</button></div></td>'
+          + '<td>' + (L.n
+              ? '<span class="pill good">' + L.n + ' device' + (L.n === 1 ? '' : 's')
+                + '</span><div class="f" style="font-size:11px">since '
+                + esc(pretty(L.since)) + '</div>'
+              : '<span class="f">nobody signed in</span>')
+          + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px"'
+          + (L.n ? '' : ' title="Nothing is signed in to this seat, so there is nothing for this '
+                        + 'to turn away."')
+          + ' onclick="bump(' + i + ')">Retire keys now</button></div></td>'
           + '<td><button style="min-height:30px;padding:4px 8px" onclick="delAccess(' + i
           + ')" title="Remove this address">✕</button></td></tr>';
-      }).join('') + '</tbody></table></div></div>';
+      }).join('') + '</tbody></table></div></div>'
+    + sheetCard() + logCard();
 }
 var ACCESSNOTE = '<p><b>An owner changes their email.</b> Type the new address over the old one. '
   + 'The old address stops receiving links immediately. Their phone stays signed in, which is '
@@ -1937,6 +2024,8 @@ function setAccess(i, f, v){
       S.former = (S.former || []).filter(function(x){ return x.email !== old; });
       S.former.unshift({email: old, seat: S.access[i].seat, div: S.access[i].div, at: now()});
       S.former = S.former.slice(0, 60);
+      note(S.access[i], 'address changed from ' + old + ' to '
+                        + (String(v || '').trim() || 'nothing'));
     }
   }
   S.access[i][f] = v; save(); render();
@@ -1958,13 +2047,21 @@ function bump(i){
   row.validAfter = now();
   row.retiredSeq = seq;
   row.retiredN = n;
+  note(row, n ? 'keys retired, ' + n + ' device' + (n === 1 ? '' : 's') + ' turned away'
+             : 'keys retired, nothing was signed in');
   save();
   var stillOurs = String(S.access[i].email || '').trim();
   showHelp('Keys retired on that seat',
-    '<p>Every device signed in to <b>' + esc(S.access[i].seat) + '</b> has been turned away.</p>'
-    + '<p class="d">The date now shown against this row is a permanent cut-off, not something '
-    + 'waiting to happen. It never clears — clearing it would bring every retired device back. '
-    + 'Anyone who signs in after it gets a new key and is unaffected by it.</p>'
+    '<p>' + (n ? esc(String(n)) + ' device' + (n === 1 ? '' : 's') + ' signed in to <b>'
+                 + esc(S.access[i].seat) + '</b> ' + (n === 1 ? 'has' : 'have')
+                 + ' been turned away.'
+               : 'Nothing was signed in to <b>' + esc(S.access[i].seat) + '</b>, so nothing was '
+                 + 'turned away. The seat is now sealed against any key handed out before now, '
+                 + 'which is what you want if you are about to hand it over.') + '</p>'
+    + '<p class="d">The <b>Signed in</b> column reads <i>nobody signed in</i> now. That is the '
+    + 'whole of what changed on the row — there is no leftover state to clear, and this '
+    + 'retirement is written into <b>Recent changes</b> at the bottom of the page with its '
+    + 'date.</p>'
     + (stillOurs
         ? '<p><b>' + esc(stillOurs) + ' is still the address on this seat</b>, so that person '
           + 'can ask for a new link and sign back in. That is correct: retiring keys ends the '
@@ -1981,8 +2078,11 @@ function addAccess(){
 }
 function csv(){
   var q = function(s){ return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; };
-  return ['Division,Seat,Email,Status,KeysRetiredBefore,Role'].concat(S.access.map(function(r){
-    return [r.div, r.seat, r.email, r.status || 'active', r.validAfter || '', r.role || 'owner']
+  /* THE SHEET'S COLUMNS, NOT THIS PAGE'S STATE. The cut-off is the script's to keep and is not
+     a column anybody can paste over; `Retire?` is a request Bob types, so it goes out blank; and
+     `Signed in` is written by the script, so pasting a count in would be pasting in a lie. */
+  return ['Division,Seat,Email,Status,Role,Retire?,Signed in'].concat(S.access.map(function(r){
+    return [r.div, r.seat, r.email, r.status || 'active', r.role || 'owner', '', '']
       .map(q).join(',');
   })).join('\n');
 }
