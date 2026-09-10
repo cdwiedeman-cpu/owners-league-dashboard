@@ -1468,7 +1468,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '10 Sep 2026, 9:33 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '10 Sep 2026, 10:35 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7408,7 +7408,21 @@ function renderTx(){
      build is two stores of one fact, and the one that would have lied is this one -- it only
      shows up when the payload is missing the key, which is exactly when nobody is checking. */
   const FEE = DATA.trade_cost != null ? DATA.trade_cost : 3;
-  const costOf = () => FEE;
+  /* WHAT A ROW COSTS IS RECORDED ON THE ROW, NOT COUNTED FROM THE ROWS.
+     Casey, 10 Sep 2026: a correction can take two or three roster moves to put one trade right,
+     "and you wouldn't want to double or triple charge somebody for their fees."
+     He is right, and the cause is structural: the total was `number of rows x $3`, so the money
+     could only ever be a consequence of how many moves it took to get the roster correct. **A
+     TOTAL COMPUTED BY COUNTING ROWS CANNOT BE CORRECTED** — there is nothing to correct, only
+     rows to add or delete, and deleting a row loses the history that explains the roster.
+     So each row carries its own `fee`, and the total is a SUM. Two things fall out of that:
+       - A row can be zeroed (a correction move that is not a new transaction) or made negative
+         (a credit for something charged in error) without touching the roster history.
+       - A fee entered this season stays what it was if the league changes the fee next season.
+         Deriving the amount retroactively rewrites the past; storing it does not.
+     `feeOf` defaults an older row that has no `fee` to the flat rate, which is what every row
+     written before today means. */
+  const feeOf = t => (t && typeof t.fee === 'number') ? t.fee : FEE;
   const money = n => (n < 0 ? '−$' : '$') + Math.abs(n).toFixed(0);
 
   const winByLabel = new Map(wins.map(w => [w.label, w]));
@@ -7436,7 +7450,11 @@ function renderTx(){
           <td class="d">${esc(t.div || '')}</td>
           <td>${esc(t.owner || '')}</td>
           <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}</td>
-          <td class="num">${money(costOf())}</td></tr>`).join('')}
+          <td class="num${feeOf(t) === FEE ? '' : ' gold'}" title="${esc(feeOf(t) === FEE
+              ? `The standard ${money(FEE)} transaction fee.`
+              : `Set to ${money(feeOf(t))} rather than the standard ${money(FEE)}${
+                  t.fee_note ? ': ' + t.fee_note : '. No reason was recorded.'}`)}">${
+            money(feeOf(t))}</td></tr>`).join('')}
       </tbody></table></div>
     <div class="note">A trade takes effect the day after its window closes, and points follow
       ownership <b>week by week</b> from there — the team an owner sends away keeps the points it
@@ -7450,8 +7468,19 @@ function renderTx(){
   const byOwner = new Map();
   for (const t of trades){
     const k = t.div + '|' + t.owner;
-    const r = byOwner.get(k) || {div: t.div, owner: t.owner, n: 0, owed: 0};
-    r.n++; r.owed += costOf(); byOwner.set(k, r);
+    const r = byOwner.get(k) || {div: t.div, owner: t.owner, n: 0, owed: 0, adj: 0};
+    r.n++; r.owed += feeOf(t); byOwner.set(k, r);
+  }
+  /* MONEY AND ROSTERS ARE CORRECTED SEPARATELY. Sometimes the roster is right and only the
+     charge is wrong — an owner billed twice for one trade — and there is then no roster move to
+     hang the correction on. An adjustment is a line of money with no team attached. */
+  for (const a of (tx.fee_adjustments || [])){
+    const k = a.div + '|' + a.owner;
+    const r = byOwner.get(k) || {div: a.div, owner: a.owner, n: 0, owed: 0, adj: 0};
+    r.owed += Number(a.amount) || 0;
+    r.adj += Number(a.amount) || 0;
+    (r.notes = r.notes || []).push(a);
+    byOwner.set(k, r);
   }
   const owners = [...byOwner.values()].sort((a, c) => c.owed - a.owed || a.owner.localeCompare(c.owner));
   const grand = owners.reduce((a, r) => a + r.owed, 0);
@@ -7463,15 +7492,27 @@ function renderTx(){
         <p><b>Nobody owes anything yet.</b> No trades have been made, and a trade is the only
         thing charged for on this page.</p>
         <p>Once trades are logged, this table lists every owner who made one, what they owe at
-        <b>${money(FEE)}</b> a trade, and the league total.</p></div></div>`
+        <b>${money(FEE)}</b> a trade, and the league total.</p>
+        <p>Each trade carries its own fee rather than being counted at a flat rate, so a fee can
+        be corrected — set to zero, or credited back — without deleting the trade and losing the
+        record of what actually moved.</p></div></div>`
     : `<div class="card"><h2>What Each Owner Owes</h2>
     <div class="scr"><table>
       <colgroup><col style="width:44%"><col style="width:24%"><col style="width:16%"><col style="width:16%"></colgroup>
       <thead><tr><th>Owner</th><th>Division</th><th class="num">Trades</th><th class="num">Owed</th></tr></thead>
       <tbody>${owners.map(r => `<tr><td>${esc(r.owner)}${
-          meName() && r.div === MY_DIV && r.owner === meName() ? ' <span class="mytag">YOU</span>' : ''}</td>
+          meName() && r.div === MY_DIV && r.owner === meName() ? ' <span class="mytag">YOU</span>' : ''}${
+          /* AN ADJUSTED TOTAL SAYS SO, AND SAYS WHY. A number that does not match trades x fee
+             and does not explain itself reads as an arithmetic error, which is worse than either
+             the wrong number or no number. */
+          r.adj ? `<div class="d" style="font-size:11px">${(r.notes || []).map(a =>
+              `${money(Number(a.amount) || 0)} — ${esc(a.why || 'adjustment')}`).join('<br>')}</div>` : ''}</td>
         <td class="d">${DIVNAME[r.div] || r.div}</td>
-        <td class="num d">${r.n}</td><td class="num"><b>${money(r.owed)}</b></td></tr>`).join('')}
+        <td class="num d">${r.n}</td><td class="num"><b>${money(r.owed)}</b>${
+          r.adj || r.owed !== r.n * FEE
+            ? `<div class="d" style="font-size:11px" title="${esc(
+                `${r.n} trade(s) at the standard ${money(FEE)} would be ${money(r.n * FEE)}. This total differs because a fee was changed on a trade, or an adjustment was entered.`)}">adjusted</div>`
+            : ''}</td></tr>`).join('')}
         <tr class="rbtot"><td><b>League total</b></td><td></td>
           <td class="num"><b>${owners.reduce((a, r) => a + r.n, 0)}</b></td>
           <td class="num"><b>${money(grand)}</b></td></tr>

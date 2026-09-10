@@ -310,6 +310,10 @@ function resolve(opts){
   /* The window this run belongs to, stamped onto every transaction it produces. The
      resolver does not own a calendar -- whoever calls it does. */
   var win      = opts.window || {};
+  /* The league's per-trade fee, stamped onto every transaction this run creates. Null
+     means the caller did not say, and a row with no fee is read as the standard rate by
+     whatever displays it -- never as zero. */
+  var fee      = opts.fee == null ? null : Number(opts.fee);
 
   /* The resolver never mutates what it was handed. Bob re-running a week must not depend on
      whether he re-ran it before. */
@@ -434,10 +438,15 @@ function resolve(opts){
              is written down. Casey, 10 Sep 2026: "as a trade commits ... you're tying that to
              update the transactions tab to keep track of the trades that have happened as well
              as what each owner owes." */
+          /* THE FEE IS RECORDED ON THE ROW, not counted from the rows later. A trade won here
+             is a transaction the owner made, so it carries the league's fee; a commissioner's
+             correction move is not, and carries zero. The caller supplies the rate rather than
+             the resolver knowing it — the rate is a league rule and this file is not where
+             league rules live. */
           log.push({div: div, week: week, owner: e.seat, row: e.res.row,
                     'in': team, out: e.res.drop,
                     how: entrantNames.length > 1 ? 'coin flip' : 'unopposed',
-                    contested: entrantNames.length > 1,
+                    contested: entrantNames.length > 1, fee: fee,
                     window: win.label || null, effective: win.effective || null});
         };
 
@@ -531,6 +540,7 @@ function claimRow(div, seat, res, opts){
   opts = opts || {};
   return {div: div, week: opts.week == null ? null : opts.week, owner: seat, row: null,
           'in': res.pickup, out: res.drop, how: 'first come', contested: false,
+          fee: opts.fee == null ? null : Number(opts.fee),
           window: opts.window || null, effective: opts.effective || null};
 }
 
@@ -1366,7 +1376,11 @@ function viewRun(){
                        : 'Run the coin flips for week ' + weekNo())
         : 'Nothing sent yet for week ' + weekNo()) + '</button>'
     + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">Why the same week '
-    + 'always resolves the same way</button></div>'
+    + 'always resolves the same way</button>'
+    + (ranBefore() && canUndo() && !canUndo().blocked
+        ? '<button class="dang" onclick="askUndo()" title="Put every roster back to 4:00pm and '
+          + 'keep every list exactly as it was typed">Undo week ' + weekNo() + '</button>' : '')
+    + '</div>'
     + (mode() === 'queue' && !isFlipMoment()
         ? '<p class="note" style="margin-top:8px">The clock says entry is still open. You can '
           + 'run it anyway to see the result — the live one would wait for 4:00pm.</p>' : '')
@@ -1412,20 +1426,100 @@ function ranBefore(){ return (S.ranWeeks || {})[weekNo()] || null; }
 function askRun(){
   var prev = ranBefore();
   if (!prev) return doRun();
+  var u = canUndo();
   showHelp('Week ' + weekNo() + ' has already been settled',
     '<p>It ran at <b>' + esc(pretty(prev.at)) + '</b> and moved ' + prev.n + ' team'
-    + (prev.n === 1 ? '' : 's') + '. Running again does <b>not</b> redo it — everything already '
-    + 'settled stands.</p>'
-    + '<p>What it will do is settle the ' + pendingRequests().length + ' list'
-    + (pendingRequests().length === 1 ? '' : 's') + ' entered since, against the rosters as they '
-    + 'are now. Use it when somebody was missed.</p>'
+    + (prev.n === 1 ? '' : 's') + '.</p>'
+    + '<p><b>If you missed somebody, undo it and run the whole week again.</b> A late request can '
+    + 'join a contest another owner won, and that changes who won it — so settling the latecomer '
+    + 'on top of the result cannot reach the answer the week should have had.</p>'
+    + (u && !u.blocked
+        ? '<div class="row" style="margin-top:10px">'
+          + '<button class="pri" onclick="closeHelp();askUndo()">Undo it and start again</button>'
+          + '<button onclick="closeHelp()">Leave it</button></div>'
+          + '<p class="note" style="margin-top:10px">There is also a plain second run, which '
+          + 'settles only what has come in since and cannot change anything already decided. It '
+          + 'is right when the person you missed wanted a team nobody else asked for — and if you '
+          + 'are not sure, undo instead.</p>'
+          + '<div class="row"><button onclick="closeHelp();doRun()">Settle only what has come in '
+          + 'since</button></div>'
+        : '<p class="b">Undo is no longer available — something has happened since the flips ran. '
+          + 'Settling what has come in since is the only option, and it cannot change anything '
+          + 'already decided.</p>'
+          + '<div class="row" style="margin-top:10px">'
+          + '<button class="pri" onclick="closeHelp();doRun()">Settle what has come in since'
+          + '</button><button onclick="closeHelp()">Leave it</button></div>'));
+}
+/* UNDO THE WHOLE WEEK, KEEPING WHAT WAS TYPED.
+   Casey, 10 Sep 2026: "it's not about running the Peloton again after it's already run. It's
+   about undoing everything that already happened and then entering in that trade that came at
+   3:50, because that could impact the Peloton depending on what that owner was selecting."
+   He is right and my first answer was wrong. A missed request does not just add a trade — it can
+   join a contest somebody else won, which changes who won it, which changes who stands aside
+   next, which changes the rest of the afternoon. **A SECOND RUN CANNOT REACH THE ANSWER THE WEEK
+   SHOULD HAVE HAD**; only re-running the whole week with every request in it can.
+   That is cheap here because the resolver is pure and deterministic: hand it the same rosters
+   and the same requests and it produces the same week. So the undo is simply "put the rosters
+   and the lists back the way they were at 4:00pm" — and crucially it puts the LISTS back too,
+   because nobody is retyping twenty-seven owners' requests. */
+function snapshot(){
+  return {rosters: JSON.parse(JSON.stringify(S.rosters)),
+          requests: JSON.parse(JSON.stringify(S.requests)),
+          acquired: JSON.parse(JSON.stringify(S.acquired || {})),
+          logLen: (S.log || []).length,
+          week: weekNo(), at: now()};
+}
+function canUndo(){
+  var u = S.undo;
+  if (!u || u.week !== weekNo()) return null;
+  /* ONLY WHILE NOTHING HAS HAPPENED SINCE. A first-come claim lands on the rosters this would
+     put back, so undoing after one would silently erase it. Refused rather than risked. */
+  if ((S.log || []).length !== u.since) return {blocked: (S.log || []).length - u.since};
+  return u;
+}
+function askUndo(){
+  var u = canUndo();
+  if (!u) return;
+  if (u.blocked){
+    showHelp('Too late to undo this week',
+      '<p>' + u.blocked + ' thing' + (u.blocked === 1 ? ' has' : 's have') + ' happened since '
+      + 'the coin flips ran — first come, first served claims, most likely. Undoing would put '
+      + 'the rosters back to 4:00pm and erase them.</p>'
+      + '<p>Fix the individual trade with <b>Record a trade</b> or a correction instead.</p>');
+    return;
+  }
+  showHelp('Undo Monday and start again?',
+    '<p>This puts every roster back to how it stood at 4:00pm and <b>keeps every list exactly as '
+    + 'it was typed</b>. Nobody re-enters anything.</p>'
+    + '<p>Then add the request you missed and run it again. The whole week is settled from '
+    + 'scratch with everything in it, which is the only way to get the answer the week should '
+    + 'have had — a late request can join a contest somebody else won, and that changes who won '
+    + 'it.</p>'
+    + '<p class="b"><b>Only do this before you have told anybody the results.</b> Re-running can '
+    + 'legitimately give a team to a different owner, and the first set of results was wrong '
+    + 'rather than unlucky — but somebody who has already been told they won Navy will not see '
+    + 'it that way.</p>'
     + '<div class="row" style="margin-top:10px">'
-    + '<button class="pri" onclick="closeHelp();doRun()">Settle what has come in since</button>'
-    + '<button onclick="closeHelp()">Leave it</button></div>');
+    + '<button class="dang" onclick="doUndo()">Undo it and put the lists back</button>'
+    + '<button onclick="closeHelp()">Leave it alone</button></div>');
+}
+function doUndo(){
+  var u = canUndo();
+  if (!u || u.blocked) { closeHelp(); return; }
+  S.rosters = JSON.parse(JSON.stringify(u.rosters));
+  S.requests = JSON.parse(JSON.stringify(u.requests));
+  S.acquired = JSON.parse(JSON.stringify(u.acquired));
+  S.log = (S.log || []).slice((S.log || []).length - u.logLen);
+  S.results = null;
+  if (S.ranWeeks) delete S.ranWeeks[u.week];
+  S.undo = null;
+  save(); closeHelp(); render();
 }
 function doRun(){
+  var snap = snapshot();
   var L = league();
-  var out = P.resolve({league: L, requests: pendingRequests(), week: weekNo(), seed: S.seed});
+  var out = P.resolve({league: L, requests: pendingRequests(), week: weekNo(), seed: S.seed,
+                       fee: DATA.trade_cost});
   S.results = {week: weekNo(), at: now(), results: out.results, log: out.log};
   S.rosters = out.rosters;
   /* THE RESOLVER'S LOG ROWS ARE ALREADY TRANSACTION ROWS -- owner / in / out / how / window --
@@ -1439,6 +1533,8 @@ function doRun(){
   S.ranWeeks = S.ranWeeks || {};
   var prev = S.ranWeeks[weekNo()];
   S.ranWeeks[weekNo()] = {at: now(), n: (prev ? prev.n : 0) + out.log.length};
+  snap.since = (S.log || []).length;      // nothing may happen after this and still allow undo
+  S.undo = snap;
   save(); render();
 }
 function resultsCard(){
