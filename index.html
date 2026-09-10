@@ -1096,17 +1096,28 @@ function renderChips(){
      upload, that is a real difference and the chip still warns -- an absence is never an answer.
      Only the ordinary case, where they came from the workbook this build read, folds into the
      tooltip. */
-  const rosters = DATA.owner_note ? `\n\nRosters: ${DATA.owner_note}` : '';
-  /* THE CHIP SAYS WHEN THE PAGE WAS MADE, because that is what a reader means by "built" and it
-     is the thing that moves when anything visible changes. The payload's own `_built` is a
-     DIFFERENT fact -- when the ratings and fixtures were last computed -- and it only moves when
-     the model is rerun. Both are shown, each labelled, rather than one standing in for the
-     other: Casey read "Built 9 Sep 2:24 AM" the morning after a rebuild and reasonably concluded
-     he was looking at an old page. */
-  c.push(`<span class="chip" title="${esc(
-    `This page was made ${PAGE_BUILT}. The ratings and fixtures inside it were computed ${DATA._built} — that is a separate step and it only reruns when the model changes. How current the SCORES are is the Results chip, which is a third thing again. Arizona time throughout, which does not change for daylight saving.${rosters}`)}">Built ${PAGE_BUILT}${
-    PAGE_BUILT.slice(0, 11) !== String(DATA._built).slice(0, 11)
-      ? ` <span class="d">· data ${esc(String(DATA._built).slice(0, 11))}</span>` : ''}</span>`);
+  /* PLAIN WORDS, THREE SHORT LINES. Casey, 10 Sep 2026, on the version I had just shipped:
+     "it makes no sense to me ... I thought you had to build to get the data. So what's built on
+     September 10th and what's the data on September 9th? That doesn't make any sense."
+     He is right, and the fault was mine twice: "data" is not a word that means anything to a
+     reader, and a bare second date invites exactly that question. There ARE three different
+     things that can be out of date and they genuinely move independently, so the fix is to NAME
+     each one in the words he would use, not to hide two of them behind one number. */
+  const dayOf = t => String(t || '').slice(0, 11);
+  const stale = PROJ_ON && dayOf(PAGE_BUILT) !== dayOf(DATA._built);
+  const lines = [
+    `The page itself: ${PAGE_BUILT}. Anything about how it looks or works.`,
+    PROJ_ON
+      ? `The projections: ${DATA._built}. These come from a separate, slower step that only reruns when the model changes — so this date can sit behind the page's, and nothing is wrong when it does.`
+      : `This page carries no projections, so there is no second date to keep track of.`,
+    `The scores: see the Results chip. That is a third thing again and it changes on its own.`,
+  ];
+  if (DATA.owner_note) lines.push(`Rosters: ${DATA.owner_note}`);
+  lines.push('Arizona time, which does not change for daylight saving.');
+  /* "Updated", not "Built". A build is something that happens to the file; an update is what the
+     reader is actually asking about. */
+  c.push(`<span class="chip" title="${esc(lines.join('\n\n'))}">Updated ${PAGE_BUILT}${
+    stale ? ` <span class="d">· projections from ${esc(dayOf(DATA._built))}</span>` : ''}</span>`);
   // Casey, 31 Aug 2026: "it makes it sound like I need to press refresh to get live scores." Right call -- live scores already update on their own (see the LIVE chip). This button is only for pulling down a NEWER BUILD of the page itself (new rosters, features, fixes), so it sits right next to the Built time, not implying anything about scores.
   c.push(`<button type="button" class="chip chip-action" title="Checks for a newer BUILD of this page (rosters, features, fixes) and loads it if one exists. Live scores already update on their own every minute -- this has nothing to do with those." onclick="location.href=location.pathname+'?v='+Date.now();">&#8635; Check for update</button>`);
   if (DATA.owner_source === 'draft')
@@ -1435,7 +1446,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '10 Sep 2026, 12:25 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '10 Sep 2026, 12:35 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
