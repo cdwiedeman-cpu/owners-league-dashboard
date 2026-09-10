@@ -1222,8 +1222,17 @@ function viewTrades(){
         + 'working down your drop list, <b>the first team you still hold and are allowed to '
         + 'drop</b> is the one that goes. The rest are backups, in case an earlier row has '
         + 'already used one.</li>'
-        + '<li>Rows are settled <b>top to bottom</b>, so put what you want most at the top. You '
-        + 'can also set a row to run only if an earlier one did, or did not, come through.</li>'
+        /* SAY IT THE WAY AN OWNER THINKS ABOUT IT. Casey, 10 Sep 2026: "they don't know we're
+           part of a run-it process — they're thinking in terms of a trade." "Run" and "come
+           through" are the machinery's words. "Got it" and "didn't get it" are the owner's, and
+           they are also MORE accurate: a row can fail to get a team without ever reaching a coin
+           flip. The two examples do the real work — a rule stated abstractly is a rule nobody
+           uses. */
+        + '<li>Your rows are taken <b>in order, top to bottom</b>, so put what you want most at '
+        + 'the top. You can also make a row depend on an earlier one: <b>only go for this team '
+        + 'if I got row 1</b>, or <b>only if I did not get row 1</b>. That is how you say '
+        + '&ldquo;if I miss out on Navy, try Alabama instead&rdquo;, or &ldquo;if I do get Navy, '
+        + 'go after Alabama as well&rdquo;.</li>'
         + '<li>Press <b>Send my list</b>. Nothing is entered until you do.</li></ol>'
         + '<p class="note">Up to ' + P.MAX_ROWS + ' rows. You can change and re-send as often as '
         + 'you like, right up to 3:59pm Monday.</p>')
@@ -1323,14 +1332,16 @@ function rowForm(r, i, free, mine, hm){
         return '<select onchange="editRow(' + i + ',\'drop\',this.value,' + j + ')">'
           + dropOptions(mine, d, hm, r.pickup, pools()) + '</select>';
       }).join('') + '</div>'
-    + '<label class="lb" style="margin-top:7px">Run this row</label>'
+    + '<label class="lb" style="margin-top:7px">Go for this team</label>'
     + '<div class="grid2"><select onchange="editRow(' + i + ',\'condtype\',this.value)">'
-    + '<option value="always"' + (c.type === 'always' ? ' selected' : '') + '>always</option>'
+    + '<option value="always"' + (c.type === 'always' ? ' selected' : '') + '>whatever '
+    + 'happens above</option>'
     + '<option value="lost"' + (c.type === 'lost' ? ' selected' : '')
     + '>only if I did NOT get row…</option>'
     + '<option value="won"' + (c.type === 'won' ? ' selected' : '')
     + '>only if I DID get row…</option></select>'
-    + (c.type === 'always' ? '<span class="note">Nothing above it matters.</span>'
+    + (c.type === 'always' ? '<span class="note">This row is tried no matter how the rows '
+      + 'above it went.</span>'
       : '<select onchange="editRow(' + i + ',\'condrow\',this.value)">'
         + Array.apply(null, {length: i}).map(function(_, n){
             return '<option value="' + (n + 1) + '"' + (c.row === n + 1 ? ' selected' : '')
