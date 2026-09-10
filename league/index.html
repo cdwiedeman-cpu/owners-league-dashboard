@@ -1435,7 +1435,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '09 Sep 2026, 10:59 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '10 Sep 2026, 12:21 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7588,7 +7588,11 @@ function openLeagueScout(n){
     <td class="num">${pointsFor(t.pool, g.pf, g.pa).toFixed(1)}</td></tr>`).join('');
   /* A row with no date at all is kept rather than dropped: unknown is not "already played". */
   const upcoming = (t.sched || []).filter(g => !gd(g) || gd(g) >= azToday());
-  const left = upcoming.slice(0, 8).map(g =>
+  /* ALL OF THEM. This was capped at eight with a line saying "showing the next 8 of 18" and no
+     way to see the other ten -- Casey, 10 Sep 2026: "why wouldn't you just give me the full
+     schedule instead?" There is no reason. A cap on a list nobody can page through is a dead
+     end, and eighteen rows is not a lot to scroll. */
+  const left = upcoming.map(g =>
     `<tr><td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
      <td class="d">${esc(g.loc || '')}</td></tr>`).join('');
   const url = espnTeamURL(n);
@@ -7627,8 +7631,9 @@ function openLeagueScout(n){
       ${left ? `<h2>Schedule</h2><div class="scr"><table>
         <colgroup><col style="width:26%"><col style="width:52%"><col style="width:22%"></colgroup>
         <thead><tr><th>Date</th><th>Opponent</th><th>Where</th></tr></thead>
-        <tbody>${left}</tbody></table>${upcoming.length > 8
-          ? `<div class="note">Showing the next 8 of ${upcoming.length}.</div>` : ''}</div>`
+        <tbody>${left}</tbody></table></div>
+        <div class="note">${upcoming.length} game${upcoming.length === 1 ? '' : 's'} still to
+          play.</div>`
         : `<h2>Schedule</h2><div class="empty">${
             (t.sched || []).length
               ? `Every fixture this page holds for ${esc(n)} has already been played.`
