@@ -1106,7 +1106,7 @@ function renderChips(){
   const dayOf = t => String(t || '').slice(0, 11);
   const stale = PROJ_ON && dayOf(PAGE_BUILT) !== dayOf(DATA._built);
   const lines = [
-    `The page itself: ${PAGE_BUILT}. Anything about how it looks or works.`,
+    `The web page itself: ${PAGE_BUILT}. Only how the page looks and works — it has nothing to do with the scores.`,
     PROJ_ON
       ? `The projections: ${DATA._built}. These come from a separate, slower step that only reruns when the model changes — so this date can sit behind the page's, and nothing is wrong when it does.`
       : `This page carries no projections, so there is no second date to keep track of.`,
@@ -1114,10 +1114,14 @@ function renderChips(){
   ];
   if (DATA.owner_note) lines.push(`Rosters: ${DATA.owner_note}`);
   lines.push('Arizona time, which does not change for daylight saving.');
-  /* "Updated", not "Built". A build is something that happens to the file; an update is what the
-     reader is actually asking about. */
-  c.push(`<span class="chip" title="${esc(lines.join('\n\n'))}">Updated ${PAGE_BUILT}${
-    stale ? ` <span class="d">· projections from ${esc(dayOf(DATA._built))}</span>` : ''}</span>`);
+  /* NAME THE SUBJECT OF EVERY DATE ON THE CHIP. Casey, 10 Sep 2026: "if updated 10 Sep really
+     means the page, then it should say PAGE updated ... because then that distinguishes between
+     when the page was updated and when the projections were updated."
+     A bare "Updated" leaves the reader to supply the noun, and the noun is the whole question.
+     "Built" was worse still: a build is something that happens to the file, not something the
+     reader asked about. */
+  c.push(`<span class="chip" title="${esc(lines.join('\n\n'))}">Web page updated ${PAGE_BUILT}${
+    stale ? ` <span class="d">· Projections from ${esc(dayOf(DATA._built))}</span>` : ''}</span>`);
   // Casey, 31 Aug 2026: "it makes it sound like I need to press refresh to get live scores." Right call -- live scores already update on their own (see the LIVE chip). This button is only for pulling down a NEWER BUILD of the page itself (new rosters, features, fixes), so it sits right next to the Built time, not implying anything about scores.
   c.push(`<button type="button" class="chip chip-action" title="Checks for a newer BUILD of this page (rosters, features, fixes) and loads it if one exists. Live scores already update on their own every minute -- this has nothing to do with those." onclick="location.href=location.pathname+'?v='+Date.now();">&#8635; Check for update</button>`);
   if (DATA.owner_source === 'draft')
@@ -1446,7 +1450,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '10 Sep 2026, 12:35 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '10 Sep 2026, 12:44 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
