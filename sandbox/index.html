@@ -652,10 +652,14 @@ function sentence(r, seat){
         body: (r.entrants || []).length + ' owners wanted ' + t + '. It went to ' + r.winner
               + '. You keep ' + (r.drop || 'your roster') + '.'};
     case O.STOOD_ASIDE:
+      /* NAME WHO. "You had already won one" was true under the old global rule and is not the
+         rule any more: you stand aside only for the specific owner you beat. Casey, 10 Sep
+         2026. A reason that does not name them cannot be checked by the person it affects. */
+      var owed = (r.owedTo || []).join(' and ');
       return {kind: 'lost', head: t + ': not eligible.',
-        body: 'You had already won a coin flip this week, so you stood aside for this one. An '
-              + 'owner who wins one coin flip is held out of the next. ' + t + ' went to '
-              + r.winner + '.'};
+        body: 'You beat ' + (owed || 'another owner') + ' in an earlier coin flip this week, and '
+              + (owed || 'they') + ' also wanted ' + t + ', so you stood aside for this one. '
+              + t + ' went to ' + r.winner + '.'};
     case O.SKIPPED:
       return {kind: 'other', head: t + ': not attempted.', body: 'This row was ' + r.detail + '.'};
     case O.NO_DROP:
