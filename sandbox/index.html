@@ -1218,8 +1218,15 @@ function viewTrades(){
      should be doing." He is right — that sentence describes the MECHANISM to somebody who
      already knows what a row is for. An owner opening this tab for the first time needs the
      three things to press, in the order they press them, with the buttons named. */
-  h += '<div class="card"><h2>' + (fcfs ? 'First come, first served' : 'Build your list for '
-    + 'Monday') + '</h2>'
+  h += '<div class="card"><h2>' + (fcfs
+      ? 'First come, first served &mdash; open now'
+      : 'Your list for Monday') + '</h2>'
+    + (fcfs
+        ? '<p class="note">The coin flips have been run. Anything still unowned is yours if you '
+          + 'ask first, until <b>5:00pm Tuesday</b>. After that, list-building for next Monday '
+          + 'opens again.</p>'
+        : '<p class="note">Entry closes at <b>3:59pm Monday</b>. First come, first served opens '
+          + 'straight afterwards and runs until 5:00pm Tuesday.</p>')
     + (fcfs
       ? '<ol class="note"><li>Choose the team you want to <b>pick up</b>. Only teams nobody in '
         + esc(DATA.div_names[a.div] || a.div) + ' owns are listed.</li>'
