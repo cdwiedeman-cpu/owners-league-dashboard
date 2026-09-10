@@ -1348,6 +1348,14 @@ function viewRun(){
      4pm if some future need arises." So there is no pilot mode to dismantle later — one switch,
      both ways, forever. */
   var auto = S.autoPeloton !== false;
+  /* OFF MEANS "HAND THEM TO ME", NOT "SAY NOTHING".
+     Casey, 10 Sep 2026: while the league is being tried out, Bob sends the results himself. A
+     switch that only suppressed the emails would leave him with nothing to send and he would be
+     retyping twenty-seven messages — so turning it off puts the text on screen instead, ready to
+     copy in one block.
+     SIGN-IN LINKS ARE NOT TOUCHED BY THIS and cannot be. They are how anybody gets in, including
+     Bob; a switch that silently turned them off would lock the league out of its own tool. */
+  var mail = S.autoEmail !== false;
   var h = '<div class="card"><h2>Monday, 4:00pm</h2>'
     + '<div class="row"><button onclick="S.autoPeloton=' + (auto ? 'false' : 'true')
     + ';save();render()" title="'
@@ -1359,6 +1367,18 @@ function viewRun(){
           + 'here for when you want it early or something was missed.'
         : 'The schedule will NOT settle anything. Nothing happens until you press the button '
           + 'below.') + '</span></div>'
+    + '<div class="row" style="margin-top:8px"><button onclick="S.autoEmail=' + (mail ? 'false' : 'true')
+    + ';save();render()" title="'
+    + esc(mail ? 'Stop the tool emailing owners their results. The text appears here for you to '
+               + 'send yourself. Sign-in links are not affected.'
+               : 'Let the tool email each owner their results again as soon as a week is settled.')
+    + '">' + (mail ? 'Emails on — owners are told automatically'
+                   : 'Emails off — you send them yourself') + '</button>'
+    + '<span class="note">' + (mail
+        ? 'Each owner is emailed their results within a minute of a week being settled.'
+        : 'Nobody is emailed. After a run, use <b>Copy every owner\'s email</b> below and send '
+          + 'them yourself. <b>Sign-in links still work</b> — this only covers results.')
+    + '</span></div>'
     + '<p class="note">' + reqs.length + ' seat' + (reqs.length === 1 ? '' : 's') + ' entered '
     + 'for week ' + weekNo() + '. To make a coin flip happen, sign in on a second device as a '
     + 'different owner in your division and ask for the same team.</p>'
@@ -1542,9 +1562,17 @@ function resultsCard(){
   var keys = Object.keys(R.results).filter(function(k){ return (R.results[k] || []).length; }).sort();
   if (!keys.length) return '<div class="card"><div class="empty">The week resolved with nothing '
     + 'in it — no seat had a readable row.</div></div>';
+  var mailed = S.autoEmail !== false;
   return '<div class="card"><h2>Week ' + R.week + ' — what happened</h2>'
     + '<p class="note">Run at ' + esc(pretty(R.at)) + '. Every row gets a sentence. A blank row '
     + 'would leave an owner unable to tell a loss from a bug.</p>'
+    + (mailed
+        ? '<p class="note g">Each owner has been emailed their own results.</p>'
+        : '<div class="card warn" style="margin:0 0 10px"><b>Nobody has been emailed.</b>'
+          + '<p class="note">Emails are switched off, so these results have not gone anywhere. '
+          + 'Copy them below and send them yourself.</p>'
+          + '<div class="row"><button class="pri" onclick="copyAllEmails()">Copy every owner\'s '
+          + 'email</button></div></div>')
     + keys.map(function(k){
         var b = k.split('|'), seat = b[1];
         var rows = R.results[k] || [];
@@ -1560,6 +1588,24 @@ function resultsCard(){
           + '\')">See the email ' + esc(seat) + ' gets</button>';
       }).join('')
     + '</div>';
+}
+/* ALL OF THEM AT ONCE, separated so they can be pasted one at a time. Twenty-seven messages
+   retyped by hand is not a workflow anybody sustains for three weeks. */
+function copyAllEmails(){
+  var R = S.results; if (!R) return;
+  var keys = Object.keys(R.results).filter(function(k){ return (R.results[k] || []).length; }).sort();
+  var all = keys.map(function(k){
+    var row = S.access.filter(function(a){ return a.div + '|' + a.seat === k && a.email; })
+                      .map(function(a){ return a.email; });
+    return 'TO: ' + (row.length ? row.join(', ') : '(no address on file — call them)')
+         + '\n\n' + emailFor(k, R.results[k]);
+  }).join('\n\n' + new Array(60).join('-') + '\n\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(all);
+  showHelp('Every owner\'s email',
+    '<p>Copied, if the browser allowed it. Either way here they are — ' + keys.length
+    + ' message' + (keys.length === 1 ? '' : 's') + ', each with the address to send it to.</p>'
+    + '<pre class="mono" style="white-space:pre-wrap;max-height:340px;overflow:auto">'
+    + esc(all) + '</pre>');
 }
 function showEmail(k){
   var rows = (S.results && S.results.results[k]) || [];
@@ -1747,7 +1793,7 @@ function blank(){
   return {clock: DATA.clock_start, device: 'A', devices: {}, tokens: {}, links: [], seq: 0,
           access: seedAccess(), former: [], requests: {}, rosters: freshRosters(),
           acquired: {}, log: [],
-          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, ranWeeks: {}, lastEmail: (DATA.me || {}).email || ''};
+          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, autoEmail: true, ranWeeks: {}, lastEmail: (DATA.me || {}).email || ''};
 }
 function boot(){
   try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
