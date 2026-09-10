@@ -508,6 +508,10 @@ function el(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function key(div, seat){ return div + '|' + seat; }
+/* A sentence that starts a line starts with a capital. The reason strings are written to
+   read mid-sentence too, so they are capitalised where they lead rather than being kept
+   in two versions. */
+function cap(t){ t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
 /* ---- the clock ---------------------------------------------------------------------------
@@ -923,7 +927,7 @@ function viewSignIn(){
               + '</b> · sent ' + esc(pretty(l.issued))
               + ' · <span class="pill bad">no link</span></div>'
               + '<div class="note"><b>You asked to sign in to the Reality Football League, and '
-              + 'we could not sign you in.</b><br>' + esc(l.why)
+              + 'we could not sign you in.</b><br>' + esc(cap(l.why))
               + (l.seat ? ' (' + esc(l.seat) + ').' : '.')
               + '<br>If you think that is wrong, contact the commissioner — nothing is broken at '
               + 'your end and there is nothing to try again.</div></div>';
