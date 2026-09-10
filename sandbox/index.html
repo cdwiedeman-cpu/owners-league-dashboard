@@ -1196,16 +1196,34 @@ function viewTrades(){
             + esc(x.owner) + ' — ' + esc(DATA.div_names[x.div] || x.div) + '</option>';
         }).join('') + '</select></div>';
   }
-  h += '<div class="card"><h2>' + (fcfs ? 'First come, first served' : 'Your list for Monday')
-    + '</h2><p class="note">' + (fcfs
-      ? 'It is between Monday 4:00pm and Tuesday 5:00pm, so there is no queue and no coin flip. '
-        + 'One team, one drop, resolved the moment you press the button.'
-      : 'Rows run in order. Every row needs at least one team you are willing to drop, and you '
-        + 'can list up to ' + P.MAX_DROPS + ' as backups. Up to ' + P.MAX_ROWS + ' rows.')
-    + '</p>'
-    + '<p class="note">Acting as <b>' + esc(a.seat) + '</b> · '
-    + esc(DATA.div_names[a.div] || a.div) + ' · ' + free.length + ' teams available · '
-    + mine.length + ' on your roster</p></div>';
+  /* TELL THEM WHAT TO DO, IN ORDER, BEFORE SHOWING THEM ANY CONTROLS. Casey, 10 Sep 2026:
+     "'Rows run in order' doesn't give any sort of instruction to the end user as to what they
+     should be doing." He is right — that sentence describes the MECHANISM to somebody who
+     already knows what a row is for. An owner opening this tab for the first time needs the
+     three things to press, in the order they press them, with the buttons named. */
+  h += '<div class="card"><h2>' + (fcfs ? 'First come, first served' : 'Build your list for '
+    + 'Monday') + '</h2>'
+    + (fcfs
+      ? '<ol class="note"><li>Choose the team you want to <b>pick up</b>. Only teams nobody in '
+        + esc(DATA.div_names[a.div] || a.div) + ' owns are listed.</li>'
+        + '<li>Choose the team you will <b>drop</b> for it. It has to be the same kind of team — '
+        + 'college for college, NFL for NFL.</li>'
+        + '<li>Press <b>Claim it now</b>. It happens immediately.</li></ol>'
+        + '<p class="note">There is no queue and no coin flip between 4:00pm Monday and 5:00pm '
+        + 'Tuesday. Whoever asks first gets the team, so one at a time is all there is.</p>'
+      : '<ol class="note"><li>Press <b>Add a row</b> for each team you want. One row is one '
+        + 'team.</li>'
+        + '<li>On each row, choose the team to <b>pick up</b> and up to ' + P.MAX_DROPS
+        + ' teams you would be willing to <b>drop</b> for it. The first one still available is '
+        + 'the one used, so extra names are insurance.</li>'
+        + '<li>Rows are settled <b>top to bottom</b>, so put what you want most at the top. You '
+        + 'can also set a row to run only if an earlier one did, or did not, come through.</li>'
+        + '<li>Press <b>Send my list</b>. Nothing is entered until you do.</li></ol>'
+        + '<p class="note">Up to ' + P.MAX_ROWS + ' rows. You can change and re-send as often as '
+        + 'you like, right up to 3:59pm Monday.</p>')
+    + '<p class="note" style="border-top:1px solid var(--line);padding-top:9px">You are '
+    + '<b>' + esc(a.seat) + '</b> in ' + esc(DATA.div_names[a.div] || a.div) + ' · '
+    + free.length + ' teams available to you · ' + mine.length + ' on your roster</p></div>';
 
   if (fcfs) return h + fcfsForm(a, free, mine, hm) + clockCard();
 
@@ -1239,16 +1257,25 @@ function viewTrades(){
         + esc((r.drops || []).filter(Boolean).join(' or ')) + '</div></div>';
     }).join('');
   } else {
-    h += rows.length ? rows.map(function(r, i){ return rowForm(r, i, free, mine, hm); }).join('')
-                     : '<div class="empty">Nothing on your list yet. Add a row below.</div>';
-    h += '<div class="row" style="margin-top:6px">'
-      + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
-      + 'Add a row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
-      + (rows.length ? '<button class="dang" onclick="setRows([]);render()">Clear them all</button>'
-                     : '') + '</div>';
-    h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
-      + 'padding-top:12px"><button class="pri" onclick="submitList()">Send my list</button>'
-      + '<span class="note">Until you press this, nothing is entered.</span></div>';
+    /* THE FIRST ACTION IS AT THE TOP WHEN THERE IS NOTHING YET. An empty list with the only
+       button underneath the empty message makes the reader hunt for the way in. */
+    if (!rows.length){
+      h += '<div class="empty" style="padding-bottom:6px">Nothing on your list yet.</div>'
+        + '<div class="row" style="justify-content:center;margin-bottom:6px">'
+        + '<button class="pri" onclick="addRow()">Add a row</button></div>';
+    } else {
+      h += rows.map(function(r, i){ return rowForm(r, i, free, mine, hm); }).join('');
+      h += '<div class="row" style="margin-top:6px">'
+        + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
+        + 'Add another row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
+        + '<button class="dang" onclick="setRows([]);render()">Clear them all</button></div>';
+    }
+    if (rows.length){
+      h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
+        + 'padding-top:12px"><button class="pri" onclick="submitList()">Send my list</button>'
+        + '<span class="note">Until you press <b>Send my list</b>, nothing is entered for '
+        + 'Monday.</span></div>';
+    }
   }
   h += '</div>';
   return h + clockCard();
@@ -1729,15 +1756,48 @@ function showEmail(k){
    without waiting for an owner to leave. */
 function viewAccess(){
   var rows = S.access;
+  var filled = rows.filter(function(r){ return String(r.email || '').trim(); }).length;
+  /* WHAT TO DO, THEN WHAT EACH COLUMN MEANS, THEN THE TABLE. Casey, 10 Sep 2026: "it should have
+     some instruction of what he needs to populate, and what the status column means, and what
+     keys last retired means and what to do with that." A grid of editable cells with no key is
+     a form that assumes the reader already knows the model. */
   return '<div class="card"><h2>Access list</h2>'
-    + '<p class="note">One row per <b>address</b>, not per seat — two rows with the same seat is '
-    + 'how you and Dominic share one. This is the tab that lives in the Google Sheet; the script '
-    + 'reads it on every sign-in and on every trade, so an edit here takes effect on the next '
-    + 'thing anybody does. No rebuild.</p>'
+    + '<p class="note">This is the tab that lives in the Google Sheet. The script reads it on '
+    + 'every sign-in and every trade, so <b>an edit takes effect on the next thing anybody '
+    + 'does</b> — nothing is rebuilt and nobody else has to be involved.</p>'
+    + '<ol class="note"><li>Type each owner&#39;s email into the <b>Email</b> column. '
+    + '<b>Personal inboxes only</b> — not the league list, and not an address that forwards to '
+    + 'several people.</li>'
+    + '<li>Leave <b>Email</b> blank for anybody without one. You enter their trades for them.</li>'
+    + '<li>Two rows with the <b>same seat</b> is how two people share one team — add a row and '
+    + 'give it the same seat.</li>'
+    + '<li>When it is filled in, press <b>Copy it as CSV for the Sheet</b> and paste it into the '
+    + 'Google Sheet.</li></ol>'
+    + '<p class="note"><b>' + filled + ' of ' + rows.length + '</b> row'
+    + (rows.length === 1 ? '' : 's') + ' have an address so far.</p>'
     + '<div class="row"><button onclick="addAccess()">Add a row</button>'
-    + '<button onclick="copyCSV()">Copy it as CSV for the Sheet</button>'
-    + '<button onclick="showHelp(\'The four things this tab can do\', ACCESSNOTE)">'
-    + 'Owner leaves · new email · no email · make someone commissioner</button></div></div>'
+    + '<button class="pri" onclick="copyCSV()">Copy it as CSV for the Sheet</button>'
+    + '<button onclick="showHelp(\'Owner leaves, new email, no email, commissioner\', ACCESSNOTE)">'
+    + 'What to do when somebody changes</button></div></div>'
+    + '<div class="card"><h2>What each column is for</h2><div class="scr"><table>'
+    + '<colgroup><col style="width:32%"><col style="width:68%"></colgroup><tbody>'
+    + [['Seat', 'The owner as the league names them. Never edited here.'],
+       ['Email', 'A personal inbox. Blank means that owner cannot sign in yet and you enter '
+                 + 'their trades for them.'],
+       ['Status', '<b>active</b> is normal. <b>inactive</b> refuses everything that seat tries '
+                  + 'to submit and changes nothing else — the seat still appears in standings '
+                  + 'and scores. Use it when an owner leaves and nobody has taken over.'],
+       ['Keys last retired', 'Press <b>Retire keys now</b> when a seat changes hands. It turns '
+                  + 'away every device already signed in to that seat — changing the address '
+                  + 'alone does not, because a phone that is already in never asks for a new '
+                  + 'link. The date it leaves behind is permanent and is meant to be.'],
+       ['Role', '<b>owner</b> for everybody except the commissioner, whose row says '
+                  + '<b>commissioner</b>. That is what lets him submit for any seat and enter a '
+                  + 'correction.']]
+      .map(function(r){
+        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
+      }).join('')
+    + '</tbody></table></div></div>'
     + '<div class="card"><div class="scr"><table>'
     + '<colgroup><col style="width:26%"><col style="width:30%"><col style="width:14%">'
     + '<col style="width:20%"><col style="width:10%"></colgroup>'
