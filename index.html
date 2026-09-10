@@ -1097,7 +1097,16 @@ function renderChips(){
      Only the ordinary case, where they came from the workbook this build read, folds into the
      tooltip. */
   const rosters = DATA.owner_note ? `\n\nRosters: ${DATA.owner_note}` : '';
-  c.push(`<span class="chip" title="When this file was made. It is not the same as how current the scores in it are — that is the Results chip. Arizona time, which does not change for daylight saving.${esc(rosters)}">Built ${DATA._built}</span>`);
+  /* THE CHIP SAYS WHEN THE PAGE WAS MADE, because that is what a reader means by "built" and it
+     is the thing that moves when anything visible changes. The payload's own `_built` is a
+     DIFFERENT fact -- when the ratings and fixtures were last computed -- and it only moves when
+     the model is rerun. Both are shown, each labelled, rather than one standing in for the
+     other: Casey read "Built 9 Sep 2:24 AM" the morning after a rebuild and reasonably concluded
+     he was looking at an old page. */
+  c.push(`<span class="chip" title="${esc(
+    `This page was made ${PAGE_BUILT}. The ratings and fixtures inside it were computed ${DATA._built} — that is a separate step and it only reruns when the model changes. How current the SCORES are is the Results chip, which is a third thing again. Arizona time throughout, which does not change for daylight saving.${rosters}`)}">Built ${PAGE_BUILT}${
+    PAGE_BUILT.slice(0, 11) !== String(DATA._built).slice(0, 11)
+      ? ` <span class="d">· data ${esc(String(DATA._built).slice(0, 11))}</span>` : ''}</span>`);
   // Casey, 31 Aug 2026: "it makes it sound like I need to press refresh to get live scores." Right call -- live scores already update on their own (see the LIVE chip). This button is only for pulling down a NEWER BUILD of the page itself (new rosters, features, fixes), so it sits right next to the Built time, not implying anything about scores.
   c.push(`<button type="button" class="chip chip-action" title="Checks for a newer BUILD of this page (rosters, features, fixes) and loads it if one exists. Live scores already update on their own every minute -- this has nothing to do with those." onclick="location.href=location.pathname+'?v='+Date.now();">&#8635; Check for update</button>`);
   if (DATA.owner_source === 'draft')
@@ -1426,6 +1435,14 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
+const PAGE_BUILT = '10 Sep 2026, 12:25 AM AZ';  // filled at render; NOT the same as DATA._built
+const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
+function espnTeamURL(n){
+  const e = ESPN_TEAM[n];
+  if (!e) return null;
+  return `https://www.espn.com/${e.pool === 'NFL' ? 'nfl' : 'college-football'}`
+       + `/team/schedule/_/id/${encodeURIComponent(e.id)}`;
+}
 function ingestEvents(pool, j, out, unmatched){
   for (const ev of (j.events || [])){
     const c = (ev.competitions || [])[0]; if (!c) continue;
@@ -1434,6 +1451,11 @@ function ingestEvents(pool, j, out, unmatched){
       const t = cs.find(x => x.homeAway === w) || {};
       const nm = resolve(t.team || {}, pool);
       if (!nm && (t.team||{}).location) unmatched.add((t.team||{}).displayName || t.team.location);
+      /* ESPN'S OWN ID FOR THIS TEAM, kept as the scoreboard hands it over. The build cannot
+         know it -- the sandbox that builds this file has no route to ESPN -- so the only place
+         it can be learned is here, on the page, from a game the team is actually in. Nothing is
+         guessed: a team we have never seen play gets no link rather than a made-up one. */
+      if (nm && (t.team || {}).id) ESPN_TEAM[nm] = {id: String(t.team.id), pool};
       return {espn: (t.team||{}).displayName || '?', name: nm, owner: nm ? ownerOf(nm) : null,
               score: t.score == null ? null : Number(t.score), winner: !!t.winner};
     };
@@ -7553,26 +7575,70 @@ function openLeagueScout(n){
   const t = BY.get(n); const box = el('scout');
   if (!t || !box) return;
   const got = SEASON ? SEASON.get(n) : null;
+  /* A DATE IS NOT ALWAYS IN THE SAME FIELD. For a college team `when` IS the date; for an NFL
+     team `when` is the week number and the date is in `d`. Filtering on `when >= today` compared
+     1 against '2026-09-10' — false every time — and threw away all 18 fixtures. Casey clicked
+     the Rams on 10 Sep 2026 and got an empty box. */
+  const gd = g => String(g.d || (typeof g.when === 'string' ? g.when : '') || '');
+  const gwhen = g => gd(g) ? pretty(gd(g))
+                 : (typeof g.when === 'number' ? `Week ${g.when}` : '<span class="d">—</span>');
   const rows = (t.hist || []).filter(g => g.pf != null).map(g => `<tr>
-    <td class="d">${pretty(g.d)}</td><td>${esc(g.opp || '')}</td>
+    <td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
     <td class="num ${g.pf > g.pa ? 'g' : 'b'}">${g.pf}–${g.pa}</td>
     <td class="num">${pointsFor(t.pool, g.pf, g.pa).toFixed(1)}</td></tr>`).join('');
-  const left = (t.sched || []).filter(g => g.when >= azToday()).slice(0, 6).map(g =>
-    `<tr><td class="d">${pretty(g.when)}</td><td>${esc(g.opp || '')}</td>
+  /* A row with no date at all is kept rather than dropped: unknown is not "already played". */
+  const upcoming = (t.sched || []).filter(g => !gd(g) || gd(g) >= azToday());
+  /* ALL OF THEM. This was capped at eight with a line saying "showing the next 8 of 18" and no
+     way to see the other ten -- Casey, 10 Sep 2026: "why wouldn't you just give me the full
+     schedule instead?" There is no reason. A cap on a list nobody can page through is a dead
+     end, and eighteen rows is not a lot to scroll. */
+  const left = upcoming.map(g =>
+    `<tr><td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
      <td class="d">${esc(g.loc || '')}</td></tr>`).join('');
+  const url = espnTeamURL(n);
+  /* THE LINK IS OFFERED ONLY WHEN IT IS KNOWN TO WORK. ESPN's id for a team is learned from the
+     live scoreboard, so a team nobody has seen play yet gets no button rather than a guess. */
+  const espnBtn = url
+    ? `<a class="f" href="${url}" target="_blank" rel="noopener"
+         title="${esc(n)}'s full season schedule on ESPN, in a new tab">Full schedule on ESPN ↗</a>`
+    : '';
+  /* THE CLASSES HAVE TO BE THE ONES THE STYLESHEET HAS. This panel was built with `.sheet`,
+     `.shead` and `.sbody`, and NONE OF THE THREE EXISTS in the CSS -- so it rendered as bare,
+     unpositioned text lying across the scoreboard with the page dimmed behind it. That is
+     exactly what Casey described on 10 Sep 2026: "the screen looks all messed up ... you still
+     see the scoreboard in the background, but it's greyed out." The rest of the page uses
+     `.modalbox` / `.modalhd` / `.modalx`, so this uses them too. A class name is not a
+     decoration; an unmatched one is a missing feature that still renders. */
   box.hidden = false;
-  box.innerHTML = `<div class="sheet"><div class="shead">
-      <b><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(n)}</b>
-      <button class="f" onclick="closeScout()">Close</button></div>
-    <div class="sbody">
+  document.body.style.overflow = 'hidden';
+  box.innerHTML = `<div class="modalbox"><div class="modalhd">
+      <div><h2>${esc(n)} <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span></h2></div>
+      <button class="modalx" onclick="closeScout()" title="Close and go back to the scoreboard"
+        aria-label="Close this panel">✕</button></div>
+    <div>
       <div class="note">${ownerHTML(n)}${got ? ` · <b>${got.w}-${got.l}${got.t ? '-' + got.t : ''}</b>
-        · <b>${got.pts.toFixed(1)}</b> league points so far` : ' · no results yet'}</div>
+        · <b>${got.pts.toFixed(1)}</b> league points so far` : ''}</div>
+      ${espnBtn ? `<div class="row" style="margin:8px 0">${espnBtn}</div>` : ''}
       ${rows ? `<h2>Results</h2><div class="scr"><table>
+        <colgroup><col style="width:26%"><col style="width:38%"><col style="width:20%"><col style="width:16%"></colgroup>
         <thead><tr><th>Date</th><th>Opponent</th><th class="num">Score</th><th class="num">Pts</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>` : `<div class="empty">No games played yet.</div>`}
-      ${left ? `<h2>Next up</h2><div class="scr"><table>
+        <tbody>${rows}</tbody></table></div>`
+        : `<h2>Results</h2><div class="empty">${
+            (t.hist || []).length
+              ? `<b>${esc(n)} has played, but no final scores have reached this page.</b>
+                 Reload somewhere ESPN is reachable.`
+              : `<b>${esc(n)} has not played yet this season.</b> Their first game is below.`}</div>`}
+      ${left ? `<h2>Schedule</h2><div class="scr"><table>
+        <colgroup><col style="width:26%"><col style="width:52%"><col style="width:22%"></colgroup>
         <thead><tr><th>Date</th><th>Opponent</th><th>Where</th></tr></thead>
-        <tbody>${left}</tbody></table></div>` : ''}
+        <tbody>${left}</tbody></table></div>
+        <div class="note">${upcoming.length} game${upcoming.length === 1 ? '' : 's'} still to
+          play.</div>`
+        : `<h2>Schedule</h2><div class="empty">${
+            (t.sched || []).length
+              ? `Every fixture this page holds for ${esc(n)} has already been played.`
+              : `<b>This build carries no schedule for ${esc(n)}.</b> That is a gap in the data,
+                 not a team with no games.`}</div>`}
     </div></div>`;
 }
 
