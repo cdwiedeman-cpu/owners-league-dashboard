@@ -70,6 +70,17 @@ button[disabled]:hover{border-color:var(--line);color:var(--ink)}
   .setlab{flex:1 1 100%;padding-top:0}
   .setwhy{flex:1 1 100%;padding-top:0}
 }
+/* THE SHAPE OF THE WEEK, both halves visible at once. The closed one is dimmed rather than
+   hidden: an owner who cannot see the other half cannot learn it exists. */
+.ways{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:640px){.ways{grid-template-columns:1fr}}
+.wway{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--pan2);
+  opacity:.62}
+.wway.on{opacity:1;border-color:#245c39;background:#0d1a12}
+.wwhen{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;
+  margin:0 0 5px}
+.wtit{font-weight:700;font-size:14px;color:var(--ink);margin:0 0 5px}
+.wwhat{font-size:12px;color:var(--dim);line-height:1.55}
 .statline{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
 .big{font-size:15px;font-weight:600;color:var(--ink)}
 .pill{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:999px;
@@ -1182,7 +1193,13 @@ function viewTrades(){
   var hm = holdMet()[k] || {};
   var fcfs = mode() === 'fcfs';
 
-  var h = '';
+  /* BOTH WAYS OF GETTING A TEAM, ALWAYS ON SCREEN, with the one that is open now marked.
+     Casey, 10 Sep 2026: "there's nothing on here in terms of the first come first serve process
+     ... I don't even see how I would do it currently." The tab showed only whichever half the
+     clock was in, so an owner in the Monday-list window had no way to learn the other half
+     existed, let alone what to do in it. **A TOOL THAT SHOWS ONLY THE CURRENT STEP CANNOT TEACH
+     THE PROCESS** — the reader needs the shape of the week before they need today's form. */
+  var h = twoWays(fcfs);
   if (s.role === 'commissioner'){
     h += '<div class="card"><h2>Commissioner — entering for someone else</h2>'
       + '<p class="note">Same form, same rules, same clock. The only difference is the line in '
@@ -1299,6 +1316,29 @@ function viewTrades(){
   return h + clockCard();
 }
 
+function twoWays(fcfs){
+  var block = function(open, when, title, what){
+    return '<div class="wway' + (open ? ' on' : '') + '">'
+      + '<div class="wwhen">' + esc(when) + (open ? ' &nbsp;<span class="pill good">open now'
+        + '</span>' : ' &nbsp;<span class="pill">closed</span>') + '</div>'
+      + '<div class="wtit">' + esc(title) + '</div>'
+      + '<div class="wwhat">' + what + '</div></div>';
+  };
+  return '<div class="card"><h2>Two ways to get a team</h2>'
+    + '<p class="note">Every week runs the same way. Only one of these is open at a time, and '
+    + 'the one that is open now is marked.</p>'
+    + '<div class="ways">'
+    + block(!fcfs, 'Tuesday 5:01pm — Monday 3:59pm', 'Build a list for Monday',
+        'Ask for as many teams as you like, in the order you want them. At 4:00pm Monday every '
+        + 'owner&rsquo;s list is settled at once, and any team more than one owner asked for '
+        + 'goes to a <b>coin flip</b>. This is the only way to get a team somebody else also '
+        + 'wants.')
+    + block(fcfs, 'Monday 4:00pm — Tuesday 5:00pm', 'First come, first served',
+        'Whatever is still unowned after the coin flips can be taken outright &mdash; one team, '
+        + 'one drop, yours the moment you press the button. <b>No coin flip and no queue</b>, so '
+        + 'if two of you want the same team it goes to whoever asks first.')
+    + '</div></div>';
+}
 function teamOptions(list, sel, hm){
   return '<option value="">—</option>' + list.map(function(n){
     var held = hm && hm[n] === false;
