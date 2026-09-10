@@ -594,21 +594,45 @@ function looksLikeGroup(e){
   return /^(owners|league|all|everyone|team|info|admin|commish|commissioner)@/i.test(String(e || ''))
       || /\+(all|group)@/i.test(String(e || ''));
 }
+/* AN ADDRESS THIS LEAGUE HAS USED BEFORE. Recorded automatically when an email cell is changed,
+   so a former owner is a KNOWN address rather than a stranger. That distinction is what lets the
+   next function answer them honestly without answering strangers at all. */
+function wasEverOurs(email){
+  var e = String(email || '').trim().toLowerCase();
+  if (!e) return null;
+  return (S.former || []).filter(function(f){ return f.email === e; })[0] || null;
+}
 function requestLink(email){
   if (looksLikeGroup(email)) return {error: 'group'};
   var row = rowFor(email);
-  /* THE ANSWER IS THE SAME EITHER WAY. Telling a stranger "that address is not in the league"
-     turns the sign-in box into a way to find out who is in it. The sandbox shows what really
-     happened underneath, because it is a test harness — the live one will not. */
-  var link = null;
+  /* WHAT GOES ON THE SCREEN IS THE SAME EITHER WAY. Telling whoever typed it "that address is
+     not in the league" turns the sign-in box into a way to find out who is. The sandbox shows
+     what really happened underneath, because it is a test harness — the live one will not. */
+  var link = null, notice = null;
   if (row && row.status !== 'removed'){
     link = {code: rnd(22), email: email, seat: row.seat, div: row.div,
             issued: now(), expires: 30};
     S.links.unshift(link);
-    S.links = S.links.slice(0, 8);
+  } else {
+    /* AN EMAIL TO THE INBOX TELLS THE TYPIST NOTHING. It lands with whoever owns the address,
+       not with whoever typed it, so answering honestly here leaks nothing — the same reason an
+       unrequested sign-in link is a tripwire rather than a hint. Casey, 10 Sep 2026: "if it was
+       a former owner trying to get in, at least tell them, in case it's an error."
+       ONLY to an address this league has actually used. Mailing every string anybody types
+       would make the sign-in box a way to send mail to strangers. */
+    var was = wasEverOurs(email);
+    if (row && row.status === 'removed'){
+      notice = {email: email, issued: now(), kind: 'notice', seat: row.seat,
+                why: 'that seat is currently inactive'};
+    } else if (was){
+      notice = {email: email, issued: now(), kind: 'notice', seat: was.seat,
+                why: 'this address is no longer on a seat in the league'};
+    }
+    if (notice) S.links.unshift(notice);
   }
+  S.links = S.links.slice(0, 8);
   save();
-  return {sent: true, real: !!link};
+  return {sent: true, real: !!link, notice: !!notice};
 }
 function useLink(code){
   var link = S.links.filter(function(l){ return l.code === code; })[0];
@@ -854,10 +878,29 @@ function viewSignIn(){
     + 'value="' + esc(S.lastEmail || '') + '"></div>'
     + '<button class="pri" onclick="doRequest()">Send me a link</button></div>'
     + '<p class="note" style="margin-top:8px">The real one emails it. This one drops it in the '
-    + 'box below, because there is no server here.</p></div>';
+    + 'box below, because there is no server here.</p>'
+    /* THE ONE MESSAGE THAT REACHES EVERYBODY. Whatever happened underneath, the person who
+       typed the address is sitting right here — telling them what to do costs nothing and
+       gives away nothing, because it says the same thing to everyone. */
+    + '<p class="note"><b>Nothing arrives after a few minutes?</b> Your address may not be the '
+    + 'one the league has for you. Contact the commissioner — it is not something you can fix '
+    + 'by trying again.</p></div>';
 
   h += S.links.length ? '<div class="inbox"><h3>Inbox (pretend)</h3>'
       + S.links.map(function(l){
+          if (l.kind === 'notice'){
+            /* A REFUSAL IS A DIFFERENT MESSAGE, NOT A SMALLER ONE. It says what happened, whose
+               seat it was, and who to ask — because the person reading it may be a former owner,
+               or may be a current owner whose row was edited by mistake. */
+            return '<div style="margin:0 0 9px"><div class="note">To <b>' + esc(l.email)
+              + '</b> · sent ' + esc(pretty(l.issued))
+              + ' · <span class="pill bad">no link</span></div>'
+              + '<div class="note"><b>You asked to sign in to the Reality Football League, and '
+              + 'we could not sign you in.</b><br>' + esc(l.why)
+              + (l.seat ? ' (' + esc(l.seat) + ').' : '.')
+              + '<br>If you think that is wrong, contact the commissioner — nothing is broken at '
+              + 'your end and there is nothing to try again.</div></div>';
+          }
           return '<div style="margin:0 0 9px"><div class="note">To <b>' + esc(l.email)
             + '</b> · sent ' + esc(pretty(l.issued)) + ' · expires in ' + l.expires + ' minutes'
             + (l.used ? ' · <span class="pill bad">already used</span>' : '') + '</div>'
@@ -886,8 +929,16 @@ function doRequest(){
   render();
   if (!r.real) showHelp('Link sent', '<p>The live app says exactly this whether or not the '
     + 'address is on the list, so the sign-in box cannot be used to find out who is in the '
-    + 'league.</p><p><b>In the sandbox, so you can see what happened:</b> that address is not on '
-    + 'the access list, so no link was actually issued. Add it on the Access list tab.</p>');
+    + 'league.</p>'
+    + '<p><b>In the sandbox, so you can see what happened:</b> no sign-in link was issued for '
+    + 'that address.</p>'
+    + (r.notice
+        ? '<p>Because the league has used that address before, it did get an <b>email saying '
+          + 'why</b> — look in the pretend inbox. A message to an inbox tells whoever typed the '
+          + 'address nothing, so answering a former owner honestly gives nothing away.</p>'
+        : '<p>That address has never been on the access list, so <b>nothing was emailed at '
+          + 'all</b>. Mailing every string somebody types would turn the sign-in box into a way '
+          + 'to send mail to strangers.</p>'));
 }
 function doUse(code){
   var r = useLink(code);
@@ -1326,7 +1377,19 @@ var ACCESSNOTE = '<p><b>An owner changes their email.</b> Type the new address o
   + '<p><b>An owner has no email.</b> Leave the row blank. They call Bob and he enters it under '
   + 'their seat — the same feature as any other commissioner submission, so there is no second '
   + 'mechanism to maintain.</p>';
-function setAccess(i, f, v){ S.access[i][f] = v; save(); render(); }
+function setAccess(i, f, v){
+  if (f === 'email'){
+    var old = String(S.access[i].email || '').trim().toLowerCase();
+    /* KEPT AUTOMATICALLY, so replacing an owner stays two edits and nobody has to remember to
+       write the old address down somewhere. */
+    if (old && old !== String(v || '').trim().toLowerCase()){
+      S.former = (S.former || []).filter(function(x){ return x.email !== old; });
+      S.former.unshift({email: old, seat: S.access[i].seat, div: S.access[i].div, at: now()});
+      S.former = S.former.slice(0, 60);
+    }
+  }
+  S.access[i][f] = v; save(); render();
+}
 function nextSeq(){ S.seq = (S.seq || 0) + 1; save(); return S.seq; }
 /* RETIRING KEYS DOES NOT REMOVE THE ADDRESS, and it is not meant to. It ends every session that
    exists right now; the address on the row can still ask for a new link. Replacing an owner is
@@ -1431,7 +1494,8 @@ function seedAccess(){
 }
 function blank(){
   return {clock: DATA.clock_start, device: 'A', devices: {}, tokens: {}, links: [], seq: 0,
-          access: seedAccess(), requests: {}, rosters: freshRosters(), acquired: {}, log: [],
+          access: seedAccess(), former: [], requests: {}, rosters: freshRosters(),
+          acquired: {}, log: [],
           results: null, seed: 'RFL-SANDBOX', actingAs: null, lastEmail: (DATA.me || {}).email || ''};
 }
 function boot(){
