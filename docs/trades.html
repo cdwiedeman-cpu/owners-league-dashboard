@@ -1,0 +1,571 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reality Football League — Trades and signing in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --ground:#f6f8fa; --card:#ffffff; --sunk:#eef2f6;
+  --ink:#0e1822; --body:#33465a; --faint:#64798f;
+  --rule:#d8e0e8;
+  --accent:#12609f; --accent-soft:#e4eef7;
+  --good:#1b6647; --good-soft:#e0f0e8;
+  --care:#8a5a12; --care-soft:#f7eeda;
+  --stop:#9c3227; --stop-soft:#f9e6e3;
+  --shadow:0 1px 2px rgba(14,24,34,.06), 0 8px 24px -16px rgba(14,24,34,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+    --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+    --rule:#26333f;
+    --accent:#79bcff; --accent-soft:#152a3d;
+    --good:#68d8a2; --good-soft:#12291f;
+    --care:#f0c264; --care-soft:#2c2413;
+    --stop:#f28b81; --stop-soft:#2e1a18;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+  --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+  --rule:#26333f;
+  --accent:#79bcff; --accent-soft:#152a3d;
+  --good:#68d8a2; --good-soft:#12291f;
+  --care:#f0c264; --care-soft:#2c2413;
+  --stop:#f28b81; --stop-soft:#2e1a18;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--body);
+  font:400 17px/1.62 "Source Serif 4",Georgia,"Times New Roman",serif;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:44rem;margin:0 auto;padding:56px 22px 96px;display:flex;flex-direction:column;gap:38px}
+h1,h2,h3,.eyebrow,.stepn,.chip,.kbd,.addr{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+h1{
+  font-size:clamp(30px,6vw,42px); line-height:1.08; letter-spacing:-.022em; font-weight:700;
+  color:var(--ink); margin:0; text-wrap:balance;
+}
+h2{
+  font-size:20px; line-height:1.25; letter-spacing:-.012em; font-weight:700;
+  color:var(--ink); margin:0 0 4px; text-wrap:balance;
+}
+h3{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 6px;letter-spacing:-.005em}
+p{margin:0 0 12px}
+p:last-child{margin-bottom:0}
+b,strong{font-weight:600;color:var(--ink)}
+a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+.eyebrow{
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  margin:0 0 12px;
+}
+.lede{font-size:19px;line-height:1.55;color:var(--body);margin:16px 0 0}
+.lede b{color:var(--ink)}
+
+/* ---- the answer, up top ---- */
+.verdict{
+  background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--good);
+  border-radius:10px;padding:20px 22px;box-shadow:var(--shadow);
+}
+.verdict h2{color:var(--good)}
+
+section{display:flex;flex-direction:column;gap:16px}
+.rule{height:1px;background:var(--rule);border:0;margin:0}
+
+/* ---- Q&A ---- */
+.qa{display:flex;flex-direction:column;gap:22px}
+.q{border-left:2px solid var(--rule);padding-left:18px}
+.q h3{font-size:16px}
+
+/* ---- routes table ---- */
+.routes{width:100%;border-collapse:collapse;font-family:Archivo,sans-serif;font-size:14.5px}
+.routes th,.routes td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+.routes th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.routes td:last-child{white-space:nowrap;font-weight:600}
+.yes{color:var(--good)} .no{color:var(--stop)}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ---- steps ---- */
+.steps{display:flex;flex-direction:column;gap:2px;counter-reset:s}
+.step{
+  /* minmax(0,1fr) not 1fr: a grid track's automatic minimum is its MIN-CONTENT width, so a
+     single unbreakable filename in the body pushed the whole page to 690px on a 390px phone. */
+  display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:16px;align-items:start;
+  padding:18px 0;border-top:1px solid var(--rule);
+}
+.step:first-child{border-top:0}
+.stepn{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13px;font-weight:600;
+  color:var(--accent);background:var(--accent-soft);border-radius:6px;
+  text-align:center;padding:4px 0;font-variant-numeric:tabular-nums;
+}
+.step .bd{font-size:16.5px}
+.step .bd p{margin-bottom:8px}
+
+/* ---- confidence chips: which of these did I actually verify ---- */
+.chip{
+  display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;margin-bottom:8px;
+}
+.chip.ok{color:var(--good);background:var(--good-soft)}
+.chip.look{color:var(--care);background:var(--care-soft)}
+.kbd{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.9em;font-weight:600;
+  background:var(--sunk);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;color:var(--ink);
+  /* Filenames live in here and some are 45 characters. nowrap made them unbreakable and they
+     widened the page; anywhere breaks ONLY when there is no room, so short ones stay intact. */
+  overflow-wrap:anywhere;
+}
+.note{
+  background:var(--sunk);border:1px solid var(--rule);border-radius:9px;padding:16px 18px;
+  font-size:15.5px;line-height:1.58;
+}
+.note.care{background:var(--care-soft);border-color:transparent}
+.note.stop{background:var(--stop-soft);border-color:transparent}
+.note h3{margin-bottom:4px}
+.note.care h3{color:var(--care)}
+.note.stop h3{color:var(--stop)}
+ol.tight,ul.tight{margin:8px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:7px}
+/* The deliverables list names files, and the longest is 38 characters of unbreakable filename.
+   In a full-width note anywhere only breaks when nothing else can give, so ordinary words are
+   untouched -- unlike a 20px column, where this same property once stacked KEEP one letter
+   per line. Width is what makes it safe or unsafe, not the property. */
+ol.tight li,ul.tight li{overflow-wrap:anywhere}
+li::marker{color:var(--faint)}
+footer{color:var(--faint);font-size:13.5px;font-family:Archivo,sans-serif;line-height:1.6}
+@media (prefers-reduced-motion:no-preference){
+  a{transition:color .15s ease}
+}
+
+/* A directory tree and a quoted ask are the two shapes this page has that the iPad guide
+   does not. Both are monospace blocks that must scroll inside themselves, never widen the page. */
+pre.tree{margin:10px 0 0;padding:14px 16px;background:var(--sunk);border:1px solid var(--rule);
+  border-radius:9px;font:400 13px/1.65 "IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color:var(--ink);overflow-x:auto}
+pre.tree .cmt{color:var(--faint)}
+p.ask{margin:10px 0;padding:11px 15px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:0 8px 8px 0;font-family:Archivo,sans-serif;font-size:15px;color:var(--ink)}
+p.ask::before{content:"“"}
+p.ask::after{content:"”"}
+.routes td:last-child{white-space:normal}
+ol.tight{padding-left:20px}
+</style>
+<style>
+table.rules td.pool{font-weight:600;color:var(--ink);width:14rem;vertical-align:top}
+section h3{margin:26px 0 6px;padding-top:14px;border-top:1px solid var(--rule,#e6e6e2);
+  font-size:17px}
+section h3:first-of-type{border-top:0;padding-top:0;margin-top:18px}
+ol li,ul li{margin:0 0 7px}
+/* A NARROW SCREEN DROPS THE COLUMN, IT DOES NOT SQUEEZE IT. A 14rem label column on a phone
+   leaves four words of description per line. */
+@media (max-width:620px){
+  table.rules td.pool{display:block;width:auto;padding:14px 0 2px;border-bottom:0}
+  table.rules td{display:block;width:auto;padding-left:0;padding-right:0}
+  table.rules tr+tr td.pool{border-top:1px solid var(--rule,#e6e6e2)}
+  table.rules td:last-child{padding-bottom:4px;border-bottom:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Reality Football League · for the commissioner</p>
+    <h1>Trades and signing in</h1>
+    <p class="lead">What the new trade page does, how a week runs, what to do when an owner
+      changes their email or leaves the league, and the few things only you can set up.</p>
+  </header>
+
+<section><h2>What this is</h2>
+<p>Trades reach you today by text, email and phone. You work out who gets what when more than one
+   owner wants the same team, you tell everybody, and you type the result into the workbook. In a
+   busy week that is a lot of messages and a lot of chances for two people to remember the same
+   conversation differently.</p>
+<p>Owners will now enter their own trades on a web page instead. There are two ways a team
+   changes hands, and they happen at different times:</p>
+<ul>
+  <li>Through the <b>Monday coin flips</b>. During the week an owner builds a list of teams they
+      want. At 4:00pm Monday the page works through every list that was submitted and settles
+      them, including running a coin flip wherever more than one owner asked for the same team.
+      Everybody is emailed what happened to each of their requests.</li>
+  <li>Through <b>first come, first served</b>. From Monday 4:00pm until Tuesday 5:00pm, any team
+      still unowned can be taken outright by whoever asks first. This does not go through the
+      Monday process at all &mdash; it is immediate, and there is no coin flip.</li>
+</ul>
+<p>You are no longer the switchboard for either one, but you can still enter or correct anything
+   by hand, for anybody, at any time.</p>
+
+<h3>None of the league&rsquo;s rules change</h3>
+<p>The page enforces the rules that already exist rather than introducing new ones. The ones that
+   decide whether a trade is legal are:</p>
+<table class="rules"><tbody>
+<tr><td class="pool">Three divisions,<br>separate pools</td>
+    <td>Predator, Viper and Scorpion each draft and trade from their own pool. A team owned in
+        one division can be free in another, and the three never interact.</td></tr>
+<tr><td class="pool">Hold before dropping</td>
+    <td>A team must have played <b>three games</b> for its owner before it can be dropped. A game
+        played on draft day counts.</td></tr>
+<tr><td class="pool">Games left to claim</td>
+    <td>A team must have <b>three games still to play</b> before anybody can pick it up. This is
+        a different rule from the one above and it bites at the other end of the season.</td></tr>
+<tr><td class="pool">Frozen after a drop</td>
+    <td>A team that has just been dropped must play <b>one game</b> before anybody can pick it
+        up. So a team dropped on Monday afternoon is not available again that afternoon.</td></tr>
+<tr><td class="pool">Like for like</td>
+    <td>College teams are traded for college teams, NFL teams for NFL teams. That is what keeps
+        every roster at eight college and three NFL. FBS and FCS both count as college.</td></tr>
+<tr><td class="pool">Coin flip</td>
+    <td>When <b>two or more</b> owners in the same division ask for the same team, it goes to a
+        coin flip between all of them.</td></tr>
+<tr><td class="pool">Cost</td>
+    <td>Every completed trade costs the owner <b>$3</b>, whichever way it happened. The page keeps
+        the running total for each owner.</td></tr>
+</tbody></table>
+<p>The rest of this guide covers the six steps to set it up, what happens each week, and what to
+   do when an owner&rsquo;s situation changes.</p>
+</section>
+
+<section><h2>Setting it up</h2><p class="lead">Six steps, once, before the season.</p>
+<p>This is done once, before the season, and it takes about half an hour.</p>
+
+<h3>First, a Google account for the league</h3>
+<p>Everything behind the page &mdash; the spreadsheet, the script that runs on Mondays, and the
+   emails owners receive &mdash; lives in one Google account. Casey and Bob agreed on
+   <b>a new account for the league</b> rather than either of their personal ones, for three
+   reasons:</p>
+<ul>
+  <li>Owners get league email from a league address, not from somebody&rsquo;s personal Gmail.</li>
+  <li>Both of you have the login, so nothing stops working if one of you steps back for a
+      season.</li>
+  <li>Neither of you ends up with the league&rsquo;s machinery sitting in your own mail.</li>
+</ul>
+<p>It is free and takes five minutes. Something like <span class="kbd">rflcommish@gmail.com</span>.
+   Do the rest of these steps <b>while signed in to that account</b>.</p>
+
+<h3>Then the six steps</h3>
+<ol>
+  <li>Make a new Google Sheet and name it <span class="kbd">RFL Trades</span>.</li>
+  <li>Add a tab named <span class="kbd">Access</span>.</li>
+  <li>Open the file <span class="kbd">Owners_League_Access_List.csv</span> that came with this
+      guide and paste it into that tab. All 27 seats are already listed and spelled correctly.</li>
+  <li>Type each owner&rsquo;s email address into the Email column. <b>Personal inboxes only</b> &mdash;
+      not the league email list, and not an address that forwards to several people.</li>
+  <li>Find Bob&rsquo;s row and change Role from <span class="kbd">owner</span> to
+      <span class="kbd">commissioner</span>. This is what gives him the two abilities described
+      later, and it has nothing to do with who owns the Google account.</li>
+  <li>In the Sheet, click Extensions, then Apps Script. Paste in the script Casey provides, click
+      Deploy, and add the trigger (see below).</li>
+</ol>
+<p><b>Casey does step 6.</b> It needs the account password rather than just edit access to the
+   Sheet, and it is the part he can work through with Claude.</p>
+
+<h3>What the trigger is</h3>
+<p>A trigger is a schedule Google keeps on its own servers. It runs a piece of the script without
+   anybody opening anything &mdash; no computer has to be switched on, and nobody has to
+   remember. That is what makes Monday afternoon happen by itself.</p>
+<p>The obvious setup would be &ldquo;run this weekly, Mondays, at 4:00pm&rdquo;, and it is the
+   wrong one. Google&rsquo;s weekly schedules are only accurate to the hour &mdash; asking for
+   4:00pm means <i>somewhere between 4:00 and 5:00</i>, and which minute is up to them. For a
+   deadline that owners are typing against, that is not good enough.</p>
+<p>So the trigger runs <b>every five minutes</b>, and the script itself decides whether there is
+   anything to do. Almost every run does nothing at all and finishes instantly. The one just
+   after 4:00pm on a Monday settles the week.</p>
+<p>The deadline itself does not depend on any of that. <b>Every request is stamped with the time
+   it was sent, and anything stamped 4:00pm Monday or later is too late</b> &mdash; whether the
+   script happens to run at 4:01 or 4:04. Results are posted within about five minutes, and first
+   come, first served opens the moment they are.</p>
+
+<h3>After that</h3>
+<p>The only thing anybody edits by hand is the Access tab, and Bob can do that with ordinary edit
+   access to the Sheet &mdash; no password needed. Two other tabs appear on their own:
+   <b>Requests</b>, which the page fills in when owners submit, and <b>Results</b>, which is
+   written every Monday and becomes the transaction record. Leave both alone.</p>
+</section>
+
+<section><h2>What happens each week</h2><p class="lead">You do nothing. This is just so you know.</p>
+<ol>
+  <li><b>Tuesday 5:01pm to Monday 3:59pm.</b> Owners build their list for the week. Each entry
+      names a team to pick up and up to four teams they would be willing to drop for it. When it
+      is ready they press <b>Send my list</b>, and the page tells them they are entered. Until
+      they press it nothing is entered, and the page says so in plain words at the top. They can
+      change and re-send as often as they like right up to 3:59pm.</li>
+  <li><b>Monday at 4:00pm.</b> The page settles everything automatically. Nobody presses
+      anything.</li>
+  <li><b>Monday 4:01pm.</b> Every owner gets an email telling them what happened to each of
+      their entries. The results are on the page too.</li>
+  <li><b>Monday 4:00pm to Tuesday 5:00pm.</b> First come, first served. This is separate from
+      the Monday process and nothing carries over into it. Any team still unowned in a division
+      can be taken outright — one team, one drop, no coin flip, no waiting. Whoever gets there
+      first has it.</li>
+  <li><b>Tuesday 5:01pm.</b> Entry opens for the following Monday, already showing the new
+      rosters.</li>
+</ol>
+
+<h3>How Monday settles a contested team</h3>
+<p>Each division is settled separately, from its own pool. A team owned in Viper can be free in
+   Predator.</p>
+<ol>
+  <li>Everybody's first entry is settled before anybody's second, so being early is worth
+      nothing.</li>
+  <li>If one owner asked for a team, they get it.</li>
+  <li>If two or more asked — three or four is perfectly possible — it goes to a coin flip
+      between all of them.</li>
+  <li>If you beat somebody in an earlier coin flip that afternoon and they are in this one too,
+      you sit this one out and they go for it without you. Once they have picked up a team,
+      you are level again and the next one is a normal coin flip.</li>
+  <li>The team dropped is the first one on that owner's list that is still available and past
+      its three-game hold. If none of them are, the entry does not go through and the owner is
+      told exactly that.</li>
+</ol>
+</section>
+
+<section><h2>How owners sign in</h2>
+<p>Owners never get a password. There is nothing for them to remember and nothing for you to
+   reset.</p>
+<ol>
+  <li>The owner opens the page and types their email address.</li>
+  <li>A link arrives in their inbox. It works once and expires after 30 minutes.</li>
+  <li>They tap it, and they are signed in.</li>
+  <li>That device stays signed in for the season. They do this once on their phone and once on
+      their laptop, and that is the last they think about it.</li>
+</ol>
+
+<h3>Why an owner cannot enter trades as somebody else</h3>
+<p>When they tap that link, the page stores a long random code in their browser. They never see
+   it or type it. Every trade they submit carries that code, and the league looks it up to find
+   out whose seat it is. Nothing announces a name, so there is no name for anybody to change.</p>
+<p>Knowing another owner's email address gets somebody nowhere: if they ask for a link at that
+   address, the link goes to that owner's inbox, and that owner gets an email saying somebody
+   tried to sign in as them.</p>
+
+<h3>If somebody cannot sign in</h3>
+<p>The sign-in box says the same thing to everybody, whatever happened underneath &mdash;
+   otherwise anybody could use it to find out who is in the league by typing addresses.</p>
+<p>What it does say, to everyone, is: if nothing arrives in a few minutes, your address may not
+   be the one the league has for you, so contact the commissioner. That reaches the person
+   sitting there and gives nothing away.</p>
+<p>Separately, an address the league <b>has used before</b> &mdash; a former owner, or somebody
+   whose address was changed &mdash; gets an actual email saying it is no longer on a seat and to
+   contact you. That is safe, because an email lands with whoever owns the address, never with
+   whoever typed it. An address the league has never used gets nothing at all, so nobody can use
+   the sign-in box to send mail to strangers.</p>
+
+<h3>Two things it does not do</h3>
+<ul>
+  <li>It does not stop anybody <b>reading</b> the page. The dashboard is a public web page and
+      always has been. What is protected is submitting a trade.</li>
+  <li>It does not help if somebody can open another owner's inbox. Forwarding a sign-in email
+      hands over your seat, the same as giving out a password.</li>
+</ul>
+
+<h3>Two owners on one team</h3>
+<p>Casey and Dominic share a seat, so they get two rows on the Access tab with the same seat name
+   and different email addresses. Both sign in on their own phones, both see the same thing, and
+   neither has to sign out for the other.</p>
+</section>
+
+<section><h2>What to do when something changes</h2><p class="lead">Five situations, each one a small edit.</p>
+<p>Each of these is a small edit on the Access tab. Nothing has to be rebuilt and nobody else has
+   to be involved. The change takes effect immediately.</p>
+
+<h3>An owner gets a new email address</h3>
+<ol>
+  <li>Type the new address over the old one.</li>
+</ol>
+<p>That is all. The old address stops working straight away, and their phone stays signed in.</p>
+
+<h3>An owner leaves and somebody new takes the team</h3>
+<ol>
+  <li>Type the new owner's address over the old one.</li>
+  <li>Press <b>Retire keys now</b> on that row.</li>
+</ol>
+<p>Step 2 is the one people forget, and it is the important one. Step 1 stops the old owner
+   getting new links, but it does not reach the phone he is already signed in on. Step 2 does.</p>
+<p>The seat keeps its roster, its points and its history. Only the person changes.</p>
+
+<h3>An owner leaves and nobody has taken over</h3>
+<ol>
+  <li>Change Status on that row from <span class="kbd">active</span> to
+      <span class="kbd">inactive</span>.</li>
+</ol>
+<p>The seat still shows up everywhere; it just cannot submit anything. Set it back to active when
+   somebody takes it on.</p>
+
+<h3>An owner has no email address</h3>
+<ol>
+  <li>Leave their Email cell blank.</li>
+  <li>They call or text you, and you enter their trades under their seat. See the next
+      section.</li>
+</ol>
+<p>There is deliberately no second way of doing this — a code handed out instead would just be a
+   password, and it would be lost by next August.</p>
+
+<h3>An owner says the page has them as the wrong person</h3>
+<ol>
+  <li>Check their row on the Access tab. Their email address is almost certainly on the wrong
+      seat.</li>
+  <li>Fix it and press <b>Retire keys now</b> on both rows involved.</li>
+</ol>
+</section>
+
+<section><h2>What only you can do</h2><p class="lead">Three actions no other owner has. Two of them are ordinary; the third is not.</p>
+<h3>Entering a request for somebody</h3>
+<ol>
+  <li>Sign in as yourself.</li>
+  <li>On the trades page, choose their name from the <b>Submitting for</b> dropdown.</li>
+  <li>Fill it in exactly as they would have.</li>
+</ol>
+<p>The clock applies to you the same as to them: before Monday 4:00pm it goes into the coin
+   flips, after that it is a first-come claim. The record shows both names, and that owner gets
+   an email telling them you submitted for them.</p>
+
+<h3>Recording a trade that happened somewhere else</h3>
+<ol>
+  <li>Use <b>Record a trade</b>.</li>
+  <li>Pick the owner, the team coming in and the team going out.</li>
+</ol>
+<p>This is for a trade that was agreed outside the app &mdash; over the phone, by text, or during
+   the first few weeks while the league is still being tried out and you are entering everything
+   yourself. It is an ordinary trade: it costs that owner the usual $3, it appears in the
+   transaction record with your name as the person who entered it, and the owner is emailed.</p>
+<p>It is deliberately <b>not</b> the same thing as the button below. Recording a trade is normal.
+   Correcting one is not.</p>
+
+<h3>Fixing something that went wrong</h3>
+<ol>
+  <li>Use the <b>Correction</b> button, not the trade form.</li>
+  <li>Type what you are changing and why.</li>
+</ol>
+<p><b>The fees are yours to set.</b> Putting one trade right can take two or three roster moves,
+   and nobody should be charged two or three times for it. So the fee sits on each line and you
+   can change it: set a line to <b>$0</b> when it is part of a correction rather than a new
+   trade, or enter a <b>credit</b> against an owner when they were charged for something that
+   did not happen.</p>
+<p>The money and the rosters are corrected separately on purpose. Sometimes a roster is right and
+   only a charge is wrong, and then there is no roster move to attach the fix to.</p>
+<p>Any total that has been adjusted is marked as such on the <b>What Each Owner Owes</b> table,
+   with the reason you typed. A figure that does not match the number of trades and does not
+   explain itself reads as a mistake, which is worse than either the wrong number or no
+   number.</p>
+<p>This changes who holds what directly, outside the normal windows. It should be rare, because
+   if everything ran properly there is nothing to correct. The affected owners are emailed, it
+   is marked as a correction in the record, and the number of them is shown to you. If that
+   number gets past two or three, tell Casey — it means something is not working.</p>
+
+<h3>Settling Monday yourself</h3>
+<p>There is a switch on the same page with two positions, and it stays there permanently.</p>
+<ul>
+  <li><b>Automatic</b> &mdash; the schedule settles the week a few minutes after 4:00pm every
+      Monday and you do nothing. This is how it runs once the whole league is on it.</li>
+  <li><b>By hand</b> &mdash; the schedule settles nothing and waits for you to press <b>Run the
+      coin flips</b>. This is how the first few weeks run, and it is there afterwards for any
+      week you want to hold back.</li>
+</ul>
+<p>The button is there in both positions. Under <b>automatic</b> you would only use it to settle
+   a week early, or to catch somebody who was missed.</p>
+<h3>If you missed somebody</h3>
+<p>You run it at 4:05 and then open an email that had been sitting unread since 3:50. It happens.</p>
+<p>Use <b>Undo week N</b>, add the request you missed, and run it again.</p>
+<p>Undo puts every roster back to how it stood at 4:00pm and <b>keeps every list exactly as it
+   was typed</b> &mdash; nobody re-enters anything. Then the whole week is settled from scratch
+   with everything in it.</p>
+<p>That is the only way to get the right answer, and it is worth understanding why. A late
+   request does not just add a trade. It can join a contest another owner won, which changes who
+   won that team, which changes who has to stand aside for the next one. Settling the latecomer
+   on top of the earlier result cannot reach the week the league should have had.</p>
+<p><b>Two things to know about undo.</b></p>
+<ul>
+  <li><b>Only do it before you have told anybody the results.</b> Running the week again can
+      legitimately give a team to a different owner. The first set of results was wrong rather
+      than unlucky &mdash; but somebody who has already been told they won Navy will not see it
+      that way.</li>
+  <li><b>First come claims made since are undone too, and handed back to you.</b> They were
+      granted against rosters that are about to be settled differently, so they cannot simply be
+      left standing. The confirmation lists them before anything happens, and after you re-run
+      the week each one waits on the Run tab with a <b>Try this one again</b> button. If the team
+      went to somebody else in the new flips, that claim is refused with the reason &mdash; which
+      you can pass on, because it was a good claim when they made it.</li>
+</ul>
+<p>There is also a plain second run, which settles only what has come in since and cannot change
+   anything already decided. It is right when the person you missed wanted a team nobody else
+   asked for. If you are not sure, undo.</p>
+
+<h3>Sending the results yourself</h3>
+<p>A second switch, next to the first one, decides whether the tool emails owners their results.</p>
+<ul>
+  <li><b>On</b> &mdash; each owner is emailed within a minute of a week being settled.</li>
+  <li><b>Off</b> &mdash; nobody is emailed, and the results appear on screen for you to send
+      instead. <b>Copy every owner&rsquo;s email</b> gives you all of them in one block, each
+      with the address it goes to, ready to paste.</li>
+</ul>
+<p>Off is how the first few weeks run, so nothing reaches the league until you have looked at it.
+   Turning it on is part of stage three.</p>
+<p><b>Sign-in links are not affected by this switch and cannot be.</b> They are how anybody gets
+   into the page at all, including you. Turning results emails off never stops somebody signing
+   in.</p>
+
+<h3>If somebody argues about a coin flip</h3>
+<p>You can re-run it and get the identical result. The flip is worked out from the week, the
+   division and the team rather than being random, so the same week always comes out the same
+   way. Show them twice and the argument is over.</p>
+</section>
+
+<section><h2>Rolling it out</h2><p class="lead">Three stages. Owners are not let in until it has been run for real for a few weeks.</p>
+<p>Nobody is asked to trust this on day one. It goes live in three stages, and the league only
+   notices the third.</p>
+
+<h3>Stage one &mdash; it runs, and only Bob uses it</h3>
+<p>The Sheet and the script go live. Nothing changes for the other owners: they keep emailing and
+   phoning Bob exactly as they do now.</p>
+<p>What changes is what Bob does with those messages. His Monday looks like this:</p>
+<ol>
+  <li>Owners email him their requests through the day, as always, up to 4:00pm.</li>
+  <li>He puts each one into the page under that owner&rsquo;s name, using
+      <b>Submitting for</b>. These are requests, not finished trades &mdash; he is typing in what
+      the owner asked for.</li>
+  <li>After 4:00pm, once they are all in, he presses <b>Run the coin flips</b> himself.</li>
+  <li>The page settles everything, including any team more than one owner wanted, and emails
+      each owner what happened.</li>
+  <li>First come, first served requests arrive through Tuesday and he enters those as they come,
+      the same way.</li>
+</ol>
+<p>The important part is that <b>the tool is doing the real work from week one</b>. Bob is doing
+   the typing, not the deciding &mdash; the coin flips, the hold rules, the like-for-like check
+   and the running totals are all being run for real. If they are right for three weeks with two
+   people watching, they are right in December with twenty-seven.</p>
+<p>Two switches on that page are set for this stage: settling is <b>by hand</b>, so the schedule
+   waits for him, and results emails are <b>off</b>, so nothing reaches the league until he has
+   looked at it and sent it himself. Both are ordinary settings rather than a temporary mode, and
+   they are flipped the other way at stage three.</p>
+<p>Only two people sign in during this stage, which is also the cheapest possible test of the
+   sign-in: if it works for two, the twenty-seventh is not different.</p>
+
+<h3>Stage two &mdash; a few weeks of watching it</h3>
+<p>Run it this way for two or three weeks. What is being checked is not whether the buttons work
+   &mdash; that has been tested &mdash; but whether the <i>record</i> it produces matches what
+   actually happened in the league. Compare the Transactions tab against what Bob would have
+   written down. If those agree for three weeks, they will agree in December.</p>
+<p>Anything that comes up gets fixed while the audience is two people rather than twenty-seven.</p>
+
+<h3>Stage three &mdash; the owners</h3>
+<p>Fill in the remaining email addresses, set both switches the other way &mdash; settling to
+   <b>automatic</b> and results emails <b>on</b> &mdash; and tell the league. From that Monday,
+   owners enter their own requests, Monday settles itself a few minutes after four, and everyone
+   is emailed what happened without you touching it.</p>
+<p>Bob keeps everything he had. <b>Record a trade</b> and <b>Submitting for</b> do not go away
+   &mdash; they are how anybody without email, or having a bad week, still gets their trade in.
+   The job that disappears is being the switchboard, not being the commissioner.</p>
+</section>
+
+<section><h2>What an owner sees after Monday</h2><p class="lead">Every entry comes back with one of these 13 answers, so nobody is left guessing whether they lost or the page broke.</p><table class="rules"><tbody><tr><td class="pool">You got it, and nobody else had asked</td><td>This is most trades in a normal week. Nobody else wanted the team, so there was no coin flip at all.</td></tr><tr><td class="pool">You got it, and you won the coin flip</td><td>More than one owner asked for the same team. The email names everyone who was in it.</td></tr><tr><td class="pool">You lost the coin flip</td><td>Somebody else won it. You keep the team you had offered to drop, and the email tells you who ended up with it.</td></tr><tr><td class="pool">You were not eligible for this one</td><td>You had already won a coin flip earlier the same afternoon, so you were held out of this one and the other owners went for it without you.</td></tr><tr><td class="pool">This request was not attempted</td><td>You had told it to run only if an earlier request did, or did not, come through. It did not need to run.</td></tr><tr><td class="pool">It could not run, because there was nothing left to drop</td><td>Every team offered up had already been used by an earlier request, was still inside its three-game hold, or was no longer on the roster. Listing more backup drops prevents this.</td></tr><tr><td class="pool">It could not run, because the team is already owned</td><td>Somebody in the division holds it. Under the normal windows this should not happen, and the email says so plainly if it does.</td></tr><tr><td class="pool">The teams you offered to drop were the wrong kind</td><td>College teams are traded for college teams and NFL teams for NFL teams, so that every roster stays at eight college and three NFL. None of the drops offered matched the team being picked up.</td></tr><tr><td class="pool">That team was dropped this week</td><td>A team that has just been dropped has to play a game before anybody can pick it up, so it is not available again the same afternoon.</td></tr><tr><td class="pool">You already hold that team</td><td>Nothing to do.</td></tr><tr><td class="pool">That team has too few games left</td><td>A team has to have three games still to play before anybody can claim it.</td></tr><tr><td class="pool">An earlier request of yours already took it</td><td>Two of your own requests asked for the same team, and the first one got it.</td></tr><tr><td class="pool">The request could not be read</td><td>A request with no team on it, more than four drops, or a condition pointing at something further down the list. The form will not normally let anybody build one.</td></tr></tbody></table></section>
+
+  <footer>
+    <p>The list of answers owners can receive is read directly out of the file that resolves
+      trades, so this guide cannot describe something the page does not actually do.</p>
+  </footer>
+</div>
+</body>

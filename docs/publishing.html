@@ -1,0 +1,446 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Publishing the Season Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --ground:#f6f8fa; --card:#ffffff; --sunk:#eef2f6;
+  --ink:#0e1822; --body:#33465a; --faint:#64798f;
+  --rule:#d8e0e8;
+  --accent:#12609f; --accent-soft:#e4eef7;
+  --good:#1b6647; --good-soft:#e0f0e8;
+  --care:#8a5a12; --care-soft:#f7eeda;
+  --stop:#9c3227; --stop-soft:#f9e6e3;
+  --shadow:0 1px 2px rgba(14,24,34,.06), 0 8px 24px -16px rgba(14,24,34,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+    --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+    --rule:#26333f;
+    --accent:#79bcff; --accent-soft:#152a3d;
+    --good:#68d8a2; --good-soft:#12291f;
+    --care:#f0c264; --care-soft:#2c2413;
+    --stop:#f28b81; --stop-soft:#2e1a18;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+  --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+  --rule:#26333f;
+  --accent:#79bcff; --accent-soft:#152a3d;
+  --good:#68d8a2; --good-soft:#12291f;
+  --care:#f0c264; --care-soft:#2c2413;
+  --stop:#f28b81; --stop-soft:#2e1a18;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--body);
+  font:400 17px/1.62 "Source Serif 4",Georgia,"Times New Roman",serif;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:44rem;margin:0 auto;padding:56px 22px 96px;display:flex;flex-direction:column;gap:38px}
+h1,h2,h3,.eyebrow,.stepn,.chip,.kbd,.addr{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+h1{
+  font-size:clamp(30px,6vw,42px); line-height:1.08; letter-spacing:-.022em; font-weight:700;
+  color:var(--ink); margin:0; text-wrap:balance;
+}
+h2{
+  font-size:20px; line-height:1.25; letter-spacing:-.012em; font-weight:700;
+  color:var(--ink); margin:0 0 4px; text-wrap:balance;
+}
+h3{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 6px;letter-spacing:-.005em}
+p{margin:0 0 12px}
+p:last-child{margin-bottom:0}
+b,strong{font-weight:600;color:var(--ink)}
+a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+.eyebrow{
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  margin:0 0 12px;
+}
+.lede{font-size:19px;line-height:1.55;color:var(--body);margin:16px 0 0}
+.lede b{color:var(--ink)}
+
+/* ---- the answer, up top ---- */
+.verdict{
+  background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--good);
+  border-radius:10px;padding:20px 22px;box-shadow:var(--shadow);
+}
+.verdict h2{color:var(--good)}
+
+section{display:flex;flex-direction:column;gap:16px}
+.rule{height:1px;background:var(--rule);border:0;margin:0}
+
+/* ---- Q&A ---- */
+.qa{display:flex;flex-direction:column;gap:22px}
+.q{border-left:2px solid var(--rule);padding-left:18px}
+.q h3{font-size:16px}
+
+/* ---- routes table ---- */
+.routes{width:100%;border-collapse:collapse;font-family:Archivo,sans-serif;font-size:14.5px}
+.routes th,.routes td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+.routes th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.routes td:last-child{white-space:nowrap;font-weight:600}
+.yes{color:var(--good)} .no{color:var(--stop)}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ---- steps ---- */
+.steps{display:flex;flex-direction:column;gap:2px;counter-reset:s}
+.step{
+  /* minmax(0,1fr) not 1fr: a grid track's automatic minimum is its MIN-CONTENT width, so a
+     single unbreakable filename in the body pushed the whole page to 690px on a 390px phone. */
+  display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:16px;align-items:start;
+  padding:18px 0;border-top:1px solid var(--rule);
+}
+.step:first-child{border-top:0}
+.stepn{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13px;font-weight:600;
+  color:var(--accent);background:var(--accent-soft);border-radius:6px;
+  text-align:center;padding:4px 0;font-variant-numeric:tabular-nums;
+}
+.step .bd{font-size:16.5px}
+.step .bd p{margin-bottom:8px}
+
+/* ---- confidence chips: which of these did I actually verify ---- */
+.chip{
+  display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;margin-bottom:8px;
+}
+.chip.ok{color:var(--good);background:var(--good-soft)}
+.chip.look{color:var(--care);background:var(--care-soft)}
+.kbd{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.9em;font-weight:600;
+  background:var(--sunk);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;color:var(--ink);
+  /* Filenames live in here and some are 45 characters. nowrap made them unbreakable and they
+     widened the page; anywhere breaks ONLY when there is no room, so short ones stay intact. */
+  overflow-wrap:anywhere;
+}
+.note{
+  background:var(--sunk);border:1px solid var(--rule);border-radius:9px;padding:16px 18px;
+  font-size:15.5px;line-height:1.58;
+}
+.note.care{background:var(--care-soft);border-color:transparent}
+.note.stop{background:var(--stop-soft);border-color:transparent}
+.note h3{margin-bottom:4px}
+.note.care h3{color:var(--care)}
+.note.stop h3{color:var(--stop)}
+ol.tight,ul.tight{margin:8px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:7px}
+/* The deliverables list names files, and the longest is 38 characters of unbreakable filename.
+   In a full-width note anywhere only breaks when nothing else can give, so ordinary words are
+   untouched -- unlike a 20px column, where this same property once stacked KEEP one letter
+   per line. Width is what makes it safe or unsafe, not the property. */
+ol.tight li,ul.tight li{overflow-wrap:anywhere}
+li::marker{color:var(--faint)}
+footer{color:var(--faint);font-size:13.5px;font-family:Archivo,sans-serif;line-height:1.6}
+@media (prefers-reduced-motion:no-preference){
+  a{transition:color .15s ease}
+}
+
+/* A directory tree and a quoted ask are the two shapes this page has that the iPad guide
+   does not. Both are monospace blocks that must scroll inside themselves, never widen the page. */
+pre.tree{margin:10px 0 0;padding:14px 16px;background:var(--sunk);border:1px solid var(--rule);
+  border-radius:9px;font:400 13px/1.65 "IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color:var(--ink);overflow-x:auto}
+pre.tree .cmt{color:var(--faint)}
+p.ask{margin:10px 0;padding:11px 15px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:0 8px 8px 0;font-family:Archivo,sans-serif;font-size:15px;color:var(--ink)}
+p.ask::before{content:"“"}
+p.ask::after{content:"”"}
+.routes td:last-child{white-space:normal}
+ol.tight{padding-left:20px}
+</style>
+<style>
+.addr{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:14px;font-weight:600;
+  background:var(--sunk);border:1px solid var(--rule);border-radius:7px;padding:9px 12px;
+  display:block;overflow-wrap:anywhere;color:var(--ink);margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Owners Football League · season tools</p>
+    <h1>Publishing the season dashboard</h1>
+    <p class="lede">How a rebuild gets to the icon on your home screen — and why the numbers you
+      type into the Race tab are still there afterwards.</p>
+  </header>
+
+  <div class="verdict">
+    <h2>The short answer</h2>
+    <p>Your typed projections are stored <b>by the browser you typed them into, against the web
+      address</b>. They are not in the HTML file and never were — that file is a program, not a
+      document. Publishing replaces the page at the address; it never changes the address. So a
+      rebuild cannot wipe your worksheet.</p>
+    <a class="addr" href="https://cdwiedeman-cpu.github.io/owners-league-dashboard/">https://cdwiedeman-cpu.github.io/owners-league-dashboard/</a>
+  </div>
+
+  <hr class="rule">
+
+  <section>
+    <h2>The order of operations</h2>
+    <p>Casey, 4 Sep 2026: <i>"do I need to first put my projections in the HTML download file,
+      then do the git publish to see those projections on my iphone? Or should I first do the git
+      publish, then add my projection to that github.io publish?"</i></p>
+
+    <div class="note stop">
+      <h3>Publish first. Always.</h3>
+      <p>Typing into the downloaded HTML file achieves <b>nothing</b>. That page cannot save at
+        all, and even if it could, nothing carries what a file remembers up to the web. The Race
+        tab says so in orange when you open it that way.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step"><div class="stepn">1</div><div class="bd">
+        <p><b>Publish</b> — the one command below. This puts the page at the address.</p>
+      </div></div>
+      <div class="step"><div class="stepn">2</div><div class="bd">
+        <p><b>Open the address and type your projections there</b> — the home-screen icon on the
+          phone, or Safari on the laptop. They save as you type.</p>
+      </div></div>
+      <div class="step"><div class="stepn">3</div><div class="bd">
+        <p><b>Rebuild and republish as often as you like.</b> Your numbers stay. The page reloads
+          itself to the new version and reads the same stored worksheet.</p>
+      </div></div>
+    </div>
+
+    <div class="note care">
+      <h3>The one thing a rebuild <i>can</i> change</h3>
+      <p>Cells are filed under the team and the thing they are for — <i>Nebraska, 11 Oct at
+        Minnesota</i>, or <i>Nebraska, FBS Champ</i>. If a rebuild changes what is on the sheet —
+        a game gets played, a team changes hands, or <b>a scoring row is renamed or split</b> —
+        the cell it was filed under no longer exists.</p>
+      <p>Those cells are <b>kept, not deleted, and never counted</b>, and the tab says how many
+        there are. They come back if the row does. They are never quietly added to a total,
+        because a total cannot include a cell you cannot see.</p>
+      <p><b>This applies to you right now.</b> The scoring rows were rewritten on 4 September —
+        the playoff ladders, the bowls and the conference rows are all new or renamed. Anything
+        typed into a <i>bonus</i> row before that date will show up as an orphaned cell. Schedule
+        cells are unaffected. Clear the grid and retype the bonuses, or retype just the ones you
+        care about.</p>
+    </div>
+
+    <div class="note">
+      <h3>Your laptop and your phone keep separate worksheets</h3>
+      <p>Browser storage does not travel and does not sync. Type on the laptop and the phone will
+        not have it. To move one across, open <b>Keep a copy, or move this to another device</b>
+        at the foot of the Race tab, press <b>Copy the worksheet</b>, send yourself the text, and
+        press <b>Paste one in</b> on the other device. That is also the backup to take before
+        deleting the home-screen icon or resetting the phone.</p>
+      <p><b>Pick one device as the one you type into</b> and treat the other as a reader. Two
+        devices edited independently cannot be merged — pasting one in replaces the other.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>Publishing a rebuild</h2>
+
+    <div class="verdict">
+      <h2>Your job is one command</h2>
+      <p>Not three. Everything else happens in the chat before you are ever told to push.</p>
+      <pre class="tree">cd ~/Documents/Owners/owners-league-dashboard &amp;&amp; git push origin main</pre>
+      <p>Terminal on the Mac, or Termius on your phone — see <a href="#phone">Pushing from your
+        phone</a>. The <span class="kbd">&amp;&amp;</span> means "and then", so one paste does
+        both halves. Lines ending in <span class="kbd">main -&gt; main</span> mean it is live;
+        give GitHub Pages a minute, then open the icon.</p>
+    </div>
+
+    <p>When you ask for a rebuild in the chat, <b>all of this is already done by the time you are
+      told to push</b>: the page is rendered, every season suite is run (a red one stops the
+      build and you are told, rather than handed a bad dashboard), the result is copied into
+      <span class="kbd">deliverables_2026/</span>, and the hosted copy is staged and committed in
+      the hosting folder. Committing needs no internet, so it can happen through the chat.
+      Pushing does need the internet, and that route only exists from a shell you are signed in
+      to — which is the entire reason the last step is yours.</p>
+
+    <div class="note">
+      <h3>The commands behind it, if you ever want them</h3>
+      <p>You should not need these. They are here so the chain is written down somewhere, not
+        because they are steps in your routine.</p>
+      <pre class="tree">cd ~/Documents/Owners/Owners_League_Restart_Kit/code
+python3 build_season.py</pre>
+      <p>Renders the page, runs the suites, copies into <span class="kbd">deliverables_2026/</span>,
+        and stages and commits the hosted copy — that last part has been built into the build
+        itself since 31 Aug 2026, which is why there is no separate staging step for you to
+        remember.</p>
+      <pre class="tree">cd ~/Documents/Owners/Owners_League_Restart_Kit/code
+python3 publish_dashboard.py</pre>
+      <p>Only the staging half, on its own. It exists for the case where a build finished
+        somewhere that could not stage — it is a fallback, not part of a normal rebuild. Safe to
+        run any time; <span class="kbd">No change since the last publish</span> is a normal,
+        correct answer.</p>
+    </div>
+
+    <div class="note care">
+      <h3>If the commit fails on a stale lock</h3>
+      <p>Claude cannot delete files on your Mac, so a leftover git lock has to be moved aside
+        rather than removed:</p>
+      <pre class="tree">cd ~/Documents/Owners/owners-league-dashboard
+mkdir -p .git/_stale
+mv .git/HEAD.lock .git/index.lock .git/_stale/ 2>/dev/null</pre>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section id="phone">
+    <h2>Pushing from your phone</h2>
+    <p>Set up once on <b>6 September 2026</b>, so that being away from the Mac stops being the
+      thing that keeps a finished rebuild off the web. The Mac stays at home and stays the only
+      machine that holds the repository; the phone reaches it over your own private network,
+      signs in, and runs the same one command.</p>
+
+    <div class="steps">
+      <div class="step"><div class="stepn">1</div><div class="bd">
+        <p>Open <b>Termius</b> on the iPhone and tap the saved host for the Mac (the one whose
+          address begins <span class="kbd">100.</span> — that is its Tailscale address, not its
+          home Wi-Fi address).</p>
+      </div></div>
+      <div class="step"><div class="stepn">2</div><div class="bd">
+        <p>You land at a prompt on the Mac. Paste the same command:</p>
+        <pre class="tree">cd ~/Documents/Owners/owners-league-dashboard &amp;&amp; git push origin main</pre>
+      </div></div>
+      <div class="step"><div class="stepn">3</div><div class="bd">
+        <p>Lines ending in <span class="kbd">main -&gt; main</span> mean it is live. Give Pages a
+          minute, then open the home-screen icon.</p>
+      </div></div>
+    </div>
+
+    <div class="note">
+      <h3>What has to be true for the phone to reach the Mac</h3>
+      <ul class="tight">
+        <li><b>Tailscale is running on the Mac</b> and signed in. It lives in the menu bar and
+          starts at login. Quit it and the Mac disappears from your network — this is the one
+          piece that must stay running.</li>
+        <li><b>The Mac is awake enough to answer.</b> <i>Wake for network access</i> is on in
+          Energy Saver; a Mac that is fully asleep and off power will not answer.</li>
+        <li><b>Remote Login is on</b> (System Settings → General → Sharing).</li>
+        <li><b>Termius is on the phone.</b> It is the client — the side that does the connecting.
+          You do <i>not</i> need Termius running, or installed, on the Mac.</li>
+      </ul>
+      <p>Nothing here touches the dashboard, the build, or your typed worksheet. It is only a way
+        into the Mac's own command line.</p>
+    </div>
+
+    <div class="note care">
+      <h3>Two macOS rules this depends on — both bit once, both are fixed</h3>
+      <p><b>An SSH session is not allowed into your Documents folder by default.</b> Every command
+        run inside <span class="kbd">~/Documents</span> from the phone failed with
+        <span class="kbd">Operation not permitted</span> — not a git problem, a macOS privacy
+        rule. The fix, already applied: System Settings → Privacy &amp; Security → Full Disk
+        Access, with <span class="kbd">/usr/libexec/sshd-keygen-wrapper</span> switched on. If
+        that ever gets turned off, or macOS is reinstalled, this is the first thing to check.</p>
+      <p><b>An SSH session cannot unlock your login keychain</b>, so the saved GitHub password that
+        works fine in Terminal is unreachable from the phone. It fails with
+        <span class="kbd">failed to get: -25308</span> and then asks for a GitHub username that no
+        password will satisfy. That is why this repository no longer authenticates with a saved
+        password at all: it uses an SSH key,
+        <span class="kbd">~/.ssh/id_ed25519_github</span>, registered on the
+        <span class="kbd">cdwiedeman-cpu</span> GitHub account, and the remote is in
+        <span class="kbd">git@github.com:</span> form. A key needs no keychain, which is why it
+        works identically from both places.</p>
+    </div>
+
+    <div class="note stop">
+      <h3>If it ever asks you for a GitHub username again</h3>
+      <p>That is not an expired login and you do not need a new token. It means the repository's
+        remote got switched back to the <span class="kbd">https://</span> form, which is the form
+        that needs the keychain. Press <b>Ctrl+C</b> and set it back:</p>
+      <pre class="tree">cd ~/Documents/Owners/owners-league-dashboard
+git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.git</pre>
+      <p>Confirm the key still works with <span class="kbd">ssh -T git@github.com</span> — it
+        should greet you by name and then say GitHub provides no shell access, which is the
+        success message, not an error.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>Putting it on the iPhone home screen</h2>
+    <p>Do this once. After that the icon <i>is</i> the app, and every publish reaches it.</p>
+    <div class="steps">
+      <div class="step"><div class="stepn">1</div><div class="bd">
+        <p>Open <b>Safari</b> — not Chrome, not the WorldWideWeb app — and go to the address
+          above. Only Safari can add a real home-screen app, and a home-screen app is the most
+          durable place iOS will keep what you type.</p>
+      </div></div>
+      <div class="step"><div class="stepn">2</div><div class="bd">
+        <p>Tap the <b>Share</b> button, then <b>Add to Home Screen</b>, then <b>Add</b>.</p>
+      </div></div>
+      <div class="step"><div class="stepn">3</div><div class="bd">
+        <p>Open it from the new icon from then on. Type your projections into the <b>Race</b>
+          tab; they save as you type, and they are still there the next time you open it — after
+          a publish, and after a restart.</p>
+      </div></div>
+    </div>
+    <div class="note care">
+      <h3>How durable is "durable"</h3>
+      <p>iOS clears stored data for ordinary websites you have not opened in about a week. A
+        home-screen app is not treated as an ordinary website — WebKit's own storage policy says
+        being added to the Home Screen is one of the signals it uses to grant a site
+        <b>persistent</b> storage, which is exempt from that clear-out. It is a heuristic, not a
+        promise, and Apple does not publish the exact rule.</p>
+      <p>So: use the icon, open it during the season, and your worksheet stays. Take the text
+        backup below before anything drastic. That is the honest version — anyone who tells you
+        browser storage is guaranteed is guessing.</p>
+    </div>
+
+    <div class="note stop">
+      <h3>What actually loses a worksheet</h3>
+      <ul class="tight">
+        <li><b>Opening the HTML file directly</b> (AirDrop, Files, the WorldWideWeb app on a local
+          copy). No address, no storage. The tab tells you in orange.</li>
+        <li><b>Deleting the home-screen icon.</b> iOS throws the app's storage away with it. Copy
+          the worksheet out first — see below.</li>
+        <li><b>Clearing website data</b>, or opening the page in a private tab.</li>
+        <li><b>Months without opening it.</b> Storage that is never touched can eventually be
+          reclaimed, home-screen app or not.</li>
+        <li><b>A different device or browser.</b> Storage does not travel. Your laptop and your
+          phone each keep their own worksheet.</li>
+      </ul>
+      <p>None of these is a publish. Publishing is safe.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>Moving a worksheet, or keeping a copy</h2>
+    <p>At the bottom of the Race tab: <b>Keep a copy, or move this to another device</b>.
+      <b>Copy the worksheet</b> gives you the whole thing as text — mail it to yourself, or paste
+      it straight into <b>Paste one in</b> on the other device. That is also the backup to take
+      before deleting the icon or resetting the phone.</p>
+    <p>It is text on purpose. A browser can drop what it has stored and give no warning, and a
+      worksheet that exists in exactly one place you cannot see is one bad tap from gone.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>What each address is for</h2>
+    <div class="scroller"><table class="routes">
+      <thead><tr><th>How you open it</th><th>Live scores</th><th>Saves what you type</th></tr></thead>
+      <tbody>
+        <tr><td>Home-screen icon (the hosted address)</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Safari, at the same address</td><td class="yes">Yes</td><td class="yes">Yes — the same worksheet as the icon</td></tr>
+        <tr><td>The file in <span class="kbd">deliverables_2026</span>, on the Mac</td><td class="yes">Yes</td><td class="no">No — a file has no address</td></tr>
+        <tr><td>AirDropped to the phone, opened in Quick Look</td><td class="no">No</td><td class="no">No — scripts do not run at all</td></tr>
+      </tbody></table></div>
+    <p class="note">The dashboard fetches ESPN itself, from whatever device is showing it. The
+      build cannot reach ESPN; the page can. That is why a hosted copy on your phone is more
+      current than the file the build produced.</p>
+  </section>
+
+  <footer>
+    Owners Football League · 10 September 2026. Scoring rules version 2026-09-09c — see
+    <b>Owners_League_Rules.html</b> in the same folder.
+  </footer>
+</div>
+</body>
