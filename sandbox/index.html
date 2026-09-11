@@ -1933,8 +1933,16 @@ function fcfsForm(a, free, mine, k){
 
 function doClaim(){
   var a = actingSeat(); if (!a) return;
-  var p = el('fcp').value, d = el('fcd').value;
-  S.fcp = p; S.fcd = d;
+  /* READ THE STATE, NOT A <select> THAT NO LONGER EXISTS.
+     The first come form used to hold two dropdowns with the ids `fcp` and `fcd`, and this line
+     read their `.value`. The type-to-find picker replaced both on 11 Sep 2026 and keeps the
+     chosen team in S.fcp / S.fcd, so `el('fcp')` returned null and `.value` threw inside the
+     click handler. THE BUTTON THEREFORE DID NOTHING AT ALL: no claim, no message, no error on
+     screen. Casey found it the same afternoon: "when I click Claim It Now, the button's not
+     depressing, it's not doing anything."
+     WHEN A CONTROL IS REPLACED, EVERY READER OF IT HAS TO MOVE WITH IT. A page cannot tell you
+     it is reading a control that is gone; it just stops working in silence. */
+  var p = S.fcp || '', d = S.fcd || '';
   if (!p || !d){ showHelp('Not enough to go on',
     '<p>A claim needs both a team to pick up and a team to drop.</p>'); return; }
   var L = league();
