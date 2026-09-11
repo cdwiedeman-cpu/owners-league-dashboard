@@ -1790,50 +1790,54 @@ function rulesCard(){
     + '<span class="note">The 3-game rules, in plain words.</span></div>';
 }
 function rulesRows(){
+  /* SIX SHORT ROWS. Casey cut this himself on 11 Sep 2026, line by line, and every cut was the
+     same kind of thing: a sentence that was true but was written for ME.
+       "For a team you drafted that counts from draft day, Sat Aug 29"  -> a date the reader does
+          not need, and one that has to be right every August.
+       "A game played on draft day counts"                              -> "that's just your
+          specific logic based upon the spreadsheet you received."
+       "A bye is not a game. It costs you a week of the roster spot."   -> "that's for you.
+          That's not for the owner."
+     What is left is what an owner has to know to fill the form in. His own words for the hold
+     are THREE CONSECUTIVE GAMES PLAYED, not "three of its games", and his are the ones that go
+     on the page. The draft-day rule still exists; it lives in season_state.py and in the
+     rulebook, which is where a rule about how the count is made belongs. */
   var hold = DATA.hold_games || 3, claim = DATA.claim_min || 3;
   var away = DATA.trade_away_min == null ? 1 : DATA.trade_away_min;
   var fr = DATA.drop_freeze == null ? 1 : DATA.drop_freeze;
+  var g = function(n){ return n + ' regular season game' + (n === 1 ? '' : 's'); };
   return [
-    ['To drop a team',
-     'You have to have held it for <b>' + hold + ' of its games</b>. For a team you drafted, '
-     + 'that counts from draft day, ' + esc(prettyDay(DATA.draft_day)) + '. A game played on '
-     + 'draft day counts. For a team you picked up, the ' + hold + ' games start again on the '
-     + 'day you got it. A bye is not a game. It costs you a week of the roster spot and moves '
-     + 'the count nowhere.'],
-    ['To pick a team up',
-     'It has to have <b>' + claim + ' games still to play</b>. It does not matter how many it '
-     + 'has already played. A team in its second week is fine. So is a team you would not yet '
-     + 'be allowed to drop yourself.'],
-    ['How many games each team needs left',
+    ['To Drop a Team',
+     'You have to have held it for <b>' + hold + ' consecutive games played</b>.'],
+    ['To Pick a Team Up',
+     'It has to have <b>' + claim + ' games still to play</b> before the end of the regular '
+     + 'season.'],
+    ['How Many Games Each Team Needs Left',
      'These are two different numbers, and this is the one people get wrong.'
-     + '<ul><li>The team you <b>drop</b> needs <b>' + away + '</b> regular season game'
-     + (away === 1 ? '' : 's') + ' still to play.</li>'
-     + '<li>The team you <b>pick up</b> needs <b>' + claim + '</b>.</li></ul>'
-     + 'Bowl games and playoff games do not count toward either one. Only regular season games '
-     + 'do. That is why college trading stops in November while NFL trading runs into '
-     + 'December.'],
-    ['A team whose season is over',
+     + '<ul><li>The team you <b>drop</b> needs <b>' + g(away) + '</b> still to play.</li>'
+     + '<li>The team you <b>pick up</b> needs <b>' + g(claim) + '</b> still to play.</li></ul>'],
+    ['A Team Whose Season Is Over',
      'It cannot be traded away at all. It stays on your roster to the end of the year, however '
      + 'long you have held it.'],
-    ['Same kind for same kind',
+    ['Same Kind for Same Kind',
      'College for college, NFL for NFL. FBS and FCS both count as college. This is what keeps '
      + 'every roster at 8 college teams and 3 NFL teams.'],
-    ['After a team is dropped',
+    ['After a Team Is Dropped',
      'It sits out ' + fr + ' game' + (fr === 1 ? '' : 's') + ' before anybody can pick it up. '
      + 'One game, not seven days.'],
   ];
 }
 var RULESNOTE = '';      // filled once DATA is readable, at the bottom of this file
 function buildRulesNote(){
-  RULESNOTE = '<p class="note">Both of the big rules are counted in <b>games</b>, never in '
+  RULESNOTE = '<p class="note">Every one of these is counted in <b>games</b>, never in '
     + 'weeks.</p><div class="scr"><table>'
     + '<colgroup><col style="width:34%"><col style="width:66%"></colgroup><tbody>'
     + rulesRows().map(function(r){
         return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
       }).join('')
     + '</tbody></table></div>'
-    + '<p class="note">Every list on this page already follows these. A team you cannot choose '
-    + 'is still shown, with the reason on it and the date it clears.</p>';
+    + '<p class="note">The team lists on this page already follow these rules. Where a team '
+    + 'cannot be chosen, the reason is shown beside it.</p>';
 }
 
 function rowForm(r, i, free, mine, k){
