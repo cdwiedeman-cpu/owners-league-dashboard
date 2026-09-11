@@ -225,10 +225,10 @@ ol.tight{padding-left:20px}
 
     <div class="note care">
       <h3>The one thing a rebuild <i>can</i> change</h3>
-      <p>Cells are filed under the team and the thing they are for — <i>Nebraska, 11 Oct at
-        Minnesota</i>, or <i>Nebraska, FBS Champ</i>. If a rebuild changes what is on the sheet —
-        a game gets played, a team changes hands, or <b>a scoring row is renamed or split</b> —
-        the cell it was filed under no longer exists.</p>
+      <p>Cells are filed under the team and the thing they are for, like <i>Nebraska, 11 Oct at
+        Minnesota</i> or <i>Nebraska, FBS Champ</i>. A rebuild can change what is on the sheet. A
+        game gets played, a team changes hands, or <b>a scoring row is renamed or split</b>. When
+        that happens, the cell it was filed under no longer exists.</p>
       <p>Those cells are <b>kept, not deleted, and never counted</b>, and the tab says how many
         there are. They come back if the row does. They are never quietly added to a total,
         because a total cannot include a cell you cannot see.</p>
@@ -243,8 +243,8 @@ ol.tight{padding-left:20px}
       <h3>Your laptop and your phone keep separate worksheets</h3>
       <p>Browser storage does not travel and does not sync. Type on the laptop and the phone will
         not have it. To move one across, open <b>Keep a copy, or move this to another device</b>
-        at the foot of the Race tab, press <b>Copy the worksheet</b>, send yourself the text, and
-        press <b>Paste one in</b> on the other device. That is also the backup to take before
+        at the foot of the Race tab. Press <b>Copy the worksheet</b> and send yourself the text.
+        On the other device, press <b>Paste one in</b>. That is also the backup to take before
         deleting the home-screen icon or resetting the phone.</p>
       <p><b>Pick one device as the one you type into</b> and treat the other as a reader. Two
         devices edited independently cannot be merged — pasting one in replaces the other.</p>
@@ -267,12 +267,12 @@ ol.tight{padding-left:20px}
     </div>
 
     <p>When you ask for a rebuild in the chat, <b>all of this is already done by the time you are
-      told to push</b>: the page is rendered, every season suite is run (a red one stops the
-      build and you are told, rather than handed a bad dashboard), the result is copied into
-      <span class="kbd">deliverables_2026/</span>, and the hosted copy is staged and committed in
-      the hosting folder. Committing needs no internet, so it can happen through the chat.
-      Pushing does need the internet, and that route only exists from a shell you are signed in
-      to — which is the entire reason the last step is yours.</p>
+      told to push</b>. The page is rendered. Every season suite is run, and a red one stops the
+      build and tells you, rather than handing you a bad dashboard. The result is copied into
+      <span class="kbd">deliverables_2026/</span>. The hosted copy is staged and committed in the
+      hosting folder. Committing needs no internet, so it can happen through the chat. Pushing
+      does need the internet, and that route only exists from a shell you are signed in to. That
+      is the entire reason the last step is yours.</p>
 
     <div class="note">
       <h3>The commands behind it, if you ever want them</h3>
@@ -281,8 +281,8 @@ ol.tight{padding-left:20px}
       <pre class="tree">cd ~/Documents/Owners/Owners_League_Restart_Kit/code
 python3 build_season.py</pre>
       <p>Renders the page, runs the suites, copies into <span class="kbd">deliverables_2026/</span>,
-        and stages and commits the hosted copy — that last part has been built into the build
-        itself since 31 Aug 2026, which is why there is no separate staging step for you to
+        and stages and commits the hosted copy. That last part has been built into the build
+        itself since 31 Aug 2026. It is why there is no separate staging step for you to
         remember.</p>
       <pre class="tree">cd ~/Documents/Owners/Owners_League_Restart_Kit/code
 python3 publish_dashboard.py</pre>
@@ -382,8 +382,8 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
     <p>Do this once. After that the icon <i>is</i> the app, and every publish reaches it.</p>
     <div class="steps">
       <div class="step"><div class="stepn">1</div><div class="bd">
-        <p>Open <b>Safari</b> — not Chrome, not the WorldWideWeb app — and go to the address
-          above. Only Safari can add a real home-screen app, and a home-screen app is the most
+        <p>Open <b>Safari</b> and go to the address above. Not Chrome, and not the WorldWideWeb
+          app. Only Safari can add a real home-screen app, and a home-screen app is the most
           durable place iOS will keep what you type.</p>
       </div></div>
       <div class="step"><div class="stepn">2</div><div class="bd">
@@ -398,10 +398,10 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
     <div class="note care">
       <h3>How durable is "durable"</h3>
       <p>iOS clears stored data for ordinary websites you have not opened in about a week. A
-        home-screen app is not treated as an ordinary website — WebKit's own storage policy says
+        home-screen app is not treated as an ordinary website. WebKit's own storage policy says
         being added to the Home Screen is one of the signals it uses to grant a site
-        <b>persistent</b> storage, which is exempt from that clear-out. It is a heuristic, not a
-        promise, and Apple does not publish the exact rule.</p>
+        <b>persistent</b> storage, and persistent storage is exempt from that clear-out. It is a
+        heuristic, not a promise, and Apple does not publish the exact rule.</p>
       <p>So: use the icon, open it during the season, and your worksheet stays. Take the text
         backup below before anything drastic. That is the honest version — anyone who tells you
         browser storage is guaranteed is guessing.</p>
@@ -454,7 +454,7 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
   </section>
 
   <footer>
-    Owners Football League · 10 September 2026. Scoring rules version 2026-09-09c — see
+    Owners Football League · 11 September 2026. Scoring rules version 2026-09-09c — see
     <b>Owners_League_Rules.html</b> in the same folder.
   </footer>
 </div>
