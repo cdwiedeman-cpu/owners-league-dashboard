@@ -197,7 +197,7 @@ td.num,th.num{text-align:right}
 <script>/* THE PELOTON RESOLVER — the one implementation, used by three things.
  *
  *   1. Owners_League_Trades_SANDBOX.html   (Casey testing scenarios against a copy)
- *   2. the Apps Script that runs for real at 4:00pm Monday
+ *   2. the Apps Script that runs for real at 4:00pm AZ Monday
  *   3. test_peloton.js
  *
  * It is deliberately PURE: no DOM, no network, no clock of its own, no randomness of its own.
@@ -576,7 +576,7 @@ function resolve(opts){
 }
 
 /* ---------------------------------------------------------------------------------------------
- * FIRST COME, FIRST SERVED — Monday 4:00pm to Tuesday 5:00pm. No flip, no queue: it either
+ * FIRST COME, FIRST SERVED — Monday 4:00pm AZ to Tuesday 5:00pm AZ. No flip, no queue: it either
  * works right now or it says why. Same checks as a peloton row, so the two can never disagree
  * about whether a trade was legal.
  * ------------------------------------------------------------------------------------------ */
