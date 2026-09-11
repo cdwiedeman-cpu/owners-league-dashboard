@@ -139,6 +139,7 @@ td.num,th.num{text-align:right}
 .kbtn+.kbtn{border-left:1px solid var(--line)}
 .kbtn.on{background:#1d3550;color:var(--ink);font-weight:600}
 .dropslot{margin:0 0 8px}
+.sandonly{border-left:3px solid var(--warn);padding-left:9px}
 .inbox{background:#0d1a12;border:1px solid #245c39;border-radius:9px;padding:10px;margin:8px 0}
 .inbox h3{margin:0 0 5px;font-size:13px;color:var(--good)}
 .res{border-left:3px solid var(--line);padding:7px 0 7px 10px;margin:0 0 9px}
@@ -240,8 +241,17 @@ function mulberry32(a){
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-function flipKey(seed, week, div, team, contestNo){
-  return String(seed) + '|w' + week + '|' + div + '|' + team + '|#' + contestNo;
+/* THE KEY IS WHAT THE CONTEST *IS*, NOT WHAT NUMBER IT HAPPENED TO BE.
+   It was a running counter, and a counter couples contests that have nothing to do with each
+   other: adding one late request for Alabama shifts the number of every contest after it and
+   silently re-rolls the winner of each. Casey, 11 Sep 2026, asking about undo-and-rerun: "if he
+   had to add another trade manually it wouldn't be the same answer, because you've now entered a
+   new variable."  He is right that the contest he changed must be re-drawn -- and wrong only in
+   the direction that matters: a contest he did NOT touch should come out the same.
+   Round (the row index) plus team identifies a contest uniquely: within one round the entrants
+   are grouped BY team, so a team is contested at most once. */
+function flipKey(seed, week, div, team, round){
+  return String(seed) + '|w' + week + '|' + div + '|' + team + '|r' + round;
 }
 
 /* --------------------------------------------------------------------------------------------
@@ -548,7 +558,7 @@ function resolve(opts){
         var lapsed = false;
         if (!eligible.length){ eligible = entrants; lapsed = true; held = {}; }
 
-        var rnd = mulberry32(hash32(flipKey(seed, week, div, team, contestNo)));
+        var rnd = mulberry32(hash32(flipKey(seed, week, div, team, idx + 1)));
         var winner = eligible[Math.floor(rnd() * eligible.length)] || eligible[0];
 
         entrants.forEach(function (e){
@@ -1889,16 +1899,39 @@ function viewRun(){
             + '<td class="d">' + esc(r.rows.map(function(x){ return x.pickup; }).join(', '))
             + '</td></tr>';
         }).join('') + '</tbody></table></div>'
-      + '<p class="note">To make a coin flip happen, sign in on another device as a different '
-      + 'owner in the same division and ask for the same team.</p></div>';
+      /* A TESTING INSTRUCTION, AND IT HAS TO SAY SO. Casey, 11 Sep 2026: "I just want to make
+         sure that that is only for this test dashboard, that that will go away on the actual
+         dashboard." It is only here. On the real page the other owners are real people on their
+         own phones, so there is nothing to stage. Rather than delete the hint -- it is genuinely
+         how you make a flip happen in here -- it is LABELLED, because an unlabelled instruction
+         is one Bob may carry over to the real thing. */
+      + '<p class="note sandonly"><b>Sandbox only.</b> To make a coin flip happen in here, sign '
+      + 'in on another device as a different owner in the same division and ask for the same '
+      + 'team. On the real page the other owners are real people entering their own lists, so '
+      + 'nothing in this paragraph exists there.</p></div>';
   }
   return h + clockCard();
 }
-var SEEDNOTE = '<p>The flip is not <code>Math.random()</code>. It is a seeded draw keyed to the '
-  + 'week, the division and the team, so running the same week twice gives the same winner — on '
-  + 'any machine, on any day.</p><p>That is what settles an argument. If somebody asks how Navy '
-  + 'went the way it did, Bob re-runs the week and gets the identical answer rather than his '
-  + 'word against theirs.</p>';
+/* EXPLAINED WITHOUT THE WORD "SEEDED". Casey, 11 Sep 2026: "what Bob currently uses is a
+   randomizer, and I thought that's what we were doing ... I don't understand what a seeded draw
+   keyed to the week means." The old text named the MECHANISM and never said what it does for
+   him. It is a randomizer; the only difference is where the randomness comes FROM. */
+var SEEDNOTE = '<p><b>It is a randomizer.</b> Nobody can predict it, nobody can steer it, and '
+  + 'every owner in a contest has exactly the same chance.</p>'
+  + '<p>The one difference from a dice roll is where the randomness comes from. A dice roll uses '
+  + '<b>the instant you press the button</b>, so it is a different answer every time and gone the '
+  + 'moment it is read. This one is worked out from <b>the week, the division, the team, and '
+  + 'which round it was</b> — facts that do not change — so <b>the same contest always '
+  + 'comes out the same way</b>, on any device, on any day, no matter who presses run.</p>'
+  + '<p><b>Why that is worth having.</b> If an owner asks how Navy went the way it did, Bob '
+  + 'presses run again and gets the identical answer. Nobody can quietly run it a second time '
+  + 'until they like the result, and nobody has to take Bob&rsquo;s word for it.</p>'
+  + '<p><b>And if the week changes, only what changed is re-drawn.</b> Undo the week, add the '
+  + 'request that came in at 3:50, and run it again: the contests that request joins are drawn '
+  + 'fresh — they have a new name in them, so they have to be — while every other team '
+  + 'in the division comes out exactly as it did before. That is the point of working it out '
+  + 'from the contest rather than from a counter: a late entry cannot re-roll a contest it had '
+  + 'nothing to do with.</p>';
 /* RUNNING A WEEK TWICE IS NOT A REDO, IT IS A SECOND, SMALLER RUN. The resolver works on what
    is entered NOW against the rosters as they stand NOW, so a second press settles only what has
    arrived since — it cannot undo or repeat what the first one did. There is a real reason to
