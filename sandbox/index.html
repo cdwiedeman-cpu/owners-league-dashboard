@@ -1209,6 +1209,15 @@ function nextDow(dow, h, m){
   var p = parts(now()) || parts('2026-09-08T12:00');
   var d = new Date(p.d.getFullYear(), p.d.getMonth(), p.d.getDate());
   var delta = (dow - d.getDay() + 7) % 7;
+  /* NEXT MEANS NEXT. It only moved to the right WEEKDAY, so on that weekday it moved to the right
+     HOUR and cheerfully went backwards: with the clock on Tuesday 7:30pm, "Tue 5:01pm, next week
+     opens" set it to 5:01pm THAT SAME EVENING, two and a half hours into the past. Press it again
+     and it computed the identical value, so the button was dead from then on. Casey, 11 Sep 2026:
+     "when I'm pushing the buttons to change the time, none of those are actually changing ... it's
+     just stuck." It looked like taps being dropped and it was arithmetic.
+     A press must always move the clock, so a target at or BEFORE the current moment is next
+     week's. `<=` and not `<`, so landing exactly on a preset does not make it a dead button. */
+  if (delta === 0 && (h * 60 + m) <= p.mins) delta = 7;
   d.setDate(d.getDate() + delta);
   var z = function(n){ return (n < 10 ? '0' : '') + n; };
   return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate())
