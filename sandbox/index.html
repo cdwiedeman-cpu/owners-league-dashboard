@@ -1831,9 +1831,12 @@ function rulesRows(){
     ['To Pick a Team Up',
      'It has to have <b>' + claim + ' games still to play</b> before the end of the regular '
      + 'season.'],
+    /* NO LEAD SENTENCE. Casey, 11 Sep 2026: "you don't need that first sentence, just have the
+       two bullet points." It said the two numbers were different, which the two bullets show by
+       sitting next to each other. A sentence announcing what the reader is about to see is a
+       sentence the reader has to get past. */
     ['How Many Games Each Team Needs Left',
-     'These are two different numbers, and this is the one people get wrong.'
-     + '<ul><li>The team you <b>drop</b> needs <b>' + g(away) + '</b> still to play.</li>'
+     '<ul><li>The team you <b>drop</b> needs <b>' + g(away) + '</b> still to play.</li>'
      + '<li>The team you <b>pick up</b> needs <b>' + g(claim) + '</b> still to play.</li></ul>'],
     ['A Team Whose Season Is Over',
      'It cannot be traded away at all. It stays on your roster to the end of the year, however '
@@ -1855,7 +1858,7 @@ function buildRulesNote(){
         return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
       }).join('')
     + '</tbody></table></div>'
-    + '<p class="note">The team lists on this page already follow these rules. Where a team '
+    + '<p class="note">The teams listed on this page already follow these rules. Where a team '
     + 'cannot be chosen, the reason is shown beside it.</p>';
 }
 
