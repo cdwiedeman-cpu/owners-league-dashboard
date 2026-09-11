@@ -132,12 +132,12 @@ td.num,th.num{text-align:right}
  border-radius:999px;padding:1px 5px;margin-left:5px}
 .popt .rsn{display:block;font-style:normal;font-size:11px;color:var(--dim);margin-top:2px;
  line-height:1.4}
-/* ---- college or NFL, for one row ---------------------------------------------------------- */
-.kinds{display:flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-.kbtn{flex:1 1 0;border:0;border-radius:0;min-height:40px;font-size:14px;background:var(--pan2);
- color:var(--dim)}
-.kbtn+.kbtn{border-left:1px solid var(--line)}
-.kbtn.on{background:#1d3550;color:var(--ink);font-weight:600}
+/* ---- college / NFL: a small filter on the open list, the same shape as the pool filters on
+       the season pages. NOT a mode on the row -- see the note above kindChips(). ------------- */
+.kchips{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 0}
+.kchip{border-radius:999px;min-height:30px;padding:4px 12px;font-size:12px;background:var(--pan2);
+ color:var(--dim);border:1px solid var(--line)}
+.kchip.on{background:#1d3550;color:var(--ink);border-color:#274b6d;font-weight:600}
 .dropslot{margin:0 0 8px}
 .sandonly{border-left:3px solid var(--warn);padding-left:9px}
 .inbox{background:#0d1a12;border:1px solid #245c39;border-radius:9px;padding:10px;margin:8px 0}
@@ -1605,17 +1605,24 @@ function kindOf(n){ return poolTag(n) === 'NFL' ? 'NFL' : 'COL'; }
 function ofKind(list, kind){
   return list.filter(function(n){ return kindOf(n) === (kind === 'NFL' ? 'NFL' : 'COL'); });
 }
-/* WHICH HALF OF THE BOARD THIS ROW IS ABOUT. Casey, 11 Sep 2026: "your pickup list does not
-   include any NFL teams" -- it did, five of them, buried in 197 college names. Five in two
-   hundred is not a list, it is a haystack, and only 5 of 32 NFL teams are ever free in a
-   division. The switch also makes the like-for-like rule VISIBLE instead of only enforced:
-   choosing NFL narrows the drops to your three NFL teams, which is the rule, drawn. */
-function kindSwitch(id, kind, onset){
-  return '<div class="kinds">'
-    + [['COL', 'College'], ['NFL', 'NFL']].map(function(x){
-        return '<button class="kbtn' + (kind === x[0] ? ' on' : '') + '" '
-          + 'aria-pressed="' + (kind === x[0] ? 'true' : 'false') + '" '
-          + 'onclick="' + onset + '(\'' + x[0] + '\')">' + x[1] + '</button>';
+/* A FILTER ON THE LIST, NOT A MODE ON THE ROW.
+   The first version put a College/NFL switch on each row and cleared the row when it changed.
+   Casey, 11 Sep 2026: "I click on NFL and I think I'm going to be seeing everything for NFL, but
+   I have multiple rows ... it clears out the first row where I had Akron." Both complaints, and
+   the second was not a bug so much as the first one biting: a control that looks like a page
+   filter WILL be read as a page filter, and this one silently threw away what he had typed.
+   IT CANNOT BE A PAGE FILTER EITHER. A week's list is ONE ordered list -- rows run top to bottom
+   and a row can say "only if I got row 2" -- so splitting it into a college tab and an NFL tab
+   would destroy the single priority order that makes the list mean anything.
+   SO THE ROW HAS NO MODE AT ALL. Which half of the board a row is about is simply WHICH TEAM YOU
+   PICKED: choose an NFL team and the drop list is your three NFL teams, because that is the rule.
+   The College/NFL chips live INSIDE the search panel, where a filter belongs, and they change
+   nothing but what is on screen. */
+function kindChips(id){
+  return '<div class="kchips">'
+    + [['ALL', 'All'], ['COL', 'College'], ['NFL', 'NFL']].map(function(x){
+        return '<button class="kchip' + (x[0] === 'ALL' ? ' on' : '') + '" data-v="' + x[0] + '" '
+          + 'onclick="pkind(\'' + id + '\',\'' + x[0] + '\')">' + x[1] + '</button>';
       }).join('')
     + '</div>';
 }
@@ -1634,22 +1641,28 @@ function pickField(id, label, value, items, note){
     return h;
   }
   var okN = items.filter(function(it){ return !it.why; }).length;
-  h += '<div class="pick"><input type="search" class="psearch" id="q_' + id + '" '
+  var mixed = items.some(function(it){ return kindOf(it.n) === 'NFL'; })
+           && items.some(function(it){ return kindOf(it.n) === 'COL'; });
+  h += '<div class="pick" id="p_' + id + '" data-k="ALL">'
+    + '<input type="search" class="psearch" id="q_' + id + '" '
     + 'placeholder="Type a team name" autocomplete="off" autocorrect="off" '
     + 'spellcheck="false" oninput="pfilter(\'' + id + '\',this.value)">'
-    + '<p class="note" style="margin:5px 0 4px">' + okN + ' you can choose'
-    + (items.length - okN ? ' · ' + (items.length - okN) + ' shown but not allowed, with the '
-        + 'reason' : '') + '</p>'
+    /* THE CHIPS ONLY APPEAR WHEN THERE IS SOMETHING TO FILTER. Once a pickup is chosen the drop
+       list is one pool already, and a filter over a list that cannot be split is furniture. */
+    + (mixed ? kindChips(id) : '')
+    + '<p class="note" id="n_' + id + '" style="margin:5px 0 4px"></p>'
     + '<div class="plist" id="l_' + id + '">'
     + (value ? '<button class="popt clr" data-q="" onclick="ppick(\'' + id + '\',\'\')">'
              + '— take this one off —</button>' : '')
     + items.map(function(it){
         var tag = poolTag(it.n);
         return it.why
-          ? '<span class="popt off" data-q="' + esc(it.n.toLowerCase()) + '">'
+          ? '<span class="popt off" data-q="' + esc(it.n.toLowerCase()) + '" '
+            + 'data-k="' + kindOf(it.n) + '">'
             + '<b>' + esc(it.n) + '</b>' + (tag ? ' <i class="tag">' + esc(tag) + '</i>' : '')
             + '<i class="rsn">' + esc(cap(it.why)) + '</i></span>'
           : '<button class="popt" data-q="' + esc(it.n.toLowerCase()) + '" '
+            + 'data-k="' + kindOf(it.n) + '" '
             + 'onclick="ppick(\'' + id + '\',' + jq(it.n) + ')">'
             + '<b>' + esc(it.n) + '</b>' + (tag ? ' <i class="tag">' + esc(tag) + '</i>' : '')
             + '</button>';
@@ -1669,22 +1682,46 @@ function whyOf(items, name){
 }
 function popen(id){
   S.open = id || null; save(); render();
-  if (id){ var q = el('q_' + id); if (q) q.focus(); }
+  if (id){ pfilter(id, ''); var q = el('q_' + id); if (q) q.focus(); }
 }
 /* TYPING FILTERS THE DOM, IT DOES NOT RE-RENDER THE PAGE. See the note above pickField. */
 function pfilter(id, q){
   q = String(q || '').toLowerCase().trim();
   var box = el('l_' + id); if (!box) return;
-  var kids = box.children, shown = 0;
+  var wrap = el('p_' + id);
+  var kind = wrap ? (wrap.getAttribute('data-k') || 'ALL') : 'ALL';
+  var kids = box.children, shown = 0, blocked = 0;
   for (var i = 0; i < kids.length; i++){
-    var node = kids[i], dq = node.getAttribute('data-q');
+    var node = kids[i], dq = node.getAttribute('data-q'), dk = node.getAttribute('data-k');
     if (dq === null) continue;                       // the "nothing matches" line
-    var hit = !q || dq.indexOf(q) >= 0;
+    var hit = (!q || dq.indexOf(q) >= 0)
+           && (kind === 'ALL' || dk === null || dk === kind);
     node.hidden = !hit;
-    if (hit && dq) shown++;
+    if (hit && dq){ shown++; if (node.className.indexOf('off') !== -1) blocked++; }
   }
   var none = box.querySelector('.pnone');
   if (none) none.hidden = shown > 0;
+  /* THE COUNT IS RECOMPUTED, NEVER PRINTED ONCE AND LEFT. A number beside a list that has since
+     been filtered is a number that is wrong. */
+  var n = el('n_' + id);
+  if (n){
+    n.innerHTML = (shown - blocked) + ' you can choose'
+      + (blocked ? ' &middot; ' + blocked + ' shown but not allowed, with the reason' : '');
+  }
+}
+/* The chips do not re-render anything -- a re-render would shut the picker and take the focus
+   out of the search box. They set one attribute and re-run the same filter. */
+function pkind(id, k){
+  var wrap = el('p_' + id); if (!wrap) return;
+  wrap.setAttribute('data-k', k);
+  var chips = wrap.querySelectorAll('.kchip');
+  for (var i = 0; i < chips.length; i++){
+    var on = chips[i].getAttribute('data-v') === k;
+    chips[i].className = 'kchip' + (on ? ' on' : '');
+    chips[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  var q = el('q_' + id);
+  pfilter(id, q ? q.value : '');
 }
 function ppick(id, name){
   S.open = null;
@@ -1743,44 +1780,36 @@ function rulesCard(){
     + 'clears.</p></div>';
 }
 
-function rowKind(r){
-  return r.kind || (r.pickup ? kindOf(r.pickup) : 'COL');
-}
-function setKind(i, v){
-  var rows = myRows().slice(), row = Object.assign({}, rows[i]);
-  if (rowKind(row) === v) return;
-  /* SWITCHING SIDES CLEARS THE ROW. Every name already on it is now an illegal move, and
-     leaving them there would show a row that cannot run beside a switch that says it can. */
-  row.kind = v; row.pickup = ''; row.drops = [''];
-  rows[i] = row; setRows(rows); S.open = null; save(); render();
-}
 function rowForm(r, i, free, mine, k){
   var drops = (r.drops || ['']).slice();
   if (drops.length < P.MAX_DROPS && drops[drops.length - 1]) drops.push('');
   if (!drops.length) drops = [''];
   var c = r.cond || {type: 'always', row: 1};
-  var kind = rowKind(r);
-  free = ofKind(free, kind); mine = ofKind(mine, kind);
+  /* THE DROPS FOLLOW THE PICKUP. Nothing decides the pool but the team chosen above, so there
+     is no mode to set, nothing to clear, and no way to build a row the rules forbid. */
+  var kind = r.pickup ? kindOf(r.pickup) : null;
+  var dropList = kind ? ofKind(mine, kind) : mine;
   var ups = free.map(function(n){ return {n: n, why: whyNotClaim(n)}; });
   var ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
   var h = '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
+    + (r.pickup ? '<span class="pill">' + (kind === 'NFL' ? 'NFL' : 'college') + '</span>' : '')
     + '<button onclick="delRow(' + i + ')" title="Remove row ' + (i + 1) + '">Remove</button>'
     + '</div>'
-    + '<label class="lb">Which kind of team</label>'
-    + kindSwitch('k' + i, kind, 'setKind.bind(null,' + i + ')')
-    + '<p class="note" style="margin:4px 0 9px">College for college, NFL for NFL &mdash; so this '
-    + 'picks both lists below. ' + free.length + ' '
-    + (kind === 'NFL' ? 'NFL team' : 'college team') + (free.length === 1 ? '' : 's')
-    + ' nobody in your division owns, ' + mine.length + ' on your roster.</p>'
     + pickField('p' + i, 'Pick up', r.pickup, ups)
     + '<label class="lb" style="margin-top:9px">Drop &mdash; in this order</label>'
     + '<p class="note" style="margin:0 0 6px">Only <b>one</b> of these goes: the first one on '
-    + 'this list that you still hold and are allowed to drop. The rest are backups.</p>';
+    + 'this list that you still hold and are allowed to drop. The rest are backups.'
+    + (kind
+        ? ' Showing your <b>' + (kind === 'NFL' ? 'NFL' : 'college') + '</b> teams, because '
+          + esc(r.pickup) + ' is ' + (kind === 'NFL' ? 'an NFL team' : 'a college team') + '.'
+        : ' Choose a team to pick up first and this list will narrow to the ones you are allowed '
+          + 'to trade for it.')
+    + '</p>';
   /* NUMBERED, AND ONE PER LINE. Casey, 11 Sep 2026: "are we reading it left to right or top to
      bottom? That could confuse teams. I think we need to label it 1, 2, 3, 4." A two-column grid
      of identical boxes has no reading order at all, and the ORDER IS THE WHOLE RULE here. */
   h += drops.map(function(d, j){
-    var opts = mine.map(function(n){ return {n: n, why: whyNotDrop(k, n, r.pickup)}; });
+    var opts = dropList.map(function(n){ return {n: n, why: whyNotDrop(k, n, r.pickup)}; });
     return '<div class="dropslot">'
       + pickField('d' + i + '_' + j, (ORD[j] || (j + 1) + 'th') + ' choice to drop', d, opts)
       + '</div>';
@@ -1806,20 +1835,12 @@ function rowForm(r, i, free, mine, k){
 }
 /* FIRST COME IS A DIFFERENT SHAPE, not the same form with the queue hidden. One team, one drop,
    an answer immediately. Pretending it is a list would imply a priority that does not exist. */
-function setFcKind(v){
-  if ((S.fck || 'COL') === v) return;
-  S.fck = v; S.fcp = ''; S.fcd = ''; S.open = null; save(); render();
-}
 function fcfsForm(a, free, mine, k){
-  var kind = S.fck || (S.fcp ? kindOf(S.fcp) : 'COL');
-  free = ofKind(free, kind); mine = ofKind(mine, kind);
+  var kind = S.fcp ? kindOf(S.fcp) : null;
+  var dns = (kind ? ofKind(mine, kind) : mine)
+              .map(function(n){ return {n: n, why: whyNotDrop(k, n, S.fcp)}; });
   var ups = free.map(function(n){ return {n: n, why: whyNotClaim(n)}; });
-  var dns = mine.map(function(n){ return {n: n, why: whyNotDrop(k, n, S.fcp)}; });
   return '<div class="card">'
-    + '<label class="lb">Which kind of team</label>'
-    + kindSwitch('fk', kind, 'setFcKind')
-    + '<p class="note" style="margin:4px 0 9px">College for college, NFL for NFL. '
-    + free.length + ' available, ' + mine.length + ' on your roster.</p>'
     + pickField('fp', 'Pick up', S.fcp, ups)
     + '<div style="margin-top:9px">' + pickField('fd', 'Drop', S.fcd, dns) + '</div>'
     + '<div class="row" style="margin-top:11px">'
