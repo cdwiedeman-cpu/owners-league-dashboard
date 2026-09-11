@@ -204,10 +204,10 @@ ol li,ul li{margin:0 0 7px}
    changes hands, and they happen at different times:</p>
 <ul>
   <li>Through the <b>Monday coin flips</b>. During the week an owner builds a list of teams they
-      want. At 4:00pm Monday the page works through every list that was submitted and settles
+      want. At 4:00pm AZ Monday the page works through every list that was submitted and settles
       them, including running a coin flip wherever more than one owner asked for the same team.
       Everybody is emailed what happened to each of their requests.</li>
-  <li>Through <b>first come, first served</b>. From Monday 4:00pm until Tuesday 5:00pm, any team
+  <li>Through <b>first come, first served</b>. From Monday 4:00pm AZ until Tuesday 5:00pm AZ, any team
       still unowned can be taken outright by whoever asks first. This does not go through the
       Monday process at all &mdash; it is immediate, and there is no coin flip.</li>
 </ul>
@@ -226,7 +226,15 @@ ol li,ul li{margin:0 0 7px}
         played on draft day counts.</td></tr>
 <tr><td class="pool">Games left to claim</td>
     <td>A team must have <b>three games still to play</b> before anybody can pick it up. This is
-        a different rule from the one above and it bites at the other end of the season.</td></tr>
+        a different rule from the one above, counted at the other end of the schedule, and the two
+        are easy to run together. <b>How many games a team has already played does not matter when
+        you are picking it up.</b> In the second week of September you can claim a team that has
+        played twice, even though you could not yet drop one of your own that has played
+        twice.</td></tr>
+<tr><td class="pool">Too late to trade away</td>
+    <td>The team going <b>out</b> must still have at least <b>one regular season game</b> to play.
+        A team whose season is finished stays on the roster for the rest of the year, however long
+        it has been held.</td></tr>
 <tr><td class="pool">Frozen after a drop</td>
     <td>A team that has just been dropped must play <b>one game</b> before anybody can pick it
         up. So a team dropped on Monday afternoon is not available again that afternoon.</td></tr>
@@ -308,15 +316,15 @@ ol li,ul li{margin:0 0 7px}
 <p>A trigger is a schedule Google keeps on its own servers. It runs a piece of the script without
    anybody opening anything &mdash; no computer has to be switched on, and nobody has to
    remember. That is what makes Monday afternoon happen by itself.</p>
-<p>The obvious setup would be &ldquo;run this weekly, Mondays, at 4:00pm&rdquo;, and it is the
+<p>The obvious setup would be &ldquo;run this weekly, Mondays, at 4:00pm AZ&rdquo;, and it is the
    wrong one. Google&rsquo;s weekly schedules are only accurate to the hour &mdash; asking for
-   4:00pm means <i>somewhere between 4:00 and 5:00</i>, and which minute is up to them. For a
+   4:00pm AZ means <i>somewhere between 4:00 and 5:00</i>, and which minute is up to them. For a
    deadline that owners are typing against, that is not good enough.</p>
 <p>So the trigger runs <b>every five minutes</b>, and the script itself decides whether there is
    anything to do. Almost every run does nothing at all and finishes instantly. The one just
-   after 4:00pm on a Monday settles the week.</p>
+   after 4:00pm AZ on a Monday settles the week.</p>
 <p>The deadline itself does not depend on any of that. <b>Every request is stamped with the time
-   it was sent, and anything stamped 4:00pm Monday or later is too late</b> &mdash; whether the
+   it was sent, and anything stamped 4:00pm AZ Monday or later is too late</b> &mdash; whether the
    script happens to run at 4:01 or 4:04. Results are posted within about five minutes, and first
    come, first served opens the moment they are.</p>
 
@@ -331,20 +339,20 @@ ol li,ul li{margin:0 0 7px}
 
 <section><h2>What happens each week</h2><p class="lead">You do nothing. This is just so you know.</p>
 <ol>
-  <li><b>Tuesday 5:01pm to Monday 3:59pm.</b> Owners build their list for the week. Each entry
+  <li><b>Tuesday 5:01pm AZ to Monday 3:59pm AZ.</b> Owners build their list for the week. Each entry
       names a team to pick up and up to four teams they would be willing to drop for it. When it
       is ready they press <b>Send my list</b>, and the page tells them they are entered. Until
       they press it nothing is entered, and the page says so in plain words at the top. They can
-      change and re-send as often as they like right up to 3:59pm.</li>
-  <li><b>Monday at 4:00pm.</b> The page settles everything automatically. Nobody presses
+      change and re-send as often as they like right up to 3:59pm AZ.</li>
+  <li><b>Monday at 4:00pm AZ.</b> The page settles everything automatically. Nobody presses
       anything.</li>
-  <li><b>Monday 4:01pm.</b> Every owner gets an email telling them what happened to each of
+  <li><b>Monday 4:01pm AZ.</b> Every owner gets an email telling them what happened to each of
       their entries. The results are on the page too.</li>
-  <li><b>Monday 4:00pm to Tuesday 5:00pm.</b> First come, first served. This is separate from
+  <li><b>Monday 4:00pm AZ to Tuesday 5:00pm AZ.</b> First come, first served. This is separate from
       the Monday process and nothing carries over into it. Any team still unowned in a division
       can be taken outright — one team, one drop, no coin flip, no waiting. Whoever gets there
       first has it.</li>
-  <li><b>Tuesday 5:01pm.</b> Entry opens for the following Monday, already showing the new
+  <li><b>Tuesday 5:01pm AZ.</b> Entry opens for the following Monday, already showing the new
       rosters.</li>
 </ol>
 
@@ -465,7 +473,7 @@ ol li,ul li{margin:0 0 7px}
   <li>On the trades page, choose their name from the <b>Submitting for</b> dropdown.</li>
   <li>Fill it in exactly as they would have.</li>
 </ol>
-<p>The clock applies to you the same as to them: before Monday 4:00pm it goes into the coin
+<p>The clock applies to you the same as to them: before Monday 4:00pm AZ it goes into the coin
    flips, after that it is a first-come claim. The record shows both names, and that owner gets
    an email telling them you submitted for them.</p>
 
@@ -505,7 +513,7 @@ ol li,ul li{margin:0 0 7px}
 <h3>Settling Monday yourself</h3>
 <p>There is a switch on the same page with two positions, and it stays there permanently.</p>
 <ul>
-  <li><b>Automatic</b> &mdash; the schedule settles the week a few minutes after 4:00pm every
+  <li><b>Automatic</b> &mdash; the schedule settles the week a few minutes after 4:00pm AZ every
       Monday and you do nothing. This is how it runs once the whole league is on it.</li>
   <li><b>By hand</b> &mdash; the schedule settles nothing and waits for you to press <b>Run the
       coin flips</b>. This is how the first few weeks run, and it is there afterwards for any
@@ -516,7 +524,7 @@ ol li,ul li{margin:0 0 7px}
 <h3>If you missed somebody</h3>
 <p>You run it at 4:05 and then open an email that had been sitting unread since 3:50. It happens.</p>
 <p>Use <b>Undo week N</b>, add the request you missed, and run it again.</p>
-<p>Undo puts every roster back to how it stood at 4:00pm and <b>keeps every list exactly as it
+<p>Undo puts every roster back to how it stood at 4:00pm AZ and <b>keeps every list exactly as it
    was typed</b> &mdash; nobody re-enters anything. Then the whole week is settled from scratch
    with everything in it.</p>
 <p>That is the only way to get the right answer, and it is worth understanding why. A late
@@ -569,11 +577,11 @@ ol li,ul li{margin:0 0 7px}
    phoning Bob exactly as they do now.</p>
 <p>What changes is what Bob does with those messages. His Monday looks like this:</p>
 <ol>
-  <li>Owners email him their requests through the day, as always, up to 4:00pm.</li>
+  <li>Owners email him their requests through the day, as always, up to 4:00pm AZ.</li>
   <li>He puts each one into the page under that owner&rsquo;s name, using
       <b>Submitting for</b>. These are requests, not finished trades &mdash; he is typing in what
       the owner asked for.</li>
-  <li>After 4:00pm, once they are all in, he presses <b>Run the coin flips</b> himself.</li>
+  <li>After 4:00pm AZ, once they are all in, he presses <b>Run the coin flips</b> himself.</li>
   <li>The page settles everything, including any team more than one owner wanted, and emails
       each owner what happened.</li>
   <li>First come, first served requests arrive through Tuesday and he enters those as they come,
