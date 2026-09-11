@@ -1785,9 +1785,12 @@ function ppick(id, name){
    let the reader see they are different. */
 function rulesCard(){
   return '<div class="row" style="margin-top:10px;border-top:1px solid var(--line);'
-    + 'padding-top:10px"><button onclick="showHelp(\'What you are allowed to trade\',RULESNOTE)">'
-    + 'What am I allowed to trade?</button>'
-    + '<span class="note">The 3-game rules, in plain words.</span></div>';
+    + 'padding-top:10px"><button onclick="showHelp(\'What You Are Allowed to Trade\',RULESNOTE)">'
+    /* NO CAPTION BESIDE IT. Casey, 11 Sep 2026: "just take that off. What am I allowed to trade
+       is all you need. And what's inside of there is more than just the three game rule." The
+       caption was also WRONG, which is the better reason to cut it: the panel holds six rules,
+       only two of which are about three games. */
+    + 'What am I allowed to trade?</button></div>';
 }
 function rulesRows(){
   /* SIX SHORT ROWS. Casey cut this himself on 11 Sep 2026, line by line, and every cut was the
