@@ -783,7 +783,11 @@ function datesOf(n){ return (TEAM[n] && TEAM[n].dates) || []; }
 /* THE DAY A SEAT GOT A TEAM. Drafted teams start at draft day; anything acquired in here starts
    on the day the trade took effect. */
 function gotOn(k, n){
-  return ((S.acquiredAt || {})[k] || {})[n] || DATA.draft_day;
+  /* A TEAM YOU DRAFTED HAS NO START DATE ON ITS COUNT. Casey, 11 Sep 2026: "a game played on or
+     before draft day counts, because there could be games played before draft day." The draft is
+     the start of everyone's season, so every game a drafted team has played this season is banked.
+     Only a team acquired since then counts from the day it changed hands. */
+  return ((S.acquiredAt || {})[k] || {})[n] || '';
 }
 /* THE DAY A NEW HOLD STARTS. A trade's EFFECTIVE date when the resolver gave one (the Wednesday
    after a Monday run), otherwise the clock's own day. Stored per seat per team because a hold
@@ -1870,7 +1874,9 @@ function rulesRows(){
        and the anchor moves, so the three start over. And a bye is not a game, so it never enters
        a count of games played -- which is why "consecutive" was never the word. */
     ['To Drop a Team',
-     'You have to hold it for the <b>first ' + hold + ' games it plays after you get it</b>.'],
+     'You have to hold it for <b>' + hold + ' of its games</b>. A team you drafted counts every '
+     + 'game it has played this season, including any played on or before draft day. A team you '
+     + 'picked up starts its ' + hold + ' on the day you got it.'],
     ['To Pick a Team Up',
      'It has to have <b>' + claim + ' games still to play</b> before the end of the regular '
      + 'season.'],
