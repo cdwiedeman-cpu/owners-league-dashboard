@@ -539,9 +539,22 @@ function resolve(opts){
                     window: win.label || null, effective: win.effective || null});
         };
 
-        if (entrants.length === 1){ award(entrants[0], OUTCOME.WON_ALONE, [entrants[0].seat]); return; }
+        if (entrants.length === 1){
+          entrants[0].res.asked = [entrants[0].seat];
+          entrants[0].res.aside = [];
+          award(entrants[0], OUTCOME.WON_ALONE, [entrants[0].seat]);
+          return;
+        }
 
         contestNo++;
+        /* THREE LISTS, NOT ONE. `asked` is everybody who put this team on their list; `drawn` is
+           who was actually in the coin flip; `aside` is who was held out of it. They used to be
+           the same array, and the winner was therefore told "you won the coin flip against Dos
+           Pigs and Twitchell/Fryer" when Twitchell/Fryer had stood aside and was never in it.
+           Casey, 11 Sep 2026: "because Twitchell Fryer won, they're not eligible to be part of
+           round two for that same team, so they should not have been in that second peloton."
+           The DRAW was right the whole time; the sentence beside it was not, which is the worse
+           of the two -- an owner can only check the rule through what he is told. */
         var names = entrants.map(function (e){ return e.seat; });
         /* PAIRWISE. You are held out only if somebody you owe is in THIS contest -- not because
            you won something earlier against people who are not here. */
@@ -561,15 +574,24 @@ function resolve(opts){
         var rnd = mulberry32(hash32(flipKey(seed, week, div, team, idx + 1)));
         var winner = eligible[Math.floor(rnd() * eligible.length)] || eligible[0];
 
+        var drawn = eligible.map(function (e){ return e.seat; });
+        var aside = entrants.filter(function (e){ return held[e.seat]; })
+                            .map(function (e){ return {seat: e.seat, owedTo: held[e.seat]}; });
         entrants.forEach(function (e){
           if (e === winner) return;
           e.res.outcome = held[e.seat] ? OUTCOME.STOOD_ASIDE : OUTCOME.LOST;
           e.res.owedTo = held[e.seat] || null;      // who this seat was standing aside FOR
-          e.res.entrants = names;
+          e.res.entrants = drawn;                   // who was IN the coin flip
+          e.res.asked = names;                      // who put the team on a list
+          e.res.aside = aside;                      // who was held out of it, and for whom
           e.res.winner = winner.seat;
           e.res.contest = contestNo;
         });
-        award(winner, OUTCOME.WON, names);
+        /* THE LOG READS ITS `how` AND `contested` OFF THIS, so it has to be the drawn list: two
+           owners ask, one stands aside, and the remaining one did not win a coin flip. */
+        award(winner, OUTCOME.WON, drawn);
+        winner.res.asked = names;
+        winner.res.aside = aside;
         winner.res.contest = contestNo;
         winner.res.lapsed = lapsed;
         /* The winner now owes everyone they actually BEAT. Nobody who stood aside was beaten, so
@@ -950,15 +972,41 @@ function signOut(){ delete S.devices[S.device]; save(); }
  * ONE SENTENCE PER ENDING, generated from the outcome, never typed twice. The results panel and
  * the email print the same string — two stores of one fact is how they end up disagreeing about
  * what happened to somebody's trade.                                                          */
+/* X, or X and Y, or X, Y and Z. Written once because it appears in five sentences and a list
+   joined with commas everywhere but one is how a page starts looking careless. */
+function nameList(a){
+  a = (a || []).filter(Boolean);
+  if (!a.length) return '';
+  if (a.length === 1) return a[0];
+  return a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+}
+/* WHO ASKED BUT WAS NOT IN IT. The reader has to be told these people asked -- otherwise the
+   count of owners and the list of rivals disagree and the page looks wrong -- and told that they
+   were NOT in the draw, which is the whole of the stand-aside rule seen from the outside. */
+function asideTail(r, seat){
+  var a = r.aside || [];
+  if (!a.length) return '';
+  return ' ' + a.map(function(x){
+    var owed = (x.owedTo || []).map(function(o){ return o === seat ? 'you' : o; });
+    return x.seat + ' also asked for ' + r.pickup + ', but stood aside: they beat '
+      + (nameList(owed) || 'another owner') + ' in an earlier coin flip this week.';
+  }).join(' ');
+}
 function sentence(r, seat){
   var O = P.OUTCOME, t = r.pickup, others;
+  var drawn = r.entrants || [];                    // who was actually IN the coin flip
+  var asked = r.asked || drawn;                    // who put the team on a list
   switch (r.outcome){
     case O.WON:
-      others = (r.entrants || []).filter(function(x){ return x !== seat; });
+      others = drawn.filter(function(x){ return x !== seat; });
       return {kind: 'won', head: t + ', dropping ' + r.drop + ': got it.',
-        body: (others.length + 1) + ' owners asked for ' + t + '. You won the coin flip'
-              + (others.length === 1 ? ' against ' + others[0] : ' against ' + others.join(' and '))
-              + '. ' + r.drop + ' goes back into the pool.'
+        body: asked.length + ' owner' + (asked.length === 1 ? '' : 's') + ' asked for ' + t + '. '
+              + (others.length
+                  ? 'You won the coin flip against ' + nameList(others) + '.'
+                  : 'You were the only one eligible for it this round, so there was no coin '
+                    + 'flip.')
+              + asideTail(r, seat)
+              + ' ' + r.drop + ' goes back into the pool.'
               + (r.lapsed ? ' (Everyone in that flip had already won one this week, so nobody stood aside.)' : '')};
     case O.WON_ALONE:
       return {kind: 'won', head: t + ', dropping ' + r.drop + ': got it.',
@@ -966,17 +1014,26 @@ function sentence(r, seat){
               + r.drop + ' goes back into the pool.'};
     case O.LOST:
       return {kind: 'lost', head: t + ': lost the coin flip.',
-        body: (r.entrants || []).length + ' owners wanted ' + t + '. It went to ' + r.winner
-              + '. You keep ' + (r.drop || 'your roster') + '.'};
+        body: asked.length + ' owners asked for ' + t + '. '
+              + (drawn.length > 1
+                  ? 'The coin flip was between ' + nameList(drawn) + ', and it went to '
+                    + r.winner + '.'
+                  : 'It went to ' + r.winner + '.')
+              + asideTail(r, seat)
+              + ' You keep ' + (r.drop || 'your roster') + '.'};
     case O.STOOD_ASIDE:
       /* NAME WHO. "You had already won one" was true under the old global rule and is not the
          rule any more: you stand aside only for the specific owner you beat. Casey, 10 Sep
          2026. A reason that does not name them cannot be checked by the person it affects. */
-      var owed = (r.owedTo || []).join(' and ');
+      var owed = nameList(r.owedTo || []);
       return {kind: 'lost', head: t + ': not eligible.',
         body: 'You beat ' + (owed || 'another owner') + ' in an earlier coin flip this week, and '
-              + (owed || 'they') + ' also wanted ' + t + ', so you stood aside for this one. '
-              + t + ' went to ' + r.winner + '.'};
+              + (owed || 'they') + ' also wanted ' + t + ', so you stood aside for this one and '
+              + 'were not in the draw. '
+              + (drawn.length > 1
+                  ? t + ' was flipped between ' + nameList(drawn) + ' and went to ' + r.winner + '.'
+                  : t + ' went to ' + r.winner + ', the only one left eligible.')
+              + ' You are back in the next one, unless somebody you beat is in that as well.'};
     case O.SKIPPED:
       return {kind: 'other', head: t + ': not attempted.', body: 'This row was ' + r.detail + '.'};
     case O.NO_DROP:
