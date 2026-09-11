@@ -1717,11 +1717,20 @@ function rulesCard(){
     + '<tr><td><b>To pick a team up</b></td><td class="d">It must have <b>' + claim + ' games '
     + 'still to play</b>. <b>How many it has already played does not matter</b> &mdash; a team '
     + 'in its second week is fine, and so is one you could not have dropped yourself.</td></tr>'
-    + '<tr><td><b>Late in the season</b></td><td class="d">The team going <b>out</b> has to have '
-    + (away === 1 ? 'at least one regular season game still to play'
-                  : 'at least ' + away + ' regular season games still to play')
-    + '. Once a team&rsquo;s season is over it cannot be traded away at all &mdash; it stays on '
-    + 'your roster to the end of the year, however long you have held it.</td></tr>'
+    /* THE TWO "GAMES REMAINING" NUMBERS ARE DIFFERENT, AND THEY SIT NEXT TO EACH OTHER SO THAT
+       IS VISIBLE. Casey, 11 Sep 2026: "do we also have a rule that the team the owner is going to
+       drop must also have three games remaining? I think we have that rule and I'm forgetting."
+       The commissioner's rules say ONE out, THREE in, in a single sentence -- and a reader who
+       has half of it remembers the wrong half. Putting them in one row is the answer. */
+    + '<tr><td><b>Games still to play</b><div class="f" style="font-size:11px">the trap</div>'
+    + '</td><td class="d">These two numbers are <b>not the same</b>, and they are in one sentence '
+    + 'of the league rules:<br><b>Going out: ' + away + '.</b> The team you drop only has to have '
+    + away + ' regular season game' + (away === 1 ? '' : 's') + ' left. Once its season is over it '
+    + 'cannot be traded away at all &mdash; it stays on your roster to the end of the year, '
+    + 'however long you have held it.<br><b>Coming in: ' + claim + '.</b> The team you pick up '
+    + 'needs ' + claim + '.<br>Bowl games, playoff games and conference championships do not '
+    + 'count toward either. Only games actually on a regular season schedule do, which is why '
+    + 'college trading stops in November while NFL trading runs to December.</td></tr>'
     + '<tr><td><b>Same kind for same kind</b></td><td class="d">College for college, NFL for '
     + 'NFL. FBS and FCS are both college. That is what keeps every roster at 8 college and 3 '
     + 'NFL.</td></tr>'
