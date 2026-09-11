@@ -1091,15 +1091,15 @@ function emailFor(seatK, rows){
      first-come window is open RIGHT NOW and closes Tuesday at 5pm, or they read the email, feel
      finished, and miss it. */
   lines.push(gotAny
-    ? 'First come, first served is open now and closes Tuesday at 5:00pm AZ.'
-    : 'You did not pick anything up this week. First come, first served is open now and closes '
+    ? 'First come, first served is Open Now and closes Tuesday at 5:00pm AZ.'
+    : 'You did not pick anything up this week. First come, first served is Open Now and closes '
       + 'Tuesday at 5:00pm AZ — anything still unowned in your division can be claimed '
       + 'outright, no coin flip.');
   return lines.join('\n');
 }
 
 /* ---- shell ---------------------------------------------------------------------------------- */
-var TABS = [['signin','Sign in'],['trades','My trades'],['run','Run it'],
+var TABS = [['signin','Sign In'],['trades','My Trades'],['run','Run It'],
             ['access','Access list'],['rosters','Rosters']];
 function setTab(t){ TAB = t; render(); window.scrollTo(0, 0); }
 function closeHelp(){ OPEN = null; var b = el('help'); b.hidden = true; b.innerHTML = '';
@@ -1150,20 +1150,20 @@ function clockCard(){
     preset(2, 17, 1,  'next week opens'),
   ];
   var real = rightNow(), live = now().slice(0, 16) === real.slice(0, 16);
-  return '<div class="card"><h2>The clock</h2>'
+  return '<div class="card"><h2>The Clock</h2>'
     + '<p class="note">This page opens on <b>the real date and time</b> and everything follows '
     + 'it — which window is open, how many games each team has played, and how many it has left. '
-    + 'Move it to test another moment; press <b>Back to right now</b> to return.</p>'
+    + 'Move it to test another moment; press <b>Back to Right Now</b> to return.</p>'
     + '<div class="row"><div class="grow"><label class="lb" for="ck">The clock says</label>'
     + '<input id="ck" type="datetime-local" value="' + esc(now()) + '" '
     + 'onchange="S.clock=this.value;save();render()"></div></div>'
     + '<p class="note" style="margin:8px 0 0">' + (live
-        ? '<span class="pill good">real time</span> ' + esc(pretty(now())) + ' — this is now.'
+        ? '<span class="pill good">Real Time</span> ' + esc(pretty(now())) + ' — this is now.'
         : '<span class="pill bad">moved</span> Set to <b>' + esc(pretty(now()))
           + '</b>. Really it is ' + esc(pretty(real)) + '.') + '</p>'
     + '<div class="row" style="margin-top:8px">'
     + '<button class="' + (live ? '' : 'pri') + '" onclick="S.clock=rightNow();save();render()">'
-    + 'Back to right now</button>'
+    + 'Back to Right Now</button>'
     + presets.map(function(p){
         return '<button onclick="S.clock=\'' + p[1] + '\';save();render()">' + esc(p[0]) + '</button>';
       }).join('')
@@ -1191,7 +1191,7 @@ function viewSignIn(){
     + ['A','B','C'].map(function(d){
         return '<button class="' + (S.device === d ? 'pri' : '') + '" onclick="S.device=\'' + d
           + '\';save();render()">Device ' + d + (S.devices[d] && S.devices[d].token
-          ? ' <span class="pill good">signed in</span>' : ' <span class="pill">signed out</span>')
+          ? ' <span class="pill good">Signed In</span>' : ' <span class="pill">Signed Out</span>')
           + '</button>';
       }).join('') + '</div></div>';
 
@@ -1202,14 +1202,14 @@ function viewSignIn(){
       + '<tr><th>Address</th><td>' + esc(s.email) + '</td></tr>'
       + '<tr><th>Role</th><td>' + (s.role === 'commissioner'
           ? '<span class="pill gold">commissioner</span>' : 'owner') + '</td></tr>'
-      + '<tr><th>Key issued</th><td>' + esc(pretty(s.issued)) + '</td></tr>'
-      + '<tr><th>The key itself</th><td class="mono f">' + esc(s.token) + '</td></tr>'
+      + '<tr><th>Key Issued</th><td>' + esc(pretty(s.issued)) + '</td></tr>'
+      + '<tr><th>The Key Itself</th><td class="mono f">' + esc(s.token) + '</td></tr>'
       + '</tbody></table>'
       + '<p class="note" style="margin-top:8px">You never see that string in the real app and you '
       + 'never type it. It is shown here so you can watch it be the thing that identifies you: '
       + 'it is what a trade carries, and it is why nothing has to announce whose trade it is.</p>'
       + '<div class="row" style="margin-top:8px">'
-      + '<button onclick="signOut();render()">Sign out on device ' + esc(S.device) + '</button>'
+      + '<button onclick="signOut();render()">Sign Out on Device ' + esc(S.device) + '</button>'
       + '<button onclick="showTokenTest()">What stops someone submitting as another owner?</button>'
       + '</div></div>';
     return h + clockCard();
@@ -1219,14 +1219,14 @@ function viewSignIn(){
       + '<p class="note">The key on device ' + esc(S.device) + ' was refused because '
       + esc(s.dead) + '. This is what an owner sees after their seat changes hands: the phone '
       + 'does not know anything happened until it next tries to do something.</p>'
-      + '<button onclick="signOut();render()">Clear it and start again</button></div>';
+      + '<button onclick="signOut();render()">Clear It and Start Again</button></div>';
   }
   h += '<div class="card"><h2>Sign in</h2>'
     + '<p class="note">Enter an address from the access list. Yours is already on it.</p>'
     + '<div class="row"><div class="grow"><label class="lb" for="em">Email address</label>'
     + '<input id="em" type="email" autocomplete="email" placeholder="you@example.com" '
     + 'value="' + esc(S.lastEmail || '') + '"></div>'
-    + '<button class="pri" onclick="doRequest()">Send me a link</button></div>'
+    + '<button class="pri" onclick="doRequest()">Send Me a Link</button></div>'
     + '<p class="note" style="margin-top:8px">The real one emails it. This one drops it in the '
     + 'box below, because there is no server here.</p>'
     /* THE ONE MESSAGE THAT REACHES EVERYBODY. Whatever happened underneath, the person who
@@ -1236,7 +1236,7 @@ function viewSignIn(){
     + 'one the league has for you. Contact the commissioner — it is not something you can fix '
     + 'by trying again.</p></div>';
 
-  h += S.links.length ? '<div class="inbox"><h3>Inbox (pretend)</h3>'
+  h += S.links.length ? '<div class="inbox"><h3>Inbox (Pretend)</h3>'
       + S.links.map(function(l){
           if (l.kind === 'notice'){
             /* A REFUSAL IS A DIFFERENT MESSAGE, NOT A SMALLER ONE. It says what happened, whose
@@ -1257,7 +1257,7 @@ function viewSignIn(){
             + '<div class="mono f">https://…/trades?c=' + esc(l.code) + '</div>'
             + '<div class="row" style="margin-top:5px">'
             + '<button ' + (l.used ? 'disabled' : '') + ' onclick="doUse(\'' + l.code
-            + '\')">Open this link on device ' + esc(S.device) + '</button></div></div>';
+            + '\')">Open This Link on Device ' + esc(S.device) + '</button></div></div>';
         }).join('')
       + '<p class="note">Two different things, side by side. The <b>link</b> works once and dies '
       + 'in 30 minutes — its whole job is proving you can open that inbox. The <b>key</b> it '
@@ -1364,7 +1364,7 @@ function submitList(){
   save();
   showHelp('You are entered for Monday',
     '<p>Your list is in for week ' + weekNo() + '. Nothing happens until Monday at 4:00pm AZ.</p>'
-    + '<p>You can change it any time before then — press <b>Change my list</b>, make the change, '
+    + '<p>You can change it any time before then — press <b>Change My List</b>, make the change, '
     + 'and send it again.</p>');
   render();
 }
@@ -1402,7 +1402,7 @@ function viewTrades(){
      carry around and no chance of one going stale between the form and the run. */
   var fcfs = mode() === 'fcfs';
 
-  /* BOTH WAYS OF GETTING A TEAM, ALWAYS ON SCREEN, with the one that is open now marked.
+  /* BOTH WAYS OF GETTING A TEAM, ALWAYS ON SCREEN, with the one that is Open Now marked.
      Casey, 10 Sep 2026: "there's nothing on here in terms of the first come first serve process
      ... I don't even see how I would do it currently." The tab showed only whichever half the
      clock was in, so an owner in the Monday-list window had no way to learn the other half
@@ -1428,8 +1428,8 @@ function viewTrades(){
      already knows what a row is for. An owner opening this tab for the first time needs the
      three things to press, in the order they press them, with the buttons named. */
   h += '<div class="card"><h2>' + (fcfs
-      ? 'First come, first served &mdash; open now'
-      : 'Your list for Monday') + '</h2>'
+      ? 'First come, first served &mdash; Open Now'
+      : 'Your List for Monday') + '</h2>'
     + (fcfs
         ? '<p class="note">The coin flips have been run. Anything still unowned is yours if you '
           + 'ask first, until <b>Tuesday at 5:00pm AZ</b>. After that, list-building for next Monday '
@@ -1441,10 +1441,10 @@ function viewTrades(){
         + esc(DATA.div_names[a.div] || a.div) + ' owns are listed.</li>'
         + '<li>Choose the team you will <b>drop</b> for it. It has to be the same kind of team — '
         + 'college for college, NFL for NFL.</li>'
-        + '<li>Press <b>Claim it now</b>. It happens immediately.</li></ol>'
+        + '<li>Press <b>Claim It Now</b>. It happens immediately.</li></ol>'
         + '<p class="note">There is no queue and no coin flip between Monday at 4:00pm AZ and 5:00pm AZ '
         + 'Tuesday. Whoever asks first gets the team, so one at a time is all there is.</p>'
-      : '<ol class="note"><li>Press <b>Add a row</b> for each team you want. One row is one '
+      : '<ol class="note"><li>Press <b>Add a Row</b> for each team you want. One row is one '
         + 'team.</li>'
         /* "THE FIRST ONE" HAD TWO CANDIDATES IN THE SAME SENTENCE. Casey, 10 Sep 2026: "it
            makes it sound like the first pickup is the one used — that's also true, but that's
@@ -1468,7 +1468,7 @@ function viewTrades(){
         + 'go after Alabama as well&rdquo;.</li>'
         /* NAME THE PLACE AND THE ACTION. Casey, 10 Sep 2026: "nothing is entered WHERE until
            you do. Do WHAT?" Both halves were pronouns pointing at nothing. */
-        + '<li>Press <b>Send my list</b>. Until you press it, your list is only saved on this '
+        + '<li>Press <b>Send My List</b>. Until you press it, your list is only saved on this '
         + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
         + '<p class="note">Up to ' + P.MAX_ROWS + ' rows. You can change and re-send as often as '
         + 'you like, right up to Monday at 3:59pm AZ.</p>')
@@ -1494,7 +1494,7 @@ function viewTrades(){
     h += '<div class="card" style="border-color:#245c39"><h2 class="g">You are entered for '
       + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. Nothing happens '
       + 'until Monday at 4:00pm AZ, and you can change it any time before then.</p>'
-      + '<div class="row"><button onclick="unsubmit()">Change my list</button></div></div>';
+      + '<div class="row"><button onclick="unsubmit()">Change My List</button></div></div>';
   }
 
   h += '<div class="card">';
@@ -1516,22 +1516,22 @@ function viewTrades(){
     if (!rows.length){
       h += '<div class="empty" style="padding-bottom:6px">Nothing on your list yet.</div>'
         + '<div class="row" style="justify-content:center;margin-bottom:6px">'
-        + '<button class="pri" onclick="addRow()">Add a row</button></div>';
+        + '<button class="pri" onclick="addRow()">Add a Row</button></div>';
     } else {
       h += rows.map(function(r, i){ return rowForm(r, i, free, mine, k); }).join('');
       h += '<div class="row" style="margin-top:6px">'
         + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
-        + 'Add another row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
-        + '<button class="dang" onclick="setRows([]);render()">Clear them all</button></div>';
+        + 'Add Another Row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
+        + '<button class="dang" onclick="setRows([]);render()">Clear Them All</button></div>';
     }
     if (rows.length){
       /* THE STATUS SITS WITH THE BUTTON THAT CHANGES IT. Nowhere else on the page needs to
          carry it while the list is still being built. */
       h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
-        + 'padding-top:12px"><button class="pri" onclick="submitList()">Send my list</button>'
-        + '<span class="pill bad">Not sent yet</span>'
+        + 'padding-top:12px"><button class="pri" onclick="submitList()">Send My List</button>'
+        + '<span class="pill bad">Not Sent Yet</span>'
         + '<span class="note">This list is <b>not</b> in Monday&rsquo;s coin flips until you '
-        + 'press <b>Send my list</b>. You can change it and send it again as often as you like, '
+        + 'press <b>Send My List</b>. You can change it and send it again as often as you like, '
         + 'up to Monday at 3:59pm AZ.</span></div>';
     }
   }
@@ -1542,14 +1542,14 @@ function viewTrades(){
 function twoWays(fcfs){
   var block = function(open, when, title, what){
     return '<div class="wway' + (open ? ' on' : '') + '">'
-      + '<div class="wwhen">' + esc(when) + (open ? ' &nbsp;<span class="pill good">open now'
+      + '<div class="wwhen">' + esc(when) + (open ? ' &nbsp;<span class="pill good">Open Now'
         + '</span>' : ' &nbsp;<span class="pill">closed</span>') + '</div>'
       + '<div class="wtit">' + esc(title) + '</div>'
       + '<div class="wwhat">' + what + '</div></div>';
   };
-  return '<div class="card"><h2>Two ways to get a team</h2>'
+  return '<div class="card"><h2>Two Ways to Get a Team</h2>'
     + '<p class="note">Every week runs the same way. Only one of these is open at a time, and '
-    + 'the one that is open now is marked.</p>'
+    + 'the one that is Open Now is marked.</p>'
     + '<div class="ways">'
     + block(!fcfs, 'Tuesday 5:01pm AZ — Monday 3:59pm AZ', 'Build a list for Monday',
         'Ask for as many teams as you like, in the order you want them. At Monday at 4:00pm AZ every '
@@ -1597,7 +1597,7 @@ function clockBanner(){
     + '<p class="note">Games played, games left, which teams you can drop and which window is '
     + 'open all follow that moment. Really it is ' + esc(pretty(real)) + '.</p>'
     + '<div class="row"><button class="pri" onclick="S.clock=rightNow();save();render()">'
-    + 'Back to right now</button></div></div>';
+    + 'Back to Right Now</button></div></div>';
 }
 function prettyDay(s){
   var p = parts(String(s || '').slice(0, 10) + 'T12:00');
@@ -1900,7 +1900,7 @@ function fcfsForm(a, free, mine, k){
     + pickField('fp', 'Pick up', S.fcp, ups)
     + '<div style="margin-top:9px">' + pickField('fd', 'Drop', S.fcd, dns) + '</div>'
     + '<div class="row" style="margin-top:11px">'
-    + '<button class="pri" onclick="doClaim()">Claim it now</button></div>'
+    + '<button class="pri" onclick="doClaim()">Claim It Now</button></div>'
     + '<p class="note" style="margin-top:8px">Whoever presses this first gets the team. There is '
     + 'no queue to be in and nothing to wait for.</p></div>';
 }
@@ -1970,14 +1970,14 @@ function viewRun(){
   var prev = ranBefore();
   var drafts = draftSeats();
 
-  var h = clockBanner() + '<div class="card"><h2>How Monday runs</h2>'
+  var h = clockBanner() + '<div class="card"><h2>How Monday Runs</h2>'
     + setting('Settling Monday',
         [{label: 'Automatically', on: auto, act: "S.autoPeloton=true;save();render()",
           title: 'The schedule settles the week a few minutes after 4:00pm AZ every Monday'},
-         {label: 'I do it myself', on: !auto, act: "S.autoPeloton=false;save();render()",
+         {label: 'I Do It Myself', on: !auto, act: "S.autoPeloton=false;save();render()",
           title: 'Nothing is settled until you press Run the coin flips'}],
         auto ? 'The week settles itself a few minutes after 4:00pm AZ every Monday. You do nothing.'
-             : 'Nothing will be settled on its own. Press <b>Run the coin flips</b> below when '
+             : 'Nothing will be settled on its own. Press <b>Run the Coin Flips</b> below when '
                + 'you have entered everything.')
     /* NAME THE SECTION AND THE BUTTON, NOT "IT APPEARS". Casey, 10 Sep 2026: "copy every owner's
        email appears with the messages ready to paste — what are you talking about? Where should
@@ -1987,9 +1987,9 @@ function viewRun(){
        moment they are choosing this setting. It lives in the hover text on the option that
        raises it, and in Bob's guide, where somebody who IS wondering will be. */
     + setting('Results emails',
-        [{label: 'The tool sends them', on: mail, act: "S.autoEmail=true;save();render()",
+        [{label: 'The Tool Sends Them', on: mail, act: "S.autoEmail=true;save();render()",
           title: 'Each owner is emailed their own results as soon as a week is settled'},
-         {label: 'I send them', on: !mail, act: "S.autoEmail=false;save();render()",
+         {label: 'I Send Them', on: !mail, act: "S.autoEmail=false;save();render()",
           title: 'Nobody is emailed their results. Sign-in links are not affected — people can '
                  + 'still sign in.'}],
         mail ? 'Each owner is emailed their own results within a minute of a week being settled.'
@@ -2012,14 +2012,14 @@ function viewRun(){
     + (drafts.length ? '<span class="pill bad">' + drafts.length + ' typed but not sent</span>'
                      : '') + '</div>'
     + (drafts.length
-        ? '<p class="note b">Typed a list but never pressed <b>Send my list</b>, so they are NOT '
+        ? '<p class="note b">Typed a list but never pressed <b>Send My List</b>, so they are NOT '
           + 'in this week: ' + esc(drafts.join(', ')) + '.</p>' : '')
     + '<div class="row">'
     + '<button class="pri" ' + (reqs.length ? '' : 'disabled')
     + ' title="' + esc(reqs.length
         ? 'Settle every list that has been sent for week ' + weekNo()
         : 'Nothing has been sent for week ' + weekNo() + ' yet')
-    + '" onclick="askRun()">Run the coin flips</button>'
+    + '" onclick="askRun()">Run the Coin Flips</button>'
     + (prev && canUndo()
         ? '<button class="dang" onclick="askUndo()" title="Put every roster back to how it stood '
           + 'at 4:00pm AZ and keep every list exactly as it was typed">Undo week ' + weekNo()
@@ -2031,7 +2031,7 @@ function viewRun(){
           + 'running a coin flip wherever more than one owner asked for the same team.'
           + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm AZ.' : '')
         : 'Nothing has been sent for week ' + weekNo() + ' yet. Enter a list on <b>My trades</b> '
-          + 'and press <b>Send my list</b>.')
+          + 'and press <b>Send My List</b>.')
     + '</p></div>';
 
   h += claimQueueCard();
@@ -2161,7 +2161,7 @@ function askUndo(){
      is the only honest thing to do with a claim whose premise has changed. */
   var claims = after.filter(function(e){ return e.how === 'first come'; });
   var other = after.length - claims.length;
-  showHelp('Undo Monday and start again?',
+  showHelp('Undo Monday and Start Again?',
     '<p>Every roster goes back to how it stood at 4:00pm AZ. <b>Every owner\u2019s list stays '
     + 'exactly as they typed it.</b> Nobody has to enter anything again.</p>'
     + (claims.length
@@ -2190,8 +2190,8 @@ function askUndo(){
     + 'again can give a team to a different owner. That is correct, because the first answer was '
     + 'wrong. But an owner who has already been told they won Navy will not see it that way.</p>'
     + '<div class="row" style="margin-top:10px">'
-    + '<button class="dang" onclick="doUndo()">Undo it and put the lists back</button>'
-    + '<button onclick="closeHelp()">Leave it alone</button></div>');
+    + '<button class="dang" onclick="doUndo()">Undo It and Put the Lists Back</button>'
+    + '<button onclick="closeHelp()">Leave It Alone</button></div>');
 }
 function doUndo(){
   var u = canUndo();
@@ -2394,12 +2394,12 @@ function note(row, what){
 function logCard(){
   var L = S.accessLog || [];
   if (!L.length){
-    return '<div class="card"><h2>Recent changes</h2><p class="note">Nothing on this list has '
+    return '<div class="card"><h2>Recent Changes</h2><p class="note">Nothing on this list has '
       + 'been changed yet. Every address change and every retirement is recorded here with its '
       + 'date. So a seat that has changed hands has a history you can read, and none of it has to '
       + 'sit in the columns above.</p></div>';
   }
-  return '<div class="card"><h2>Recent changes</h2>'
+  return '<div class="card"><h2>Recent Changes</h2>'
     + '<p class="note">Newest first. In the Google Sheet this is the <b>Log</b> tab, written by '
     + 'the script.</p><div class="scr"><table>'
     + '<colgroup><col style="width:30%"><col style="width:26%"><col style="width:44%"></colgroup>'
@@ -2417,15 +2417,15 @@ function logCard(){
    the Google Sheet where he's telling it to retire the keys?" A spreadsheet has no buttons, so
    the answer has to be written down rather than implied by a page that has them. */
 function sheetCard(){
-  return '<div class="card"><h2>The same thing in the Google Sheet</h2>'
-    + '<p class="note">A spreadsheet has no buttons, so <b>Retire keys now</b> is typed there '
+  return '<div class="card"><h2>The Same Thing in the Google Sheet</h2>'
+    + '<p class="note">A spreadsheet has no buttons, so <b>Retire Keys Now</b> is typed there '
     + 'instead. Adding and removing a row is just adding and removing a spreadsheet row. The '
     + 'Sheet has one row per seat and these columns:</p>'
     + '<div class="scr"><table>'
     + '<colgroup><col style="width:30%"><col style="width:70%"></colgroup><tbody>'
     + [['Division, Seat', 'Written once when the season is set up. Bob never touches them.'],
        ['Email, Status, Role', 'Bob types these. The same three columns as above.'],
-       ['Retire?', 'Bob types an <b>x</b> here instead of pressing <b>Retire keys now</b>. Within '
+       ['Retire?', 'Bob types an <b>x</b> here instead of pressing <b>Retire Keys Now</b>. Within '
         + 'five minutes the script turns away every device signed in to that seat, empties the '
         + 'cell again, and writes a line on the <b>Log</b> tab. <b>The empty cell is the '
         + 'receipt</b> — while the x is still sitting there it has not happened yet.'],
@@ -2447,7 +2447,7 @@ function viewAccess(){
      some instruction of what he needs to populate, and what the status column means, and what
      keys last retired means and what to do with that." A grid of editable cells with no key is
      a form that assumes the reader already knows the model. */
-  return '<div class="card"><h2>Access list</h2>'
+  return '<div class="card"><h2>Access List</h2>'
     + '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
     + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
     + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
@@ -2460,15 +2460,15 @@ function viewAccess(){
     + '<li>Leave <b>Email</b> blank for anybody without one. You enter their trades for them.</li>'
     + '<li>Two rows with the <b>same seat</b> is how two people share one team — add a row and '
     + 'give it the same seat.</li>'
-    + '<li>When it is filled in, press <b>Copy it as CSV for the Sheet</b> and paste it into the '
+    + '<li>When it is filled in, press <b>Copy It as CSV for the Sheet</b> and paste it into the '
     + 'Google Sheet.</li></ol>'
     + '<p class="note"><b>' + filled + ' of ' + rows.length + '</b> row'
     + (rows.length === 1 ? '' : 's') + ' have an address so far.</p>'
-    + '<div class="row"><button onclick="addAccess()">Add a row</button>'
-    + '<button class="pri" onclick="copyCSV()">Copy it as CSV for the Sheet</button>'
+    + '<div class="row"><button onclick="addAccess()">Add a Row</button>'
+    + '<button class="pri" onclick="copyCSV()">Copy It as CSV for the Sheet</button>'
     + '<button onclick="showHelp(\'Owner leaves, new email, no email, commissioner\', ACCESSNOTE)">'
-    + 'What to do when somebody changes</button></div></div>'
-    + '<div class="card"><h2>What each column is for</h2><div class="scr"><table>'
+    + 'What to Do When Somebody Changes</button></div></div>'
+    + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
     + '<colgroup><col style="width:32%"><col style="width:68%"></colgroup><tbody>'
     + [['Seat', 'The owner as the league names them. Never edited here.'],
        ['Email', 'A personal inbox. Blank means that owner cannot sign in yet and you enter '
@@ -2478,7 +2478,7 @@ function viewAccess(){
                   + 'and scores. Use it when an owner leaves and nobody has taken over.'],
        ['Signed in', 'How many devices are holding a working key for that seat right now, and '
                   + 'since when. It answers the one question worth asking before you retire '
-                  + 'keys: is there anything to turn away? <b>Retire keys now</b> sends it to '
+                  + 'keys: is there anything to turn away? <b>Retire Keys Now</b> sends it to '
                   + '<i>nobody signed in</i>, and that is how you know it worked. Retire when a '
                   + 'seat changes hands — changing the address alone does not reach a phone '
                   + 'that is already signed in, because it never asks for a new link.'],
@@ -2515,7 +2515,7 @@ function viewAccess(){
           + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px"'
           + (L.n ? '' : ' title="Nothing is signed in to this seat, so there is nothing for this '
                         + 'to turn away."')
-          + ' onclick="bump(' + i + ')">Retire keys now</button></div></td>'
+          + ' onclick="bump(' + i + ')">Retire Keys Now</button></div></td>'
           + '<td><button style="min-height:30px;padding:4px 8px" onclick="delAccess(' + i
           + ')" title="Remove this address">✕</button></td></tr>';
       }).join('') + '</tbody></table></div></div>'
@@ -2525,7 +2525,7 @@ var ACCESSNOTE = '<p><b>An owner changes their email.</b> Type the new address o
   + 'The old address stops receiving links immediately. Their phone stays signed in, which is '
   + 'what you want when they are just moving from work to personal.</p>'
   + '<p><b>An owner leaves and somebody new takes the team.</b> Same two edits, plus '
-  + '<i>Retire keys now</i> — in the Google Sheet that one is an <b>x</b> in the '
+  + '<i>Retire Keys Now</i> — in the Google Sheet that one is an <b>x</b> in the '
   + '<b>Retire?</b> cell. It is what reaches a phone that is already signed in — '
   + 'deleting an address only stops new links. The seat keeps its roster, its points and its '
   + 'history, because the team’s season carries on regardless of who holds it.</p>'
@@ -2579,7 +2579,7 @@ function bump(i){
                  + 'which is what you want if you are about to hand it over.') + '</p>'
     + '<p class="d">The <b>Signed in</b> column reads <i>nobody signed in</i> now. That is the '
     + 'whole of what changed on the row — there is no leftover state to clear, and this '
-    + 'retirement is written into <b>Recent changes</b> at the bottom of the page with its '
+    + 'retirement is written into <b>Recent Changes</b> at the bottom of the page with its '
     + 'date.</p>'
     + (stillOurs
         ? '<p><b>' + esc(stillOurs) + ' is still the address on this seat</b>, so that person '
@@ -2615,10 +2615,10 @@ function copyCSV(){
 
 /* ---- TAB: rosters ------------------------------------------------------------------------------ */
 function viewRosters(){
-  var h = '<div class="card"><h2>Where the sandbox stands</h2>'
+  var h = '<div class="card"><h2>Where the Sandbox Stands</h2>'
     + '<p class="note">Started as a copy of the real rosters. Everything below is the result of '
     + 'what you have done in here, and none of it has left this browser.</p>'
-    + '<div class="row"><button class="dang" onclick="doReset()">Put the real rosters back</button>'
+    + '<div class="row"><button class="dang" onclick="doReset()">Put the Real Rosters Back</button>'
     + '</div></div>';
   h += S.log.length ? '<div class="card"><h2>What has moved</h2><div class="scr"><table>'
       + '<colgroup><col style="width:24%"><col style="width:22%"><col style="width:22%">'
@@ -2646,8 +2646,8 @@ function doReset(){
   showHelp('Put the real rosters back?', '<p>This throws away every trade you have run in here '
     + 'and reloads the drafted rosters. Sign-ins and the access list are kept.</p>'
     + '<div class="row" style="margin-top:10px">'
-    + '<button class="dang" onclick="reallyReset()">Yes, reset the rosters</button>'
-    + '<button onclick="closeHelp()">Leave it alone</button></div>');
+    + '<button class="dang" onclick="reallyReset()">Yes, Reset the Rosters</button>'
+    + '<button onclick="closeHelp()">Leave It Alone</button></div>');
 }
 function reallyReset(){
   S.rosters = freshRosters(); S.acquiredAt = {}; S.log = []; S.results = null; S.requests = {};
