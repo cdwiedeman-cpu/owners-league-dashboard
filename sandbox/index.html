@@ -1668,9 +1668,11 @@ function whyNotDrop(k, n, pickup){
        a different way, and two phrasings of one rule is how a reader ends up thinking they are
        two rules. */
     return H.stuck
-      ? 'held for ' + H.done + ' of its first ' + H.need + ' games, and its season ends before it '
+      /* "PLAYED", NOT "HELD FOR". A drafted team counts games it played before the draft, and
+         nobody held it for those. The count is of games played; say that. */
+      ? 'played ' + H.done + ' of its first ' + H.need + ' games, and its season ends before it '
         + 'reaches ' + H.need + '. It cannot be dropped this year.'
-      : 'held for ' + H.done + ' of its first ' + H.need + ' games. Droppable after its game on '
+      : 'played ' + H.done + ' of its first ' + H.need + ' games. Droppable after its game on '
         + prettyDay(H.on) + '.';
   }
   var min = DATA.trade_away_min == null ? 1 : DATA.trade_away_min;
