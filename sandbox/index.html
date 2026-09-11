@@ -36,6 +36,12 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
  linear-gradient(135deg,var(--dim) 50%,transparent 50%);
  background-position:calc(100% - 15px) 15px,calc(100% - 10px) 15px;
  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:28px}
+/* TOUCH-ACTION ON EVERYTHING YOU PRESS. Without it a mobile browser holds a tap back to see
+   whether a second one is coming (double-tap to zoom), and a tap it decides was part of a scroll
+   is dropped entirely. Casey, 11 Sep 2026: "it works eventually, but sometimes it doesn't work to
+   start." `manipulation` tells the browser there is no double-tap gesture here, so the press
+   lands on the first try. */
+button,select,input,.popt,.kchip,.pickbtn{touch-action:manipulation}
 button{background:var(--pan2);color:var(--ink);border:1px solid var(--line);border-radius:7px;
  padding:8px 13px;min-height:36px;cursor:pointer}
 button:hover{border-color:var(--blue);color:var(--blue)}
@@ -1113,7 +1119,35 @@ function showHelp(title, html){
 }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && OPEN) closeHelp(); });
 
+/* ---- NEVER REBUILD THE PAGE WHILE A FINGER IS DOWN -------------------------------------------
+ * A press only becomes a click if the element under the finger SURVIVES from touchdown to
+ * release. render() replaces the whole of #body and #tabs, so any re-render in the middle of a
+ * press throws the pressed button away and the click never happens. Nothing appears on screen:
+ * no action, no error, no sign that anything was pressed at all.
+ * It is easy to trigger without meaning to. Six controls on this page carry `onchange`, which
+ * fires when they LOSE FOCUS -- so tapping a button while the clock box or an email cell is
+ * focused commits that box, re-renders, and eats the tap. The second tap works, because by then
+ * there is nothing left to commit. Casey, 11 Sep 2026: "I kept pressing, scrolled back up,
+ * scrolled back down, pressed it again, and then it finally changed."
+ * So a render asked for while a pointer is down is HELD until the pointer is released, and then
+ * run one turn later, which is after the click has been delivered. */
+var PTR_DOWN = false, RENDER_HELD = false;
+function releasePointer(){
+  PTR_DOWN = false;
+  if (!RENDER_HELD) return;
+  RENDER_HELD = false;
+  setTimeout(render, 0);          // after the click, never during it
+}
+document.addEventListener('pointerdown', function(){ PTR_DOWN = true; }, true);
+document.addEventListener('pointerup', releasePointer, true);
+document.addEventListener('pointercancel', releasePointer, true);
+/* A WATCHDOG, because a held render that never runs is a page frozen on old numbers, which is
+   worse than the tap it was protecting. If no pointerup arrives, flush anyway. */
 function render(){
+  if (PTR_DOWN){
+    if (!RENDER_HELD){ RENDER_HELD = true; setTimeout(releasePointer, 400); }
+    return;
+  }
   var s = session();
   el('clockchip').innerHTML = ' &nbsp;·&nbsp; ' + esc(pretty(now())) + ' &nbsp;·&nbsp; '
     + (mode() === 'fcfs' ? 'first come, first served' : 'peloton entry open')
