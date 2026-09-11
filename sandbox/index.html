@@ -1617,12 +1617,14 @@ function whyNotClaim(n){
 function whyNotDrop(k, n, pickup){
   var H = holdOf(k, n);
   if (!H.met){
-    var got = gotOn(k, n) === DATA.draft_day ? 'since the draft' : 'since you got it';
+    /* SAME WORDS AS THE RULES PANEL. "Held for 2 of 3 games since the draft" said the same thing
+       a different way, and two phrasings of one rule is how a reader ends up thinking they are
+       two rules. */
     return H.stuck
-      ? 'held for ' + H.done + ' of ' + H.need + ' games ' + got + ', and its season ends before '
-        + 'it reaches ' + H.need + ' — it cannot be dropped this year'
-      : 'held for ' + H.done + ' of ' + H.need + ' games ' + got + ' — droppable after its game '
-        + 'on ' + prettyDay(H.on);
+      ? 'has played ' + H.done + ' of ' + H.need + ' games for you, and its season ends before it '
+        + 'reaches ' + H.need + '. It cannot be dropped this year.'
+      : 'has played ' + H.done + ' of ' + H.need + ' games for you. Droppable after its game on '
+        + prettyDay(H.on) + '.';
   }
   var min = DATA.trade_away_min == null ? 1 : DATA.trade_away_min;
   if (leftOf(n) < min) return 'no regular season games left, so it cannot be traded away';
