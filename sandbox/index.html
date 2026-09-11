@@ -107,6 +107,38 @@ td.num,th.num{text-align:right}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 @media (max-width:640px){.grid3,.grid2{grid-template-columns:1fr}}
+/* ---- the type-to-find team picker ----------------------------------------------------------
+   The list is drawn once and typing only sets `hidden` on its rows, so the reader never loses
+   the box they are typing into. [hidden] has to be forced here: this page sets display on
+   several of these elements, and the attribute loses to a class rule without !important. */
+[hidden]{display:none!important}
+.pickbtn{display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;
+ text-align:left;min-height:42px;font-size:15px}
+.pickbtn .pval{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pickbtn.empty .pval{color:var(--faint)}
+.pickbtn .pchg{flex:0 0 auto;font-size:11px;color:var(--dim);text-transform:uppercase;
+ letter-spacing:.06em}
+.pickbtn.warnbtn{border-color:#5b2626}
+.pick{border:1px solid var(--line);border-radius:9px;padding:8px;background:var(--bg)}
+.psearch{width:100%;font-size:16px;min-height:42px}
+.plist{max-height:44vh;overflow-y:auto;overflow-x:hidden;border-top:1px solid var(--line);
+ padding-top:6px}
+.popt{display:block;width:100%;text-align:left;margin:0 0 4px;min-height:38px;padding:7px 9px;
+ font-size:14px;overflow-wrap:anywhere}
+.popt.clr{color:var(--dim)}
+.popt.off{border:1px dashed var(--line);border-radius:8px;color:var(--faint);background:none;
+ cursor:default}
+.popt .tag{font-style:normal;font-size:10px;color:var(--faint);border:1px solid var(--line);
+ border-radius:999px;padding:1px 5px;margin-left:5px}
+.popt .rsn{display:block;font-style:normal;font-size:11px;color:var(--dim);margin-top:2px;
+ line-height:1.4}
+/* ---- college or NFL, for one row ---------------------------------------------------------- */
+.kinds{display:flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.kbtn{flex:1 1 0;border:0;border-radius:0;min-height:40px;font-size:14px;background:var(--pan2);
+ color:var(--dim)}
+.kbtn+.kbtn{border-left:1px solid var(--line)}
+.kbtn.on{background:#1d3550;color:var(--ink);font-weight:600}
+.dropslot{margin:0 0 8px}
 .inbox{background:#0d1a12;border:1px solid #245c39;border-radius:9px;padding:10px;margin:8px 0}
 .inbox h3{margin:0 0 5px;font-size:13px;color:var(--good)}
 .res{border-left:3px solid var(--line);padding:7px 0 7px 10px;margin:0 0 9px}
@@ -161,7 +193,7 @@ td.num,th.num{text-align:right}
   });
 })();
 </script>
-<script>var DATA = {"divisions":["PFD","VFD","SFD"],"div_names":{"PFD":"Predator","VFD":"Viper","SFD":"Scorpion"},"seats":[{"div":"PFD","owner":"Dos Pigs"},{"div":"PFD","owner":"Gail Sulski"},{"div":"PFD","owner":"Jason/Greg"},{"div":"PFD","owner":"Jay LaBenz"},{"div":"PFD","owner":"Mark Secrest"},{"div":"PFD","owner":"Mike Endredy"},{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"PFD","owner":"Steve Eriksson"},{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"SFD","owner":"Bob Tucker"},{"div":"SFD","owner":"Cory Norton"},{"div":"SFD","owner":"Elliot Karlin"},{"div":"SFD","owner":"Jay McCarroll"},{"div":"SFD","owner":"Mark Berner"},{"div":"SFD","owner":"Mark Jatcko"},{"div":"SFD","owner":"Michael Spielman"},{"div":"SFD","owner":"Steve Salatino"},{"div":"SFD","owner":"Tom Rush"},{"div":"VFD","owner":"Brian/Dave"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"VFD","owner":"Chris Patten"},{"div":"VFD","owner":"Erik Woods"},{"div":"VFD","owner":"Frank Haughn"},{"div":"VFD","owner":"Patrick Lee"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"VFD","owner":"Tom Brown"}],"teams":[{"n":"Indiana","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Miami (FL)","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Notre Dame","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Oregon","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Washington","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Texas Tech","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"South Dakota St","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Penn State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Nebraska","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Pittsburgh","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Arizona","pool":"FBS","left":10,"owners":[]},{"n":"Baylor","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"}]},{"n":"Ohio State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"SMU","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Utah","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Fresno State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"}]},{"n":"Georgia","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Clemson","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Houston","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Liberty","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Villanova","pool":"FCS","left":9,"owners":[{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Montana St","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Iowa","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Boise State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Louisville","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Alabama","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Michigan","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Kansas State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"USC","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Florida","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Patrick Lee"}]},{"n":"South Carolina St","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"South Florida","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"South Carolina","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"}]},{"n":"Texas A&M","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Ole Miss","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Los Angeles Chargers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Austin Peay","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"James Madison","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Rhode Island","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Missouri","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Texas","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"San Francisco 49ers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"TCU","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"}]},{"n":"Ohio","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Chris Patten"}]},{"n":"California","pool":"FBS","left":10,"owners":[]},{"n":"Minnesota","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"}]},{"n":"Chattanooga","pool":"FCS","left":9,"owners":[]},{"n":"Virginia","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chris Patten"}]},{"n":"SF Austin","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Western Illinois","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Cory Norton"}]},{"n":"Southern Utah","pool":"FCS","left":9,"owners":[]},{"n":"Tennessee","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Seattle Seahawks","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"New Mexico","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Wisconsin","pool":"FBS","left":10,"owners":[]},{"n":"Northern Colorado","pool":"FCS","left":9,"owners":[]},{"n":"Florida Atlantic","pool":"FBS","left":10,"owners":[]},{"n":"LSU","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Jacksonville State","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"}]},{"n":"Tulane","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"}]},{"n":"Baltimore Ravens","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Western Michigan","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Jackson St","pool":"FCS","left":9,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Texas State","pool":"FBS","left":10,"owners":[]},{"n":"Green Bay Packers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Los Angeles Rams","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Detroit Lions","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Virginia Tech","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Georgia Tech","pool":"FBS","left":10,"owners":[]},{"n":"Florida State","pool":"FBS","left":10,"owners":[]},{"n":"Marshall","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Frank Haughn"}]},{"n":"Tarleton State","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Princeton","pool":"FCS","left":10,"owners":[]},{"n":"Youngstown St","pool":"FCS","left":9,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Toledo","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Philadelphia Eagles","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Weber St","pool":"FCS","left":9,"owners":[]},{"n":"East Carolina","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Illinois","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Oklahoma State","pool":"FBS","left":10,"owners":[]},{"n":"BYU","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Prairie View A&M","pool":"FCS","left":9,"owners":[]},{"n":"Oklahoma","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Lehigh","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"New Hampshire","pool":"FCS","left":9,"owners":[{"div":"VFD","owner":"Tom Brown"}]},{"n":"Yale","pool":"FCS","left":10,"owners":[{"div":"VFD","owner":"Rob O'Conner"}]},{"n":"UC Davis","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Montana","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Richmond","pool":"FCS","left":9,"owners":[]},{"n":"Monmouth","pool":"FCS","left":9,"owners":[]},{"n":"Harvard","pool":"FCS","left":10,"owners":[]},{"n":"North Texas","pool":"FBS","left":10,"owners":[{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Abilene Christian","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Rob O'Conner"}]},{"n":"Campbell","pool":"FCS","left":9,"owners":[]},{"n":"Tampa Bay Buccaneers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Bethune-Cookman","pool":"FCS","left":10,"owners":[]},{"n":"NC State","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Tulsa","pool":"FBS","left":10,"owners":[]},{"n":"Houston Texans","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Kansas City Chiefs","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Cal Poly","pool":"FCS","left":9,"owners":[]},{"n":"Chicago Bears","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Dallas Cowboys","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Miami (OH)","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Jacksonville Jaguars","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Furman","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Cory Norton"}]},{"n":"Drake","pool":"FCS","left":8,"owners":[]},{"n":"Denver Broncos","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Duke","pool":"FBS","left":10,"owners":[]},{"n":"Elon","pool":"FCS","left":9,"owners":[]},{"n":"Navy","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Iowa State","pool":"FBS","left":10,"owners":[]},{"n":"Buffalo Bills","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Indiana St","pool":"FCS","left":9,"owners":[]},{"n":"New England Patriots","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Norfolk St","pool":"FCS","left":9,"owners":[]},{"n":"Lafayette","pool":"FCS","left":9,"owners":[]},{"n":"Hampton","pool":"FCS","left":9,"owners":[]},{"n":"Oregon State","pool":"FBS","left":10,"owners":[]},{"n":"William & Mary","pool":"FCS","left":9,"owners":[]},{"n":"Arizona State","pool":"FBS","left":10,"owners":[]},{"n":"Eastern Kentucky","pool":"FCS","left":9,"owners":[]},{"n":"North Dakota","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Dartmouth","pool":"FCS","left":10,"owners":[]},{"n":"Tennessee Tech","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Louisiana","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Mark Secrest"}]},{"n":"San Diego","pool":"FCS","left":9,"owners":[]},{"n":"FIU","pool":"FBS","left":10,"owners":[]},{"n":"UNLV","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"UCF","pool":"FBS","left":10,"owners":[]},{"n":"East Tennessee St","pool":"FCS","left":9,"owners":[]},{"n":"Southern Illinois","pool":"FCS","left":9,"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Carolina Panthers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"}]},{"n":"Memphis","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Eastern Michigan","pool":"FBS","left":9,"owners":[]},{"n":"Towson","pool":"FCS","left":9,"owners":[]},{"n":"Western Carolina","pool":"FCS","left":9,"owners":[]},{"n":"Columbia","pool":"FCS","left":10,"owners":[]},{"n":"UTSA","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"West Georgia","pool":"FCS","left":9,"owners":[]},{"n":"Butler","pool":"FCS","left":9,"owners":[]},{"n":"Air Force","pool":"FBS","left":10,"owners":[]},{"n":"Alabama A&M","pool":"FCS","left":9,"owners":[]},{"n":"Alabama St","pool":"FCS","left":9,"owners":[{"div":"VFD","owner":"Chris Patten"}]},{"n":"Lamar","pool":"FCS","left":9,"owners":[]},{"n":"Pittsburgh Steelers","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"North Alabama","pool":"FCS","left":9,"owners":[]},{"n":"Cincinnati Bengals","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Washington State","pool":"FBS","left":10,"owners":[]},{"n":"Central Conn St","pool":"FCS","left":9,"owners":[]},{"n":"Idaho St","pool":"FCS","left":9,"owners":[]},{"n":"Gardner-Webb","pool":"FCS","left":9,"owners":[]},{"n":"West Virginia","pool":"FBS","left":10,"owners":[]},{"n":"Wyoming","pool":"FBS","left":10,"owners":[]},{"n":"Presbyterian","pool":"FCS","left":9,"owners":[]},{"n":"Mercyhurst","pool":"FCS","left":9,"owners":[]},{"n":"Cincinnati","pool":"FBS","left":10,"owners":[]},{"n":"Rutgers","pool":"FBS","left":10,"owners":[]},{"n":"Duquesne","pool":"FCS","left":9,"owners":[]},{"n":"UConn","pool":"FBS","left":10,"owners":[]},{"n":"Brown","pool":"FCS","left":10,"owners":[]},{"n":"Illinois St","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"UTRGV","pool":"FCS","left":9,"owners":[]},{"n":"Tennessee Titans","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Dos Pigs"}]},{"n":"Hawaii","pool":"FBS","left":9,"owners":[]},{"n":"VMI","pool":"FCS","left":9,"owners":[]},{"n":"Wake Forest","pool":"FBS","left":9,"owners":[]},{"n":"Auburn","pool":"FBS","left":10,"owners":[]},{"n":"South Alabama","pool":"FBS","left":10,"owners":[]},{"n":"Idaho","pool":"FCS","left":9,"owners":[]},{"n":"Alcorn St","pool":"FCS","left":9,"owners":[]},{"n":"Army","pool":"FBS","left":10,"owners":[]},{"n":"Central Michigan","pool":"FBS","left":10,"owners":[]},{"n":"Georgetown","pool":"FCS","left":9,"owners":[]},{"n":"Minnesota Vikings","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Kentucky","pool":"FBS","left":10,"owners":[]},{"n":"Boston College","pool":"FBS","left":10,"owners":[]},{"n":"Atlanta Falcons","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"UMass","pool":"FBS","left":10,"owners":[]},{"n":"New York Giants","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"San Diego State","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Delaware","pool":"FBS","left":10,"owners":[]},{"n":"Grambling St","pool":"FCS","left":8,"owners":[]},{"n":"UAB","pool":"FBS","left":10,"owners":[]},{"n":"Kansas","pool":"FBS","left":10,"owners":[]},{"n":"Nicholls","pool":"FCS","left":9,"owners":[]},{"n":"Maine","pool":"FCS","left":8,"owners":[]},{"n":"Tennessee St","pool":"FCS","left":9,"owners":[]},{"n":"Maryland","pool":"FBS","left":10,"owners":[]},{"n":"Florida A&M","pool":"FCS","left":9,"owners":[]},{"n":"Northern Arizona","pool":"FCS","left":9,"owners":[]},{"n":"Miss Valley St","pool":"FCS","left":9,"owners":[]},{"n":"McNeese St","pool":"FCS","left":9,"owners":[]},{"n":"Penn","pool":"FCS","left":10,"owners":[]},{"n":"Temple","pool":"FBS","left":10,"owners":[]},{"n":"New Orleans Saints","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Southern","pool":"FCS","left":8,"owners":[]},{"n":"Western Kentucky","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"}]},{"n":"Delaware St","pool":"FCS","left":9,"owners":[]},{"n":"Buffalo","pool":"FBS","left":10,"owners":[]},{"n":"Nevada","pool":"FBS","left":10,"owners":[]},{"n":"Troy","pool":"FBS","left":10,"owners":[{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Ark Pine Bluff","pool":"FCS","left":8,"owners":[]},{"n":"ULM","pool":"FBS","left":10,"owners":[]},{"n":"Vanderbilt","pool":"FBS","left":10,"owners":[]},{"n":"South Dakota","pool":"FCS","left":7,"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Cornell","pool":"FCS","left":10,"owners":[]},{"n":"UCLA","pool":"FBS","left":10,"owners":[]},{"n":"Coastal Carolina","pool":"FBS","left":10,"owners":[]},{"n":"Southeastern Louisiana","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Tom Rush"}]},{"n":"St Thomas","pool":"FCS","left":9,"owners":[]},{"n":"Holy Cross","pool":"FCS","left":9,"owners":[]},{"n":"Arkansas State","pool":"FBS","left":10,"owners":[]},{"n":"Arkansas","pool":"FBS","left":10,"owners":[]},{"n":"Stony Brook","pool":"FCS","left":9,"owners":[]},{"n":"Colgate","pool":"FCS","left":9,"owners":[]},{"n":"Indianapolis Colts","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Old Dominion","pool":"FBS","left":11,"owners":[{"div":"PFD","owner":"Gail Sulski"}]},{"n":"Wofford","pool":"FCS","left":9,"owners":[]},{"n":"Washington Commanders","pool":"NFL","left":17,"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Northwestern","pool":"FBS","left":11,"owners":[]},{"n":"Marist","pool":"FCS","left":9,"owners":[]},{"n":"Cleveland Browns","pool":"NFL","left":13,"owners":[]},{"n":"Long Island","pool":"FCS","left":9,"owners":[]},{"n":"Kent State","pool":"FBS","left":10,"owners":[]},{"n":"Southeast Missouri St","pool":"FCS","left":8,"owners":[]},{"n":"Lindenwood","pool":"FCS","left":8,"owners":[]},{"n":"Texas Southern","pool":"FCS","left":8,"owners":[]},{"n":"Albany","pool":"FCS","left":9,"owners":[]},{"n":"Incarnate Word","pool":"FCS","left":10,"owners":[]},{"n":"Bryant","pool":"FCS","left":9,"owners":[]},{"n":"Utah Tech","pool":"FCS","left":9,"owners":[]},{"n":"Georgia Southern","pool":"FBS","left":10,"owners":[]},{"n":"Sacred Heart","pool":"FCS","left":9,"owners":[]},{"n":"New York Jets","pool":"NFL","left":14,"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Robert Morris","pool":"FCS","left":9,"owners":[]},{"n":"Houston Christian","pool":"FCS","left":9,"owners":[]},{"n":"Appalachian State","pool":"FBS","left":10,"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Mercer","pool":"FCS","left":10,"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Eastern Washington","pool":"FCS","left":9,"owners":[]},{"n":"UT Martin","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Tom Rush"}]},{"n":"Syracuse","pool":"FBS","left":9,"owners":[]},{"n":"Georgia State","pool":"FBS","left":10,"owners":[]},{"n":"Sacramento State","pool":"FBS","left":9,"owners":[]},{"n":"North Dakota State","pool":"FBS","left":10,"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Valparaiso","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Charleston Southern","pool":"FCS","left":8,"owners":[]},{"n":"Morgan St","pool":"FCS","left":9,"owners":[]},{"n":"NC Central","pool":"FCS","left":9,"owners":[]},{"n":"Dayton","pool":"FCS","left":9,"owners":[{"div":"SFD","owner":"Mark Berner"}]},{"n":"Davidson","pool":"FCS","left":9,"owners":[]},{"n":"Morehead St","pool":"FCS","left":9,"owners":[]},{"n":"Las Vegas Raiders","pool":"NFL","left":14,"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Fordham","pool":"FCS","left":9,"owners":[]},{"n":"West Florida","pool":"FCS","left":9,"owners":[]},{"n":"Samford","pool":"FCS","left":9,"owners":[]},{"n":"Central Arkansas","pool":"FCS","left":9,"owners":[]},{"n":"North Carolina A&T","pool":"FCS","left":9,"owners":[]},{"n":"Portland St","pool":"FCS","left":8,"owners":[]},{"n":"Mississippi State","pool":"FBS","left":10,"owners":[]},{"n":"Louisiana Tech","pool":"FBS","left":10,"owners":[]},{"n":"Kennesaw State","pool":"FBS","left":10,"owners":[]},{"n":"Miami Dolphins","pool":"NFL","left":14,"owners":[{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Stanford","pool":"FBS","left":10,"owners":[]},{"n":"Colorado State","pool":"FBS","left":10,"owners":[]},{"n":"Colorado","pool":"FBS","left":10,"owners":[]},{"n":"Bucknell","pool":"FCS","left":9,"owners":[]},{"n":"The Citadel","pool":"FCS","left":9,"owners":[]},{"n":"East Texas A&M","pool":"FCS","left":9,"owners":[]},{"n":"Northern Iowa","pool":"FCS","left":9,"owners":[]},{"n":"Ball State","pool":"FBS","left":10,"owners":[]},{"n":"Rice","pool":"FBS","left":10,"owners":[]},{"n":"Howard","pool":"FCS","left":9,"owners":[]},{"n":"Northwestern St","pool":"FCS","left":9,"owners":[]},{"n":"Utah State","pool":"FBS","left":10,"owners":[]},{"n":"Sam Houston","pool":"FBS","left":10,"owners":[]},{"n":"Charlotte","pool":"FBS","left":10,"owners":[]},{"n":"Middle Tennessee","pool":"FBS","left":10,"owners":[]},{"n":"Eastern Illinois","pool":"FCS","left":9,"owners":[]},{"n":"San Jose State","pool":"FBS","left":10,"owners":[]},{"n":"Stonehill","pool":"FCS","left":9,"owners":[]},{"n":"Michigan State","pool":"FBS","left":10,"owners":[]},{"n":"New Haven","pool":"FCS","left":9,"owners":[]},{"n":"Arizona Cardinals","pool":"NFL","left":14,"owners":[]},{"n":"Stetson","pool":"FCS","left":9,"owners":[]},{"n":"Northern Illinois","pool":"FBS","left":10,"owners":[]},{"n":"UTEP","pool":"FBS","left":10,"owners":[]},{"n":"Akron","pool":"FBS","left":10,"owners":[]},{"n":"New Mexico State","pool":"FBS","left":9,"owners":[]},{"n":"Wagner","pool":"FCS","left":9,"owners":[]},{"n":"Bowling Green","pool":"FBS","left":10,"owners":[]},{"n":"Missouri State","pool":"FBS","left":10,"owners":[]},{"n":"Southern Miss","pool":"FBS","left":10,"owners":[]},{"n":"Murray St","pool":"FCS","left":9,"owners":[]},{"n":"Purdue","pool":"FBS","left":10,"owners":[]},{"n":"North Carolina","pool":"FBS","left":10,"owners":[]}],"hold_games":3,"claim_min":3,"week1":"2026-09-08","clock_start":"2026-09-08T19:30","me":{"div":"PFD","seat":"Palma/Wiedeman","email":"cdwiedeman@gmail.com"}};</script>
+<script>var DATA = {"divisions":["PFD","VFD","SFD"],"div_names":{"PFD":"Predator","VFD":"Viper","SFD":"Scorpion"},"seats":[{"div":"PFD","owner":"Dos Pigs"},{"div":"PFD","owner":"Gail Sulski"},{"div":"PFD","owner":"Jason/Greg"},{"div":"PFD","owner":"Jay LaBenz"},{"div":"PFD","owner":"Mark Secrest"},{"div":"PFD","owner":"Mike Endredy"},{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"PFD","owner":"Steve Eriksson"},{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"SFD","owner":"Bob Tucker"},{"div":"SFD","owner":"Cory Norton"},{"div":"SFD","owner":"Elliot Karlin"},{"div":"SFD","owner":"Jay McCarroll"},{"div":"SFD","owner":"Mark Berner"},{"div":"SFD","owner":"Mark Jatcko"},{"div":"SFD","owner":"Michael Spielman"},{"div":"SFD","owner":"Steve Salatino"},{"div":"SFD","owner":"Tom Rush"},{"div":"VFD","owner":"Brian/Dave"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"VFD","owner":"Chris Patten"},{"div":"VFD","owner":"Erik Woods"},{"div":"VFD","owner":"Frank Haughn"},{"div":"VFD","owner":"Patrick Lee"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"VFD","owner":"Tom Brown"}],"teams":[{"n":"Indiana","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-25","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Miami (FL)","pool":"FBS","dates":["2026-09-04","2026-09-10","2026-09-18","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Notre Dame","pool":"FBS","dates":["2026-09-06","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Oregon","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-18","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-20","2026-11-28"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Washington","pool":"FBS","dates":["2026-09-06","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-09","2026-10-16","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Texas Tech","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-18","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-26"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"South Dakota St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Penn State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-02","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Nebraska","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-06","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Pittsburgh","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-17","2026-09-26","2026-10-02","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-13","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Arizona","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-06","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Baylor","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-30","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Gail Sulski"}]},{"n":"Ohio State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"SMU","pool":"FBS","dates":["2026-09-07","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-06","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Utah","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Fresno State","pool":"FBS","dates":["2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mark Secrest"}]},{"n":"Georgia","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Clemson","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-25","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-20","2026-11-28"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Houston","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-18","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-13","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Liberty","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-24","2026-10-02","2026-10-08","2026-10-22","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Villanova","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-11","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Montana St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-02","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Iowa","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-09","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Boise State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Louisville","pool":"FBS","dates":["2026-09-06","2026-09-11","2026-09-19","2026-09-26","2026-10-03","2026-10-09","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Alabama","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Michigan","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Kansas State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"USC","pool":"FBS","dates":["2026-08-29","2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Florida","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Patrick Lee"}]},{"n":"South Carolina St","pool":"FCS","dates":["2026-08-29","2026-09-06","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"South Florida","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-08","2026-10-17","2026-10-31","2026-11-06","2026-11-12","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"South Carolina","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"}]},{"n":"Texas A&M","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Ole Miss","pool":"FBS","dates":["2026-09-06","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Los Angeles Chargers","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-11-01","2026-11-08","2026-11-16","2026-11-22","2026-11-29","2026-12-06","2026-12-13","2026-12-17","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Austin Peay","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"James Madison","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-22","2026-10-29","2026-11-05","2026-11-14","2026-11-28"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Rhode Island","pool":"FCS","dates":["2026-08-28","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Missouri","pool":"FBS","dates":["2026-09-03","2026-09-11","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Texas","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"San Francisco 49ers","pool":"NFL","dates":["2026-09-10","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-19","2026-10-25","2026-11-08","2026-11-15","2026-11-22","2026-11-29","2026-12-06","2026-12-13","2026-12-17","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"TCU","pool":"FBS","dates":["2026-08-29","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-06","2026-11-14","2026-11-21","2026-11-26"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"}]},{"n":"Ohio","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-03","2026-11-10","2026-11-17","2026-11-27"],"owners":[{"div":"VFD","owner":"Chris Patten"}]},{"n":"California","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-25","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Minnesota","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"}]},{"n":"Chattanooga","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Virginia","pool":"FBS","dates":["2026-08-29","2026-09-11","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-23","2026-10-31","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Chris Patten"}]},{"n":"SF Austin","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-19"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Western Illinois","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"SFD","owner":"Cory Norton"}]},{"n":"Southern Utah","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-13","2026-11-21"],"owners":[]},{"n":"Tennessee","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Seattle Seahawks","pool":"NFL","dates":["2026-09-09","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-15","2026-10-25","2026-11-02","2026-11-08","2026-11-15","2026-11-29","2026-12-07","2026-12-13","2026-12-19","2026-12-25","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"New Mexico","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-06","2026-11-14","2026-11-20","2026-11-27"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Wisconsin","pool":"FBS","dates":["2026-09-06","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[]},{"n":"Northern Colorado","pool":"FCS","dates":["2026-08-28","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Florida Atlantic","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-29","2026-11-05","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"LSU","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Jacksonville State","pool":"FBS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-07","2026-10-13","2026-10-28","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"}]},{"n":"Tulane","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-16","2026-10-24","2026-10-30","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Jason/Greg"}]},{"n":"Baltimore Ravens","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-05","2026-11-16","2026-11-22","2026-11-29","2026-12-13","2026-12-20","2026-12-27","2026-12-31","2027-01-10"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Western Michigan","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-10","2026-11-17","2026-11-24"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Jackson St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Texas State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-15","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Green Bay Packers","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-24","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-10-29","2026-11-08","2026-11-15","2026-11-25","2026-12-06","2026-12-13","2026-12-20","2026-12-25","2027-01-04","2027-01-10"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Los Angeles Rams","pool":"NFL","dates":["2026-09-10","2026-09-21","2026-09-27","2026-10-04","2026-10-12","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-25","2026-12-03","2026-12-13","2026-12-20","2026-12-25","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Detroit Lions","pool":"NFL","dates":["2026-09-13","2026-09-17","2026-09-27","2026-10-04","2026-10-11","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-22","2026-11-26","2026-12-06","2026-12-13","2026-12-20","2026-12-28","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Virginia Tech","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-02","2026-10-10","2026-10-17","2026-10-24","2026-11-06","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Georgia Tech","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Florida State","pool":"FBS","dates":["2026-08-29","2026-09-07","2026-09-19","2026-09-26","2026-10-03","2026-10-09","2026-10-17","2026-10-31","2026-11-07","2026-11-13","2026-11-21","2026-11-27"],"owners":[]},{"n":"Marshall","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-20","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"VFD","owner":"Frank Haughn"}]},{"n":"Tarleton State","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Princeton","pool":"FCS","dates":["2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Youngstown St","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Toledo","pool":"FBS","dates":["2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-04","2026-11-11","2026-11-20","2026-11-27"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Philadelphia Eagles","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-28","2026-10-04","2026-10-11","2026-10-18","2026-10-26","2026-11-01","2026-11-08","2026-11-22","2026-11-26","2026-12-06","2026-12-13","2026-12-19","2026-12-24","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Weber St","pool":"FCS","dates":["2026-08-28","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-14","2026-11-21"],"owners":[]},{"n":"East Carolina","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-15","2026-10-22","2026-10-31","2026-11-06","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Illinois","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Oklahoma State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"BYU","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Prairie View A&M","pool":"FCS","dates":["2026-08-29","2026-09-06","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Oklahoma","pool":"FBS","dates":["2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Lehigh","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"New Hampshire","pool":"FCS","dates":["2026-08-28","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"VFD","owner":"Tom Brown"}]},{"n":"Yale","pool":"FCS","dates":["2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"VFD","owner":"Rob O'Conner"}]},{"n":"UC Davis","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Montana","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Richmond","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-11","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Monmouth","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Harvard","pool":"FCS","dates":["2026-09-19","2026-09-25","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-30","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"North Texas","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-01","2026-10-10","2026-10-24","2026-10-29","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Abilene Christian","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Rob O'Conner"}]},{"n":"Campbell","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Tampa Bay Buccaneers","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-08","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-22","2026-11-30","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Bethune-Cookman","pool":"FCS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"NC State","pool":"FBS","dates":["2026-08-29","2026-09-11","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-23","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Tulsa","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-01","2026-10-10","2026-10-17","2026-10-23","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Houston Texans","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-11-08","2026-11-15","2026-11-19","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-24","2027-01-04","2027-01-10"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Kansas City Chiefs","pool":"NFL","dates":["2026-09-14","2026-09-20","2026-09-27","2026-10-04","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-22","2026-11-26","2026-12-03","2026-12-13","2026-12-21","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Cal Poly","pool":"FCS","dates":["2026-08-28","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-21"],"owners":[]},{"n":"Chicago Bears","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-28","2026-10-04","2026-10-11","2026-10-18","2026-10-22","2026-11-02","2026-11-08","2026-11-22","2026-11-26","2026-12-06","2026-12-13","2026-12-19","2026-12-25","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Dallas Cowboys","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-08","2026-10-18","2026-10-26","2026-11-01","2026-11-08","2026-11-15","2026-11-22","2026-11-26","2026-12-07","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Miami (OH)","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-03","2026-11-10","2026-11-17","2026-11-24"],"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Jacksonville Jaguars","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-11-01","2026-11-05","2026-11-15","2026-11-22","2026-11-29","2026-12-06","2026-12-14","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Furman","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"SFD","owner":"Cory Norton"}]},{"n":"Drake","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14"],"owners":[]},{"n":"Denver Broncos","pool":"NFL","dates":["2026-09-14","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-15","2026-10-25","2026-11-01","2026-11-08","2026-11-22","2026-11-27","2026-12-06","2026-12-13","2026-12-20","2026-12-25","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Duke","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-23","2026-10-31","2026-11-07","2026-11-14","2026-11-20","2026-11-28"],"owners":[]},{"n":"Elon","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Navy","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-25","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-21","2026-11-28","2026-12-12"],"owners":[{"div":"PFD","owner":"Dos Pigs"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Iowa State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-09","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-20","2026-11-28"],"owners":[]},{"n":"Buffalo Bills","pool":"NFL","dates":["2026-09-13","2026-09-17","2026-09-27","2026-10-04","2026-10-12","2026-10-18","2026-11-01","2026-11-09","2026-11-15","2026-11-22","2026-11-26","2026-12-06","2026-12-13","2026-12-19","2026-12-25","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Indiana St","pool":"FCS","dates":["2026-08-29","2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"New England Patriots","pool":"NFL","dates":["2026-09-09","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-22","2026-11-01","2026-11-08","2026-11-15","2026-11-29","2026-12-06","2026-12-10","2026-12-21","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Norfolk St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-11","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Lafayette","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Hampton","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Oregon State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"William & Mary","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Arizona State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Eastern Kentucky","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"North Dakota","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-21"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Dartmouth","pool":"FCS","dates":["2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-30","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Tennessee Tech","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Louisiana","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-12","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mark Secrest"}]},{"n":"San Diego","pool":"FCS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-21"],"owners":[]},{"n":"FIU","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-07","2026-10-13","2026-10-20","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"UNLV","pool":"FBS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"UCF","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-30","2026-11-07","2026-11-14","2026-11-20","2026-11-28"],"owners":[]},{"n":"East Tennessee St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Southern Illinois","pool":"FCS","dates":["2026-08-27","2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Carolina Panthers","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-18","2026-10-25","2026-10-29","2026-11-08","2026-11-15","2026-11-22","2026-11-30","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Ryan Liebengood"}]},{"n":"Memphis","pool":"FBS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-16","2026-10-22","2026-10-31","2026-11-12","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Eastern Michigan","pool":"FBS","dates":["2026-08-29","2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-04","2026-11-17","2026-11-24"],"owners":[]},{"n":"Towson","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Western Carolina","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Columbia","pool":"FCS","dates":["2026-09-19","2026-09-26","2026-10-03","2026-10-09","2026-10-16","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"UTSA","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-08","2026-10-17","2026-10-24","2026-11-05","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"West Georgia","pool":"FCS","dates":["2026-08-27","2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Butler","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Air Force","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-23","2026-10-31","2026-11-07","2026-11-14","2026-11-20","2026-11-27"],"owners":[]},{"n":"Alabama A&M","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Alabama St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-26"],"owners":[{"div":"VFD","owner":"Chris Patten"}]},{"n":"Lamar","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Pittsburgh Steelers","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-01","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-15","2026-11-22","2026-11-27","2026-12-06","2026-12-14","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Rob O'Conner"},{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"North Alabama","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Cincinnati Bengals","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-23","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2026-12-31","2027-01-10"],"owners":[{"div":"PFD","owner":"Palma/Wiedeman"},{"div":"VFD","owner":"Erik Woods"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"Washington State","pool":"FBS","dates":["2026-09-06","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-09","2026-10-17","2026-10-24","2026-10-31","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Central Conn St","pool":"FCS","dates":["2026-08-29","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Idaho St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Gardner-Webb","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"West Virginia","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[]},{"n":"Wyoming","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Presbyterian","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-14","2026-11-21"],"owners":[]},{"n":"Mercyhurst","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Cincinnati","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Rutgers","pool":"FBS","dates":["2026-09-03","2026-09-11","2026-09-19","2026-09-25","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Duquesne","pool":"FCS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"UConn","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-23","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Brown","pool":"FCS","dates":["2026-09-19","2026-09-25","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Illinois St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Ryan Liebengood"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"UTRGV","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Tennessee Titans","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-15","2026-11-22","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Dos Pigs"}]},{"n":"Hawaii","pool":"FBS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"VMI","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Wake Forest","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-18","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Auburn","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"South Alabama","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-08","2026-10-20","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[]},{"n":"Idaho","pool":"FCS","dates":["2026-08-28","2026-09-03","2026-09-12","2026-09-19","2026-10-02","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Alcorn St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Army","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-25","2026-10-03","2026-10-10","2026-10-17","2026-10-23","2026-10-31","2026-11-07","2026-11-21","2026-11-28","2026-12-12"],"owners":[]},{"n":"Central Michigan","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-04","2026-11-11","2026-11-18","2026-11-28"],"owners":[]},{"n":"Georgetown","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Minnesota Vikings","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-25","2026-11-01","2026-11-09","2026-11-15","2026-11-22","2026-11-29","2026-12-06","2026-12-10","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Jay LaBenz"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Bob Tucker"}]},{"n":"Kentucky","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Boston College","pool":"FBS","dates":["2026-09-05","2026-09-11","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Atlanta Falcons","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-24","2026-10-05","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"UMass","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-23","2026-11-04","2026-11-11","2026-11-18","2026-11-28"],"owners":[]},{"n":"New York Giants","pool":"NFL","dates":["2026-09-13","2026-09-21","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-11-08","2026-11-12","2026-11-22","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-28","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Patrick Lee"},{"div":"SFD","owner":"Tom Rush"}]},{"n":"San Diego State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"VFD","owner":"Tom Brown"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Delaware","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-02","2026-10-13","2026-10-20","2026-10-27","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Grambling St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-28"],"owners":[]},{"n":"UAB","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-25","2026-10-03","2026-10-10","2026-10-15","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Kansas","pool":"FBS","dates":["2026-09-04","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Nicholls","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Maine","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-14","2026-11-21"],"owners":[]},{"n":"Tennessee St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Maryland","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Florida A&M","pool":"FCS","dates":["2026-08-29","2026-09-06","2026-09-10","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Northern Arizona","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Miss Valley St","pool":"FCS","dates":["2026-08-27","2026-09-06","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"McNeese St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Penn","pool":"FCS","dates":["2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-16","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Temple","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-25","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-19","2026-11-28"],"owners":[]},{"n":"New Orleans Saints","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-05","2026-10-11","2026-10-18","2026-10-25","2026-11-08","2026-11-15","2026-11-22","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Mike Endredy"},{"div":"VFD","owner":"Chad Muszynski"},{"div":"SFD","owner":"Mark Berner"}]},{"n":"Southern","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-28"],"owners":[]},{"n":"Western Kentucky","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-01","2026-10-08","2026-10-14","2026-10-27","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Gail Sulski"},{"div":"VFD","owner":"Erik Woods"}]},{"n":"Delaware St","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Buffalo","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-03","2026-11-11","2026-11-18","2026-11-27"],"owners":[]},{"n":"Nevada","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-06","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Troy","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-06","2026-10-17","2026-10-24","2026-10-29","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Steve Salatino"}]},{"n":"Ark Pine Bluff","pool":"FCS","dates":["2026-08-29","2026-09-04","2026-09-12","2026-09-19","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"ULM","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-12","2026-11-21","2026-11-28"],"owners":[]},{"n":"Vanderbilt","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"South Dakota","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-11-14","2026-11-21"],"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Cornell","pool":"FCS","dates":["2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"UCLA","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Coastal Carolina","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-24","2026-10-03","2026-10-10","2026-10-16","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Southeastern Louisiana","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-19"],"owners":[{"div":"SFD","owner":"Tom Rush"}]},{"n":"St Thomas","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Holy Cross","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Arkansas State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-08","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Arkansas","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Stony Brook","pool":"FCS","dates":["2026-08-27","2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Colgate","pool":"FCS","dates":["2026-08-28","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Indianapolis Colts","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-19","2026-11-29","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Steve Eriksson"},{"div":"VFD","owner":"Chris Patten"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Old Dominion","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-15","2026-10-24","2026-10-31","2026-11-07","2026-11-21","2026-11-28"],"owners":[{"div":"PFD","owner":"Gail Sulski"}]},{"n":"Wofford","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Washington Commanders","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-19","2026-11-01","2026-11-08","2026-11-12","2026-11-23","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"PFD","owner":"Mark Secrest"},{"div":"VFD","owner":"Frank Haughn"},{"div":"SFD","owner":"Cory Norton"}]},{"n":"Northwestern","pool":"FBS","dates":["2026-09-05","2026-09-19","2026-09-25","2026-10-02","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Marist","pool":"FCS","dates":["2026-08-28","2026-09-04","2026-09-12","2026-09-26","2026-10-03","2026-10-09","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Cleveland Browns","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-01","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[]},{"n":"Long Island","pool":"FCS","dates":["2026-08-27","2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Kent State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-30","2026-11-10","2026-11-17","2026-11-24"],"owners":[]},{"n":"Southeast Missouri St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14"],"owners":[]},{"n":"Lindenwood","pool":"FCS","dates":["2026-08-27","2026-09-03","2026-09-12","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Texas Southern","pool":"FCS","dates":["2026-08-29","2026-09-06","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Albany","pool":"FCS","dates":["2026-08-28","2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Incarnate Word","pool":"FCS","dates":["2026-08-29","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Bryant","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Utah Tech","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Georgia Southern","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-15","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Sacred Heart","pool":"FCS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"New York Jets","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-22","2026-11-29","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Robert Morris","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Houston Christian","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Appalachian State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-16","2026-10-22","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Mercer","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"PFD","owner":"Jason/Greg"},{"div":"SFD","owner":"Michael Spielman"}]},{"n":"Eastern Washington","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"UT Martin","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"SFD","owner":"Tom Rush"}]},{"n":"Syracuse","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-17","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Georgia State","pool":"FBS","dates":["2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Sacramento State","pool":"FBS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-30","2026-11-04","2026-11-11","2026-11-28"],"owners":[]},{"n":"North Dakota State","pool":"FBS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-14","2026-11-21","2026-11-27"],"owners":[{"div":"PFD","owner":"Twitchell/Fryer"},{"div":"VFD","owner":"Brian/Dave"},{"div":"SFD","owner":"Elliot Karlin"}]},{"n":"Valparaiso","pool":"FCS","dates":["2026-08-29","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"SFD","owner":"Jay McCarroll"}]},{"n":"Charleston Southern","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Morgan St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"NC Central","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-23","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Dayton","pool":"FCS","dates":["2026-08-29","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[{"div":"SFD","owner":"Mark Berner"}]},{"n":"Davidson","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Morehead St","pool":"FCS","dates":["2026-08-27","2026-09-03","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Las Vegas Raiders","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-22","2026-11-29","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"VFD","owner":"Chad Muszynski"}]},{"n":"Fordham","pool":"FCS","dates":["2026-08-28","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"West Florida","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Samford","pool":"FCS","dates":["2026-08-29","2026-09-03","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Central Arkansas","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"North Carolina A&T","pool":"FCS","dates":["2026-08-29","2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Portland St","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-18","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-13","2026-11-21"],"owners":[]},{"n":"Mississippi State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[]},{"n":"Louisiana Tech","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Kennesaw State","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-07","2026-10-14","2026-10-22","2026-10-28","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Miami Dolphins","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-22","2026-11-29","2026-12-06","2026-12-13","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[{"div":"SFD","owner":"Mark Jatcko"}]},{"n":"Stanford","pool":"FBS","dates":["2026-08-29","2026-09-04","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-23","2026-10-31","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Colorado State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-15","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Colorado","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-13","2026-11-21","2026-11-28"],"owners":[]},{"n":"Bucknell","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"The Citadel","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"East Texas A&M","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Northern Iowa","pool":"FCS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Ball State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-04","2026-11-11","2026-11-17","2026-11-28"],"owners":[]},{"n":"Rice","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-19","2026-11-28"],"owners":[]},{"n":"Howard","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-25","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Northwestern St","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-19"],"owners":[]},{"n":"Utah State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-09","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Sam Houston","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-08","2026-10-14","2026-10-21","2026-10-27","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Charlotte","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-30","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Middle Tennessee","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-13","2026-10-20","2026-10-28","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Eastern Illinois","pool":"FCS","dates":["2026-08-27","2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"San Jose State","pool":"FBS","dates":["2026-08-29","2026-09-04","2026-09-12","2026-09-19","2026-10-03","2026-10-09","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-27"],"owners":[]},{"n":"Stonehill","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Michigan State","pool":"FBS","dates":["2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-07","2026-11-14","2026-11-20","2026-11-28"],"owners":[]},{"n":"New Haven","pool":"FCS","dates":["2026-08-28","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Arizona Cardinals","pool":"NFL","dates":["2026-09-13","2026-09-20","2026-09-27","2026-10-04","2026-10-11","2026-10-18","2026-10-25","2026-11-01","2026-11-08","2026-11-15","2026-11-22","2026-11-29","2026-12-06","2026-12-20","2026-12-27","2027-01-03","2027-01-10"],"owners":[]},{"n":"Stetson","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Northern Illinois","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"UTEP","pool":"FBS","dates":["2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-31","2026-11-07","2026-11-14","2026-11-20","2026-11-28"],"owners":[]},{"n":"Akron","pool":"FBS","dates":["2026-09-03","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-11-03","2026-11-10","2026-11-18","2026-11-27"],"owners":[]},{"n":"New Mexico State","pool":"FBS","dates":["2026-08-29","2026-09-05","2026-09-13","2026-09-26","2026-10-01","2026-10-07","2026-10-21","2026-10-28","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Wagner","pool":"FCS","dates":["2026-08-29","2026-09-05","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Bowling Green","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-10","2026-11-20","2026-11-28"],"owners":[]},{"n":"Missouri State","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-08","2026-10-14","2026-10-20","2026-10-27","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Southern Miss","pool":"FBS","dates":["2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-06","2026-10-17","2026-10-24","2026-10-31","2026-11-05","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"Murray St","pool":"FCS","dates":["2026-08-27","2026-09-05","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21"],"owners":[]},{"n":"Purdue","pool":"FBS","dates":["2026-09-04","2026-09-12","2026-09-19","2026-09-26","2026-10-03","2026-10-10","2026-10-16","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]},{"n":"North Carolina","pool":"FBS","dates":["2026-08-29","2026-09-12","2026-09-19","2026-10-03","2026-10-10","2026-10-17","2026-10-24","2026-10-31","2026-11-07","2026-11-14","2026-11-21","2026-11-28"],"owners":[]}],"hold_games":3,"claim_min":3,"trade_away_min":1,"drop_freeze":1,"hold_from_draft_day":true,"draft_day":"2026-08-29","week1":"2026-09-08","clock_start":"2026-09-08T19:30","me":{"div":"PFD","seat":"Palma/Wiedeman","email":"cdwiedeman@gmail.com"}};</script>
 <script>/* THE PELOTON RESOLVER — the one implementation, used by three things.
  *
  *   1. Owners_League_Trades_SANDBOX.html   (Casey testing scenarios against a copy)
@@ -238,7 +270,15 @@ var GOT = {won: 1, won_alone: 1};        // the two endings that mean "you have 
  *   divisions : ['PFD','VFD','SFD']
  *   rosters   : {'PFD|Palma/Wiedeman': ['Navy', ...]}     -- who holds what, per division seat
  *   holdMet   : {'PFD|Palma/Wiedeman': {'Navy': true}}    -- has this team met its 3-game hold
- *   claimOK   : {'Navy': true}                            -- does it have enough games left
+ *   claimOK   : {'Navy': true}         -- enough games LEFT to be picked up (3). Nothing to do
+ *                                         with how many it has PLAYED: a team in its first week
+ *                                         is claimable, it just cannot be dropped for a while.
+ *   tradeAwayOK:{'Navy': true}         -- a DIFFERENT rule with a DIFFERENT threshold: the team
+ *                                         going out must still have at least one regular season
+ *                                         game. A team whose season is over is stuck on the
+ *                                         roster even though its hold finished months ago, so
+ *                                         this cannot be folded into holdMet -- one flag with
+ *                                         two meanings gives the owner the wrong reason.
  * A team that is in nobody's roster for a division is FREE in that division and only that one.
  * Casey, 9 Sep 2026: "this is division by division ... separately for another division."
  * ------------------------------------------------------------------------------------------ */
@@ -297,6 +337,9 @@ function pickDrop(league, key, row, used){
     if (used[d]){ why.push(d + ' was already used by an earlier request'); continue; }
     if (roster.indexOf(d) === -1){ why.push(d + ' is not on the roster'); continue; }
     if (hold[d] === false){ why.push(d + ' has not finished its hold'); continue; }
+    if ((league.tradeAwayOK || {})[d] === false){
+      why.push(d + ' has no regular season games left, so it cannot be traded away'); continue;
+    }
     if (!sameSide(league, row.pickup, d)){
       why.push(d + ' is not the same kind of team as ' + row.pickup); continue;
     }
@@ -358,8 +401,9 @@ function resolve(opts){
      added, so sameSide() saw no pools, returned true for everything, and the like-for-like rule
      silently did nothing -- the suite caught it, which is the whole reason it exists. A copy
      built by listing fields by hand goes stale every time a field is added. */
-  var work = {divisions: league.divisions, rosters: rosters, pools: league.pools,
-              holdMet: league.holdMet, claimOK: league.claimOK};
+  var work = {};
+  for (var f in league) work[f] = league[f];
+  work.rosters = rosters;          // the ONLY field this run is allowed to change
 
   (league.divisions || []).forEach(function (div){
     var reqs = requests.filter(function (r){ return r.div === div; })
@@ -616,26 +660,37 @@ function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e)
  * converting a made-up time into a real one only invites the reader to wonder which they are
  * looking at. */
 function now(){ return S.clock; }
+/* THE SANDBOX OPENS ON THE REAL DATE AND TIME. Casey, 11 Sep 2026: "basically it is as if I were
+   trying to make a trade ... based on today." It used to open on the Tuesday of league week 1, on
+   the reasoning that a fixed opening moment is the same page every day. That was the wrong trade:
+   a fixed date makes every game count, every hold and every availability belong to a week that has
+   already gone, so the one thing he wanted to check -- what can I actually do today -- was the one
+   thing it could not show. The presets are still there to move to any other moment. */
+function rightNow(){
+  var d = new Date(), p = function(x){ return (x < 10 ? '0' : '') + x; };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+       + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
 function parts(s){
   var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(s || '');
   if (!m) return null;
   var d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
   return {d: d, day: d.getDay(), mins: (+m[4]) * 60 + (+m[5])};
 }
-/* WHICH WINDOW THE CLOCK IS IN. Casey, 9 Sep 2026: first come first served is Monday 4:00pm to
-   Tuesday 5:00pm; peloton entry is Tuesday 5:01pm through Monday 3:59pm. Two states and no gap
+/* WHICH WINDOW THE CLOCK IS IN. Casey, 9 Sep 2026: first come first served is Monday 4:00pm AZ to
+   Tuesday 5:00pm AZ; peloton entry is Tuesday 5:01pm AZ through Monday 3:59pm AZ. Two states and no gap
    — the clock always knows which kind of submission the form is taking, so the form never has
    to ask. */
 function mode(s){
   var p = parts(s || now());
   if (!p) return 'queue';
-  if (p.day === 1 && p.mins >= 16 * 60) return 'fcfs';       // Monday from 4:00pm
-  if (p.day === 2 && p.mins <  17 * 60) return 'fcfs';       // through Tuesday 4:59pm
+  if (p.day === 1 && p.mins >= 16 * 60) return 'fcfs';       // Monday from 4:00pm AZ
+  if (p.day === 2 && p.mins <  17 * 60) return 'fcfs';       // through Tuesday 4:59pm AZ
   return 'queue';
 }
 function isFlipMoment(s){
   var p = parts(s || now());
-  return !!p && p.day === 1 && p.mins === 16 * 60;           // Monday 4:00pm exactly
+  return !!p && p.day === 1 && p.mins === 16 * 60;           // Monday 4:00pm AZ exactly
 }
 function weekNo(s){
   var p = parts(s || now()); if (!p) return 1;
@@ -649,7 +704,7 @@ function pretty(s){
   var h = Math.floor(p.mins / 60), m = p.mins % 60;
   var ap = h >= 12 ? 'pm' : 'am', hh = (h % 12) || 12;
   return DAY[p.day] + ' ' + p.d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'})
-    + ', ' + hh + ':' + (m < 10 ? '0' : '') + m + ap + ' MT';
+    + ', ' + hh + ':' + (m < 10 ? '0' : '') + m + ap + ' AZ';
 }
 
 /* ---- the league copy ---------------------------------------------------------------------- */
@@ -664,22 +719,79 @@ function freshRosters(){
   });
   return out;
 }
-/* HOLD: every team on a drafted roster has met its hold by now (the draft was in August and the
-   season is under way), and a team acquired IN the sandbox has not. That is the honest model for
-   a test harness and it makes the 'no drop left' path reachable without inventing dates. */
+/* ---- THE TWO THREE-GAME RULES, AND THEY ARE NOT THE SAME RULE -------------------------------
+ * Casey, 11 Sep 2026: "a team owned at the start has to have played three games before they can
+ * be dropped ... but technically they could pick up a team that has not played three games yet.
+ * I can drop South Dakota St after this weekend. I can pick up FCS teams that have only played
+ * two games."
+ *   TO DROP a team you must have HELD it for 3 games  -> counted forward from the day you got it
+ *                                                        (draft day for a drafted team, and a
+ *                                                        game played ON draft day counts).
+ *   TO PICK UP a team it must have 3 games STILL TO PLAY -> counted forward from today. How many
+ *                                                        it has already played is irrelevant.
+ * Both are counted in GAMES, against a DATE, off the clock -- so moving the clock moves both,
+ * which is the only way a settable clock can be honest. A bye is neither: it costs a week of the
+ * roster slot and advances no count, so byes are not in `dates` at all.
+ * NOTHING HERE IS BAKED. A build-time "played" is right for one instant and wrong for every
+ * other, and this page's whole purpose is to be looked at from another instant. */
+var TEAM = {};
+(DATA.teams || []).forEach(function(t){ TEAM[t.n] = t; });
+function today(){ return String(now() || '').slice(0, 10); }
+function datesOf(n){ return (TEAM[n] && TEAM[n].dates) || []; }
+/* THE DAY A SEAT GOT A TEAM. Drafted teams start at draft day; anything acquired in here starts
+   on the day the trade took effect. */
+function gotOn(k, n){
+  return ((S.acquiredAt || {})[k] || {})[n] || DATA.draft_day;
+}
+/* THE DAY A NEW HOLD STARTS. A trade's EFFECTIVE date when the resolver gave one (the Wednesday
+   after a Monday run), otherwise the clock's own day. Stored per seat per team because a hold
+   belongs to the OWNER, not to the team -- the next owner's three games start over. */
+function markGot(k, n, when){
+  S.acquiredAt = S.acquiredAt || {};
+  (S.acquiredAt[k] = S.acquiredAt[k] || {})[n] = String(when || today()).slice(0, 10);
+}
+/* A GAME COUNTS ONCE IT HAS BEEN PLAYED, which means its date is behind the clock. A game on the
+   clock's own date has not finished, so it does not count yet -- that is why South Dakota St,
+   playing on Saturday 12 Sep, is droppable at the Monday window and not before it. */
+function holdOf(k, n){
+  var since = gotOn(k, n), t = today(), ds = datesOf(n), need = DATA.hold_games || 3;
+  var done = 0, future = [];
+  ds.forEach(function(d){
+    if (d >= since && d < t) done++;
+    else if (d >= t) future.push(d);
+  });
+  var short = need - done;
+  return {done: done, need: need, met: short <= 0,
+          /* THE DATE THE HOLD FINISHES, or null when the schedule runs out first -- a team can
+             reach the end of its season still inside its hold. Unknown is not zero and neither
+             is impossible: `stuck` says which. */
+          on: short <= 0 ? null : (future.length >= short ? future[short - 1] : null),
+          stuck: short > 0 && future.length < short};
+}
+function leftOf(n){
+  var t = today();
+  return datesOf(n).filter(function(d){ return d >= t; }).length;
+}
 function holdMet(){
   var out = {};
   Object.keys(S.rosters).forEach(function(k){
     out[k] = {};
-    S.rosters[k].forEach(function(n){
-      out[k][n] = (S.acquired[k] || []).indexOf(n) === -1;
-    });
+    S.rosters[k].forEach(function(n){ out[k][n] = holdOf(k, n).met; });
   });
   return out;
 }
 function claimOK(){
-  var out = {};
-  DATA.teams.forEach(function(t){ out[t.n] = (t.left == null) || t.left >= (DATA.claim_min || 3); });
+  var out = {}, min = DATA.claim_min || 3;
+  DATA.teams.forEach(function(t){ out[t.n] = leftOf(t.n) >= min; });
+  return out;
+}
+/* A DIFFERENT RULE WITH A DIFFERENT THRESHOLD. From the commissioner's own document: the team
+   going OUT must still have at least one regular season game to play. So a team can be long past
+   its hold and still be stuck on the roster, and calling that "inside its hold" would give the
+   owner a reason that is not the reason. */
+function tradeAwayOK(){
+  var out = {}, min = DATA.trade_away_min == null ? 1 : DATA.trade_away_min;
+  DATA.teams.forEach(function(t){ out[t.n] = leftOf(t.n) >= min; });
   return out;
 }
 function pools(){
@@ -689,16 +801,19 @@ function pools(){
 }
 function league(){
   return {divisions: DATA.divisions, rosters: S.rosters, pools: pools(),
-          holdMet: holdMet(), claimOK: claimOK()};
+          holdMet: holdMet(), claimOK: claimOK(), tradeAwayOK: tradeAwayOK()};
 }
+/* EVERY TEAM NOBODY IN THE DIVISION OWNS -- including the ones too late in their season to be
+   claimed. They are SHOWN AND DISABLED WITH THE REASON rather than dropped from the list:
+   Casey's standing rule is that an absence is never an answer, and a team that quietly vanishes
+   in November teaches nothing about why. */
 function freeIn(div){
   var taken = {};
   Object.keys(S.rosters).forEach(function(k){
     if (k.slice(0, div.length + 1) !== div + '|') return;
     S.rosters[k].forEach(function(n){ taken[n] = 1; });
   });
-  var ok = claimOK();
-  return DATA.teams.filter(function(t){ return !taken[t.n] && ok[t.n] !== false; })
+  return DATA.teams.filter(function(t){ return !taken[t.n]; })
                    .map(function(t){ return t.n; }).sort();
 }
 
@@ -901,9 +1016,9 @@ function emailFor(seatK, rows){
      first-come window is open RIGHT NOW and closes Tuesday at 5pm, or they read the email, feel
      finished, and miss it. */
   lines.push(gotAny
-    ? 'First come, first served is open now and closes Tuesday at 5:00pm MT.'
+    ? 'First come, first served is open now and closes Tuesday at 5:00pm AZ.'
     : 'You did not pick anything up this week. First come, first served is open now and closes '
-      + 'Tuesday at 5:00pm MT — anything still unowned in your division can be claimed '
+      + 'Tuesday at 5:00pm AZ — anything still unowned in your division can be claimed '
       + 'outright, no coin flip.');
   return lines.join('\n');
 }
@@ -943,19 +1058,26 @@ function render(){
 /* ---- the clock panel, on every tab that cares about it -------------------------------------- */
 function clockCard(){
   var presets = [
-    ['Monday 3:59pm — last minute to enter', nextDow(1, 15, 59)],
-    ['Monday 4:00pm — run the coin flips',   nextDow(1, 16, 0)],
-    ['Monday 4:30pm — first come is open',   nextDow(1, 16, 30)],
-    ['Tuesday 4:59pm — first come closing',  nextDow(2, 16, 59)],
-    ['Tuesday 5:01pm — next week opens',     nextDow(2, 17, 1)],
+    ['Monday 3:59pm AZ — last minute to enter', nextDow(1, 15, 59)],
+    ['Monday 4:00pm AZ — run the coin flips',   nextDow(1, 16, 0)],
+    ['Monday 4:30pm AZ — first come is open',   nextDow(1, 16, 30)],
+    ['Tuesday 4:59pm AZ — first come closing',  nextDow(2, 16, 59)],
+    ['Tuesday 5:01pm AZ — next week opens',     nextDow(2, 17, 1)],
   ];
+  var real = rightNow(), live = now().slice(0, 16) === real.slice(0, 16);
   return '<div class="card"><h2>The clock</h2>'
-    + '<p class="note">Nothing here reads the real time. Set it to whatever moment you want to '
-    + 'test — the form and the buttons follow it.</p>'
-    + '<div class="row"><div class="grow"><label class="lb" for="ck">Pretend it is</label>'
+    + '<p class="note">This page opens on <b>the real date and time</b> and everything follows '
+    + 'it — which window is open, how many games each team has played, and how many it has left. '
+    + 'Move it to test another moment; press <b>Back to right now</b> to return.</p>'
+    + '<div class="row"><div class="grow"><label class="lb" for="ck">The clock says</label>'
     + '<input id="ck" type="datetime-local" value="' + esc(now()) + '" '
     + 'onchange="S.clock=this.value;save();render()"></div></div>'
+    + '<p class="note" style="margin:8px 0 0">' + (live
+        ? '<span class="pill good">real time</span> This is now.'
+        : '<span class="pill">moved</span> Really it is ' + esc(pretty(real)) + '.') + '</p>'
     + '<div class="row" style="margin-top:8px">'
+    + '<button class="' + (live ? '' : 'pri') + '" onclick="S.clock=rightNow();save();render()">'
+    + 'Back to right now</button>'
     + presets.map(function(p){
         return '<button onclick="S.clock=\'' + p[1] + '\';save();render()">' + esc(p[0]) + '</button>';
       }).join('')
@@ -1155,7 +1277,7 @@ function submitList(){
   S.requests[key(a.div, a.seat)].submitted = now();
   save();
   showHelp('You are entered for Monday',
-    '<p>Your list is in for week ' + weekNo() + '. Nothing happens until Monday at 4:00pm.</p>'
+    '<p>Your list is in for week ' + weekNo() + '. Nothing happens until Monday at 4:00pm AZ.</p>'
     + '<p>You can change it any time before then — press <b>Change my list</b>, make the change, '
     + 'and send it again.</p>');
   render();
@@ -1190,7 +1312,8 @@ function viewTrades(){
   var a = actingSeat();
   var k = key(a.div, a.seat);
   var free = freeIn(a.div), mine = (S.rosters[k] || []).slice().sort();
-  var hm = holdMet()[k] || {};
+  /* The forms compute each team's standing from the clock themselves, so there is no map to
+     carry around and no chance of one going stale between the form and the run. */
   var fcfs = mode() === 'fcfs';
 
   /* BOTH WAYS OF GETTING A TEAM, ALWAYS ON SCREEN, with the one that is open now marked.
@@ -1223,17 +1346,17 @@ function viewTrades(){
       : 'Your list for Monday') + '</h2>'
     + (fcfs
         ? '<p class="note">The coin flips have been run. Anything still unowned is yours if you '
-          + 'ask first, until <b>5:00pm Tuesday</b>. After that, list-building for next Monday '
+          + 'ask first, until <b>5:00pm AZ Tuesday</b>. After that, list-building for next Monday '
           + 'opens again.</p>'
-        : '<p class="note">Entry closes at <b>3:59pm Monday</b>. First come, first served opens '
-          + 'straight afterwards and runs until 5:00pm Tuesday.</p>')
+        : '<p class="note">Entry closes at <b>3:59pm AZ Monday</b>. First come, first served opens '
+          + 'straight afterwards and runs until 5:00pm AZ Tuesday.</p>')
     + (fcfs
       ? '<ol class="note"><li>Choose the team you want to <b>pick up</b>. Only teams nobody in '
         + esc(DATA.div_names[a.div] || a.div) + ' owns are listed.</li>'
         + '<li>Choose the team you will <b>drop</b> for it. It has to be the same kind of team — '
         + 'college for college, NFL for NFL.</li>'
         + '<li>Press <b>Claim it now</b>. It happens immediately.</li></ol>'
-        + '<p class="note">There is no queue and no coin flip between 4:00pm Monday and 5:00pm '
+        + '<p class="note">There is no queue and no coin flip between 4:00pm AZ Monday and 5:00pm AZ '
         + 'Tuesday. Whoever asks first gets the team, so one at a time is all there is.</p>'
       : '<ol class="note"><li>Press <b>Add a row</b> for each team you want. One row is one '
         + 'team.</li>'
@@ -1262,12 +1385,13 @@ function viewTrades(){
         + '<li>Press <b>Send my list</b>. Until you press it, your list is only saved on this '
         + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
         + '<p class="note">Up to ' + P.MAX_ROWS + ' rows. You can change and re-send as often as '
-        + 'you like, right up to 3:59pm Monday.</p>')
+        + 'you like, right up to 3:59pm AZ Monday.</p>')
     + '<p class="note" style="border-top:1px solid var(--line);padding-top:9px">You are '
     + '<b>' + esc(a.seat) + '</b> in ' + esc(DATA.div_names[a.div] || a.div) + ' · '
-    + free.length + ' teams available to you · ' + mine.length + ' on your roster</p></div>';
+    + free.length + ' team' + (free.length === 1 ? '' : 's') + ' nobody in your division owns · '
+    + mine.length + ' on your roster</p></div>' + rulesCard();
 
-  if (fcfs) return h + fcfsForm(a, free, mine, hm) + clockCard();
+  if (fcfs) return h + fcfsForm(a, free, mine, k) + clockCard();
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
 
@@ -1283,7 +1407,7 @@ function viewTrades(){
   if (sent){
     h += '<div class="card" style="border-color:#245c39"><h2 class="g">You are entered for '
       + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. Nothing happens '
-      + 'until Monday at 4:00pm, and you can change it any time before then.</p>'
+      + 'until Monday at 4:00pm AZ, and you can change it any time before then.</p>'
       + '<div class="row"><button onclick="unsubmit()">Change my list</button></div></div>';
   }
 
@@ -1308,7 +1432,7 @@ function viewTrades(){
         + '<div class="row" style="justify-content:center;margin-bottom:6px">'
         + '<button class="pri" onclick="addRow()">Add a row</button></div>';
     } else {
-      h += rows.map(function(r, i){ return rowForm(r, i, free, mine, hm); }).join('');
+      h += rows.map(function(r, i){ return rowForm(r, i, free, mine, k); }).join('');
       h += '<div class="row" style="margin-top:6px">'
         + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
         + 'Add another row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
@@ -1322,7 +1446,7 @@ function viewTrades(){
         + '<span class="pill bad">Not sent yet</span>'
         + '<span class="note">This list is <b>not</b> in Monday&rsquo;s coin flips until you '
         + 'press <b>Send my list</b>. You can change it and send it again as often as you like, '
-        + 'up to 3:59pm Monday.</span></div>';
+        + 'up to 3:59pm AZ Monday.</span></div>';
     }
   }
   h += '</div>';
@@ -1341,55 +1465,245 @@ function twoWays(fcfs){
     + '<p class="note">Every week runs the same way. Only one of these is open at a time, and '
     + 'the one that is open now is marked.</p>'
     + '<div class="ways">'
-    + block(!fcfs, 'Tuesday 5:01pm — Monday 3:59pm', 'Build a list for Monday',
-        'Ask for as many teams as you like, in the order you want them. At 4:00pm Monday every '
+    + block(!fcfs, 'Tuesday 5:01pm AZ — Monday 3:59pm AZ', 'Build a list for Monday',
+        'Ask for as many teams as you like, in the order you want them. At 4:00pm AZ Monday every '
         + 'owner&rsquo;s list is settled at once, and any team more than one owner asked for '
         + 'goes to a <b>coin flip</b>. This is the only way to get a team somebody else also '
         + 'wants.')
-    + block(fcfs, 'Monday 4:00pm — Tuesday 5:00pm', 'First come, first served',
+    + block(fcfs, 'Monday 4:00pm AZ — Tuesday 5:00pm AZ', 'First come, first served',
         'Whatever is still unowned after the coin flips can be taken outright &mdash; one team, '
         + 'one drop, yours the moment you press the button. <b>No coin flip and no queue</b>, so '
         + 'if two of you want the same team it goes to whoever asks first.')
     + '</div></div>';
 }
-function teamOptions(list, sel, hm){
-  return '<option value="">—</option>' + list.map(function(n){
-    var held = hm && hm[n] === false;
-    return '<option value="' + esc(n) + '"' + (sel === n ? ' selected' : '')
-      + (held ? ' disabled' : '') + '>' + esc(n) + (held ? ' (inside its hold)' : '') + '</option>';
-  }).join('');
+/* ---- CHOOSING A TEAM ---------------------------------------------------------------------
+ * A TYPE-TO-FIND PICKER, NOT A 296-LONG DROPDOWN. Casey, 11 Sep 2026: "it needs to be a
+ * searchable dropdown so that they don't have to scroll ... like we have in other areas of the
+ * dashboard." The season page's team search is the same shape: type, the list narrows.
+ *
+ * TWO THINGS MAKE IT WORTH WRITING BY HAND RATHER THAN USING A <select>:
+ *   1. FILTERING DOES NOT RE-RENDER. The list is drawn once when the picker opens and typing
+ *      only sets `hidden` on the rows -- a re-render on every keystroke takes the focus out of
+ *      the box the reader is typing into, which is the bug that makes a search field feel broken.
+ *   2. A BLOCKED TEAM CAN SAY WHY. A native option can be disabled but cannot carry a sentence.
+ *      An absence is never an answer: a team that is out of reach is SHOWN, dimmed, with the
+ *      rule that put it there -- which is the only way the page teaches the rule.
+ * ONE PICKER IS OPEN AT A TIME (S.open) so the page holds one list, not fifty.               */
+function prettyDay(s){
+  var p = parts(String(s || '').slice(0, 10) + 'T12:00');
+  if (!p) return String(s || '');
+  var DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return DAY[p.day] + ' ' + p.d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
 }
-/* THE DROP LIST FOR A GIVEN PICKUP. Offering a college team as a drop for an NFL pickup is
-   offering a move the rules forbid, and a form that offers an illegal move is a form that
-   teaches the wrong rule. Wrong-kind teams stay VISIBLE but disabled, with the reason on them —
-   Casey's standing rule: show the constraint as a dimmed cue, never as a silent absence. */
-function dropOptions(mine, sel, hm, pickup, pl){
-  return '<option value="">—</option>' + mine.map(function(n){
-    var held = hm && hm[n] === false;
-    var wrong = pickup && pl[pickup] && pl[n] && ((pl[pickup] === 'NFL') !== (pl[n] === 'NFL'));
-    var why = held ? ' (inside its hold)' : wrong ? ' (' + (pl[n] === 'NFL' ? 'NFL' : 'college')
-              + ' — must match ' + pickup + ')' : '';
-    return '<option value="' + esc(n) + '"' + (sel === n ? ' selected' : '')
-      + (held || wrong ? ' disabled' : '') + '>' + esc(n) + esc(why) + '</option>';
-  }).join('');
+/* WHY THIS TEAM CANNOT BE PICKED UP, or '' when it can. The rule is games STILL TO PLAY. */
+function whyNotClaim(n){
+  var min = DATA.claim_min || 3, left = leftOf(n);
+  if (left >= min) return '';
+  if (!left) return 'its regular season is over';
+  return 'only ' + left + ' game' + (left === 1 ? '' : 's') + ' left — needs ' + min;
 }
-function rowForm(r, i, free, mine, hm){
+/* WHY THIS TEAM CANNOT BE DROPPED, or '' when it can. Checked in the SAME ORDER the resolver
+   checks them, so the form and the result never give an owner two different reasons. */
+function whyNotDrop(k, n, pickup){
+  var H = holdOf(k, n);
+  if (!H.met){
+    var got = gotOn(k, n) === DATA.draft_day ? 'since the draft' : 'since you got it';
+    return H.stuck
+      ? 'held for ' + H.done + ' of ' + H.need + ' games ' + got + ', and its season ends before '
+        + 'it reaches ' + H.need + ' — it cannot be dropped this year'
+      : 'held for ' + H.done + ' of ' + H.need + ' games ' + got + ' — droppable after its game '
+        + 'on ' + prettyDay(H.on);
+  }
+  var min = DATA.trade_away_min == null ? 1 : DATA.trade_away_min;
+  if (leftOf(n) < min) return 'no regular season games left, so it cannot be traded away';
+  if (pickup && !sameKind(pickup, n)){
+    return (TEAM[n] && TEAM[n].pool === 'NFL' ? 'an NFL team' : 'a college team')
+      + ' — it has to match ' + pickup;
+  }
+  return '';
+}
+function sameKind(a, b){
+  var pa = TEAM[a] && TEAM[a].pool, pb = TEAM[b] && TEAM[b].pool;
+  if (!pa || !pb) return true;
+  return (pa === 'NFL') === (pb === 'NFL');
+}
+function poolTag(n){ return (TEAM[n] && TEAM[n].pool) || ''; }
+/* COLLEGE OR NFL, AND NOTHING IN BETWEEN. FBS and FCS are both college, which is the whole
+   reason this is a two-way switch and not a three-way one. */
+function kindOf(n){ return poolTag(n) === 'NFL' ? 'NFL' : 'COL'; }
+function ofKind(list, kind){
+  return list.filter(function(n){ return kindOf(n) === (kind === 'NFL' ? 'NFL' : 'COL'); });
+}
+/* WHICH HALF OF THE BOARD THIS ROW IS ABOUT. Casey, 11 Sep 2026: "your pickup list does not
+   include any NFL teams" -- it did, five of them, buried in 197 college names. Five in two
+   hundred is not a list, it is a haystack, and only 5 of 32 NFL teams are ever free in a
+   division. The switch also makes the like-for-like rule VISIBLE instead of only enforced:
+   choosing NFL narrows the drops to your three NFL teams, which is the rule, drawn. */
+function kindSwitch(id, kind, onset){
+  return '<div class="kinds">'
+    + [['COL', 'College'], ['NFL', 'NFL']].map(function(x){
+        return '<button class="kbtn' + (kind === x[0] ? ' on' : '') + '" '
+          + 'aria-pressed="' + (kind === x[0] ? 'true' : 'false') + '" '
+          + 'onclick="' + onset + '(\'' + x[0] + '\')">' + x[1] + '</button>';
+      }).join('')
+    + '</div>';
+}
+/* items: [{n, why}] -- why '' means choosable. */
+function pickField(id, label, value, items, note){
+  var open = S.open === id;
+  var h = '<label class="lb">' + label + '</label>';
+  if (!open){
+    var bad = value ? whyOf(items, value) : '';
+    h += '<button class="pickbtn' + (value ? '' : ' empty') + (bad ? ' warnbtn' : '') + '" '
+      + 'onclick="popen(\'' + id + '\')">'
+      + '<span class="pval">' + (value ? esc(value) : 'Choose a team') + '</span>'
+      + '<span class="pchg">' + (value ? 'Change' : 'Search') + '</span></button>';
+    if (bad) h += '<p class="note b" style="margin:4px 0 0">' + esc(cap(bad)) + '</p>';
+    else if (note) h += '<p class="note" style="margin:4px 0 0">' + note + '</p>';
+    return h;
+  }
+  var okN = items.filter(function(it){ return !it.why; }).length;
+  h += '<div class="pick"><input type="search" class="psearch" id="q_' + id + '" '
+    + 'placeholder="Type a team name" autocomplete="off" autocorrect="off" '
+    + 'spellcheck="false" oninput="pfilter(\'' + id + '\',this.value)">'
+    + '<p class="note" style="margin:5px 0 4px">' + okN + ' you can choose'
+    + (items.length - okN ? ' · ' + (items.length - okN) + ' shown but not allowed, with the '
+        + 'reason' : '') + '</p>'
+    + '<div class="plist" id="l_' + id + '">'
+    + (value ? '<button class="popt clr" data-q="" onclick="ppick(\'' + id + '\',\'\')">'
+             + '— take this one off —</button>' : '')
+    + items.map(function(it){
+        var tag = poolTag(it.n);
+        return it.why
+          ? '<span class="popt off" data-q="' + esc(it.n.toLowerCase()) + '">'
+            + '<b>' + esc(it.n) + '</b>' + (tag ? ' <i class="tag">' + esc(tag) + '</i>' : '')
+            + '<i class="rsn">' + esc(cap(it.why)) + '</i></span>'
+          : '<button class="popt" data-q="' + esc(it.n.toLowerCase()) + '" '
+            + 'onclick="ppick(\'' + id + '\',' + jq(it.n) + ')">'
+            + '<b>' + esc(it.n) + '</b>' + (tag ? ' <i class="tag">' + esc(tag) + '</i>' : '')
+            + '</button>';
+      }).join('')
+    + '<p class="pnone note" hidden>No team matches that.</p></div>'
+    + '<div class="row" style="margin-top:6px"><button onclick="popen(null)">Cancel</button>'
+    + '</div></div>';
+  return h;
+}
+/* A NAME INSIDE AN onclick INSIDE AN HTML ATTRIBUTE. Two quoting layers, and team names carry
+   apostrophes (Hawai'i). Escape for JS first, then for HTML, in that order -- the other way
+   round turns &#39; back into a quote that closes the attribute. */
+function jq(s){ return esc("'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"); }
+function whyOf(items, name){
+  for (var i = 0; i < items.length; i++) if (items[i].n === name) return items[i].why || '';
+  return '';
+}
+function popen(id){
+  S.open = id || null; save(); render();
+  if (id){ var q = el('q_' + id); if (q) q.focus(); }
+}
+/* TYPING FILTERS THE DOM, IT DOES NOT RE-RENDER THE PAGE. See the note above pickField. */
+function pfilter(id, q){
+  q = String(q || '').toLowerCase().trim();
+  var box = el('l_' + id); if (!box) return;
+  var kids = box.children, shown = 0;
+  for (var i = 0; i < kids.length; i++){
+    var node = kids[i], dq = node.getAttribute('data-q');
+    if (dq === null) continue;                       // the "nothing matches" line
+    var hit = !q || dq.indexOf(q) >= 0;
+    node.hidden = !hit;
+    if (hit && dq) shown++;
+  }
+  var none = box.querySelector('.pnone');
+  if (none) none.hidden = shown > 0;
+}
+function ppick(id, name){
+  S.open = null;
+  if (id === 'fp') { S.fcp = name; save(); render(); return; }
+  if (id === 'fd') { S.fcd = name; save(); render(); return; }
+  if (id.charAt(0) === 'p'){ editRow(+id.slice(1), 'pickup', name); return; }
+  var b = id.slice(1).split('_');
+  editRow(+b[0], 'drop', name, +b[1]);
+}
+
+/* ---- THE RULES, ON THE PAGE THAT ENFORCES THEM ---------------------------------------------
+ * Casey, 11 Sep 2026: "I think you already have that in the rules, but I want to make sure."
+ * Every number below comes from the payload, which comes from season_state.py. A rule typed
+ * into a sentence beside code that uses a constant is a rule with two values.               */
+function rulesCard(){
+  var hold = DATA.hold_games || 3, claim = DATA.claim_min || 3;
+  var away = DATA.trade_away_min == null ? 1 : DATA.trade_away_min;
+  var fr = DATA.drop_freeze == null ? 1 : DATA.drop_freeze;
+  return '<div class="card"><h2>What you are allowed to trade</h2>'
+    + '<p class="note">Both of the big rules are counted in <b>games</b>, never in weeks, and '
+    + 'they are <b>not the same rule</b>.</p>'
+    + '<div class="scr"><table><colgroup><col style="width:34%"><col style="width:66%">'
+    + '</colgroup><tbody>'
+    + '<tr><td><b>To drop a team</b></td><td class="d">You must have held it for <b>' + hold
+    + ' of its games</b>. For a team you drafted that counts from draft day, '
+    + esc(prettyDay(DATA.draft_day)) + (DATA.hold_from_draft_day
+        ? ' &mdash; and a game played <b>on</b> draft day counts' : '')
+    + '. For a team you picked up, it starts again the day you got it. <b>A bye is not a '
+    + 'game</b>: it costs you a week of the roster slot and moves the count nowhere.</td></tr>'
+    + '<tr><td><b>To pick a team up</b></td><td class="d">It must have <b>' + claim + ' games '
+    + 'still to play</b>. <b>How many it has already played does not matter</b> &mdash; a team '
+    + 'in its second week is fine, and so is one you could not have dropped yourself.</td></tr>'
+    + '<tr><td><b>Late in the season</b></td><td class="d">A team with fewer than ' + away
+    + ' regular season game' + (away === 1 ? '' : 's') + ' left cannot be traded away at all. It '
+    + 'stays on your roster to the end of the year, however long you have held it.</td></tr>'
+    + '<tr><td><b>Same kind for same kind</b></td><td class="d">College for college, NFL for '
+    + 'NFL. FBS and FCS are both college. That is what keeps every roster at 8 college and 3 '
+    + 'NFL.</td></tr>'
+    + '<tr><td><b>After a team is dropped</b></td><td class="d">It sits out ' + fr + ' game'
+    + (fr === 1 ? '' : 's') + ' before anybody can pick it up &mdash; one game, not seven '
+    + 'days.</td></tr>'
+    + '</tbody></table></div>'
+    + '<p class="note">Every list on this page follows these. A team you cannot choose is still '
+    + 'shown, with the reason on it, so you can see what is holding it up and when it '
+    + 'clears.</p></div>';
+}
+
+function rowKind(r){
+  return r.kind || (r.pickup ? kindOf(r.pickup) : 'COL');
+}
+function setKind(i, v){
+  var rows = myRows().slice(), row = Object.assign({}, rows[i]);
+  if (rowKind(row) === v) return;
+  /* SWITCHING SIDES CLEARS THE ROW. Every name already on it is now an illegal move, and
+     leaving them there would show a row that cannot run beside a switch that says it can. */
+  row.kind = v; row.pickup = ''; row.drops = [''];
+  rows[i] = row; setRows(rows); S.open = null; save(); render();
+}
+function rowForm(r, i, free, mine, k){
   var drops = (r.drops || ['']).slice();
   if (drops.length < P.MAX_DROPS && drops[drops.length - 1]) drops.push('');
   if (!drops.length) drops = [''];
   var c = r.cond || {type: 'always', row: 1};
-  return '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
-    + '<button onclick="delRow(' + i + ')" title="Remove row ' + (i + 1) + '">Remove</button></div>'
-    + '<label class="lb">Pick up</label>'
-    + '<select onchange="editRow(' + i + ',\'pickup\',this.value)">'
-    + teamOptions(free, r.pickup) + '</select>'
-    + '<label class="lb" style="margin-top:7px">Drop &mdash; only one of these goes, the first '
-    + 'you still hold</label>'
-    + '<div class="grid2">' + drops.map(function(d, j){
-        return '<select onchange="editRow(' + i + ',\'drop\',this.value,' + j + ')">'
-          + dropOptions(mine, d, hm, r.pickup, pools()) + '</select>';
-      }).join('') + '</div>'
-    + '<label class="lb" style="margin-top:7px">Go for this team</label>'
+  var kind = rowKind(r);
+  free = ofKind(free, kind); mine = ofKind(mine, kind);
+  var ups = free.map(function(n){ return {n: n, why: whyNotClaim(n)}; });
+  var ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+  var h = '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
+    + '<button onclick="delRow(' + i + ')" title="Remove row ' + (i + 1) + '">Remove</button>'
+    + '</div>'
+    + '<label class="lb">Which kind of team</label>'
+    + kindSwitch('k' + i, kind, 'setKind.bind(null,' + i + ')')
+    + '<p class="note" style="margin:4px 0 9px">College for college, NFL for NFL &mdash; so this '
+    + 'picks both lists below. ' + free.length + ' '
+    + (kind === 'NFL' ? 'NFL team' : 'college team') + (free.length === 1 ? '' : 's')
+    + ' nobody in your division owns, ' + mine.length + ' on your roster.</p>'
+    + pickField('p' + i, 'Pick up', r.pickup, ups)
+    + '<label class="lb" style="margin-top:9px">Drop &mdash; in this order</label>'
+    + '<p class="note" style="margin:0 0 6px">Only <b>one</b> of these goes: the first one on '
+    + 'this list that you still hold and are allowed to drop. The rest are backups.</p>';
+  /* NUMBERED, AND ONE PER LINE. Casey, 11 Sep 2026: "are we reading it left to right or top to
+     bottom? That could confuse teams. I think we need to label it 1, 2, 3, 4." A two-column grid
+     of identical boxes has no reading order at all, and the ORDER IS THE WHOLE RULE here. */
+  h += drops.map(function(d, j){
+    var opts = mine.map(function(n){ return {n: n, why: whyNotDrop(k, n, r.pickup)}; });
+    return '<div class="dropslot">'
+      + pickField('d' + i + '_' + j, (ORD[j] || (j + 1) + 'th') + ' choice to drop', d, opts)
+      + '</div>';
+  }).join('');
+  h += '<label class="lb" style="margin-top:9px">Go for this team</label>'
     + '<div class="grid2"><select onchange="editRow(' + i + ',\'condtype\',this.value)">'
     + '<option value="always"' + (c.type === 'always' ? ' selected' : '') + '>whatever '
     + 'happens above</option>'
@@ -1406,18 +1720,32 @@ function rowForm(r, i, free, mine, hm){
           }).join('')
         + (i === 0 ? '<option value="1">— no earlier row —</option>' : '') + '</select>')
     + '</div></div>';
+  return h;
 }
 /* FIRST COME IS A DIFFERENT SHAPE, not the same form with the queue hidden. One team, one drop,
    an answer immediately. Pretending it is a list would imply a priority that does not exist. */
-function fcfsForm(a, free, mine, hm){
-  return '<div class="card"><div class="grid2">'
-    + '<div><label class="lb">Pick up</label><select id="fcp">' + teamOptions(free, S.fcp) + '</select></div>'
-    + '<div><label class="lb">Drop</label><select id="fcd">' + teamOptions(mine, S.fcd, hm) + '</select></div>'
-    + '</div><div class="row" style="margin-top:9px">'
+function setFcKind(v){
+  if ((S.fck || 'COL') === v) return;
+  S.fck = v; S.fcp = ''; S.fcd = ''; S.open = null; save(); render();
+}
+function fcfsForm(a, free, mine, k){
+  var kind = S.fck || (S.fcp ? kindOf(S.fcp) : 'COL');
+  free = ofKind(free, kind); mine = ofKind(mine, kind);
+  var ups = free.map(function(n){ return {n: n, why: whyNotClaim(n)}; });
+  var dns = mine.map(function(n){ return {n: n, why: whyNotDrop(k, n, S.fcp)}; });
+  return '<div class="card">'
+    + '<label class="lb">Which kind of team</label>'
+    + kindSwitch('fk', kind, 'setFcKind')
+    + '<p class="note" style="margin:4px 0 9px">College for college, NFL for NFL. '
+    + free.length + ' available, ' + mine.length + ' on your roster.</p>'
+    + pickField('fp', 'Pick up', S.fcp, ups)
+    + '<div style="margin-top:9px">' + pickField('fd', 'Drop', S.fcd, dns) + '</div>'
+    + '<div class="row" style="margin-top:11px">'
     + '<button class="pri" onclick="doClaim()">Claim it now</button></div>'
     + '<p class="note" style="margin-top:8px">Whoever presses this first gets the team. There is '
     + 'no queue to be in and nothing to wait for.</p></div>';
 }
+
 function doClaim(){
   var a = actingSeat(); if (!a) return;
   var p = el('fcp').value, d = el('fcd').value;
@@ -1430,7 +1758,7 @@ function doClaim(){
   if (P.GOT[res.outcome]){
     P.applyClaim(L, a.div, a.seat, res);
     S.rosters = L.rosters;
-    (S.acquired[key(a.div, a.seat)] = S.acquired[key(a.div, a.seat)] || []).push(p);
+    markGot(key(a.div, a.seat), p, today());
     S.log.unshift(Object.assign({when: now(), by: a.by || null},
       P.claimRow(a.div, a.seat, res, {week: weekNo()})));
     S.fcp = ''; S.fcd = '';
@@ -1486,10 +1814,10 @@ function viewRun(){
   var h = '<div class="card"><h2>How Monday runs</h2>'
     + setting('Settling Monday',
         [{label: 'Automatically', on: auto, act: "S.autoPeloton=true;save();render()",
-          title: 'The schedule settles the week a few minutes after 4:00pm every Monday'},
+          title: 'The schedule settles the week a few minutes after 4:00pm AZ every Monday'},
          {label: 'I do it myself', on: !auto, act: "S.autoPeloton=false;save();render()",
           title: 'Nothing is settled until you press Run the coin flips'}],
-        auto ? 'The week settles itself a few minutes after 4:00pm every Monday. You do nothing.'
+        auto ? 'The week settles itself a few minutes after 4:00pm AZ every Monday. You do nothing.'
              : 'Nothing will be settled on its own. Press <b>Run the coin flips</b> below when '
                + 'you have entered everything.')
     /* NAME THE SECTION AND THE BUTTON, NOT "IT APPEARS". Casey, 10 Sep 2026: "copy every owner's
@@ -1535,14 +1863,14 @@ function viewRun(){
     + '" onclick="askRun()">Run the coin flips</button>'
     + (prev && canUndo()
         ? '<button class="dang" onclick="askUndo()" title="Put every roster back to how it stood '
-          + 'at 4:00pm and keep every list exactly as it was typed">Undo week ' + weekNo()
+          + 'at 4:00pm AZ and keep every list exactly as it was typed">Undo week ' + weekNo()
           + '</button>' : '')
     + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">How the coin flip '
     + 'works</button></div>'
     + '<p class="note">' + (reqs.length
         ? 'Settles all ' + reqs.length + ' list' + (reqs.length === 1 ? '' : 's') + ' at once, '
           + 'running a coin flip wherever more than one owner asked for the same team.'
-          + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm.' : '')
+          + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm AZ.' : '')
         : 'Nothing has been sent for week ' + weekNo() + ' yet. Enter a list on <b>My trades</b> '
           + 'and press <b>Send my list</b>.')
     + '</p></div>';
@@ -1613,12 +1941,12 @@ function askRun(){
    SHOULD HAVE HAD**; only re-running the whole week with every request in it can.
    That is cheap here because the resolver is pure and deterministic: hand it the same rosters
    and the same requests and it produces the same week. So the undo is simply "put the rosters
-   and the lists back the way they were at 4:00pm" — and crucially it puts the LISTS back too,
+   and the lists back the way they were at 4:00pm AZ" — and crucially it puts the LISTS back too,
    because nobody is retyping twenty-seven owners' requests. */
 function snapshot(){
   return {rosters: JSON.parse(JSON.stringify(S.rosters)),
           requests: JSON.parse(JSON.stringify(S.requests)),
-          acquired: JSON.parse(JSON.stringify(S.acquired || {})),
+          acquiredAt: JSON.parse(JSON.stringify(S.acquiredAt || {})),
           logLen: (S.log || []).length,
           week: weekNo(), at: now()};
 }
@@ -1650,7 +1978,7 @@ function askUndo(){
   var claims = after.filter(function(e){ return e.how === 'first come'; });
   var other = after.length - claims.length;
   showHelp('Undo Monday and start again?',
-    '<p>This puts every roster back to how it stood at 4:00pm and <b>keeps every list exactly as '
+    '<p>This puts every roster back to how it stood at 4:00pm AZ and <b>keeps every list exactly as '
     + 'it was typed</b>. Nobody re-enters anything.</p>'
     + (claims.length
         ? '<div class="card warn" style="margin:10px 0"><b>' + claims.length
@@ -1692,7 +2020,7 @@ function doUndo(){
     }).reverse();                       // back into the order they arrived
   S.rosters = JSON.parse(JSON.stringify(u.rosters));
   S.requests = JSON.parse(JSON.stringify(u.requests));
-  S.acquired = JSON.parse(JSON.stringify(u.acquired));
+  S.acquiredAt = JSON.parse(JSON.stringify(u.acquiredAt || {}));
   S.log = (S.log || []).slice((S.log || []).length - u.logLen);
   S.results = null;
   if (S.ranWeeks) delete S.ranWeeks[u.week];
@@ -1710,7 +2038,7 @@ function doRun(){
      so nothing is renamed on the way past. A translation step here would be a second place the
      same fact is written down, and the Transactions tab on the live page reads these names. */
   out.log.forEach(function(e){
-    (S.acquired[key(e.div, e.owner)] = S.acquired[key(e.div, e.owner)] || []).push(e['in']);
+    markGot(key(e.div, e.owner), e['in'], e.effective || today());
     S.log.unshift(Object.assign({when: now()}, e));
   });
   S.requests = {};
@@ -1795,7 +2123,7 @@ function retryClaim(i){
   if (P.GOT[res.outcome]){
     P.applyClaim(L, c.div, c.owner, res);
     S.rosters = L.rosters;
-    (S.acquired[key(c.div, c.owner)] = S.acquired[key(c.div, c.owner)] || []).push(c.pickup);
+    markGot(key(c.div, c.owner), c.pickup, today());
     S.log.unshift(Object.assign({when: now(), by: c.by},
       P.claimRow(c.div, c.owner, res, {week: weekNo(), fee: DATA.trade_cost})));
     c.state = 'done'; c.why = 'Granted again — ' + c.pickup + ' for ' + res.drop + '.';
@@ -1842,7 +2170,7 @@ function showEmail(k){
    whole key store instead of one device. A status column that reasons differently from the gate
    is a second store of one fact, and one of them would eventually lie.
    THIS REPLACED A PERMANENT `Keys last retired` DATE. Casey, 10 Sep 2026: he retired his keys,
-   changed his address, signed back in, and the row still read "Tue 15 Sep 5:01pm" forever after
+   changed his address, signed back in, and the row still read "Tue 15 Sep 5:01pm AZ" forever after
    — "it looks like it's been retired". The stored cut-off HAS to be permanent; the column does
    not have to be the place it is shown. A column Bob reads before acting should say what is true
    now; what happened once belongs in a history. */
@@ -1871,11 +2199,16 @@ function liveSessions(row){
    question this answers: is anybody keeping track of what was retired against that email? Yes —
    here, where a history belongs, and not in a status column. */
 function note(row, what){
-  S.log = ([{at: now(), seat: row.seat, div: row.div, what: what}]).concat(S.log || [])
-            .slice(0, 80);
+  /* ITS OWN ARRAY. `S.log` is the TRANSACTION log the Rosters tab renders as Seat/In/Out/How --
+     writing access-list history into it put rows of a different shape into that table and let an
+     80-entry cap truncate real trades. Two kinds of record, two arrays. Caught on 11 Sep 2026,
+     one day after the history was added; the access suite passed because it never looked at the
+     transactions, which is the reason a suite is written per PROPERTY and not per feature. */
+  S.accessLog = ([{at: now(), seat: row.seat, div: row.div, what: what}])
+                  .concat(S.accessLog || []).slice(0, 80);
 }
 function logCard(){
-  var L = S.log || [];
+  var L = S.accessLog || [];
   if (!L.length){
     return '<div class="card"><h2>Recent changes</h2><p class="note">Nothing on this list has '
       + 'been changed yet. Every address change and every retirement is recorded here with its '
@@ -2133,7 +2466,7 @@ function doReset(){
     + '<button onclick="closeHelp()">Leave it alone</button></div>');
 }
 function reallyReset(){
-  S.rosters = freshRosters(); S.acquired = {}; S.log = []; S.results = null; S.requests = {};
+  S.rosters = freshRosters(); S.acquiredAt = {}; S.log = []; S.results = null; S.requests = {};
   save(); closeHelp(); render();
 }
 
@@ -2146,9 +2479,9 @@ function seedAccess(){
   });
 }
 function blank(){
-  return {clock: DATA.clock_start, device: 'A', devices: {}, tokens: {}, links: [], seq: 0,
+  return {clock: rightNow(), device: 'A', devices: {}, tokens: {}, links: [], seq: 0,
           access: seedAccess(), former: [], requests: {}, rosters: freshRosters(),
-          acquired: {}, log: [],
+          acquiredAt: {}, log: [], accessLog: [],
           results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, autoEmail: true, ranWeeks: {}, claimQueue: [], lastEmail: (DATA.me || {}).email || ''};
 }
 function boot(){
