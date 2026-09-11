@@ -1621,9 +1621,9 @@ function whyNotDrop(k, n, pickup){
        a different way, and two phrasings of one rule is how a reader ends up thinking they are
        two rules. */
     return H.stuck
-      ? 'has played ' + H.done + ' of ' + H.need + ' games for you, and its season ends before it '
+      ? 'held for ' + H.done + ' of its first ' + H.need + ' games, and its season ends before it '
         + 'reaches ' + H.need + '. It cannot be dropped this year.'
-      : 'has played ' + H.done + ' of ' + H.need + ' games for you. Droppable after its game on '
+      : 'held for ' + H.done + ' of its first ' + H.need + ' games. Droppable after its game on '
         + prettyDay(H.on) + '.';
   }
   var min = DATA.trade_away_min == null ? 1 : DATA.trade_away_min;
@@ -1812,16 +1812,22 @@ function rulesRows(){
   var fr = DATA.drop_freeze == null ? 1 : DATA.drop_freeze;
   var g = function(n){ return n + ' regular season game' + (n === 1 ? '' : 's'); };
   return [
-    /* NOT "CONSECUTIVE", AND NOT "THREE OF ITS GAMES" EITHER. Both were wrong, and each was wrong
-       in the opposite direction. "Three of its games" reads as any three games in the season.
-       "Three consecutive games played" invites the question Casey then asked himself, 11 Sep
-       2026: "there could be a bye week in between there ... technically they're not consecutive."
-       THE WORD DOING THE WORK IS "FOR YOU". It fixes where the count starts, which is what
-       "consecutive" was reaching for, and it makes the bye a non-question rather than an
-       exception that has to be written down: a bye is not a game, so it never enters the count.
-       When a clause needs an exception, the clause is usually the problem. */
+    /* FOUR WORDINGS, 11 Sep 2026, and Casey found the hole in each of the first three.
+         "held for three of its games"    -> reads as ANY three games in the season.
+         "three consecutive games played" -> his own fix, then his own objection: a bye falls
+                                             between, so they are not consecutive.
+         "played three games for you"     -> his objection again, and the worst of the three
+                                             because it reads as a RUNNING TOTAL: "what if I had
+                                             the team, it played three games, I dropped it, I
+                                             picked it back up ... technically it's already
+                                             played three games for me."
+       THE ANCHOR HAS TO BE IN THE SENTENCE. "The first three games it plays AFTER YOU GET IT"
+       fixes all three holes at once and needs no exception for any of them. Already-played games
+       are not "after you get it", so no total can be accumulated. Drop it and pick it up again
+       and the anchor moves, so the three start over. And a bye is not a game, so it never enters
+       a count of games played -- which is why "consecutive" was never the word. */
     ['To Drop a Team',
-     'It has to have played <b>' + hold + ' games for you</b>.'],
+     'You have to hold it for the <b>first ' + hold + ' games it plays after you get it</b>.'],
     ['To Pick a Team Up',
      'It has to have <b>' + claim + ' games still to play</b> before the end of the regular '
      + 'season.'],
