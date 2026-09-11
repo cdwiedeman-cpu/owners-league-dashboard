@@ -1100,7 +1100,7 @@ function emailFor(seatK, rows){
 
 /* ---- shell ---------------------------------------------------------------------------------- */
 var TABS = [['signin','Sign In'],['trades','My Trades'],['run','Run It'],
-            ['access','Access list'],['rosters','Rosters']];
+            ['access','Access List'],['rosters','Rosters']];
 function setTab(t){ TAB = t; render(); window.scrollTo(0, 0); }
 function closeHelp(){ OPEN = null; var b = el('help'); b.hidden = true; b.innerHTML = '';
   document.body.style.overflow = ''; }
@@ -1215,7 +1215,7 @@ function viewSignIn(){
     return h + clockCard();
   }
   if (s && s.dead){
-    h += '<div class="card warn"><h2>This device was signed in, and is not any more</h2>'
+    h += '<div class="card warn"><h2>This Device Was Signed Out</h2>'
       + '<p class="note">The key on device ' + esc(S.device) + ' was refused because '
       + esc(s.dead) + '. This is what an owner sees after their seat changes hands: the phone '
       + 'does not know anything happened until it next tries to do something.</p>'
@@ -1253,7 +1253,7 @@ function viewSignIn(){
           }
           return '<div style="margin:0 0 9px"><div class="note">To <b>' + esc(l.email)
             + '</b> · sent ' + esc(pretty(l.issued)) + ' · expires in ' + l.expires + ' minutes'
-            + (l.used ? ' · <span class="pill bad">already used</span>' : '') + '</div>'
+            + (l.used ? ' · <span class="pill bad">Already Used</span>' : '') + '</div>'
             + '<div class="mono f">https://…/trades?c=' + esc(l.code) + '</div>'
             + '<div class="row" style="margin-top:5px">'
             + '<button ' + (l.used ? 'disabled' : '') + ' onclick="doUse(\'' + l.code
@@ -1977,7 +1977,7 @@ function viewRun(){
          {label: 'I Do It Myself', on: !auto, act: "S.autoPeloton=false;save();render()",
           title: 'Nothing is settled until you press Run the coin flips'}],
         auto ? 'The week settles itself a few minutes after 4:00pm AZ every Monday. You do nothing.'
-             : 'Nothing will be settled on its own. Press <b>Run the Coin Flips</b> below when '
+             : 'Nothing will be settled on its own. Press <b>Run the Coin Flips</b> on this tab when '
                + 'you have entered everything.')
     /* NAME THE SECTION AND THE BUTTON, NOT "IT APPEARS". Casey, 10 Sep 2026: "copy every owner's
        email appears with the messages ready to paste — what are you talking about? Where should
@@ -2024,8 +2024,8 @@ function viewRun(){
         ? '<button class="dang" onclick="askUndo()" title="Put every roster back to how it stood '
           + 'at 4:00pm AZ and keep every list exactly as it was typed">Undo week ' + weekNo()
           + '</button>' : '')
-    + '<button onclick="showHelp(\'The draw can be re-run\', SEEDNOTE)">How the coin flip '
-    + 'works</button></div>'
+    + '<button onclick="showHelp(\'How the Coin Flip Works\', SEEDNOTE)">How the Coin Flip '
+    + 'Works</button></div>'
     + '<p class="note">' + (reqs.length
         ? 'Settles all ' + reqs.length + ' list' + (reqs.length === 1 ? '' : 's') + ' at once, '
           + 'running a coin flip wherever more than one owner asked for the same team.'
