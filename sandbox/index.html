@@ -1810,8 +1810,16 @@ function rulesRows(){
   var fr = DATA.drop_freeze == null ? 1 : DATA.drop_freeze;
   var g = function(n){ return n + ' regular season game' + (n === 1 ? '' : 's'); };
   return [
+    /* NOT "CONSECUTIVE", AND NOT "THREE OF ITS GAMES" EITHER. Both were wrong, and each was wrong
+       in the opposite direction. "Three of its games" reads as any three games in the season.
+       "Three consecutive games played" invites the question Casey then asked himself, 11 Sep
+       2026: "there could be a bye week in between there ... technically they're not consecutive."
+       THE WORD DOING THE WORK IS "FOR YOU". It fixes where the count starts, which is what
+       "consecutive" was reaching for, and it makes the bye a non-question rather than an
+       exception that has to be written down: a bye is not a game, so it never enters the count.
+       When a clause needs an exception, the clause is usually the problem. */
     ['To Drop a Team',
-     'You have to have held it for <b>' + hold + ' consecutive games played</b>.'],
+     'It has to have played <b>' + hold + ' games for you</b>.'],
     ['To Pick a Team Up',
      'It has to have <b>' + claim + ' games still to play</b> before the end of the regular '
      + 'season.'],
