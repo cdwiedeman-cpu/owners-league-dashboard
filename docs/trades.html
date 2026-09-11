@@ -234,7 +234,7 @@ ol li,ul li{margin:0 0 7px}
 <tr><td class="pool">Games still to play &mdash;<br>the one people get wrong</td>
     <td>The two numbers are <b>different</b>, and the league rules put them in one sentence.
         <b>Going out: one.</b> The team being dropped only needs <b>1 regular season game</b> still
-        to play; once its season is finished it cannot be traded away at all and stays on the
+        to play. Once its season is finished it cannot be traded away at all. It stays on the
         roster for the rest of the year, however long it has been held. <b>Coming in: three.</b>
         The team being picked up needs <b>3</b>. Bowl games, playoff games and conference
         championships count toward neither &mdash; only games on a regular season schedule do,
@@ -248,14 +248,15 @@ ol li,ul li{margin:0 0 7px}
         every roster at eight college and three NFL. FBS and FCS both count as college.</td></tr>
 <tr><td class="pool">Coin flip</td>
     <td>When <b>two or more</b> owners in the same division ask for the same team, it goes to a
-        coin flip between all of them. It is a real randomizer &mdash; nobody can predict it or
-        steer it, and everybody in a contest has the same chance &mdash; but unlike a dice roll it
-        is worked out from the week, the division, the team and the round rather than from the
-        instant somebody pressed the button. <b>So the same contest always comes out the same
-        way</b>, on any device and on any day, which means you can always press run again and show
-        an owner the identical answer. Undoing a week and running it again is safe for the same
-        reason: only the teams you changed something about come out differently, and every other
-        team in the division goes to exactly the owner it went to the first time.</td></tr>
+        coin flip between all of them. It is a real randomizer. Nobody can predict it or steer
+        it, and everybody in the flip has the same chance. The difference from a dice roll is
+        where the randomness comes from. A dice roll uses the instant somebody pressed the button.
+        This uses the week, the division, the team and the round, and those four things never
+        change. <b>So the same coin flip always comes out the same way</b>, on any device and on
+        any day. You can always press run again and show an owner the identical answer. Undoing a
+        week and running it again is safe for the same reason. Only the teams you changed
+        something about come out differently. Every other team goes to exactly the owner it went
+        to the first time.</td></tr>
 <tr><td class="pool">Cost</td>
     <td>Every completed trade costs the owner <b>$3</b>, whichever way it happened. The page keeps
         the running total for each owner.</td></tr>
@@ -268,8 +269,8 @@ ol li,ul li{margin:0 0 7px}
 <p>This is done once, before the season, and it takes about half an hour.</p>
 
 <h3>First, a Google account for the league</h3>
-<p>Everything behind the page &mdash; the spreadsheet, the script that runs on Mondays, and the
-   emails owners receive &mdash; lives in one Google account. Casey and Bob agreed on
+<p>Three things sit behind the page: the spreadsheet, the script that runs on Mondays, and the
+   emails owners receive. All three live in one Google account. Casey and Bob agreed on
    <b>a new account for the league</b> rather than either of their personal ones, for three
    reasons:</p>
 <ul>
@@ -342,11 +343,10 @@ ol li,ul li{margin:0 0 7px}
 
 <h3>After that</h3>
 <p>The only thing anybody edits by hand is the Access tab, and Bob can do that with ordinary edit
-   access to the Sheet &mdash; no password needed. Three other tabs appear on their own:
-   <b>Requests</b>, which the page fills in when owners submit; <b>Results</b>, which is written
-   every Monday and becomes the transaction record; and <b>Log</b>, a dated line for every address
-   change and every retirement. Leave all three alone — Log is there to be read, not
-   edited.</p>
+   access to the Sheet &mdash; no password needed. Three other tabs appear on their own. <b>Requests</b> is
+   filled in by the page when owners submit. <b>Results</b> is written every Monday and becomes
+   the record of every trade. <b>Log</b> keeps a dated line for every address change and every
+   retirement. Leave all three alone. Log is there to be read, not edited.</p>
 </section>
 
 <section><h2>What happens each week</h2><p class="lead">You do nothing. This is just so you know.</p>
@@ -375,15 +375,16 @@ ol li,ul li{margin:0 0 7px}
   <li>Everybody's first entry is settled before anybody's second, so being early is worth
       nothing.</li>
   <li>If one owner asked for a team, they get it.</li>
-  <li>If two or more asked — three or four is perfectly possible — it goes to a coin flip
-      between all of them.</li>
+  <li>If two or more asked, it goes to a coin flip between all of them. Three or four owners on
+      one team is perfectly normal.</li>
   <li>If you beat somebody in an earlier coin flip that afternoon and they are in this one too,
       you sit this one out and they go for it without you. Once they have picked up a team,
       you are level again and the next one is a normal coin flip.</li>
   <li>Only one team is dropped per request. Working down that owner's drop list, the first team
-      they still hold and are allowed to drop is the one that goes &mdash; still on the roster,
-      past its three games, and the same kind of team as the one coming in. If none of them
-      qualify, the request does not go through and the owner is told which rule stopped it.</li>
+      they still hold and are allowed to drop is the one that goes. Allowed means three things:
+      still on the roster, past its three games, and the same kind of team as the one coming in.
+      If none of them qualify, the request does not go through, and the owner is told which rule
+      stopped it.</li>
 </ol>
 </section>
 
@@ -402,9 +403,9 @@ ol li,ul li{margin:0 0 7px}
 <p>When they tap that link, the page stores a long random code in their browser. They never see
    it or type it. Every trade they submit carries that code, and the league looks it up to find
    out whose seat it is. Nothing announces a name, so there is no name for anybody to change.</p>
-<p>Knowing another owner's email address gets somebody nowhere: if they ask for a link at that
-   address, the link goes to that owner's inbox, and that owner gets an email saying somebody
-   tried to sign in as them.</p>
+<p>Knowing another owner's email address gets somebody nowhere. Ask for a link at that address
+   and the link goes to that owner's inbox. That owner also gets an email saying somebody tried
+   to sign in as them.</p>
 
 <h3>If somebody cannot sign in</h3>
 <p>The sign-in box says the same thing to everybody, whatever happened underneath &mdash;
@@ -412,10 +413,10 @@ ol li,ul li{margin:0 0 7px}
 <p>What it does say, to everyone, is: if nothing arrives in a few minutes, your address may not
    be the one the league has for you, so contact the commissioner. That reaches the person
    sitting there and gives nothing away.</p>
-<p>Separately, an address the league <b>has used before</b> &mdash; a former owner, or somebody
-   whose address was changed &mdash; gets an actual email saying it is no longer on a seat and to
-   contact you. That is safe, because an email lands with whoever owns the address, never with
-   whoever typed it. An address the league has never used gets nothing at all, so nobody can use
+<p>An address the league <b>has used before</b> is treated differently. A former owner, or
+   somebody whose address was changed, gets a real email saying the address is no longer on a seat
+   and to contact you. That is safe, because an email lands with whoever owns the address, never
+   with whoever typed it. An address the league has never used gets nothing at all, so nobody can use
    the sign-in box to send mail to strangers.</p>
 
 <h3>Two things it does not do</h3>
@@ -494,11 +495,11 @@ ol li,ul li{margin:0 0 7px}
   <li>Use <b>Record a trade</b>.</li>
   <li>Pick the owner, the team coming in and the team going out.</li>
 </ol>
-<p>This is for a trade that was agreed outside the app &mdash; over the phone, by text, or during
-   the first few weeks while the league is still being tried out and you are entering everything
-   yourself. It is an ordinary trade: it costs that owner the usual $3, it appears in the
+<p>This is for a trade that was agreed outside the app. Over the phone, by text, or during the
+   first few weeks while the league is still being tried out and you are entering everything
+   yourself. It is an ordinary trade. It costs that owner the usual $3, it appears in the
    transaction record with your name as the person who entered it, and the owner is emailed.</p>
-<p>It is deliberately <b>not</b> the same thing as the button below. Recording a trade is normal.
+<p>It is deliberately <b>not</b> the same thing as <b>Correct a roster</b>. Recording a trade is normal.
    Correcting one is not.</p>
 
 <h3>Fixing something that went wrong</h3>
@@ -508,9 +509,9 @@ ol li,ul li{margin:0 0 7px}
 </ol>
 <p><b>The fees are yours to set.</b> Putting one trade right can take two or three roster moves,
    and nobody should be charged two or three times for it. So the fee sits on each line and you
-   can change it: set a line to <b>$0</b> when it is part of a correction rather than a new
-   trade, or enter a <b>credit</b> against an owner when they were charged for something that
-   did not happen.</p>
+   can change it. Set a line to <b>$0</b> when it is part of a correction rather than a new trade.
+   Enter a <b>credit</b> against an owner when they were charged for something that did not
+   happen.</p>
 <p>The money and the rosters are corrected separately on purpose. Sometimes a roster is right and
    only a charge is wrong, and then there is no roster move to attach the fix to.</p>
 <p>Any total that has been adjusted is marked as such on the <b>What Each Owner Owes</b> table,
@@ -540,8 +541,8 @@ ol li,ul li{margin:0 0 7px}
    was typed</b> &mdash; nobody re-enters anything. Then the whole week is settled from scratch
    with everything in it.</p>
 <p>That is the only way to get the right answer, and it is worth understanding why. A late
-   request does not just add a trade. It can join a contest another owner won, which changes who
-   won that team, which changes who has to stand aside for the next one. Settling the latecomer
+   request does not just add a trade. It can join a coin flip another owner won. That changes who
+   won that team, and that changes who has to stand aside for the next one. Settling the latecomer
    on top of the earlier result cannot reach the week the league should have had.</p>
 <p><b>Two things to know about undo.</b></p>
 <ul>
@@ -603,23 +604,23 @@ ol li,ul li{margin:0 0 7px}
    the typing, not the deciding &mdash; the coin flips, the hold rules, the like-for-like check
    and the running totals are all being run for real. If they are right for three weeks with two
    people watching, they are right in December with twenty-seven.</p>
-<p>Two switches on that page are set for this stage: settling is <b>by hand</b>, so the schedule
-   waits for him, and results emails are <b>off</b>, so nothing reaches the league until he has
-   looked at it and sent it himself. Both are ordinary settings rather than a temporary mode, and
-   they are flipped the other way at stage three.</p>
+<p>Two switches on that page are set for this stage. Settling is <b>by hand</b>, so the schedule
+   waits for him. Results emails are <b>off</b>, so nothing reaches the league until he has looked
+   at it and sent it himself. Both are ordinary settings rather than a temporary mode, and they
+   are flipped the other way at stage three.</p>
 <p>Only two people sign in during this stage, which is also the cheapest possible test of the
    sign-in: if it works for two, the twenty-seventh is not different.</p>
 
 <h3>Stage two &mdash; a few weeks of watching it</h3>
-<p>Run it this way for two or three weeks. What is being checked is not whether the buttons work
-   &mdash; that has been tested &mdash; but whether the <i>record</i> it produces matches what
-   actually happened in the league. Compare the Transactions tab against what Bob would have
+<p>Run it this way for two or three weeks. The buttons have already been tested. What is being
+   checked now is whether the <i>record</i> the page produces matches what actually happened in
+   the league. Compare the Transactions tab against what Bob would have
    written down. If those agree for three weeks, they will agree in December.</p>
 <p>Anything that comes up gets fixed while the audience is two people rather than twenty-seven.</p>
 
 <h3>Stage three &mdash; the owners</h3>
-<p>Fill in the remaining email addresses, set both switches the other way &mdash; settling to
-   <b>automatic</b> and results emails <b>on</b> &mdash; and tell the league. From that Monday,
+<p>Fill in the remaining email addresses. Set settling to <b>automatic</b> and results emails
+   <b>on</b>. Then tell the league. From that Monday,
    owners enter their own requests, Monday settles itself a few minutes after four, and everyone
    is emailed what happened without you touching it.</p>
 <p>Bob keeps everything he had. <b>Record a trade</b> and <b>Submitting for</b> do not go away
