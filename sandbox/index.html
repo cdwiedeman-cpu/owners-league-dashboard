@@ -138,6 +138,10 @@ td.num,th.num{text-align:right}
 .kchip{border-radius:999px;min-height:30px;padding:4px 12px;font-size:12px;background:var(--pan2);
  color:var(--dim);border:1px solid var(--line)}
 .kchip.on{background:#1d3550;color:var(--ink);border-color:#274b6d;font-weight:600}
+/* WHICH MOMENT THE PAGE IS WORKING FROM, at the top of every tab that depends on it. */
+.asof{font-size:12px;color:var(--dim);margin:0 0 10px}
+.asofbox{border-color:var(--warn)}
+.card.warn{border-color:var(--warn)}
 .dropslot{margin:0 0 8px}
 .sandonly{border-left:3px solid var(--warn);padding-left:9px}
 .inbox{background:#0d1a12;border:1px solid #245c39;border-radius:9px;padding:10px;margin:8px 0}
@@ -1128,12 +1132,22 @@ function render(){
 
 /* ---- the clock panel, on every tab that cares about it -------------------------------------- */
 function clockCard(){
+  /* THE LABEL CARRIES THE DATE IT JUMPS TO, computed from the destination so the two cannot
+     disagree. A preset is relative to where the clock already is -- "the next Monday" from a
+     Tuesday is a week further on than from a Friday -- and a button that says only "Monday"
+     walks the clock forward a week at a time without ever saying so. Casey, 11 Sep 2026, read
+     "Dallas: held for 2 of 3" as wrong; the arithmetic was right and his clock was on 21 Sep.
+     Navy read the same at both dates, which is exactly why he could not tell. */
+  var preset = function(dow, h, m, what){
+    var at = nextDow(dow, h, m);
+    return [prettyDay(at) + ', ' + clockTime(at) + ' — ' + what, at];
+  };
   var presets = [
-    ['Monday 3:59pm AZ — last minute to enter', nextDow(1, 15, 59)],
-    ['Monday 4:00pm AZ — run the coin flips',   nextDow(1, 16, 0)],
-    ['Monday 4:30pm AZ — first come is open',   nextDow(1, 16, 30)],
-    ['Tuesday 4:59pm AZ — first come closing',  nextDow(2, 16, 59)],
-    ['Tuesday 5:01pm AZ — next week opens',     nextDow(2, 17, 1)],
+    preset(1, 15, 59, 'last minute to enter'),
+    preset(1, 16, 0,  'run the coin flips'),
+    preset(1, 16, 30, 'first come is open'),
+    preset(2, 16, 59, 'first come closing'),
+    preset(2, 17, 1,  'next week opens'),
   ];
   var real = rightNow(), live = now().slice(0, 16) === real.slice(0, 16);
   return '<div class="card"><h2>The clock</h2>'
@@ -1144,8 +1158,9 @@ function clockCard(){
     + '<input id="ck" type="datetime-local" value="' + esc(now()) + '" '
     + 'onchange="S.clock=this.value;save();render()"></div></div>'
     + '<p class="note" style="margin:8px 0 0">' + (live
-        ? '<span class="pill good">real time</span> This is now.'
-        : '<span class="pill">moved</span> Really it is ' + esc(pretty(real)) + '.') + '</p>'
+        ? '<span class="pill good">real time</span> ' + esc(pretty(now())) + ' — this is now.'
+        : '<span class="pill bad">moved</span> Set to <b>' + esc(pretty(now()))
+          + '</b>. Really it is ' + esc(pretty(real)) + '.') + '</p>'
     + '<div class="row" style="margin-top:8px">'
     + '<button class="' + (live ? '' : 'pri') + '" onclick="S.clock=rightNow();save();render()">'
     + 'Back to right now</button>'
@@ -1393,7 +1408,7 @@ function viewTrades(){
      clock was in, so an owner in the Monday-list window had no way to learn the other half
      existed, let alone what to do in it. **A TOOL THAT SHOWS ONLY THE CURRENT STEP CANNOT TEACH
      THE PROCESS** — the reader needs the shape of the week before they need today's form. */
-  var h = twoWays(fcfs);
+  var h = clockBanner() + twoWays(fcfs);
   if (s.role === 'commissioner'){
     h += '<div class="card"><h2>Commissioner — entering for someone else</h2>'
       + '<p class="note">Same form, same rules, same clock. The only difference is the line in '
@@ -1560,6 +1575,30 @@ function twoWays(fcfs){
  *      An absence is never an answer: a team that is out of reach is SHOWN, dimmed, with the
  *      rule that put it there -- which is the only way the page teaches the rule.
  * ONE PICKER IS OPEN AT A TIME (S.open) so the page holds one list, not fifty.               */
+/* Just the time out of a clock string, with its zone. */
+function clockTime(s){
+  var p = parts(s); if (!p) return String(s || '');
+  var h = Math.floor(p.mins / 60), m = p.mins % 60;
+  return ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h >= 12 ? 'pm' : 'am') + ' AZ';
+}
+/* WHICH DAY THIS PAGE IS PRETENDING TO BE, said in words, at the top of every tab whose numbers
+   depend on it. The datetime box further down held the same fact, and a reader does not read a
+   CONTROL as a statement -- Casey worked from "this Monday" while the clock sat on the next one
+   for a week's worth of games. Both states are printed: an absence is never an answer, so "it is
+   really now" has to be said rather than implied by the lack of a warning. */
+function clockBanner(){
+  var real = rightNow(), moved = now().slice(0, 16) !== real.slice(0, 16);
+  if (!moved){
+    return '<p class="asof"><span class="pill good">right now</span> '
+      + esc(pretty(now())) + '</p>';
+  }
+  return '<div class="card warn asofbox"><b>The clock is moved. This page is working out every '
+    + 'count as if it were ' + esc(pretty(now())) + '.</b>'
+    + '<p class="note">Games played, games left, which teams you can drop and which window is '
+    + 'open all follow that moment. Really it is ' + esc(pretty(real)) + '.</p>'
+    + '<div class="row"><button class="pri" onclick="S.clock=rightNow();save();render()">'
+    + 'Back to right now</button></div></div>';
+}
 function prettyDay(s){
   var p = parts(String(s || '').slice(0, 10) + 'T12:00');
   if (!p) return String(s || '');
@@ -1914,7 +1953,7 @@ function viewRun(){
   var prev = ranBefore();
   var drafts = draftSeats();
 
-  var h = '<div class="card"><h2>How Monday runs</h2>'
+  var h = clockBanner() + '<div class="card"><h2>How Monday runs</h2>'
     + setting('Settling Monday',
         [{label: 'Automatically', on: auto, act: "S.autoPeloton=true;save();render()",
           title: 'The schedule settles the week a few minutes after 4:00pm AZ every Monday'},
