@@ -987,7 +987,11 @@ function asideTail(r, seat){
   var a = r.aside || [];
   if (!a.length) return '';
   return ' ' + a.map(function(x){
-    var owed = (x.owedTo || []).map(function(o){ return o === seat ? 'you' : o; });
+    /* "YOU" LEADS. "they beat Dos Pigs and you" puts the reader last in a sentence that is
+       about them. */
+    var owed = (x.owedTo || []).slice().sort(function(a, b){
+      return a === seat ? -1 : b === seat ? 1 : 0;
+    }).map(function(o){ return o === seat ? 'you' : o; });
     return x.seat + ' also asked for ' + r.pickup + ', but stood aside: they beat '
       + (nameList(owed) || 'another owner') + ' in an earlier coin flip this week.';
   }).join(' ');
