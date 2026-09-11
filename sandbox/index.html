@@ -2050,18 +2050,20 @@ var SEEDNOTE = '<p><b>It is a randomizer.</b> Nobody can predict it, nobody can 
   + 'every owner in a contest has exactly the same chance.</p>'
   + '<p>The one difference from a dice roll is where the randomness comes from. A dice roll uses '
   + '<b>the instant you press the button</b>, so it is a different answer every time and gone the '
-  + 'moment it is read. This one is worked out from <b>the week, the division, the team, and '
-  + 'which round it was</b> — facts that do not change — so <b>the same contest always '
-  + 'comes out the same way</b>, on any device, on any day, no matter who presses run.</p>'
+  + 'moment it is read. This one is worked out from <b>the week, the division, the team and the '
+  + 'round</b> — facts that do not change — so <b>the same coin flip always comes out '
+  + 'the same way</b>, on any device, on any day, no matter who presses run.</p>'
   + '<p><b>Why that is worth having.</b> If an owner asks how Navy went the way it did, Bob '
   + 'presses run again and gets the identical answer. Nobody can quietly run it a second time '
   + 'until they like the result, and nobody has to take Bob&rsquo;s word for it.</p>'
-  + '<p><b>And if the week changes, only what changed is re-drawn.</b> Undo the week, add the '
-  + 'request that came in at 3:50, and run it again: the contests that request joins are drawn '
-  + 'fresh — they have a new name in them, so they have to be — while every other team '
-  + 'in the division comes out exactly as it did before. That is the point of working it out '
-  + 'from the contest rather than from a counter: a late entry cannot re-roll a contest it had '
-  + 'nothing to do with.</p>';
+  /* THE SAME POINT, IN ONE SENTENCE THE READER ALREADY HAS THE WORDS FOR. Casey, 11 Sep 2026:
+     "the contests that request joins are drawn fresh -- what does that mean? From contest,
+     counter, what are you talking about?" Every noun in that paragraph was mine, not his. It
+     stays because the question it answers is HIS OWN -- what happens when Bob undoes a week to
+     add a trade -- but it says only the answer now, with no mechanism in it at all. */
+  + '<p><b>Undoing a week and running it again is safe.</b> Only the teams you changed something '
+  + 'about come out differently. Add a trade that arrived late, run it again, and every other '
+  + 'team in the division goes to exactly the owner it went to the first time.</p>';
 /* RUNNING A WEEK TWICE IS NOT A REDO, IT IS A SECOND, SMALLER RUN. The resolver works on what
    is entered NOW against the rosters as they stand NOW, so a second press settles only what has
    arrived since — it cannot undo or repeat what the first one did. There is a real reason to
