@@ -1805,12 +1805,13 @@ function rulesRows(){
      + 'has already played. A team in its second week is fine. So is a team you would not yet '
      + 'be allowed to drop yourself.'],
     ['How many games each team needs left',
-     'These are two different numbers, and this is the one people get wrong.<br>'
-     + 'The team you <b>drop</b> needs <b>' + away + '</b> regular season game'
-     + (away === 1 ? '' : 's') + ' still to play.<br>'
-     + 'The team you <b>pick up</b> needs <b>' + claim + '</b>.<br>'
+     'These are two different numbers, and this is the one people get wrong.'
+     + '<ul><li>The team you <b>drop</b> needs <b>' + away + '</b> regular season game'
+     + (away === 1 ? '' : 's') + ' still to play.</li>'
+     + '<li>The team you <b>pick up</b> needs <b>' + claim + '</b>.</li></ul>'
      + 'Bowl games and playoff games do not count toward either one. Only regular season games '
-     + 'do. That is why college trading stops in November while NFL trading runs into December.'],
+     + 'do. That is why college trading stops in November while NFL trading runs into '
+     + 'December.'],
     ['A team whose season is over',
      'It cannot be traded away at all. It stays on your roster to the end of the year, however '
      + 'long you have held it.'],
