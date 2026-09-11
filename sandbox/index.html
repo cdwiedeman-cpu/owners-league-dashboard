@@ -1775,48 +1775,64 @@ function ppick(id, name){
  * Casey, 11 Sep 2026: "I think you already have that in the rules, but I want to make sure."
  * Every number below comes from the payload, which comes from season_state.py. A rule typed
  * into a sentence beside code that uses a constant is a rule with two values.               */
+/* WHAT YOU ARE ALLOWED TO TRADE. Behind a button, not in the way.
+   Casey, 11 Sep 2026: "that is nice, but I think it should be a button they can push to open,
+   because now it makes the screen very long before you even get to the trade section."
+   The first version also had a row headed "Games still to play / the trap" with "Going out:"
+   and "Coming in:" in it. His words: "I think this is for you yourself." It was -- "the trap"
+   named MY difficulty in keeping the two numbers straight, and the labels were shorthand for a
+   distinction the reader had not been told about yet. Say the two numbers, in two sentences, and
+   let the reader see they are different. */
 function rulesCard(){
+  return '<div class="row" style="margin-top:10px;border-top:1px solid var(--line);'
+    + 'padding-top:10px"><button onclick="showHelp(\'What you are allowed to trade\',RULESNOTE)">'
+    + 'What am I allowed to trade?</button>'
+    + '<span class="note">The 3-game rules, in plain words.</span></div>';
+}
+function rulesRows(){
   var hold = DATA.hold_games || 3, claim = DATA.claim_min || 3;
   var away = DATA.trade_away_min == null ? 1 : DATA.trade_away_min;
   var fr = DATA.drop_freeze == null ? 1 : DATA.drop_freeze;
-  return '<div class="card"><h2>What you are allowed to trade</h2>'
-    + '<p class="note">Both of the big rules are counted in <b>games</b>, never in weeks, and '
-    + 'they are <b>not the same rule</b>.</p>'
-    + '<div class="scr"><table><colgroup><col style="width:34%"><col style="width:66%">'
-    + '</colgroup><tbody>'
-    + '<tr><td><b>To drop a team</b></td><td class="d">You must have held it for <b>' + hold
-    + ' of its games</b>. For a team you drafted that counts from draft day, '
-    + esc(prettyDay(DATA.draft_day)) + (DATA.hold_from_draft_day
-        ? ' &mdash; and a game played <b>on</b> draft day counts' : '')
-    + '. For a team you picked up, it starts again the day you got it. <b>A bye is not a '
-    + 'game</b>: it costs you a week of the roster slot and moves the count nowhere.</td></tr>'
-    + '<tr><td><b>To pick a team up</b></td><td class="d">It must have <b>' + claim + ' games '
-    + 'still to play</b>. <b>How many it has already played does not matter</b> &mdash; a team '
-    + 'in its second week is fine, and so is one you could not have dropped yourself.</td></tr>'
-    /* THE TWO "GAMES REMAINING" NUMBERS ARE DIFFERENT, AND THEY SIT NEXT TO EACH OTHER SO THAT
-       IS VISIBLE. Casey, 11 Sep 2026: "do we also have a rule that the team the owner is going to
-       drop must also have three games remaining? I think we have that rule and I'm forgetting."
-       The commissioner's rules say ONE out, THREE in, in a single sentence -- and a reader who
-       has half of it remembers the wrong half. Putting them in one row is the answer. */
-    + '<tr><td><b>Games still to play</b><div class="f" style="font-size:11px">the trap</div>'
-    + '</td><td class="d">These two numbers are <b>not the same</b>, and they are in one sentence '
-    + 'of the league rules:<br><b>Going out: ' + away + '.</b> The team you drop only has to have '
-    + away + ' regular season game' + (away === 1 ? '' : 's') + ' left. Once its season is over it '
-    + 'cannot be traded away at all &mdash; it stays on your roster to the end of the year, '
-    + 'however long you have held it.<br><b>Coming in: ' + claim + '.</b> The team you pick up '
-    + 'needs ' + claim + '.<br>Bowl games, playoff games and conference championships do not '
-    + 'count toward either. Only games actually on a regular season schedule do, which is why '
-    + 'college trading stops in November while NFL trading runs to December.</td></tr>'
-    + '<tr><td><b>Same kind for same kind</b></td><td class="d">College for college, NFL for '
-    + 'NFL. FBS and FCS are both college. That is what keeps every roster at 8 college and 3 '
-    + 'NFL.</td></tr>'
-    + '<tr><td><b>After a team is dropped</b></td><td class="d">It sits out ' + fr + ' game'
-    + (fr === 1 ? '' : 's') + ' before anybody can pick it up &mdash; one game, not seven '
-    + 'days.</td></tr>'
+  return [
+    ['To drop a team',
+     'You have to have held it for <b>' + hold + ' of its games</b>. For a team you drafted, '
+     + 'that counts from draft day, ' + esc(prettyDay(DATA.draft_day)) + '. A game played on '
+     + 'draft day counts. For a team you picked up, the ' + hold + ' games start again on the '
+     + 'day you got it. A bye is not a game. It costs you a week of the roster spot and moves '
+     + 'the count nowhere.'],
+    ['To pick a team up',
+     'It has to have <b>' + claim + ' games still to play</b>. It does not matter how many it '
+     + 'has already played. A team in its second week is fine. So is a team you would not yet '
+     + 'be allowed to drop yourself.'],
+    ['How many games each team needs left',
+     'These are two different numbers, and this is the one people get wrong.<br>'
+     + 'The team you <b>drop</b> needs <b>' + away + '</b> regular season game'
+     + (away === 1 ? '' : 's') + ' still to play.<br>'
+     + 'The team you <b>pick up</b> needs <b>' + claim + '</b>.<br>'
+     + 'Bowl games and playoff games do not count toward either one. Only regular season games '
+     + 'do. That is why college trading stops in November while NFL trading runs into December.'],
+    ['A team whose season is over',
+     'It cannot be traded away at all. It stays on your roster to the end of the year, however '
+     + 'long you have held it.'],
+    ['Same kind for same kind',
+     'College for college, NFL for NFL. FBS and FCS both count as college. This is what keeps '
+     + 'every roster at 8 college teams and 3 NFL teams.'],
+    ['After a team is dropped',
+     'It sits out ' + fr + ' game' + (fr === 1 ? '' : 's') + ' before anybody can pick it up. '
+     + 'One game, not seven days.'],
+  ];
+}
+var RULESNOTE = '';      // filled once DATA is readable, at the bottom of this file
+function buildRulesNote(){
+  RULESNOTE = '<p class="note">Both of the big rules are counted in <b>games</b>, never in '
+    + 'weeks.</p><div class="scr"><table>'
+    + '<colgroup><col style="width:34%"><col style="width:66%"></colgroup><tbody>'
+    + rulesRows().map(function(r){
+        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
+      }).join('')
     + '</tbody></table></div>'
-    + '<p class="note">Every list on this page follows these. A team you cannot choose is still '
-    + 'shown, with the reason on it, so you can see what is holding it up and when it '
-    + 'clears.</p></div>';
+    + '<p class="note">Every list on this page already follows these. A team you cannot choose '
+    + 'is still shown, with the reason on it and the date it clears.</p>';
 }
 
 function rowForm(r, i, free, mine, k){
@@ -2049,10 +2065,10 @@ function viewRun(){
 var SEEDNOTE = '<p><b>It is a randomizer.</b> Nobody can predict it, nobody can steer it, and '
   + 'every owner in a coin flip has exactly the same chance.</p>'
   + '<p>The one difference from a dice roll is where the randomness comes from. A dice roll uses '
-  + '<b>the instant you press the button</b>, so it is a different answer every time and gone the '
-  + 'moment it is read. This one is worked out from <b>the week, the division, the team and the '
-  + 'round</b> — facts that do not change — so <b>the same coin flip always comes out '
-  + 'the same way</b>, on any device, on any day, no matter who presses run.</p>'
+  + '<b>the instant you press the button</b>, so it gives a different answer every time. This one '
+  + 'is worked out from <b>the week, the division, the team and the round</b>. Those four things '
+  + 'never change. So <b>the same coin flip always comes out the same way</b>, on any device and '
+  + 'on any day, no matter who presses run.</p>'
   + '<p><b>Why that is worth having.</b> If an owner asks how Navy went the way it did, Bob '
   + 'presses run again and gets the identical answer. Nobody can quietly run it a second time '
   + 'until they like the result, and nobody has to take Bob&rsquo;s word for it.</p>'
@@ -2145,8 +2161,8 @@ function askUndo(){
   var claims = after.filter(function(e){ return e.how === 'first come'; });
   var other = after.length - claims.length;
   showHelp('Undo Monday and start again?',
-    '<p>This puts every roster back to how it stood at 4:00pm AZ and <b>keeps every list exactly as '
-    + 'it was typed</b>. Nobody re-enters anything.</p>'
+    '<p>Every roster goes back to how it stood at 4:00pm AZ. <b>Every owner\u2019s list stays '
+    + 'exactly as they typed it.</b> Nobody has to enter anything again.</p>'
     + (claims.length
         ? '<div class="card warn" style="margin:10px 0"><b>' + claims.length
           + ' first come, first served claim' + (claims.length === 1 ? '' : 's')
@@ -2164,14 +2180,14 @@ function askUndo(){
         : '')
     + (other ? '<p class="b">' + other + ' other change' + (other === 1 ? '' : 's')
              + ' since the flips will also be undone.</p>' : '')
-    + '<p>Then add the request you missed and run it again. The whole week is settled from '
-    + 'scratch with everything in it, which is the only way to get the answer the week should '
-    + 'have had — a late request can join a contest somebody else won, and that changes who won '
-    + 'it.</p>'
-    + '<p class="b"><b>Only do this before you have told anybody the results.</b> Re-running can '
-    + 'legitimately give a team to a different owner, and the first set of results was wrong '
-    + 'rather than unlucky — but somebody who has already been told they won Navy will not see '
-    + 'it that way.</p>'
+    + '<p>Then add the request you missed and run the week again. It is settled from the start '
+    + 'with everything in it.</p>'
+    + '<p>That is the only way to get the right answer. A late request does not just add one '
+    + 'trade. It can join a coin flip somebody else won, and then it changes who won that team '
+    + 'too.</p>'
+    + '<p class="b"><b>Only do this before you have told anybody the results.</b> Running the week '
+    + 'again can give a team to a different owner. That is correct, because the first answer was '
+    + 'wrong. But an owner who has already been told they won Navy will not see it that way.</p>'
     + '<div class="row" style="margin-top:10px">'
     + '<button class="dang" onclick="doUndo()">Undo it and put the lists back</button>'
     + '<button onclick="closeHelp()">Leave it alone</button></div>');
@@ -2379,8 +2395,8 @@ function logCard(){
   if (!L.length){
     return '<div class="card"><h2>Recent changes</h2><p class="note">Nothing on this list has '
       + 'been changed yet. Every address change and every retirement is recorded here with its '
-      + 'date, so a seat that has changed hands has a history you can read — which is why '
-      + 'none of that has to sit in the columns above.</p></div>';
+      + 'date. So a seat that has changed hands has a history you can read, and none of it has to '
+      + 'sit in the columns above.</p></div>';
   }
   return '<div class="card"><h2>Recent changes</h2>'
     + '<p class="note">Newest first. In the Google Sheet this is the <b>Log</b> tab, written by '
@@ -2662,6 +2678,7 @@ function boot(){
   save();
   render();
 }
+buildRulesNote();
 boot();
 </script>
 </body></html>
