@@ -1156,8 +1156,8 @@ function render(){
   el('clockchip').innerHTML = ' &nbsp;·&nbsp; ' + esc(pretty(now())) + ' &nbsp;·&nbsp; '
     + (mode() === 'fcfs' ? 'first come, first served' : 'peloton entry open')
     + ' &nbsp;·&nbsp; week ' + weekNo();
-  el('subline').innerHTML = 'A copy of the real rosters, a clock you can move, and the same '
-    + 'resolver the live one will use. ' + (s && s.seat
+  el('subline').innerHTML = 'A copy of the real rosters, a clock you can move, and the same rules the live '
+    + 'one will use. ' + (s && s.seat
       ? 'Signed in on <b>device ' + esc(S.device) + '</b> as <b>' + esc(s.seat) + '</b>.'
       : 'Not signed in on device ' + esc(S.device) + '.');
   el('tabs').innerHTML = TABS.map(function(t){
@@ -1409,7 +1409,7 @@ function submitList(){
   var a = actingSeat();
   S.requests[key(a.div, a.seat)].submitted = now();
   save();
-  showHelp('You are entered for Monday',
+  showHelp('You Are Entered for Monday',
     '<p>Your list is in for week ' + weekNo() + '. Nothing happens until Monday at 4:00pm AZ.</p>'
     + '<p>You can change it any time before then — press <b>Change My List</b>, make the change, '
     + 'and send it again.</p>');
@@ -1457,7 +1457,7 @@ function viewTrades(){
      THE PROCESS** — the reader needs the shape of the week before they need today's form. */
   var h = clockBanner() + twoWays(fcfs);
   if (s.role === 'commissioner'){
-    h += '<div class="card"><h2>Commissioner — entering for someone else</h2>'
+    h += '<div class="card"><h2>Commissioner — Entering for Someone Else</h2>'
       + '<p class="note">Same form, same rules, same clock. The only difference is the line in '
       + 'the log saying you entered it, and the email that goes to them saying so.</p>'
       + '<label class="lb" for="ba">Submitting for</label><select id="ba" '
@@ -1538,7 +1538,7 @@ function viewTrades(){
      question they arrived with, so then it goes at the top. Until then it belongs beside the
      button that changes it, and nowhere else. */
   if (sent){
-    h += '<div class="card" style="border-color:#245c39"><h2 class="g">You are entered for '
+    h += '<div class="card" style="border-color:#245c39"><h2 class="g">You Are Entered for '
       + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. Nothing happens '
       + 'until Monday at 4:00pm AZ, and you can change it any time before then.</p>'
       + '<div class="row"><button onclick="unsubmit()">Change My List</button></div></div>';
@@ -2088,7 +2088,7 @@ function viewRun(){
                  + 'still sign in.'}],
         mail ? 'Each owner is emailed their own results within a minute of a week being settled.'
              : 'Nobody is emailed. When you settle a week, the <b>Week ' + weekNo()
-               + ' — what happened</b> section further down this page gains a <b>Copy every '
+               + ' — What Happened</b> section gains a <b>Copy every '
                + 'owner\'s email</b> button: every message at once, each with the address it '
                + 'goes to.')
     + '</div>';
@@ -2132,7 +2132,7 @@ function viewRun(){
   if (S.results) h += resultsCard();
 
   if (reqs.length){
-    h += '<div class="card"><h2>Waiting to be settled</h2><div class="scr"><table>'
+    h += '<div class="card"><h2>Waiting to Be Settled</h2><div class="scr"><table>'
       + '<colgroup><col style="width:34%"><col style="width:14%"><col style="width:52%"></colgroup>'
       + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th></tr></thead><tbody>'
       + reqs.map(function(r){
@@ -2189,9 +2189,9 @@ function askRun(){
   showHelp('Week ' + weekNo() + ' has already been settled',
     '<p>It ran at <b>' + esc(pretty(prev.at)) + '</b> and moved ' + prev.n + ' team'
     + (prev.n === 1 ? '' : 's') + '.</p>'
-    + '<p><b>If you missed somebody, undo it and run the whole week again.</b> A late request can '
-    + 'join a contest another owner won, and that changes who won it — so settling the latecomer '
-    + 'on top of the result cannot reach the answer the week should have had.</p>'
+    + '<p><b>If you missed somebody, undo it and run the whole week again.</b> A late request '
+    + 'can join a coin flip that another owner already won. That changes who wins the flip. '
+    + 'Settling the late request on its own cannot reach the answer the week should have had.</p>'
     + (u && !u.blocked
         ? '<div class="row" style="margin-top:10px">'
           + '<button class="pri" onclick="closeHelp();askUndo()">Undo it and start again</button>'
@@ -2333,7 +2333,7 @@ function resultsCard(){
   if (!keys.length) return '<div class="card"><div class="empty">The week resolved with nothing '
     + 'in it — no seat had a readable row.</div></div>';
   var mailed = S.autoEmail !== false;
-  return '<div class="card"><h2>Week ' + R.week + ' — what happened</h2>'
+  return '<div class="card"><h2>Week ' + R.week + ' — What Happened</h2>'
     + '<p class="note">Run at ' + esc(pretty(R.at)) + '. Every row gets a sentence. A blank row '
     + 'would leave an owner unable to tell a loss from a bug.</p>'
     + (mailed
@@ -2370,7 +2370,7 @@ function claimQueueCard(){
   var q = S.claimQueue || [];
   if (!q.length) return '';
   var waiting = q.filter(function(c){ return c.state === 'waiting'; }).length;
-  return '<div class="card warn"><h2>First come claims to decide again</h2>'
+  return '<div class="card warn"><h2>First Come Claims to Decide Again</h2>'
     + '<p class="note">These came in after the flips and were taken off the rosters when you '
     + 'undid the week. Re-run the week first, then try each one — the team may have gone to '
     + 'somebody else this time.</p>'
@@ -2672,9 +2672,8 @@ function bump(i){
                  + 'turned away. The seat is now sealed against any key handed out before now, '
                  + 'which is what you want if you are about to hand it over.') + '</p>'
     + '<p class="d">The <b>Signed in</b> column reads <i>nobody signed in</i> now. That is the '
-    + 'whole of what changed on the row — there is no leftover state to clear, and this '
-    + 'retirement is written into <b>Recent Changes</b> at the bottom of the page with its '
-    + 'date.</p>'
+    + 'whole of what changed on the row, and there is nothing left for you to clear. The '
+    + 'retirement is written into <b>Recent Changes</b> with its date.</p>'
     + (stillOurs
         ? '<p><b>' + esc(stillOurs) + ' is still the address on this seat</b>, so that person '
           + 'can ask for a new link and sign back in. That is correct: retiring keys ends the '
@@ -2714,7 +2713,7 @@ function viewRosters(){
     + 'what you have done in here, and none of it has left this browser.</p>'
     + '<div class="row"><button class="dang" onclick="doReset()">Put the Real Rosters Back</button>'
     + '</div></div>';
-  h += S.log.length ? '<div class="card"><h2>What has moved</h2><div class="scr"><table>'
+  h += S.log.length ? '<div class="card"><h2>What Has Moved</h2><div class="scr"><table>'
       + '<colgroup><col style="width:24%"><col style="width:22%"><col style="width:22%">'
       + '<col style="width:32%"></colgroup>'
       + '<thead><tr><th>Seat</th><th>In</th><th>Out</th><th>How</th></tr></thead><tbody>'
