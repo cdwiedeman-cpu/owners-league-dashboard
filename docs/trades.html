@@ -292,45 +292,53 @@ ol li,ul li{margin:0 0 7px}
 <p>Google asks for a six digit code when it sees a sign-in from a computer it does not recognise.
    Casey&rsquo;s phone produces those codes. Bob needs a phone that produces the same ones, or he
    will have to ring Casey every time.</p>
-<p>The two phones have to hold <b>the same secret</b>. There is only one secret on the account, and
-   Google shows it exactly once, on the screen where you set the authenticator up. It cannot be
-   read back afterwards. So the way to give Bob a working phone is to set the authenticator up one
-   more time and write the secret down while it is on the screen.</p>
+<p>Both phones have to hold <b>the same secret</b>. There is only one secret on the account, and
+   Google shows it exactly once, on the screen where the authenticator is set up. It cannot be
+   read back afterwards.</p>
+<p><b>Use Google Authenticator rather than any other authenticator app.</b> It can copy an account
+   straight to another phone, which no other app here does. That means a new phone, or a second
+   person, takes about a minute and never touches the Google account. It is worth the few minutes
+   it takes to move over.</p>
 
-<h4>What to Do</h4>
-<p>Casey does this on a computer, signed in to the league account.</p>
+<h4>Setting It Up on Casey&rsquo;s Phone</h4>
+<p>Do this once, on a computer, signed in to the league account. It replaces whatever authenticator
+   was there before.</p>
 <ol>
-  <li>Open the Google Account security settings, then <b>2-Step Verification</b>, then
-      <b>Authenticator</b>, and start setting it up again.</li>
-  <li>Google shows a QR code. <b>Do not scan it yet.</b> Click <b>Can't scan it?</b> beside it.
-      Google shows the same secret written out as a string of letters and numbers.</li>
-  <li><b>Write that string down.</b> This is the step that matters. Once you finish the setup it
-      is gone for good, and the only way back is to do all of this again.</li>
-  <li>Add it to Casey&rsquo;s phone, then finish the setup by typing in the six digits his phone
-      shows.</li>
-  <li>Give Bob the string, and he adds it to his phone the same way.</li>
+  <li>Install <b>Google Authenticator</b> on Casey&rsquo;s phone. Open it and leave it on the
+      welcome screen.</li>
+  <li>On the computer, open the Google Account security settings, then <b>2-Step Verification</b>,
+      then <b>Authenticator</b>, and start setting it up again.</li>
+  <li>Google shows a QR code. Before scanning it, click <b>Can't scan it?</b> beside it and
+      <b>write down the string of letters and numbers</b> it shows. That string is the secret, and
+      this is the only screen it ever appears on. Keep it with the password.</li>
+  <li>In Google Authenticator on Casey&rsquo;s phone, tap <b>+</b>, then <b>Scan a QR code</b>, and
+      point it at the computer screen.</li>
+  <li>Type the six digits the phone shows into the computer to finish.</li>
+  <li>Delete the old entry from Microsoft Authenticator. It stopped working the moment this one
+      was set up, and an entry that looks right but is dead is worse than no entry at all.</li>
 </ol>
-<p>Both phones then show the same six digits at the same second, and they keep matching from then
-   on. Check that before you call it done.</p>
-
-<h4>Adding the String to a Phone</h4>
-<p>This works in any authenticator app. The wording differs a little between them.</p>
-<ul>
-  <li><b>Microsoft Authenticator:</b> tap <b>+</b>, choose <b>Other account</b>, then choose the
-      option to enter a code manually. Type a name for it and paste the string in.</li>
-  <li><b>Google Authenticator:</b> tap <b>+</b>, choose <b>Enter a setup key</b>, type a name for
-      it and paste the string in, and leave the type on <b>Time based</b>.</li>
-</ul>
-<p>The two of you do not have to use the same app. The secret is what has to match, not the app.</p>
-<p>Setting the authenticator up again replaces whatever was there before, so delete the old entry
-   from Casey&rsquo;s phone once the new one is working. Two entries that look alike, only one of
-   which works, is a bad thing to own on the morning something is wrong.</p>
-<p>That string is worth exactly as much as the password. Hand it to Bob the way you handed him the
-   password, and never put it in an email.</p>
-<p><b>Do not scan any of this with the phone&rsquo;s camera.</b> The camera hands these codes to
+<p><b>Do not scan that QR code with the phone&rsquo;s camera.</b> The camera hands these codes to
    the phone&rsquo;s password manager, which then asks for a username, a password and a website,
-   and none of that is what you want. Scanning and typing both happen inside the authenticator
-   app.</p>
+   and none of that is what you want. Scan from inside Google Authenticator.</p>
+
+<h4>Then Putting It on Bob&rsquo;s Phone</h4>
+<p>Bob installs Google Authenticator and leaves it on the welcome screen. Then pick whichever of
+   these suits where the two of you are.</p>
+<p><b>In the same room.</b> One phone shows a code and the other reads it off the screen.</p>
+<ol>
+  <li>On Casey&rsquo;s phone, open Google Authenticator, open its menu, and choose <b>Transfer
+      accounts</b>, then <b>Export accounts</b>.</li>
+  <li>Tick the league account and tap Next. A QR code appears.</li>
+  <li>On Bob&rsquo;s phone, open Google Authenticator, open its menu, and choose <b>Transfer
+      accounts</b>, then <b>Import accounts</b>, then <b>Scan QR code</b>.</li>
+  <li>Point Bob&rsquo;s phone at Casey&rsquo;s screen.</li>
+</ol>
+<p><b>Apart.</b> Give Bob the string that was written down. He taps <b>+</b>, chooses <b>Enter a
+   setup key</b>, types a name and the string, and leaves the type on <b>Time based</b>.</p>
+<p>Either way, check that both phones show the same six digits at the same second before you call
+   it done.</p>
+<p>That string is worth exactly as much as the password. Hand it to Bob the way the password was
+   handed over, and never put it in an email.</p>
 
 <h4>Bob Adds a Passkey, and Then He Is Done</h4>
 <p>Once Bob has signed in on his own phone or laptop, have him open the Google Account security
