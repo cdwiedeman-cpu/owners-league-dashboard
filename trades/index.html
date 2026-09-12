@@ -887,18 +887,44 @@ function adopt(x){
 /* THE ACCESS TAB IS TYPED BY PEOPLE AND READ BY THE PROGRAM. Email, status and role come from
    the spreadsheet every time the page loads, so changing somebody's address there is all it
    takes. The seats themselves are the league's and are never taken from a typed row. */
+/* THE SPREADSHEET SPELLS A DIVISION OUT AND THE PROGRAM USES A CODE.
+   The Access tab says "Predator"; everything in here says "PFD". A join on the raw strings
+   matches NOTHING, and because the join simply found nothing it failed in silence: Casey typed
+   the commissioner key, signed in, and saw no commissioner tabs. He was a commissioner on the
+   Access tab the whole time.
+   THIS IS THE SAME CLASS OF BUG AS THE TEAM NAMES, and the same answer: one place that folds
+   every spelling of a division onto the one the program uses. `DATA.div_names` already maps the
+   code to the name, so the reverse of it is the table -- never a second list to keep in step. */
+var DIV_CODE = (function(){
+  var m = {};
+  Object.keys(DATA.div_names || {}).forEach(function(code){
+    m[String(code).toLowerCase()] = code;
+    m[String(DATA.div_names[code]).toLowerCase()] = code;
+  });
+  return m;
+})();
+function divCode(x){
+  var k = String(x == null ? '' : x).trim().toLowerCase();
+  return DIV_CODE[k] || x;
+}
+
 function adoptAccess(rows){
   if (!rows || !rows.length) return;
-  var by = {};
-  rows.forEach(function(r){ by[key(r.div, r.seat)] = r; });
+  var by = {}, hit = 0;
+  rows.forEach(function(r){ by[key(divCode(r.div), String(r.seat || '').trim())] = r; });
   (S.access || []).forEach(function(a){
-    var r = by[key(a.div, a.seat)];
+    var r = by[key(divCode(a.div), String(a.seat || '').trim())];
     if (!r) return;
+    hit++;
     a.email = r.email || '';
     a.status = r.status || 'active';
     a.role = r.role || 'owner';
   });
+  /* A JOIN THAT MATCHES NOTHING IS A FAULT, NOT AN EMPTY RESULT. It cost an evening once; it
+     says so on the page now rather than looking like a league where nobody is commissioner. */
+  ACCESS_JOIN = {rows: rows.length, matched: hit};
 }
+var ACCESS_JOIN = null;
 
 /* ---- the clock ---------------------------------------------------------------------------
  * Mountain time, because that is what the league runs on. The sandbox stores a plain
@@ -1409,9 +1435,9 @@ function render(){
     var sl = el('subline'); if (sl) sl.hidden = true;
     var only = {signin: viewSignIn, trades: viewTrades, run: viewRun,
                 access: viewAccess, rosters: viewRosters}[ONLY] || viewSignIn;
-    el('body').innerHTML = (COMMISH_TABS[ONLY] && !isCommish())
+    el('body').innerHTML = accessWarning() + ((COMMISH_TABS[ONLY] && !isCommish())
       ? commishOnly(ONLY === 'run' ? 'Run It' : 'The Access List')
-      : only();
+      : only());
     return;
   }
   var shown = allowedTabs();
@@ -1425,9 +1451,9 @@ function render(){
   var view = {signin: viewSignIn, trades: viewTrades, run: viewRun,
               access: viewAccess, rosters: viewRosters}[TAB] || viewSignIn;
   if (COMMISH_TABS[TAB] && !isCommish()){
-    el('body').innerHTML = commishOnly(TAB === 'run' ? 'Run It' : 'The Access List');
+    el('body').innerHTML = accessWarning() + commishOnly(TAB === 'run' ? 'Run It' : 'The Access List');
   } else {
-    el('body').innerHTML = view();
+    el('body').innerHTML = accessWarning() + view();
   }
 }
 
@@ -3089,6 +3115,18 @@ function saveKey(){
   Store.setKey(v);
   closeHelp();
   boot();
+}
+
+/* SAYING SO WHEN THE SPREADSHEET AND THE PAGE DO NOT AGREE ABOUT A SEAT. */
+function accessWarning(){
+  if (!Store.live() || !ACCESS_JOIN) return '';
+  if (ACCESS_JOIN.matched >= ACCESS_JOIN.rows) return '';
+  return '<div class="card warn"><h2>Some Rows of the Access Tab Do Not Match a Seat</h2>'
+    + '<p>The league sheet has <b>' + ACCESS_JOIN.rows + '</b> rows on its Access tab and <b>'
+    + ACCESS_JOIN.matched + '</b> of them line up with a seat in this league. Any row that does '
+    + 'not match is ignored, so the email address and the role on it do nothing.</p>'
+    + '<p>The Division and Seat columns have to read exactly as the league spells them. Paste '
+    + '<b>Owners_League_Access_List.csv</b> in again if a row has been edited by hand.</p></div>';
 }
 
 function boot(){
