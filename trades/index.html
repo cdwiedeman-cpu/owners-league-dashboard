@@ -1321,6 +1321,14 @@ var TABS = [['signin','Sign In'],['trades','My Trades'],['run','Run It'],
    THE ROLE COMES FROM THE ACCESS TAB, which is typed in the spreadsheet and read on every load.
    Nobody can give themselves the role from inside the page. */
 var COMMISH_TABS = {run: 1, access: 1};
+/* SHOWING ONE TAB ON ITS OWN. The league dashboard puts these tabs inside itself, and a tab
+   strip inside a tab strip reads as sloppy. With `?only=run` this page draws that one view and
+   nothing else -- no tab strip and no banner -- so the dashboard's own tabs are the only ones
+   the reader sees. Casey, 12 Sep 2026: "I want them inside the dashboard." */
+var ONLY = (function(){
+  var m = /[?&]only=([a-z]+)/.exec(String(location.search || ''));
+  return m ? m[1] : null;
+})();
 function isCommish(){
   var s = session();
   return !!(s && !s.dead && s.role === 'commissioner');
@@ -1392,6 +1400,20 @@ function render(){
     + 'one will use. ' + (s && s.seat
       ? 'Signed in on <b>device ' + esc(S.device) + '</b> as <b>' + esc(s.seat) + '</b>.'
       : 'Not signed in on device ' + esc(S.device) + '.');
+  if (ONLY){
+    /* ONE VIEW, NO CHROME. The gate still applies: a commissioner view asked for by a device
+       with no commissioner seat draws the refusal, not the view. */
+    var bar = el('tabs'); if (bar){ bar.innerHTML = ''; bar.hidden = true; }
+    var sb = el('sandbar'); if (sb) sb.hidden = true;
+    var h1 = document.querySelector('h1'); if (h1) h1.hidden = true;
+    var sl = el('subline'); if (sl) sl.hidden = true;
+    var only = {signin: viewSignIn, trades: viewTrades, run: viewRun,
+                access: viewAccess, rosters: viewRosters}[ONLY] || viewSignIn;
+    el('body').innerHTML = (COMMISH_TABS[ONLY] && !isCommish())
+      ? commishOnly(ONLY === 'run' ? 'Run It' : 'The Access List')
+      : only();
+    return;
+  }
   var shown = allowedTabs();
   /* A TAB THAT IS NO LONGER ALLOWED CANNOT STAY OPEN. Signing out of a commissioner's seat
      while the Run It tab is showing would otherwise leave it on screen. */
