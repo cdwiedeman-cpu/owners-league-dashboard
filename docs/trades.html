@@ -190,13 +190,13 @@ ol li,ul li{margin:0 0 7px}
 
   <header>
     <p class="eyebrow">Reality Football League · for the commissioner</p>
-    <h1>Trades and signing in</h1>
+    <h1>Trades and Signing In</h1>
     <p class="lead">How the trade page applies the rules you have been applying by hand, what to
       set up once, and what you can still do yourself.</p>
   </header>
 
 <section><h2>How it works</h2><p class="lead">Two ways a team changes hands, at two different times.</p>
-<p>Owners enter their own trades in the RFL application. Everything below is a rule you already
+<p>Owners enter their own trades in the RFL application. Everything in this table is a rule you already
    apply, and the application applies the same ones, in the same order, and shows its working. Nothing about the league
    changes.</p>
 <p>There are two ways a team changes hands, and they happen at different times:</p>
@@ -233,7 +233,7 @@ ol li,ul li{margin:0 0 7px}
         </ul></td></tr>
 <tr><td class="pool">Games left to claim</td>
     <td>The team being picked up needs <b>three regular season games still to play</b>. This is a
-        different rule from the one above, counted at the other end of the schedule.</td></tr>
+        different rule from the hold rule. The hold rule counts games a team has already played. This one counts games the team still has left.</td></tr>
 <tr><td class="pool">Games left to drop</td>
     <td>The team being dropped needs <b>one regular season game still to play</b>.</td></tr>
 <tr><td class="pool">Games already played<br>do not matter to a claim</td>
@@ -266,7 +266,7 @@ ol li,ul li{margin:0 0 7px}
 <section><h2>Setting it up</h2><p class="lead">Six steps, once, before the season.</p>
 <p>This is done once, before the season, and it takes about half an hour.</p>
 
-<h3>First, a Google account for the league</h3>
+<h3>First, a Google Account for the League</h3>
 <p>Three things sit behind the RFL application: the spreadsheet, the script that runs on Mondays, and the
    emails owners receive. All three live in one Google account. Casey and Bob agreed on
    <b>a new account for the league</b> rather than either of their personal ones, for three
@@ -280,7 +280,7 @@ ol li,ul li{margin:0 0 7px}
 <p>It is free and takes five minutes. Something like <span class="kbd">rflcommish@gmail.com</span>.
    Do the rest of these steps <b>while signed in to that account</b>.</p>
 
-<h3>Then the six steps</h3>
+<h3>Then the Six Steps</h3>
 <ol>
   <li>Make a new Google Sheet and name it <span class="kbd">RFL Trades</span>.</li>
   <li>Add a tab named <span class="kbd">Access</span>.</li>
@@ -292,12 +292,12 @@ ol li,ul li{margin:0 0 7px}
       <span class="kbd">commissioner</span>. This is what gives him the two abilities described
       later, and it has nothing to do with who owns the Google account.</li>
   <li>In the Sheet, click Extensions, then Apps Script. Paste in the script Casey provides, click
-      Deploy, and add the trigger (see below).</li>
+      Deploy, and add the trigger described in What the Trigger Is.</li>
 </ol>
 <p><b>Casey does step 6.</b> It needs the account password rather than just edit access to the
    Sheet, and it is the part he can work through with Claude.</p>
 
-<h3>The Access tab&rsquo;s columns</h3>
+<h3>The Access Tab&rsquo;s Columns</h3>
 <p>Four of them you type. Two the script writes, and you leave those alone.</p>
 <table><thead><tr><th>Column</th><th>What it is</th></tr></thead><tbody>
 <tr><td><b>Division, Seat</b></td><td>Already filled in from the CSV. Never edited.</td></tr>
@@ -323,7 +323,7 @@ ol li,ul li{margin:0 0 7px}
    Bob looks at before acting should say what is true now; what happened in August belongs in a
    log.</p>
 
-<h3>What the trigger is</h3>
+<h3>What the Trigger Is</h3>
 <p>A trigger is a schedule Google keeps on its own servers. It runs a piece of the script without
    anybody opening anything &mdash; no computer has to be switched on, and nobody has to
    remember. That is what makes Monday afternoon happen by itself.</p>
@@ -339,7 +339,7 @@ ol li,ul li{margin:0 0 7px}
    script happens to run at 4:01 or 4:04. Results are posted within about five minutes, and first
    come, first served opens the moment they are.</p>
 
-<h3>After that</h3>
+<h3>After That</h3>
 <p>The only thing anybody edits by hand is the Access tab, and Bob can do that with ordinary edit
    access to the Sheet &mdash; no password needed. Three other tabs appear on their own. <b>Requests</b> is
    filled in by the RFL application when owners submit. <b>Results</b> is written every Monday and becomes
@@ -358,7 +358,7 @@ ol li,ul li{margin:0 0 7px}
       their laptop, and that is the last they think about it.</li>
 </ol>
 
-<h3>Why an owner cannot enter trades as somebody else</h3>
+<h3>Why an Owner Cannot Enter Trades as Somebody Else</h3>
 <p>When they tap that link, the application stores a long random code in their browser. They never see
    it or type it. Every trade they submit carries that code, and the league looks it up to find
    out whose seat it is. Nothing announces a name, so there is no name for anybody to change.</p>
@@ -366,7 +366,7 @@ ol li,ul li{margin:0 0 7px}
    and the link goes to that owner's inbox. That owner also gets an email saying somebody tried
    to sign in as them.</p>
 
-<h3>If somebody cannot sign in</h3>
+<h3>If Somebody Cannot Sign In</h3>
 <p>The sign-in box says the same thing to everybody, whatever happened underneath &mdash;
    otherwise anybody could use it to find out who is in the league by typing addresses.</p>
 <p>What it does say, to everyone, is: if nothing arrives in a few minutes, your address may not
@@ -378,7 +378,7 @@ ol li,ul li{margin:0 0 7px}
    with whoever typed it. An address the league has never used gets nothing at all, so nobody can use
    the sign-in box to send mail to strangers.</p>
 
-<h3>Two things it does not do</h3>
+<h3>Two Things It Does Not Do</h3>
 <ul>
   <li>It does not stop anybody <b>reading</b> the page. The dashboard is a public web page and
       always has been. What is protected is submitting a trade.</li>
@@ -386,7 +386,7 @@ ol li,ul li{margin:0 0 7px}
       hands over your seat, the same as giving out a password.</li>
 </ul>
 
-<h3>Two owners on one team</h3>
+<h3>Two Owners on One Team</h3>
 <p>Casey and Dominic share a seat, so they get two rows on the Access tab with the same seat name
    and different email addresses. Both sign in on their own phones, both see the same thing, and
    neither has to sign out for the other.</p>
@@ -415,7 +415,7 @@ ol li,ul li{margin:0 0 7px}
   <li><b>Monday 4:00pm AZ.</b> Entry closes. Anything sent at 4:00pm or later is too late, and is
       stamped with the time it was sent, so the cut-off does not depend on when the script
       happens to run.</li>
-  <li>The RFL application settles every list that was submitted, division by division, in the order below.
+  <li>The RFL application settles every list that was submitted, division by division, in this order.
       Nobody presses anything.</li>
   <li><b>Within about five minutes.</b> Every owner gets an email telling them what happened to
       each of their entries. The results are on the page as well.</li>
@@ -424,7 +424,7 @@ ol li,ul li{margin:0 0 7px}
       rosters.</li>
 </ol>
 
-<h3>What the coin flip actually is</h3>
+<h3>What the Coin Flip Actually Is</h3>
 <p>It is a real randomizer. Nobody can predict it or steer it, and everybody in the flip has the
    same chance.</p>
 <p>The difference from a dice roll is where the randomness comes from. A dice roll uses the instant
@@ -435,7 +435,7 @@ ol li,ul li{margin:0 0 7px}
    and running it again is safe for the same reason. Only the teams you changed something about
    come out differently. Every other team goes to exactly the owner it went to the first time.</p>
 
-<h3>How Monday settles a contested team</h3>
+<h3>How Monday Settles a Contested Team</h3>
 <p>Each division is settled separately, from its own pool. A team owned in Viper can be free in
    Predator.</p>
 <ol>
@@ -457,7 +457,7 @@ ol li,ul li{margin:0 0 7px}
 </section>
 
 <section><h2>What only you can do</h2><p class="lead">Three actions no other owner has. Two of them are ordinary; the third is not.</p>
-<h3>Entering a request for somebody</h3>
+<h3>Entering a Request for Somebody</h3>
 <ol>
   <li>Sign in as yourself.</li>
   <li>On the trades page, choose their name from the <b>Submitting for</b> dropdown.</li>
@@ -467,7 +467,7 @@ ol li,ul li{margin:0 0 7px}
    flips, after that it is a first-come claim. The record shows both names, and that owner gets
    an email telling them you submitted for them.</p>
 
-<h3>Recording a trade that happened somewhere else</h3>
+<h3>Recording a Trade That Happened Somewhere Else</h3>
 <ol>
   <li>Use <b>Record a trade</b>.</li>
   <li>Pick the owner, the team coming in and the team going out.</li>
@@ -479,7 +479,7 @@ ol li,ul li{margin:0 0 7px}
 <p>It is deliberately <b>not</b> the same thing as <b>Correct a roster</b>. Recording a trade is normal.
    Correcting one is not.</p>
 
-<h3>Fixing something that went wrong</h3>
+<h3>Fixing Something That Went Wrong</h3>
 <ol>
   <li>Use the <b>Correction</b> button, not the trade form.</li>
   <li>Type what you are changing and why.</li>
@@ -500,7 +500,7 @@ ol li,ul li{margin:0 0 7px}
    is marked as a correction in the record, and the number of them is shown to you. If that
    number gets past two or three, tell Casey — it means something is not working.</p>
 
-<h3>Settling Monday yourself</h3>
+<h3>Settling Monday Yourself</h3>
 <p>There is a switch on the same page with two positions, and it stays there permanently.</p>
 <ul>
   <li><b>Automatic</b> &mdash; the schedule settles the week a few minutes after 4:00pm AZ every
@@ -511,7 +511,7 @@ ol li,ul li{margin:0 0 7px}
 </ul>
 <p>The button is there in both positions. Under <b>automatic</b> you would only use it to settle
    a week early, or to catch somebody who was missed.</p>
-<h3>If you missed somebody</h3>
+<h3>If You Missed Somebody</h3>
 <p>You run it at 4:05 and then open an email that had been sitting unread since 3:50. It happens.</p>
 <p>Use <b>Undo week N</b>, add the request you missed, and run it again.</p>
 <p>Undo puts every roster back to how it stood at 4:00pm AZ and <b>keeps every list exactly as it
@@ -538,7 +538,7 @@ ol li,ul li{margin:0 0 7px}
    anything already decided. It is right when the person you missed wanted a team nobody else
    asked for. If you are not sure, undo.</p>
 
-<h3>Sending the results yourself</h3>
+<h3>Sending the Results Yourself</h3>
 <p>A second switch, next to the first one, decides whether the tool emails owners their results.</p>
 <ul>
   <li><b>On</b> &mdash; each owner is emailed within a minute of a week being settled.</li>
@@ -552,7 +552,7 @@ ol li,ul li{margin:0 0 7px}
    into the page at all, including you. Turning results emails off never stops somebody signing
    in.</p>
 
-<h3>If somebody argues about a coin flip</h3>
+<h3>If Somebody Argues About a Coin Flip</h3>
 <p>You can re-run it and get the identical result. The flip is worked out from the week, the
    division and the team rather than being random, so the same week always comes out the same
    way. Show them twice and the argument is over.</p>
@@ -562,13 +562,13 @@ ol li,ul li{margin:0 0 7px}
 <p>Each of these is a small edit on the Access tab. Nothing has to be rebuilt and nobody else has
    to be involved. The change takes effect immediately.</p>
 
-<h3>An owner gets a new email address</h3>
+<h3>An Owner Gets a New Email Address</h3>
 <ol>
   <li>Type the new address over the old one.</li>
 </ol>
 <p>That is all. The old address stops working straight away, and their phone stays signed in.</p>
 
-<h3>An owner leaves and somebody new takes the team</h3>
+<h3>An Owner Leaves and Somebody New Takes the Team</h3>
 <ol>
   <li>Type the new owner's address over the old one.</li>
   <li>Type an <b>x</b> in the <b>Retire?</b> cell on that row.</li>
@@ -579,7 +579,7 @@ ol li,ul li{margin:0 0 7px}
    getting new links, but it does not reach the phone he is already signed in on. Step 2 does.</p>
 <p>The seat keeps its roster, its points and its history. Only the person changes.</p>
 
-<h3>An owner leaves and nobody has taken over</h3>
+<h3>An Owner Leaves and Nobody Has Taken Over</h3>
 <ol>
   <li>Change Status on that row from <span class="kbd">active</span> to
       <span class="kbd">inactive</span>.</li>
@@ -587,7 +587,7 @@ ol li,ul li{margin:0 0 7px}
 <p>The seat still shows up everywhere; it just cannot submit anything. Set it back to active when
    somebody takes it on.</p>
 
-<h3>An owner has no email address</h3>
+<h3>An Owner Has No Email Address</h3>
 <ol>
   <li>Leave their Email cell blank.</li>
   <li>They call or text you, and you enter their trades under their seat. See the next
@@ -596,7 +596,7 @@ ol li,ul li{margin:0 0 7px}
 <p>There is deliberately no second way of doing this — a code handed out instead would just be a
    password, and it would be lost by next August.</p>
 
-<h3>An owner says the page has them as the wrong person</h3>
+<h3>An Owner Says the RFL Application Has Them as the Wrong Person</h3>
 <ol>
   <li>Check their row on the Access tab. Their email address is almost certainly on the wrong
       seat.</li>
@@ -608,7 +608,7 @@ ol li,ul li{margin:0 0 7px}
 <p>Nobody is asked to trust this on day one. It goes live in three stages, and the league only
    notices the third.</p>
 
-<h3>Stage one &mdash; it runs, and only Bob uses it</h3>
+<h3>Stage One &mdash; It Runs, and Only Bob Uses It</h3>
 <p>The Sheet and the script go live. Nothing changes for the other owners: they keep emailing and
    phoning Bob exactly as they do now.</p>
 <p>What changes is what Bob does with those messages. His Monday looks like this:</p>
@@ -634,14 +634,14 @@ ol li,ul li{margin:0 0 7px}
 <p>Only two people sign in during this stage, which is also the cheapest possible test of the
    sign-in: if it works for two, the twenty-seventh is not different.</p>
 
-<h3>Stage two &mdash; a few weeks of watching it</h3>
+<h3>Stage Two &mdash; A Few Weeks of Watching It</h3>
 <p>Run it this way for two or three weeks. The buttons have already been tested. What is being
    checked now is whether the <i>record</i> the page produces matches what actually happened in
    the league. Compare the Transactions tab against what Bob would have
    written down. If those agree for three weeks, they will agree in December.</p>
 <p>Anything that comes up gets fixed while the audience is two people rather than twenty-seven.</p>
 
-<h3>Stage three &mdash; the owners</h3>
+<h3>Stage Three &mdash; The Owners</h3>
 <p>Fill in the remaining email addresses. Set settling to <b>automatic</b> and results emails
    <b>on</b>. Then tell the league. From that Monday,
    owners enter their own requests, Monday settles itself a few minutes after four, and everyone
