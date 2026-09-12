@@ -1468,7 +1468,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '11 Sep 2026, 11:41 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '12 Sep 2026, 12:28 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7717,6 +7717,102 @@ function openLeagueScout(n){
 }
 
 
+/* ---------- TRADES SETTLED IN THE TRADES APPLICATION --------------------------------------
+ * Casey, 12 Sep 2026: he and Bob will settle trades in the published trades page, and the
+ * rosters on THIS page have to move when they do -- not at the next rebuild.
+ *
+ * HOW IT IS DONE, AND WHY IT IS DONE THIS WAY. The page already knows how to read ownership
+ * that changes during a season: `owner_history.snapshots` is a list of `{week, labels}` and
+ * `ownersInWeek()` picks the latest one at or before a week. Every tab that scopes points or
+ * records to the weeks an owner held a team goes through that one function.
+ *
+ * So a settled trade is not a special case anywhere. It is one more snapshot. Standings,
+ * Weekly, the Season Summary and the roster lists all follow with nothing added to them, and
+ * a traded team's points still split by week exactly as they did before.
+ *
+ * IT REBUILDS FROM THE BAKED SNAPSHOT EVERY TIME rather than adding to what is already there.
+ * Applying a move twice would move a team twice, and this runs again every few minutes.
+ */
+const TRADES_API = 'https://script.google.com/macros/s/AKfycbwi0sPS4cxHkpSSlQak2Pk2J29HnpW1l0HKEixdB9d3I97mdzKzjUxQGyzSyyoDGPgG/exec';
+let BAKED_SNAPS = null, BAKED_TRADES = null, LIVE_TX_AT = null, LIVE_TX_N = 0, LIVE_TX_ERR = null;
+
+function _copyLabels(o){
+  const out = {};
+  for (const k in o) out[k] = (o[k] || []).map(p => [p[0], p[1]]);
+  return out;
+}
+
+function applyLiveTrades(list){
+  const hist = DATA.owner_history || (DATA.owner_history = {});
+  const txs = DATA.transactions || (DATA.transactions = {});
+  if (BAKED_SNAPS === null){
+    BAKED_SNAPS = (hist.snapshots || []).slice();
+    BAKED_TRADES = (txs.trades || []).slice();
+  }
+  hist.snapshots = BAKED_SNAPS.slice();
+  txs.trades = BAKED_TRADES.slice();
+  LIVE_TX_N = 0;
+  if (!list || !list.length) return;
+
+  const last = hist.snapshots[hist.snapshots.length - 1] || {week: 0, labels: {}};
+  let labels = _copyLabels(last.labels || {});
+  const byWeek = new Map();
+  list.forEach(t => {
+    if (!t || !t['in']) return;
+    const w = t.week == null ? 0 : +t.week;
+    if (!byWeek.has(w)) byWeek.set(w, []);
+    byWeek.get(w).push(t);
+  });
+  const weeks = [...byWeek.keys()].sort((a, b) => a - b);
+  for (const w of weeks){
+    for (const t of byWeek.get(w)){
+      const div = t.div, owner = t.owner;
+      if (t.out && labels[t.out])
+        labels[t.out] = labels[t.out].filter(p => !(p[0] === div && p[1] === owner));
+      if (!labels[t['in']]) labels[t['in']] = [];
+      if (!labels[t['in']].some(p => p[0] === div && p[1] === owner))
+        labels[t['in']].push([div, owner]);
+      txs.trades.push({window: null, div: div, owner: owner,
+                       old: t.out || '', new: t['in'],
+                       fee: DATA.trade_cost != null ? DATA.trade_cost : 3,
+                       fee_note: '', week: w, live: true,
+                       how: t.how || '', contested: !!t.contested});
+      LIVE_TX_N++;
+    }
+    /* THE MOVE TAKES EFFECT IN THE WEEK IT WAS SETTLED, so the snapshot is stamped with that
+       week and everything before it keeps the old owner. */
+    hist.snapshots.push({asof: null, week: w, source: 'trades page',
+                         labels: _copyLabels(labels)});
+  }
+  hist.snapshots.sort((a, b) => a.week - b.week);
+}
+
+function fetchLiveTrades(){
+  if (!TRADES_API) return Promise.resolve();
+  return fetch(TRADES_API + (TRADES_API.indexOf('?') < 0 ? '?' : '&') + 'fn=public')
+    .then(r => r.json())
+    .then(a => {
+      if (!a || !a.ok) throw new Error((a && a.note) || 'the league sheet did not answer');
+      LIVE_TX_ERR = null;
+      LIVE_TX_AT = new Date();
+      applyLiveTrades(a.transactions || []);
+    })
+    .catch(err => {
+      /* UNKNOWN IS NOT ZERO. If the trades could not be read, the page does NOT quietly show
+         the drafted rosters as though nothing had been traded. It says so on the chip. */
+      LIVE_TX_ERR = String(err && err.message ? err.message : err);
+    });
+}
+
+function liveTradeChip(){
+  if (!TRADES_API) return '';
+  if (LIVE_TX_ERR) return `<span class="chip b" title="${esc(LIVE_TX_ERR)}">Trades Not Loaded</span>`;
+  if (LIVE_TX_AT === null) return '<span class="chip">Reading Trades…</span>';
+  const at = LIVE_TX_AT.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  return `<span class="chip" title="Read from the league sheet at ${esc(at)} AZ.">${
+    LIVE_TX_N} trade${LIVE_TX_N === 1 ? '' : 's'} applied</span>`;
+}
+
 buildTabs();
 viewerLoad();
 VIEWER_SAVED = viewerSaved();
@@ -7727,9 +7823,19 @@ watchWake();
    — that page shows no projection, so it needs no model. Guarded rather than deleted: the same
    file builds both pages. */
 if (PROJ_ON) computeRerate();
-renderChips(); renderFilters(); renderScores(); renderStandings();
-if (PROJ_ON){ renderPick(); renderSlots(); renderRace(); }
-else { renderWeekly(); renderSummary(); renderTx(); }
+function paintAll(){
+  renderChips(); renderFilters(); renderScores(); renderStandings();
+  if (PROJ_ON){ renderPick(); renderSlots(); renderRace(); }
+  else { renderWeekly(); renderSummary(); renderTx(); }
+}
+paintAll();
+/* THE TRADES ARRIVE AFTER THE FIRST PAINT, so a slow sheet never holds up the scores, and then
+   the page redraws with them. Read again every five minutes, because a trade settled while this
+   page is open should reach it without a reload. */
+if (TRADES_API){
+  fetchLiveTrades().then(paintAll);
+  setInterval(() => fetchLiveTrades().then(paintAll), 300000);
+}
 /* ASK ONCE, ON FIRST OPEN. After the page has drawn, so a reader who skips is looking at a
    working dashboard and not a blank one, and so nothing here can stop the page rendering. */
 if (LEAGUE && !VIEWER) openSetup();
