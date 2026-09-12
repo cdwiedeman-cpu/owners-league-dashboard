@@ -289,39 +289,101 @@ ol li,ul li{margin:0 0 7px}
    did it. That is fine for a league, and it is the trade-off that comes with one login.</p>
 
 <h3>When You Sit Down Together</h3>
-<p>Everything up to this point Casey does on his own. This is the part that needs both of you,
-   and it takes about ten minutes. Work down the list in order.</p>
+<p>Everything up to this point Casey does on his own. This is the part that needs both of you, and
+   it takes about fifteen minutes. Casey brings the password and the setup key, both written on
+   paper. Work straight down this list.</p>
+
+<h4>1. Bob Installs Google Authenticator</h4>
 <ol>
-  <li><b>Bob installs Google Authenticator</b> from the App Store or the Play Store. He opens it
-      once and leaves it on the welcome screen. He does not add anything yet.</li>
-  <li><b>Bob types in the setup key.</b> Casey has the string of letters and numbers saved with
-      the password. In Google Authenticator, Bob taps <b>+</b>, chooses <b>Enter a setup key</b>,
-      types <span class="kbd">realityfootballcommish</span> as the name, types the string into the
-      key box, and leaves the type on <b>Time based</b>.</li>
-  <li><b>If the key is not to hand, copy it phone to phone instead.</b> On Casey&rsquo;s phone,
-      open Google Authenticator, open its menu, and choose <b>Transfer accounts</b>, then
-      <b>Export accounts</b>. Tick the league account and tap Next, and a QR code appears. On
-      Bob&rsquo;s phone, open the same menu and choose <b>Transfer accounts</b>, then <b>Import
-      accounts</b>, then <b>Scan QR code</b>, and point it at Casey&rsquo;s screen. He has to scan
-      from inside the app. The phone&rsquo;s own camera sends these codes to the password manager,
-      which then asks for a username and a website and gets you nowhere.</li>
-  <li><b>Check the two phones match.</b> They should show the same six digits at the same second.
-      If they do not, stop here and sort it out rather than moving on.</li>
-  <li><b>Casey gives Bob the password</b> for
-      <span class="kbd">realityfootballcommish@gmail.com</span>, out loud or written on paper.</li>
-  <li><b>Bob signs in on his own laptop or phone</b> using that password and a code from his own
-      Google Authenticator. This is the moment to confirm the whole thing works.</li>
-  <li><b>Bob adds a passkey on that device.</b> Open the Google Account security settings and add
-      one. From then on his fingerprint, face or screen lock opens the account on that device and
-      it stops asking for codes.</li>
-  <li><b>Open the RFL Trades spreadsheet together</b> and look at the Access tab. Bob&rsquo;s row
-      and Casey&rsquo;s row both read <span class="kbd">commissioner</span>. Every other row reads
-      <span class="kbd">owner</span>.</li>
-  <li><b>Go through the Email column.</b> Fill in every address Bob knows, and write down who is
-      still missing. Nobody can sign in until their address is in that column.</li>
+  <li>Open the App Store on an iPhone, or the Play Store on an Android phone.</li>
+  <li>Search for <b>Google Authenticator</b>. The one you want is published by Google LLC, and its
+      icon is a grey padlock on a white background. Several other apps have similar names.</li>
+  <li>Install it and open it.</li>
+  <li>The first screen is a welcome screen. Tap <b>Get started</b>.</li>
+  <li>It then offers to sign in with a Google account. Bob signs in with <b>his own</b> personal
+      Google account, which keeps a backup of his codes. If he has no Google account, or does not
+      want one involved, tap <b>Use Authenticator without an account</b> instead. Either choice
+      works. <b>Do not sign the app in to the league account.</b></li>
 </ol>
-<p>Bob has full access once he has four things. Nothing else is needed, because the spreadsheet
-   and the emails live inside the account.</p>
+<p>He now has an empty screen that says he has no codes yet.</p>
+
+<h4>2. Bob Adds the League Account by Typing the Key</h4>
+<ol>
+  <li>Tap the <b>+</b> button. On Android it sits at the bottom right of the screen. On an iPhone
+      it sits at the top right.</li>
+  <li>Two choices appear: <b>Scan a QR code</b> and <b>Enter a setup key</b>. Tap <b>Enter a setup
+      key</b>.</li>
+  <li>A form appears with three parts.
+      <ul>
+        <li><b>Account name</b> or <b>Account</b>: type
+            <span class="kbd">realityfootballcommish</span>. This is only a label, so any name Bob
+            will recognise is fine.</li>
+        <li><b>Your key</b> or <b>Key</b>: type in the string Casey brought. Spaces and capitals do
+            not matter, and Google Authenticator ignores them.</li>
+        <li><b>Type of key</b>: leave it on <b>Time based</b>. Do not change it to Counter
+            based.</li>
+      </ul></li>
+  <li>Tap <b>Add</b>.</li>
+</ol>
+<p>An entry appears showing six digits and a shrinking circle beside them. The digits change every
+   thirty seconds.</p>
+
+<h4>3. Check the Two Phones Agree</h4>
+<p>Hold the two phones side by side and look at the league entry on each. They must show the same
+   six digits at the same moment. If they differ, the key was typed wrong, so delete the entry on
+   Bob&rsquo;s phone and do part 2 again.</p>
+<p>If it still differs, check the clock. Both phones need the date and time set automatically, in
+   the phone&rsquo;s own date and time settings. These codes are built from the current time, so a
+   phone with a wrong clock produces wrong codes.</p>
+<p><b>Do not go on until the digits match.</b> Everything after this depends on them matching.</p>
+
+<h4>4. Casey Hands Over the Password</h4>
+<p>Casey gives Bob the password for
+   <span class="kbd">realityfootballcommish@gmail.com</span>, on paper or out loud. Bob puts it
+   wherever he keeps his own passwords. It does not go in an email.</p>
+
+<h4>5. Bob Signs In on His Own Laptop or Phone</h4>
+<ol>
+  <li>Bob opens a browser and goes to <span class="kbd">gmail.com</span>.</li>
+  <li>If a different account is already signed in, click the picture at the top right and choose
+      <b>Add another account</b>.</li>
+  <li>He types <span class="kbd">realityfootballcommish@gmail.com</span> and the password.</li>
+  <li>Google asks for a six digit code. Bob reads it off <b>his own</b> Google Authenticator and
+      types it in. If Google offers a different way first, choose <b>Try another way</b>, then
+      <b>Get a verification code from the Google Authenticator app</b>.</li>
+  <li>If Google offers to remember the device, say yes. That stops it asking on that device every
+      time.</li>
+</ol>
+<p>He is in. This is the moment the whole thing is proved, so do not skip it.</p>
+
+<h4>6. Bob Adds a Passkey on That Device</h4>
+<p>This is what stops Google asking him for codes on the device he uses most.</p>
+<ol>
+  <li>Still signed in as the league account, go to
+      <span class="kbd">myaccount.google.com</span>.</li>
+  <li>Open <b>Security</b>.</li>
+  <li>Find <b>How you sign in to Google</b> and open <b>Passkeys and security keys</b>.</li>
+  <li>Tap <b>Create a passkey</b>, then <b>Continue</b>.</li>
+  <li>The device asks for his fingerprint, his face, or the screen lock code. That is it.</li>
+</ol>
+<p>From now on that device opens the league account with his fingerprint or face. The code app is
+   only needed on a device that has no passkey.</p>
+
+<h4>7. The Two of You Look at the Spreadsheet</h4>
+<ol>
+  <li>Open <b>RFL Trades</b> and go to the <b>Access</b> tab.</li>
+  <li>Check that Bob&rsquo;s row and Casey&rsquo;s row both read
+      <span class="kbd">commissioner</span> in the Role column. Every other row reads
+      <span class="kbd">owner</span>.</li>
+  <li>Go down the <b>Email</b> column together. Fill in every address Bob knows.</li>
+  <li>Write down who is still missing, and agree who is chasing them.</li>
+</ol>
+<p>Nobody can sign in to the RFL application until their own address is in that column, so this is
+   the item that decides when the owners can start using it.</p>
+
+<h4>What Full Access Means</h4>
+<p>Bob has full access once he has four things. Nothing else is needed, because the spreadsheet and
+   the emails live inside the account.</p>
 <ol>
   <li>The address, <span class="kbd">realityfootballcommish@gmail.com</span>.</li>
   <li>The password.</li>
