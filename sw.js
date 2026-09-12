@@ -1,25 +1,22 @@
-// Owners League Season Dashboard — service worker.
-//
-// Its only job: when the app is opened (from the home screen icon or Safari), always go to the
-// network for the page itself rather than letting iOS reuse a stale cached copy. Casey, 31 Aug
-// 2026: had to delete and re-add the home screen icon to see an update — that's the standard
-// fix, but not one he should have to repeat every week. This is the real fix: intercept the
-// page's own load and force `cache:'reload'`, which bypasses the HTTP cache outright. If the
-// network is unreachable, fall back to whatever's cached so the app doesn't just break offline.
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  const isPageLoad = req.mode === 'navigate' || req.destination === 'document';
-  if (!isPageLoad) return; // everything else (ESPN calls, etc.) behaves normally
-
-  event.respondWith(
-    fetch(req, { cache: 'reload' }).catch(() => caches.match(req))
+/* THIS WORKER RETIRES ITSELF.
+ *
+ * Casey's own dashboard used to live at the root of this site, and this file was its offline
+ * cache. The page moved on 12 Sep 2026, because anybody handed the league address could delete
+ * "league" from the end of it and land on his projections.
+ *
+ * A worker outlives the page that installed it. Left as it was, a browser that had opened the old
+ * root page could keep serving that CACHED COPY from this address for weeks. So this version
+ * throws away everything it cached and unregisters itself the moment it runs. Deleting the file
+ * would not do the job: a browser with the old worker already installed would never fetch a
+ * replacement it could act on.
+ */
+self.addEventListener('install', function (e) { self.skipWaiting(); });
+self.addEventListener('activate', function (e) {
+  e.waitUntil(
+    caches.keys()
+      .then(function (keys) { return Promise.all(keys.map(function (k) { return caches.delete(k); })); })
+      .then(function () { return self.registration.unregister(); })
+      .then(function () { return self.clients.matchAll({type: 'window'}); })
+      .then(function (cs) { cs.forEach(function (c) { c.navigate(c.url); }); })
   );
 });
