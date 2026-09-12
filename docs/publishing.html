@@ -180,13 +180,13 @@ ol.tight{padding-left:20px}
 
   <header>
     <p class="eyebrow">Owners Football League · season tools</p>
-    <h1>Publishing the season dashboard</h1>
+    <h1>Publishing the Season Dashboard</h1>
     <p class="lede">How a rebuild gets to the icon on your home screen — and why the numbers you
       type into the Race tab are still there afterwards.</p>
   </header>
 
   <div class="verdict">
-    <h2>The short answer</h2>
+    <h2>The Short Answer</h2>
     <p>Your typed projections are stored <b>by the browser you typed them into, against the web
       address</b>. They are not in the HTML file and never were — that file is a program, not a
       document. Publishing replaces the page at the address; it never changes the address. So a
@@ -197,7 +197,7 @@ ol.tight{padding-left:20px}
   <hr class="rule">
 
   <section>
-    <h2>The order of operations</h2>
+    <h2>The Order of Operations</h2>
     <p>Casey, 4 Sep 2026: <i>"do I need to first put my projections in the HTML download file,
       then do the git publish to see those projections on my iphone? Or should I first do the git
       publish, then add my projection to that github.io publish?"</i></p>
@@ -240,7 +240,7 @@ ol.tight{padding-left:20px}
     </div>
 
     <div class="note">
-      <h3>Your laptop and your phone keep separate worksheets</h3>
+      <h3>Your Laptop and Your Phone Keep Separate Worksheets</h3>
       <p>Browser storage does not travel and does not sync. Type on the laptop and the phone will
         not have it. To move one across, open <b>Keep a copy, or move this to another device</b>
         at the foot of the Race tab. Press <b>Copy the worksheet</b> and send yourself the text.
@@ -254,10 +254,10 @@ ol.tight{padding-left:20px}
   <hr class="rule">
 
   <section>
-    <h2>Publishing a rebuild</h2>
+    <h2>Publishing a Rebuild</h2>
 
     <div class="verdict">
-      <h2>Your job is one command</h2>
+      <h2>Your Job Is One Command</h2>
       <p>Not three. Everything else happens in the chat before you are ever told to push.</p>
       <pre class="tree">cd ~/Documents/Owners/owners-league-dashboard &amp;&amp; git push origin main</pre>
       <p>Terminal on the Mac, or Termius on your phone — see <a href="#phone">Pushing from your
@@ -275,7 +275,7 @@ ol.tight{padding-left:20px}
       is the entire reason the last step is yours.</p>
 
     <div class="note">
-      <h3>The commands behind it, if you ever want them</h3>
+      <h3>The Commands Behind It, If You Ever Want Them</h3>
       <p>You should not need these. They are here so the chain is written down somewhere, not
         because they are steps in your routine.</p>
       <pre class="tree">cd ~/Documents/Owners/Owners_League_Restart_Kit/code
@@ -293,7 +293,7 @@ python3 publish_dashboard.py</pre>
     </div>
 
     <div class="note care">
-      <h3>If the commit fails on a stale lock</h3>
+      <h3>If the Commit Fails on a Stale Lock</h3>
       <p>Claude cannot delete files on your Mac, so a leftover git lock has to be moved aside
         rather than removed:</p>
       <pre class="tree">cd ~/Documents/Owners/owners-league-dashboard
@@ -305,7 +305,7 @@ mv .git/HEAD.lock .git/index.lock .git/_stale/ 2>/dev/null</pre>
   <hr class="rule">
 
   <section id="phone">
-    <h2>Pushing from your phone</h2>
+    <h2>Pushing From Your Phone</h2>
     <p>Set up once on <b>6 September 2026</b>, so that being away from the Mac stops being the
       thing that keeps a finished rebuild off the web. The Mac stays at home and stays the only
       machine that holds the repository; the phone reaches it over your own private network,
@@ -328,7 +328,7 @@ mv .git/HEAD.lock .git/index.lock .git/_stale/ 2>/dev/null</pre>
     </div>
 
     <div class="note">
-      <h3>What has to be true for the phone to reach the Mac</h3>
+      <h3>What Has to Be True for the Phone to Reach the Mac</h3>
       <ul class="tight">
         <li><b>Tailscale is running on the Mac</b> and signed in. It lives in the menu bar and
           starts at login. Quit it and the Mac disappears from your network — this is the one
@@ -344,7 +344,7 @@ mv .git/HEAD.lock .git/index.lock .git/_stale/ 2>/dev/null</pre>
     </div>
 
     <div class="note care">
-      <h3>Two macOS rules this depends on — both bit once, both are fixed</h3>
+      <h3>Two MacOS Rules This Depends on — Both Bit Once, Both Are Fixed</h3>
       <p><b>An SSH session is not allowed into your Documents folder by default.</b> Every command
         run inside <span class="kbd">~/Documents</span> from the phone failed with
         <span class="kbd">Operation not permitted</span> — not a git problem, a macOS privacy
@@ -363,7 +363,7 @@ mv .git/HEAD.lock .git/index.lock .git/_stale/ 2>/dev/null</pre>
     </div>
 
     <div class="note stop">
-      <h3>If it ever asks you for a GitHub username again</h3>
+      <h3>If It Ever Asks You for a GitHub Username Again</h3>
       <p>That is not an expired login and you do not need a new token. It means the repository's
         remote got switched back to the <span class="kbd">https://</span> form, which is the form
         that needs the keychain. Press <b>Ctrl+C</b> and set it back:</p>
@@ -378,7 +378,7 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
   <hr class="rule">
 
   <section>
-    <h2>Putting it on the iPhone home screen</h2>
+    <h2>Putting It on the IPhone Home Screen</h2>
     <p>Do this once. After that the icon <i>is</i> the app, and every publish reaches it.</p>
     <div class="steps">
       <div class="step"><div class="stepn">1</div><div class="bd">
@@ -396,7 +396,7 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
       </div></div>
     </div>
     <div class="note care">
-      <h3>How durable is "durable"</h3>
+      <h3>How Durable Is "Durable"</h3>
       <p>iOS clears stored data for ordinary websites you have not opened in about a week. A
         home-screen app is not treated as an ordinary website. WebKit's own storage policy says
         being added to the Home Screen is one of the signals it uses to grant a site
@@ -408,7 +408,7 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
     </div>
 
     <div class="note stop">
-      <h3>What actually loses a worksheet</h3>
+      <h3>What Actually Loses a Worksheet</h3>
       <ul class="tight">
         <li><b>Opening the HTML file directly</b> (AirDrop, Files, the WorldWideWeb app on a local
           copy). No address, no storage. The tab tells you in orange.</li>
@@ -427,7 +427,7 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
   <hr class="rule">
 
   <section>
-    <h2>Moving a worksheet, or keeping a copy</h2>
+    <h2>Moving a Worksheet, or Keeping a Copy</h2>
     <p>At the bottom of the Race tab: <b>Keep a copy, or move this to another device</b>.
       <b>Copy the worksheet</b> gives you the whole thing as text — mail it to yourself, or paste
       it straight into <b>Paste one in</b> on the other device. That is also the backup to take
@@ -439,7 +439,7 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
   <hr class="rule">
 
   <section>
-    <h2>What each address is for</h2>
+    <h2>What Each Address Is For</h2>
     <div class="scroller"><table class="routes">
       <thead><tr><th>How you open it</th><th>Live scores</th><th>Saves what you type</th></tr></thead>
       <tbody>
@@ -454,7 +454,7 @@ git remote set-url origin git@github.com:cdwiedeman-cpu/owners-league-dashboard.
   </section>
 
   <footer>
-    Owners Football League · 11 September 2026. Scoring rules version 2026-09-09c — see
+    Owners Football League · 12 September 2026. Scoring rules version 2026-09-09c — see
     <b>Owners_League_Rules.html</b> in the same folder.
   </footer>
 </div>
