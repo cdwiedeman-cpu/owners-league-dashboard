@@ -290,51 +290,52 @@ ol li,ul li{margin:0 0 7px}
 
 <h3>So Bob Never Has to Ask Casey for a Code</h3>
 <p>Google asks for a six digit code when it sees a sign-in from a computer it does not recognise.
-   Casey has set up Google Authenticator on his own phone, so his phone produces those codes. Bob
-   needs the same thing on his phone, or he will have to ring Casey every time.</p>
+   Casey&rsquo;s phone produces those codes. Bob needs a phone that produces the same ones, or he
+   will have to ring Casey every time.</p>
+<p>The two phones have to hold <b>the same secret</b>. There is only one secret on the account, and
+   Google shows it exactly once, on the screen where you set the authenticator up. It cannot be
+   read back afterwards. So the way to give Bob a working phone is to set the authenticator up one
+   more time and write the secret down while it is on the screen.</p>
 
-<h4>Step One: Bob Installs the App</h4>
-<p>Bob installs <b>Google Authenticator</b> from the App Store or the Play Store. He opens it once
-   and leaves it sitting on the welcome screen. He does not add anything yet.</p>
-<p>Do not scan any QR code with the phone&rsquo;s camera. The camera hands these codes to the
-   phone&rsquo;s password manager, which then asks for a username, a password and a website, and
-   none of that is what you want. Every scan described here is done from inside Google
-   Authenticator.</p>
-
-<h4>Step Two: Copy Casey&rsquo;s Entry Onto Bob&rsquo;s Phone</h4>
-<p>Google Authenticator can copy an entry from one phone to another. This is the easy way, and it
-   changes nothing about the Google account. The two of you need to be in the same room, because
-   one phone shows a QR code and the other reads it off the screen.</p>
+<h4>What to Do</h4>
+<p>Casey does this on a computer, signed in to the league account.</p>
 <ol>
-  <li>On <b>Casey&rsquo;s</b> phone, open Google Authenticator and open its menu.</li>
-  <li>Choose <b>Transfer accounts</b>, then <b>Export accounts</b>.</li>
-  <li>Tick the league account and tap Next. The phone shows a QR code.</li>
-  <li>On <b>Bob&rsquo;s</b> phone, open Google Authenticator, open its menu, choose <b>Transfer
-      accounts</b>, then <b>Import accounts</b>, then <b>Scan QR code</b>.</li>
-  <li>Point Bob&rsquo;s phone at the QR code on Casey&rsquo;s screen.</li>
+  <li>Open the Google Account security settings, then <b>2-Step Verification</b>, then
+      <b>Authenticator</b>, and start setting it up again.</li>
+  <li>Google shows a QR code. <b>Do not scan it yet.</b> Click <b>Can't scan it?</b> beside it.
+      Google shows the same secret written out as a string of letters and numbers.</li>
+  <li><b>Write that string down.</b> This is the step that matters. Once you finish the setup it
+      is gone for good, and the only way back is to do all of this again.</li>
+  <li>Add it to Casey&rsquo;s phone, then finish the setup by typing in the six digits his phone
+      shows.</li>
+  <li>Give Bob the string, and he adds it to his phone the same way.</li>
 </ol>
-<p>Both phones now show the same six digits at the same second, and they will keep matching. Check
-   that before you put the phones down.</p>
+<p>Both phones then show the same six digits at the same second, and they keep matching from then
+   on. Check that before you call it done.</p>
 
-<h4>If You Cannot Be in the Same Room</h4>
-<p>Set the authenticator up again from the Google account, with both phones present in the sense
-   that matters: both scanning the one screen. Casey signs in to the league account on a computer,
-   opens the Google Account security settings, opens 2-Step Verification, and starts Authenticator
-   setup again. Google shows a fresh QR code. Casey and Bob each scan that same QR code from
-   inside Google Authenticator before anybody clicks Next.</p>
-<p>If Bob is somewhere else, click <b>Can't scan it?</b> beside the QR code. Google shows the same
-   secret written out as letters and numbers. Bob taps <b>+</b> in Google Authenticator, chooses
-   <b>Enter a setup key</b>, and types it in with the type left on <b>Time based</b>.</p>
-<p>That string is worth exactly as much as the password. Hand it over the way you handed over the
+<h4>Adding the String to a Phone</h4>
+<p>This works in any authenticator app. The wording differs a little between them.</p>
+<ul>
+  <li><b>Microsoft Authenticator:</b> tap <b>+</b>, choose <b>Other account</b>, then choose the
+      option to enter a code manually. Type a name for it and paste the string in.</li>
+  <li><b>Google Authenticator:</b> tap <b>+</b>, choose <b>Enter a setup key</b>, type a name for
+      it and paste the string in, and leave the type on <b>Time based</b>.</li>
+</ul>
+<p>The two of you do not have to use the same app. The secret is what has to match, not the app.</p>
+<p>Setting the authenticator up again replaces whatever was there before, so delete the old entry
+   from Casey&rsquo;s phone once the new one is working. Two entries that look alike, only one of
+   which works, is a bad thing to own on the morning something is wrong.</p>
+<p>That string is worth exactly as much as the password. Hand it to Bob the way you handed him the
    password, and never put it in an email.</p>
-<p>Setting it up again replaces what was there, so Casey should delete the old entry from his
-   phone afterwards. Two entries that look alike and only one of which works is a bad thing to
-   have on the morning something is wrong.</p>
+<p><b>Do not scan any of this with the phone&rsquo;s camera.</b> The camera hands these codes to
+   the phone&rsquo;s password manager, which then asks for a username, a password and a website,
+   and none of that is what you want. Scanning and typing both happen inside the authenticator
+   app.</p>
 
-<h4>Step Three: Bob Adds a Passkey, and Then He Is Done</h4>
+<h4>Bob Adds a Passkey, and Then He Is Done</h4>
 <p>Once Bob has signed in on his own phone or laptop, have him open the Google Account security
    settings on that device and add a <b>passkey</b>. That device then opens the account with his
-   fingerprint, face or screen lock, and it stops asking for codes there at all.</p>
+   fingerprint, face or screen lock, and it stops asking him for codes at all.</p>
 
 <h3>Everything Bob Needs, in One List</h3>
 <p>Bob has full access to the league account once he has all four of these. Nothing else is
