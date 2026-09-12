@@ -259,11 +259,11 @@ ol li,ul li{margin:0 0 7px}
     <td>Every completed trade costs the owner <b>$3</b>, whichever way it happened. The page keeps
         the running total for each owner.</td></tr>
 </tbody></table>
-<p>The rest of this guide covers the six steps to set it up, what happens each week, and what to
+<p>The rest of this guide covers the seven steps to set it up, what happens each week, and what to
    do when an owner&rsquo;s situation changes.</p>
 </section>
 
-<section><h2>Setting It Up</h2><p class="lead">Six steps, once, before the season.</p>
+<section><h2>Setting It Up</h2><p class="lead">Seven steps, once, before the season.</p>
 <p>This is done once, before the season, and it takes about half an hour.</p>
 
 <h3>First, a Google Account for the League</h3>
@@ -283,7 +283,7 @@ ol li,ul li{margin:0 0 7px}
    so anybody who opens the site can read it. Casey gives Bob the password directly, and Bob
    keeps it wherever he keeps his own.</p>
 
-<h3>Then the Six Steps</h3>
+<h3>Then the Seven Steps</h3>
 <ol>
   <li>Make a new Google Sheet and name it <span class="kbd">RFL Trades</span>.</li>
   <li>Add a tab named <span class="kbd">Access</span>.</li>
@@ -291,14 +291,21 @@ ol li,ul li{margin:0 0 7px}
       guide and paste it into that tab. All 27 seats are already listed and spelled correctly.</li>
   <li>Type each owner&rsquo;s email address into the Email column. <b>Personal inboxes only</b> &mdash;
       not the league email list, and not an address that forwards to several people.</li>
-  <li>Find Bob&rsquo;s row and change Role from <span class="kbd">owner</span> to
-      <span class="kbd">commissioner</span>. This is what gives him the two abilities described
-      later, and it has nothing to do with who owns the Google account.</li>
-  <li>In the Sheet, click Extensions, then Apps Script. Paste in the script Casey provides, click
-      Deploy, and add the trigger described in What the Trigger Is.</li>
+  <li>Set the Role column to <span class="kbd">commissioner</span> on two rows: Bob&rsquo;s and
+      Casey&rsquo;s. Bob is the commissioner of the league. Casey runs the software, and he needs
+      the same two abilities to fix anything that goes wrong. Every other row stays
+      <span class="kbd">owner</span>. Role has nothing to do with who owns the Google account.</li>
+  <li>Turn the Role column into a drop-down so nobody can mistype it. Select the whole column,
+      then choose Data, then Data validation, then Add rule. Set the rule to Dropdown and give it
+      two values: <span class="kbd">owner</span> and <span class="kbd">commissioner</span>. Do the
+      same for the Status column with <span class="kbd">active</span> and
+      <span class="kbd">inactive</span>.</li>
+  <li>In the Sheet, click Extensions, then Apps Script. Paste in the script, click Deploy, and add
+      the trigger described in What the Trigger Is.</li>
 </ol>
-<p><b>Casey does step 6.</b> It needs the account password rather than just edit access to the
-   Sheet, and it is the part he can work through with Claude.</p>
+<p><b>Casey does the last step, and the script is not written yet.</b> Steps 1 to 6 are worth
+   doing now, because the script reads the Access tab you build in them. Nothing in those steps
+   has to be redone once the script exists.</p>
 
 <h3>The Access Tab&rsquo;s Columns</h3>
 <p>Four of them you type. Two the script writes, and you leave those alone.</p>
