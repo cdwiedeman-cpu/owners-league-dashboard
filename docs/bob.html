@@ -1,0 +1,351 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reality Football League — Setting Bob up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --ground:#f6f8fa; --card:#ffffff; --sunk:#eef2f6;
+  --ink:#0e1822; --body:#33465a; --faint:#64798f;
+  --rule:#d8e0e8;
+  --accent:#12609f; --accent-soft:#e4eef7;
+  --good:#1b6647; --good-soft:#e0f0e8;
+  --care:#8a5a12; --care-soft:#f7eeda;
+  --stop:#9c3227; --stop-soft:#f9e6e3;
+  --shadow:0 1px 2px rgba(14,24,34,.06), 0 8px 24px -16px rgba(14,24,34,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+    --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+    --rule:#26333f;
+    --accent:#79bcff; --accent-soft:#152a3d;
+    --good:#68d8a2; --good-soft:#12291f;
+    --care:#f0c264; --care-soft:#2c2413;
+    --stop:#f28b81; --stop-soft:#2e1a18;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+  --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+  --rule:#26333f;
+  --accent:#79bcff; --accent-soft:#152a3d;
+  --good:#68d8a2; --good-soft:#12291f;
+  --care:#f0c264; --care-soft:#2c2413;
+  --stop:#f28b81; --stop-soft:#2e1a18;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--body);
+  font:400 17px/1.62 "Source Serif 4",Georgia,"Times New Roman",serif;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:44rem;margin:0 auto;padding:56px 22px 96px;display:flex;flex-direction:column;gap:38px}
+h1,h2,h3,.eyebrow,.stepn,.chip,.kbd,.addr{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+h1{
+  font-size:clamp(30px,6vw,42px); line-height:1.08; letter-spacing:-.022em; font-weight:700;
+  color:var(--ink); margin:0; text-wrap:balance;
+}
+h2{
+  font-size:20px; line-height:1.25; letter-spacing:-.012em; font-weight:700;
+  color:var(--ink); margin:0 0 4px; text-wrap:balance;
+}
+h3{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 6px;letter-spacing:-.005em}
+p{margin:0 0 12px}
+p:last-child{margin-bottom:0}
+b,strong{font-weight:600;color:var(--ink)}
+a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+.eyebrow{
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  margin:0 0 12px;
+}
+.lede{font-size:19px;line-height:1.55;color:var(--body);margin:16px 0 0}
+.lede b{color:var(--ink)}
+
+/* ---- the answer, up top ---- */
+.verdict{
+  background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--good);
+  border-radius:10px;padding:20px 22px;box-shadow:var(--shadow);
+}
+.verdict h2{color:var(--good)}
+
+section{display:flex;flex-direction:column;gap:16px}
+.rule{height:1px;background:var(--rule);border:0;margin:0}
+
+/* ---- Q&A ---- */
+.qa{display:flex;flex-direction:column;gap:22px}
+.q{border-left:2px solid var(--rule);padding-left:18px}
+.q h3{font-size:16px}
+
+/* ---- routes table ---- */
+.routes{width:100%;border-collapse:collapse;font-family:Archivo,sans-serif;font-size:14.5px}
+.routes th,.routes td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+.routes th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.routes td:last-child{white-space:nowrap;font-weight:600}
+.yes{color:var(--good)} .no{color:var(--stop)}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ---- steps ---- */
+.steps{display:flex;flex-direction:column;gap:2px;counter-reset:s}
+.step{
+  /* minmax(0,1fr) not 1fr: a grid track's automatic minimum is its MIN-CONTENT width, so a
+     single unbreakable filename in the body pushed the whole page to 690px on a 390px phone. */
+  display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:16px;align-items:start;
+  padding:18px 0;border-top:1px solid var(--rule);
+}
+.step:first-child{border-top:0}
+.stepn{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13px;font-weight:600;
+  color:var(--accent);background:var(--accent-soft);border-radius:6px;
+  text-align:center;padding:4px 0;font-variant-numeric:tabular-nums;
+}
+.step .bd{font-size:16.5px}
+.step .bd p{margin-bottom:8px}
+
+/* ---- confidence chips: which of these did I actually verify ---- */
+.chip{
+  display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;margin-bottom:8px;
+}
+.chip.ok{color:var(--good);background:var(--good-soft)}
+.chip.look{color:var(--care);background:var(--care-soft)}
+.kbd{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.9em;font-weight:600;
+  background:var(--sunk);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;color:var(--ink);
+  /* Filenames live in here and some are 45 characters. nowrap made them unbreakable and they
+     widened the page; anywhere breaks ONLY when there is no room, so short ones stay intact. */
+  overflow-wrap:anywhere;
+}
+.note{
+  background:var(--sunk);border:1px solid var(--rule);border-radius:9px;padding:16px 18px;
+  font-size:15.5px;line-height:1.58;
+}
+.note.care{background:var(--care-soft);border-color:transparent}
+.note.stop{background:var(--stop-soft);border-color:transparent}
+.note h3{margin-bottom:4px}
+.note.care h3{color:var(--care)}
+.note.stop h3{color:var(--stop)}
+ol.tight,ul.tight{margin:8px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:7px}
+/* The deliverables list names files, and the longest is 38 characters of unbreakable filename.
+   In a full-width note anywhere only breaks when nothing else can give, so ordinary words are
+   untouched -- unlike a 20px column, where this same property once stacked KEEP one letter
+   per line. Width is what makes it safe or unsafe, not the property. */
+ol.tight li,ul.tight li{overflow-wrap:anywhere}
+li::marker{color:var(--faint)}
+footer{color:var(--faint);font-size:13.5px;font-family:Archivo,sans-serif;line-height:1.6}
+@media (prefers-reduced-motion:no-preference){
+  a{transition:color .15s ease}
+}
+
+/* A directory tree and a quoted ask are the two shapes this page has that the iPad guide
+   does not. Both are monospace blocks that must scroll inside themselves, never widen the page. */
+pre.tree{margin:10px 0 0;padding:14px 16px;background:var(--sunk);border:1px solid var(--rule);
+  border-radius:9px;font:400 13px/1.65 "IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color:var(--ink);overflow-x:auto}
+pre.tree .cmt{color:var(--faint)}
+p.ask{margin:10px 0;padding:11px 15px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:0 8px 8px 0;font-family:Archivo,sans-serif;font-size:15px;color:var(--ink)}
+p.ask::before{content:"“"}
+p.ask::after{content:"”"}
+.routes td:last-child{white-space:normal}
+ol.tight{padding-left:20px}
+</style>
+<style>
+section h3{margin:26px 0 6px;padding-top:14px;border-top:1px solid var(--rule,#e6e6e2);
+  font-size:17px}
+section h3:first-of-type{border-top:0;padding-top:0;margin-top:18px}
+section h4{margin:18px 0 5px;font-size:15px}
+ol li,ul li{margin:0 0 7px}
+</style>
+<style>
+.sitenav{position:sticky;top:0;z-index:50;background:var(--card);
+ border-bottom:1px solid var(--rule);margin:0 0 8px;
+ font-family:Archivo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.sitenav .inner{max-width:860px;margin:0 auto;padding:9px 18px;display:flex;flex-wrap:wrap;
+ gap:6px 14px;align-items:center}
+.sitenav a{text-decoration:none;font-size:13px;color:var(--faint);padding:5px 2px;
+ border-bottom:2px solid transparent;white-space:nowrap}
+.sitenav a:hover{color:var(--accent)}
+.sitenav a.here{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.sitenav a.home{font-weight:700;color:var(--ink);margin-right:4px}
+.sitenav a.home:hover{color:var(--accent)}
+@media print{.sitenav{display:none}}
+</style>
+</head>
+<body>
+<nav class="sitenav"><div class="inner"><a class="home" href="./">RFL Documents</a><a class="" href="rules.html">League Rules</a><a class="" href="trades.html">Trades and Signing In</a><a class="here" href="bob.html">Setting Bob Up</a><a class="" href="publishing.html">Publishing the Dashboards</a></div></nav>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Reality Football League · for Casey and Bob</p>
+    <h1>Setting Bob Up</h1>
+    <p class="lead">Everything it takes to give Bob his own way in to the league Google account,
+      in the order to do it. Read it off a phone while you work through it.</p>
+  </header>
+
+  <section>
+    <h3>Before You Start</h3>
+    <p>Casey needs two things written on paper, and neither can be looked up later.</p>
+    <ul>
+      <li>The password for <span class="kbd">realityfootballcommish@gmail.com</span>.</li>
+      <li>The authenticator setup key, the string of letters and numbers from the screen where the
+          authenticator was set up.</li>
+    </ul>
+    <p>Both are worth the same as each other. Hand them over on paper or out loud, and never in an
+       email.</p>
+    <p>If the key was never written down, go to <b>If the Key Does Not Work, Start Over</b> and do
+       that first.</p>
+  </section>
+
+  <section>
+<p>Everything up to this point Casey does on his own. This is the part that needs both of you, and
+   it takes about fifteen minutes. Casey brings the password and the setup key, both written on
+   paper. Work straight down this list.</p>
+
+<h4>1. Bob Installs Google Authenticator</h4>
+<ol>
+  <li>Open the App Store on an iPhone, or the Play Store on an Android phone.</li>
+  <li>Search for <b>Google Authenticator</b>. The one you want is published by Google LLC, and its
+      icon is a grey padlock on a white background. Several other apps have similar names.</li>
+  <li>Install it and open it.</li>
+  <li>The first screen is a welcome screen. Tap <b>Get started</b>.</li>
+  <li>It then offers to sign in with a Google account. Bob signs in with <b>his own</b> personal
+      Google account, which keeps a backup of his codes. If he has no Google account, or does not
+      want one involved, tap <b>Use Authenticator without an account</b> instead. Either choice
+      works. <b>Do not sign the app in to the league account.</b></li>
+</ol>
+<p>He now has an empty screen that says he has no codes yet.</p>
+
+<h4>2. Bob Adds the League Account by Typing the Key</h4>
+<p>All of this happens on Bob&rsquo;s phone, inside Google Authenticator. <b>He never sees a QR
+   code and he never opens a Google web page for this.</b> The QR code belongs to the setup Casey
+   already finished on his own computer, and it is gone. The key is what replaces it.</p>
+<ol>
+  <li>Tap the <b>+</b> button. On Android it sits at the bottom right of the screen. On an iPhone
+      it sits at the top right.</li>
+  <li>Two choices appear: <b>Scan a QR code</b> and <b>Enter a setup key</b>. Tap <b>Enter a setup
+      key</b>.</li>
+  <li>A form appears with three parts.
+      <ul>
+        <li><b>Account name</b> or <b>Account</b>: type
+            <span class="kbd">realityfootballcommish</span>. This is only a label, so any name Bob
+            will recognise is fine.</li>
+        <li><b>Your key</b> or <b>Key</b>: type in the string Casey brought. Spaces and capitals do
+            not matter, and Google Authenticator ignores them.</li>
+        <li><b>Type of key</b>: leave it on <span class="kbd">Time based</span>. Do not change it
+            to <span class="kbd">Counter based</span>.</li>
+      </ul></li>
+  <li>Tap <b>Add</b>.</li>
+</ol>
+<p>An entry appears showing six digits and a shrinking circle beside them. The digits change every
+   thirty seconds.</p>
+
+<h4>3. Check the Two Phones Agree</h4>
+<p>To see a code on either phone, open Google Authenticator. The entry named
+   <span class="kbd">realityfootballcommish</span> shows six digits and a shrinking circle. That is
+   the code. Nothing has to be tapped or unlocked to read it.</p>
+<p><b>Together in one room:</b> hold the phones side by side and look at both entries. They must
+   show the same six digits at the same moment.</p>
+<p><b>On the phone or on a video call:</b> do not try to read codes to each other. A code lives
+   thirty seconds and you will spend the call chasing it. <b>Have Bob sign in instead.</b> Go
+   straight to part 4 and part 5. If Google accepts his code, the key is right, and that is a
+   better proof than any comparison. If Google says the code is wrong, the key is wrong.</p>
+<p>If it is wrong, delete the entry on Bob&rsquo;s phone and do part 2 again. Read the key out
+   character by character, saying &ldquo;capital&rdquo; or &ldquo;lower case&rdquo; for each
+   letter.</p>
+<p>If a carefully typed key still fails, check the clock. Both phones need the date and time set
+   automatically, in the phone&rsquo;s own date and time settings. These codes are built from the
+   current time, so a phone with a wrong clock produces wrong codes.</p>
+
+<h4>4. Casey Hands Over the Password</h4>
+<p>Casey gives Bob the password for
+   <span class="kbd">realityfootballcommish@gmail.com</span>, on paper or out loud. Bob puts it
+   wherever he keeps his own passwords. It does not go in an email.</p>
+
+<h4>5. Bob Signs In on His Own Laptop or Phone</h4>
+<ol>
+  <li>Bob opens a browser and goes to <span class="kbd">gmail.com</span>.</li>
+  <li>If a different account is already signed in, click the picture at the top right and choose
+      <b>Add another account</b>.</li>
+  <li>He types <span class="kbd">realityfootballcommish@gmail.com</span> and the password.</li>
+  <li>Google asks for a six digit code. Bob reads it off <b>his own</b> Google Authenticator and
+      types it in. If Google offers a different way first, choose <b>Try another way</b>, then
+      <b>Get a verification code from the Google Authenticator app</b>.</li>
+  <li>If Google offers to remember the device, say yes. That stops it asking on that device every
+      time.</li>
+</ol>
+<p>He is in. This is the moment the whole thing is proved, so do not skip it.</p>
+
+<h4>6. Bob Adds a Passkey on That Device</h4>
+<p>This is what stops Google asking him for codes on the device he uses most.</p>
+<ol>
+  <li>Still signed in as the league account, go to
+      <span class="kbd">myaccount.google.com</span>.</li>
+  <li>Open <b>Security</b>.</li>
+  <li>Find <b>How you sign in to Google</b> and open <b>Passkeys and security keys</b>.</li>
+  <li>Tap <b>Create a passkey</b>, then <b>Continue</b>.</li>
+  <li>The device asks for his fingerprint, his face, or the screen lock code. That is it.</li>
+</ol>
+<p>From now on that device opens the league account with his fingerprint or face. The code app is
+   only needed on a device that has no passkey.</p>
+
+<h4>7. The Two of You Look at the Spreadsheet</h4>
+<ol>
+  <li>Open <b>RFL Trades</b> and go to the <b>Access</b> tab.</li>
+  <li>Check that Bob&rsquo;s row and Casey&rsquo;s row both read
+      <span class="kbd">commissioner</span> in the Role column. Every other row reads
+      <span class="kbd">owner</span>.</li>
+  <li>Go down the <b>Email</b> column together. Fill in every address Bob knows.</li>
+  <li>Write down who is still missing, and agree who is chasing them.</li>
+</ol>
+<p>Nobody can sign in to the RFL application until their own address is in that column, so this is
+   the item that decides when the owners can start using it.</p>
+
+<h4>What Full Access Means</h4>
+<p>Bob has full access once he has four things. Nothing else is needed, because the spreadsheet and
+   the emails live inside the account.</p>
+<ol>
+  <li>The address, <span class="kbd">realityfootballcommish@gmail.com</span>.</li>
+  <li>The password.</li>
+  <li>An authenticator app showing the same codes as Casey&rsquo;s.</li>
+  <li>A passkey on the device he uses most.</li>
+</ol>
+<p>Do not change the recovery phone number to Bob&rsquo;s. Recovery is for getting a locked account
+   back, it is not the everyday sign-in, and moving it away from Casey helps nobody.</p>
+
+
+<h3>If the Key Does Not Work, Start Over</h3>
+<p>There is no way to read the key back out of Google. If it was mistyped, or never written down,
+   the only fix is to set the authenticator up again. That produces a <b>new</b> key and kills the
+   old one, so whoever already had a working code has to redo it too.</p>
+<p>Casey does this on a computer, signed in to the league account.</p>
+<ol>
+  <li>Go to <span class="kbd">myaccount.google.com</span> and open <b>Security</b>.</li>
+  <li>Open <b>2-Step Verification</b>. Google asks for the password again.</li>
+  <li>Find <b>Authenticator</b> in the list and choose <b>Change authenticator app</b>.</li>
+  <li>A QR code appears. <b>Stay on this screen.</b> Click <b>Can't scan it?</b> beside it and
+      write down the string of letters and numbers. This is the only screen it ever appears on.</li>
+  <li>Click back to the QR code, open Google Authenticator on Casey&rsquo;s phone, tap <b>+</b>,
+      tap <b>Scan a QR code</b>, and scan it.</li>
+  <li>Type the six digits his phone shows into the computer to finish.</li>
+  <li>Delete the old entry from Casey&rsquo;s phone. It is dead now, and two entries that look
+      alike with only one working is a bad thing to own.</li>
+  <li>Give Bob the new string, and he does part 2 again.</li>
+</ol>
+<p>Check the key before you trust it. On Casey&rsquo;s phone, add a second entry called
+   <span class="kbd">test</span> using <b>Enter a setup key</b> and the string he just wrote down.
+   If <span class="kbd">test</span> and the real entry show the same six digits, the string is
+   right. Delete <span class="kbd">test</span> afterwards and keep the real one.</p>
+
+  </section>
+
+  <footer>
+    <p>Bob has full access once he has four things: the address, the password, an authenticator
+      app showing the same codes as Casey&rsquo;s, and a passkey on the device he uses most.</p>
+  </footer>
+</div>
+</body>

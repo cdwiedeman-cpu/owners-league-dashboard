@@ -188,7 +188,7 @@ ol li,ul li{margin:0 0 7px}
 </style>
 </head>
 <body>
-<nav class="sitenav"><div class="inner"><a class="home" href="./">RFL Documents</a><a class="" href="rules.html">League Rules</a><a class="here" href="trades.html">Trades and Signing In</a><a class="" href="publishing.html">Publishing the Dashboards</a></div></nav>
+<nav class="sitenav"><div class="inner"><a class="home" href="./">RFL Documents</a><a class="" href="rules.html">League Rules</a><a class="here" href="trades.html">Trades and Signing In</a><a class="" href="bob.html">Setting Bob Up</a><a class="" href="publishing.html">Publishing the Dashboards</a></div></nav>
 <div class="wrap">
 
   <header>
@@ -289,120 +289,8 @@ ol li,ul li{margin:0 0 7px}
    did it. That is fine for a league, and it is the trade-off that comes with one login.</p>
 
 <h3>When You Sit Down Together</h3>
-<p>Everything up to this point Casey does on his own. This is the part that needs both of you, and
-   it takes about fifteen minutes. Casey brings the password and the setup key, both written on
-   paper. Work straight down this list.</p>
-
-<h4>1. Bob Installs Google Authenticator</h4>
-<ol>
-  <li>Open the App Store on an iPhone, or the Play Store on an Android phone.</li>
-  <li>Search for <b>Google Authenticator</b>. The one you want is published by Google LLC, and its
-      icon is a grey padlock on a white background. Several other apps have similar names.</li>
-  <li>Install it and open it.</li>
-  <li>The first screen is a welcome screen. Tap <b>Get started</b>.</li>
-  <li>It then offers to sign in with a Google account. Bob signs in with <b>his own</b> personal
-      Google account, which keeps a backup of his codes. If he has no Google account, or does not
-      want one involved, tap <b>Use Authenticator without an account</b> instead. Either choice
-      works. <b>Do not sign the app in to the league account.</b></li>
-</ol>
-<p>He now has an empty screen that says he has no codes yet.</p>
-
-<h4>2. Bob Adds the League Account by Typing the Key</h4>
-<p>All of this happens on Bob&rsquo;s phone, inside Google Authenticator. <b>He never sees a QR
-   code and he never opens a Google web page for this.</b> The QR code belongs to the setup Casey
-   already finished on his own computer, and it is gone. The key is what replaces it.</p>
-<ol>
-  <li>Tap the <b>+</b> button. On Android it sits at the bottom right of the screen. On an iPhone
-      it sits at the top right.</li>
-  <li>Two choices appear: <b>Scan a QR code</b> and <b>Enter a setup key</b>. Tap <b>Enter a setup
-      key</b>.</li>
-  <li>A form appears with three parts.
-      <ul>
-        <li><b>Account name</b> or <b>Account</b>: type
-            <span class="kbd">realityfootballcommish</span>. This is only a label, so any name Bob
-            will recognise is fine.</li>
-        <li><b>Your key</b> or <b>Key</b>: type in the string Casey brought. Spaces and capitals do
-            not matter, and Google Authenticator ignores them.</li>
-        <li><b>Type of key</b>: leave it on <span class="kbd">Time based</span>. Do not change it
-            to <span class="kbd">Counter based</span>.</li>
-      </ul></li>
-  <li>Tap <b>Add</b>.</li>
-</ol>
-<p>An entry appears showing six digits and a shrinking circle beside them. The digits change every
-   thirty seconds.</p>
-
-<h4>3. Check the Two Phones Agree</h4>
-<p>To see a code on either phone, open Google Authenticator. The entry named
-   <span class="kbd">realityfootballcommish</span> shows six digits and a shrinking circle. That is
-   the code. Nothing has to be tapped or unlocked to read it.</p>
-<p><b>Together in one room:</b> hold the phones side by side and look at both entries. They must
-   show the same six digits at the same moment.</p>
-<p><b>On the phone or on a video call:</b> do not try to read codes to each other. A code lives
-   thirty seconds and you will spend the call chasing it. <b>Have Bob sign in instead.</b> Go
-   straight to part 4 and part 5. If Google accepts his code, the key is right, and that is a
-   better proof than any comparison. If Google says the code is wrong, the key is wrong.</p>
-<p>If it is wrong, delete the entry on Bob&rsquo;s phone and do part 2 again. Read the key out
-   character by character, saying &ldquo;capital&rdquo; or &ldquo;lower case&rdquo; for each
-   letter.</p>
-<p>If a carefully typed key still fails, check the clock. Both phones need the date and time set
-   automatically, in the phone&rsquo;s own date and time settings. These codes are built from the
-   current time, so a phone with a wrong clock produces wrong codes.</p>
-
-<h4>4. Casey Hands Over the Password</h4>
-<p>Casey gives Bob the password for
-   <span class="kbd">realityfootballcommish@gmail.com</span>, on paper or out loud. Bob puts it
-   wherever he keeps his own passwords. It does not go in an email.</p>
-
-<h4>5. Bob Signs In on His Own Laptop or Phone</h4>
-<ol>
-  <li>Bob opens a browser and goes to <span class="kbd">gmail.com</span>.</li>
-  <li>If a different account is already signed in, click the picture at the top right and choose
-      <b>Add another account</b>.</li>
-  <li>He types <span class="kbd">realityfootballcommish@gmail.com</span> and the password.</li>
-  <li>Google asks for a six digit code. Bob reads it off <b>his own</b> Google Authenticator and
-      types it in. If Google offers a different way first, choose <b>Try another way</b>, then
-      <b>Get a verification code from the Google Authenticator app</b>.</li>
-  <li>If Google offers to remember the device, say yes. That stops it asking on that device every
-      time.</li>
-</ol>
-<p>He is in. This is the moment the whole thing is proved, so do not skip it.</p>
-
-<h4>6. Bob Adds a Passkey on That Device</h4>
-<p>This is what stops Google asking him for codes on the device he uses most.</p>
-<ol>
-  <li>Still signed in as the league account, go to
-      <span class="kbd">myaccount.google.com</span>.</li>
-  <li>Open <b>Security</b>.</li>
-  <li>Find <b>How you sign in to Google</b> and open <b>Passkeys and security keys</b>.</li>
-  <li>Tap <b>Create a passkey</b>, then <b>Continue</b>.</li>
-  <li>The device asks for his fingerprint, his face, or the screen lock code. That is it.</li>
-</ol>
-<p>From now on that device opens the league account with his fingerprint or face. The code app is
-   only needed on a device that has no passkey.</p>
-
-<h4>7. The Two of You Look at the Spreadsheet</h4>
-<ol>
-  <li>Open <b>RFL Trades</b> and go to the <b>Access</b> tab.</li>
-  <li>Check that Bob&rsquo;s row and Casey&rsquo;s row both read
-      <span class="kbd">commissioner</span> in the Role column. Every other row reads
-      <span class="kbd">owner</span>.</li>
-  <li>Go down the <b>Email</b> column together. Fill in every address Bob knows.</li>
-  <li>Write down who is still missing, and agree who is chasing them.</li>
-</ol>
-<p>Nobody can sign in to the RFL application until their own address is in that column, so this is
-   the item that decides when the owners can start using it.</p>
-
-<h4>What Full Access Means</h4>
-<p>Bob has full access once he has four things. Nothing else is needed, because the spreadsheet and
-   the emails live inside the account.</p>
-<ol>
-  <li>The address, <span class="kbd">realityfootballcommish@gmail.com</span>.</li>
-  <li>The password.</li>
-  <li>An authenticator app showing the same codes as Casey&rsquo;s.</li>
-  <li>A passkey on the device he uses most.</li>
-</ol>
-<p>Do not change the recovery phone number to Bob&rsquo;s. Recovery is for getting a locked account
-   back, it is not the everyday sign-in, and moving it away from Casey helps nobody.</p>
+<p>Setting Bob up is its own sheet, so it can be read off a phone while you are doing it. It is
+   called <b>Setting Bob Up</b> and it lives at <span class="kbd">/docs/bob.html</span>.</p>
 
 <h3>What Is Left to Do</h3>
 <p>Do these in order. The first one is the one everything else waits on.</p>
