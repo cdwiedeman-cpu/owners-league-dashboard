@@ -259,31 +259,29 @@ ol li,ul li{margin:0 0 7px}
     <td>Every completed trade costs the owner <b>$3</b>, whichever way it happened. The page keeps
         the running total for each owner.</td></tr>
 </tbody></table>
-<p>The rest of this guide covers the seven steps to set it up, what happens each week, and what to
-   do when an owner&rsquo;s situation changes.</p>
+<p>The rest of this guide covers what is already set up and what is left, what happens each week,
+   and what to do when an owner&rsquo;s situation changes.</p>
 </section>
 
-<section><h2>Setting It Up</h2><p class="lead">Seven steps, once, before the season.</p>
-<p>This is done once, before the season, and it takes about half an hour.</p>
+<section><h2>Setting It Up</h2><p class="lead">What is done, and what is left.</p>
+<p>Casey has already done the first half of this. What is written here is where things stand and
+   what is still to do. Either of you can do any of it.</p>
 
-<h3>First, a Google Account for the League</h3>
-<p>Three things sit behind the RFL application: the spreadsheet, the script that runs on Mondays, and the
-   emails owners receive. All three live in one Google account. Casey and Bob agreed on
-   <b>a new account for the league</b> rather than either of their personal ones, for three
-   reasons:</p>
+<h3>What Is Already Set Up</h3>
 <ul>
-  <li>Owners get league email from a league address, not from somebody&rsquo;s personal Gmail.</li>
-  <li>Both of you have the login, so nothing stops working if one of you steps back for a
-      season.</li>
-  <li>Neither of you ends up with the league&rsquo;s machinery sitting in your own mail.</li>
+  <li>The league has its own Google account, <span class="kbd">realityfootballcommish@gmail.com</span>.
+      Casey and Bob both sign in to it with the same password.</li>
+  <li>The spreadsheet exists. It is called <span class="kbd">RFL Trades</span> and it lives in
+      that account&rsquo;s Google Drive.</li>
+  <li>It has a tab named <span class="kbd">Access</span>, with all 27 seats listed and spelled
+      correctly.</li>
 </ul>
-<p>The account is <span class="kbd">realityfootballcommish@gmail.com</span>. Do the rest of
-   these steps <b>while signed in to that account</b>.</p>
-<p>Casey and Bob both sign in to this one account with the same email address and password.
-   There is no second login to keep track of, and either of them can do anything the league needs
-   doing.</p>
-<p><b>The password is not written down here.</b> This guide is published on the league website,
-   so anybody who opens the site can read it. Casey gives Bob the password directly.</p>
+<p>Three things sit behind the RFL application: that spreadsheet, a script that runs on Mondays,
+   and the emails owners receive. All three belong to the league account rather than to either of
+   your personal ones. Owners get league email from a league address, and nothing stops working if
+   one of you steps back for a season.</p>
+<p><b>The password is not written down here.</b> This guide is published on the league website, so
+   anybody who opens the site can read it.</p>
 <p>Two things follow from sharing one login, and both are worth knowing:</p>
 <ul>
   <li>Google sometimes asks for a code when it sees a sign-in from a computer it does not
@@ -294,29 +292,29 @@ ol li,ul li{margin:0 0 7px}
       did it. That is fine for a league, and it is the trade-off that comes with one login.</li>
 </ul>
 
-<h3>Then the Seven Steps</h3>
+<h3>What Is Left to Do</h3>
+<p>Do these in order. The first one is the one everything else waits on.</p>
 <ol>
-  <li>Make a new Google Sheet and name it <span class="kbd">RFL Trades</span>.</li>
-  <li>Add a tab named <span class="kbd">Access</span>.</li>
-  <li>Open the file <span class="kbd">Owners_League_Access_List.csv</span> that came with this
-      guide and paste it into that tab. All 27 seats are already listed and spelled correctly.</li>
-  <li>Type each owner&rsquo;s email address into the Email column. <b>Personal inboxes only</b> &mdash;
-      not the league email list, and not an address that forwards to several people.</li>
-  <li>Set the Role column to <span class="kbd">commissioner</span> on two rows: Bob&rsquo;s and
-      Casey&rsquo;s. Bob is the commissioner of the league. Casey runs the software, and he needs
-      the same two abilities to fix anything that goes wrong. Every other row stays
-      <span class="kbd">owner</span>. Role has nothing to do with who owns the Google account.</li>
-  <li>Turn the Role column into a drop-down so nobody can mistype it. Select the whole column,
-      then choose Data, then Data validation, then Add rule. Set the rule to Dropdown and give it
-      two values: <span class="kbd">owner</span> and <span class="kbd">commissioner</span>. Do the
-      same for the Status column with <span class="kbd">active</span> and
-      <span class="kbd">inactive</span>.</li>
-  <li>In the Sheet, click Extensions, then Apps Script. Paste in the script, click Deploy, and add
-      the trigger described in What the Trigger Is.</li>
+  <li><b>Collect the 27 email addresses and type them into the Email column.</b> Personal inboxes
+      only. Do not use the league email list, and do not use an address that forwards to several
+      people. Bob&rsquo;s scoring workbook does not hold email addresses, so there is nowhere to
+      copy them from. They have to be gathered from the owners.</li>
+  <li><b>Set the Role column to <span class="kbd">commissioner</span> on two rows</b>,
+      Bob&rsquo;s and Casey&rsquo;s. Bob is the commissioner of the league. Casey runs the
+      software and needs the same two abilities to fix anything that goes wrong. Every other row
+      stays <span class="kbd">owner</span>.</li>
+  <li><b>Turn Role and Status into drop-downs</b> so neither can be mistyped. Select the Role
+      column, then choose Data, then Data validation, then Add rule. Set the rule to Dropdown and
+      give it two values, <span class="kbd">owner</span> and
+      <span class="kbd">commissioner</span>. Do the same on the Status column with
+      <span class="kbd">active</span> and <span class="kbd">inactive</span>.</li>
+  <li><b>Install the script.</b> Click Extensions, then Apps Script, then paste it in, click
+      Deploy, and add the trigger described in What the Trigger Is.</li>
 </ol>
-<p><b>Casey does the last step, and the script is not written yet.</b> Steps 1 to 6 are worth
-   doing now, because the script reads the Access tab you build in them. Nothing in those steps
-   has to be redone once the script exists.</p>
+<p><b>The script is not written yet.</b> That is the one piece of this that does not exist, and
+   Casey is building it. Steps 1 to 3 are worth doing now and none of them will need redoing,
+   because the script reads the Access tab those steps fill in.</p>
+<p>Nobody can sign in until the Email column is filled, so that is the real starting line.</p>
 
 <h3>The Access Tab&rsquo;s Columns</h3>
 <p>Four of them you type. Two the script writes, and you leave those alone.</p>
