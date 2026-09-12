@@ -704,6 +704,7 @@ return {resolve: resolve, claim: claim, applyClaim: applyClaim, claimRow: claimR
 var Store = (function () {
 
   var KEY = 'rfl_sandbox_v2';
+  var CKEY = 'rfl_commish_key';   // the key THIS browser was given, never in the page itself
   var api = null;             // the script's address, or null for the practice copy
   var rev = null;             // the revision the copy in this browser was built on
   var dirty = false, sending = false, timer = null;
@@ -720,9 +721,21 @@ var Store = (function () {
 
   /* ---- talking to the sheet ------------------------------------------------------------ */
 
+  /* THE KEY LIVES IN THIS BROWSER AND NOWHERE ELSE. It is not in the page, because the page's
+     source can be read by anybody who opens it. Casey and Bob each type it once, from the
+     Settings tab of the league spreadsheet. */
+  function ckey() {
+    try { return localStorage.getItem(CKEY) || ''; } catch (e) { return ''; }
+  }
+  function setKey(k) {
+    try { localStorage.setItem(CKEY, String(k || '').trim()); } catch (e) {}
+  }
+
   function call(body) {
     /* text/plain on purpose. Any other content type makes the browser ask Google's permission
        first, and a script on a sheet has no way to answer that question. */
+    body = body || {};
+    body.key = ckey();
     return fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
                        body: JSON.stringify(body)})
       .then(function (r) { return r.json(); });
@@ -742,6 +755,11 @@ var Store = (function () {
              written over the newer one. */
           if (a.state) { set(a.state); rev = a.rev; }
           setStatus('stale', 'somebody else changed this while you had it open');
+          return;
+        }
+        if (a && a.why === 'nokey') {
+          dirty = true;
+          setStatus('nokey', (a && a.note) || 'the commissioner key is missing or wrong');
           return;
         }
         dirty = true;
@@ -784,9 +802,16 @@ var Store = (function () {
       }
 
       setStatus('saving');
-      fetch(api + (api.indexOf('?') < 0 ? '?' : '&') + 'fn=load')
+      fetch(api + (api.indexOf('?') < 0 ? '?' : '&') + 'fn=load&key='
+            + encodeURIComponent(ckey()))
         .then(function (r) { return r.json(); })
         .then(function (a) {
+          if (a && a.why === 'nokey') {
+            /* NOT AN OUTAGE AND NOT AN EMPTY LEAGUE. The page asks for the key and waits. */
+            setStatus('nokey', a.note || '');
+            if (opts.needKey) opts.needKey();
+            return;
+          }
           if (!a || !a.ok) throw new Error((a && a.note) || 'the league sheet did not answer');
           rev = a.rev;
           set(a.state || opts.blank());
@@ -813,6 +838,8 @@ var Store = (function () {
     },
 
     reload: function (opts) { this.boot(opts); },
+    key: ckey,
+    setKey: setKey,
     live: live,
     status: function () { return state; },
     why: function () { return lastWhy; },
@@ -2996,11 +3023,17 @@ function saveLight(st, why){
   if (!b) return;
   if (!Store.live()){ b.hidden = true; return; }
   var say = {saving: ['w', 'Saving'], saved: ['g', 'Saved to the League Sheet'],
-             offline: ['b', 'Not Saved'], stale: ['b', 'Reloaded'], ready: ['', '']};
+             offline: ['b', 'Not Saved'], stale: ['b', 'Reloaded'],
+             nokey: ['b', 'Key Needed'], ready: ['', '']};
   var m = say[st] || ['', st];
   b.hidden = false;
   b.className = 'chip ' + m[0];
   b.textContent = m[1];
+  if (st === 'nokey'){
+    b.title = 'This device has not been given the commissioner key yet, so the league sheet will '
+            + 'not answer it.';
+    return;
+  }
   b.title = st === 'offline'
     ? 'The league sheet could not be reached, so this change is still only on this device. '
       + 'It will be sent again by itself. ' + (why || '')
@@ -3008,6 +3041,32 @@ function saveLight(st, why){
         ? 'Somebody else changed this while you had it open, so what you are looking at was '
           + 'reloaded from the league sheet.'
         : 'Everything on this page is stored in the league sheet.');
+}
+
+/* ASKING FOR THE KEY. Typed once per device and remembered by that browser. It is never in the
+   page, because the page's source can be read by anybody who opens it, and this key is what
+   stands between an owner and the whole Access tab. */
+function askForKey(){
+  showHelp('This Device Needs the Commissioner Key',
+    '<p>The league sheet will not answer a device that has not been given its key. That is what '
+    + 'stops an owner reading the league\'s email addresses.</p>'
+    + '<p>The key is on the <b>Settings</b> tab of the <b>RFL Trades</b> spreadsheet, beside '
+    + '<b>Commissioner key</b>. Only you and Bob can open that spreadsheet.</p>'
+    + '<label class="lb" for="ck">Commissioner Key</label>'
+    + '<input id="ck" autocapitalize="characters" autocorrect="off" spellcheck="false" '
+    + 'placeholder="ABCDEF-GHJKLM-NPQRST-UVWXYZ" value="' + esc(Store.key()) + '">'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="saveKey()">Use This Key</button>'
+    + '<button onclick="closeHelp()">Not Now</button></div>'
+    + '<p class="note">It is remembered on this device only. Each phone and each computer is '
+    + 'told once.</p>');
+}
+function saveKey(){
+  var v = el('ck') ? el('ck').value : '';
+  if (!String(v).trim()) return;
+  Store.setKey(v);
+  closeHelp();
+  boot();
 }
 
 function boot(){
@@ -3018,6 +3077,7 @@ function boot(){
     blank: blank,
     access: adoptAccess,
     status: saveLight,
+    needKey: askForKey,
     ready: function(stuck){
       if (!S) adopt(null);
       render();
