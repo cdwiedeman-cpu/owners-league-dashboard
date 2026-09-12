@@ -286,30 +286,64 @@ ol li,ul li{margin:0 0 7px}
    did it. That is fine for a league, and it is the trade-off that comes with one login.</p>
 
 <h3>So Bob Never Has to Ask Casey for a Code</h3>
-<p>Google asks for a code when it sees a sign-in from a computer it does not recognise, and by
-   default it sends that code to Casey&rsquo;s phone. Give Bob his own way to get in. Do the first
-   of these, and the second as well if you want a spare.</p>
+<p>Google asks for a six digit code when it sees a sign-in from a computer it does not recognise.
+   Casey has set up Google Authenticator on his own phone, so his phone produces those codes. Bob
+   needs the same thing on his phone, or he will have to ring Casey every time.</p>
+
+<h4>Step One: Bob Installs the App</h4>
+<p>Bob installs <b>Google Authenticator</b> from the App Store or the Play Store. He opens it once
+   and leaves it sitting on the welcome screen. He does not add anything yet.</p>
+<p>Do not scan any QR code with the phone&rsquo;s camera. The camera hands these codes to the
+   phone&rsquo;s password manager, which then asks for a username, a password and a website, and
+   none of that is what you want. Every scan described here is done from inside Google
+   Authenticator.</p>
+
+<h4>Step Two: Copy Casey&rsquo;s Entry Onto Bob&rsquo;s Phone</h4>
+<p>Google Authenticator can copy an entry from one phone to another. This is the easy way, and it
+   changes nothing about the Google account. The two of you need to be in the same room, because
+   one phone shows a QR code and the other reads it off the screen.</p>
 <ol>
-  <li><b>Bob adds a passkey on his own phone or laptop.</b> Sign in to the league account on
-      Bob&rsquo;s device once, using a code from Casey. Then open the Google Account security
-      settings on that device and add a passkey. From then on that device unlocks the account with
-      Bob&rsquo;s fingerprint, face or screen lock, and it never asks for a code again. This is the
-      one Google recommends and it is the least trouble.</li>
-  <li><b>Put an authenticator app on both phones from the same setup code.</b> In the Google
-      Account security settings, open 2-Step Verification and choose Authenticator. Google shows a
-      QR code on the screen. Have Casey and Bob each scan that same QR code with Google
-      Authenticator. Both phones then show the same six digits at the same time, forever, so
-      either of you can read off a code without asking the other.</li>
+  <li>On <b>Casey&rsquo;s</b> phone, open Google Authenticator and open its menu.</li>
+  <li>Choose <b>Transfer accounts</b>, then <b>Export accounts</b>.</li>
+  <li>Tick the league account and tap Next. The phone shows a QR code.</li>
+  <li>On <b>Bob&rsquo;s</b> phone, open Google Authenticator, open its menu, choose <b>Transfer
+      accounts</b>, then <b>Import accounts</b>, then <b>Scan QR code</b>.</li>
+  <li>Point Bob&rsquo;s phone at the QR code on Casey&rsquo;s screen.</li>
 </ol>
-<p>Two more options, if you want them:</p>
-<ul>
-  <li><b>Add Bob&rsquo;s number as a backup phone</b> in 2-Step Verification. It works, but Google
-      decides when to offer the backup phone, so it is not something Bob can count on.</li>
-  <li><b>Print the backup codes and give Bob half of them.</b> Each code works once and then it is
-      spent, so this is a spare rather than a way in.</li>
-</ul>
-<p>Do not change the recovery phone number to Bob&rsquo;s. Recovery is for getting a locked
-   account back, it is not the everyday sign-in, and moving it away from Casey helps nobody.</p>
+<p>Both phones now show the same six digits at the same second, and they will keep matching. Check
+   that before you put the phones down.</p>
+
+<h4>If You Cannot Be in the Same Room</h4>
+<p>Set the authenticator up again from the Google account, with both phones present in the sense
+   that matters: both scanning the one screen. Casey signs in to the league account on a computer,
+   opens the Google Account security settings, opens 2-Step Verification, and starts Authenticator
+   setup again. Google shows a fresh QR code. Casey and Bob each scan that same QR code from
+   inside Google Authenticator before anybody clicks Next.</p>
+<p>If Bob is somewhere else, click <b>Can't scan it?</b> beside the QR code. Google shows the same
+   secret written out as letters and numbers. Bob taps <b>+</b> in Google Authenticator, chooses
+   <b>Enter a setup key</b>, and types it in with the type left on <b>Time based</b>.</p>
+<p>That string is worth exactly as much as the password. Hand it over the way you handed over the
+   password, and never put it in an email.</p>
+<p>Setting it up again replaces what was there, so Casey should delete the old entry from his
+   phone afterwards. Two entries that look alike and only one of which works is a bad thing to
+   have on the morning something is wrong.</p>
+
+<h4>Step Three: Bob Adds a Passkey, and Then He Is Done</h4>
+<p>Once Bob has signed in on his own phone or laptop, have him open the Google Account security
+   settings on that device and add a <b>passkey</b>. That device then opens the account with his
+   fingerprint, face or screen lock, and it stops asking for codes there at all.</p>
+
+<h3>Everything Bob Needs, in One List</h3>
+<p>Bob has full access to the league account once he has all four of these. Nothing else is
+   required, because the spreadsheet and the emails live inside the account.</p>
+<ol>
+  <li>The address, <span class="kbd">realityfootballcommish@gmail.com</span>.</li>
+  <li>The password.</li>
+  <li>Google Authenticator on his phone, showing the same codes as Casey&rsquo;s.</li>
+  <li>A passkey on the device he uses most, so he stops needing codes there.</li>
+</ol>
+<p>Do not change the recovery phone number to Bob&rsquo;s. Recovery is for getting a locked account
+   back, it is not the everyday sign-in, and moving it away from Casey helps nobody.</p>
 
 <h3>What Is Left to Do</h3>
 <p>Do these in order. The first one is the one everything else waits on.</p>
