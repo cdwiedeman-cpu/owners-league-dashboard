@@ -196,8 +196,8 @@ ol li,ul li{margin:0 0 7px}
   </header>
 
 <section><h2>How it works</h2><p class="lead">Two ways a team changes hands, at two different times.</p>
-<p>Owners enter their own trades on a web page. Everything below is a rule you already apply; the
-   page applies the same ones, in the same order, and shows its working. Nothing about the league
+<p>Owners enter their own trades in the RFL application. Everything below is a rule you already
+   apply, and the application applies the same ones, in the same order, and shows its working. Nothing about the league
    changes.</p>
 <p>There are two ways a team changes hands, and they happen at different times:</p>
 <ul>
@@ -214,18 +214,23 @@ ol li,ul li{margin:0 0 7px}
 
 </section>
 
-<section><h2>The rules it applies</h2><p class="lead">Your rules, enforced by the page instead of by you.</p>
-<p>These are the rules you have been applying by hand. Every one of them is enforced by the page
+<section><h2>The rules it applies</h2><p class="lead">Your rules, enforced by the RFL application instead of by you.</p>
+<p>These are the rules you have been applying by hand. Every one of them is enforced by the RFL application
    before a trade can go through, and an owner who breaks one is told which rule stopped them.</p>
 <table class="rules"><tbody>
 <tr><td class="pool">Three divisions,<br>separate pools</td>
     <td>Predator, Viper and Scorpion each draft and trade from their own pool. A team owned in
         one division can be free in another, and the three never interact.</td></tr>
 <tr><td class="pool">Hold before dropping</td>
-    <td>An owner has to hold a team for <b>three of its games</b> before it can be dropped. A
-        team they drafted counts every game it has played this season, including any played on or
-        before draft day. A team they picked up starts its three on the day they got it, so
-        dropping a team and picking it up again starts the three over.</td></tr>
+    <td>An owner has to hold a team for <b>three of its games</b> before it can be dropped.
+        <ul>
+        <li>For a team they drafted, every game that team has played this season counts toward
+            those three games, including any played on or before draft day.</li>
+        <li>For a team they picked up during the season, the three games start on the day they
+            got it. Games the team played for a previous owner do not count.</li>
+        <li>If an owner drops a team and picks it up again later, they have to hold it for three
+            more games before they can drop it again.</li>
+        </ul></td></tr>
 <tr><td class="pool">Games left to claim</td>
     <td>The team being picked up needs <b>three regular season games still to play</b>. This is a
         different rule from the one above, counted at the other end of the schedule.</td></tr>
@@ -337,7 +342,7 @@ ol li,ul li{margin:0 0 7px}
 <h3>After that</h3>
 <p>The only thing anybody edits by hand is the Access tab, and Bob can do that with ordinary edit
    access to the Sheet &mdash; no password needed. Three other tabs appear on their own. <b>Requests</b> is
-   filled in by the page when owners submit. <b>Results</b> is written every Monday and becomes
+   filled in by the RFL application when owners submit. <b>Results</b> is written every Monday and becomes
    the record of every trade. <b>Log</b> keeps a dated line for every address change and every
    retirement. Leave all three alone. Log is there to be read, not edited.</p>
 </section>
@@ -410,7 +415,7 @@ ol li,ul li{margin:0 0 7px}
   <li><b>Monday 4:00pm AZ.</b> Entry closes. Anything sent at 4:00pm or later is too late, and is
       stamped with the time it was sent, so the cut-off does not depend on when the script
       happens to run.</li>
-  <li>The page settles every list that was submitted, division by division, in the order below.
+  <li>The RFL application settles every list that was submitted, division by division, in the order below.
       Nobody presses anything.</li>
   <li><b>Within about five minutes.</b> Every owner gets an email telling them what happened to
       each of their entries. The results are on the page as well.</li>
