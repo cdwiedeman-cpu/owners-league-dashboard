@@ -1,0 +1,80 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RFL — Connection Test</title>
+<style>
+:root{color-scheme:light dark}
+body{margin:0;padding:20px;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  max-width:760px;margin:0 auto;background:#0b121c;color:#e8eef7}
+h1{font-size:20px;margin:0 0 4px}
+p.lead{margin:0 0 18px;color:#9fb0c6}
+label{display:block;font-weight:600;margin:14px 0 5px}
+input{width:100%;box-sizing:border-box;padding:11px;font-size:16px;border-radius:8px;
+  border:1px solid #2a3a52;background:#111a27;color:#e8eef7}
+button{margin-top:14px;padding:12px 18px;font-size:16px;font-weight:600;border:0;border-radius:8px;
+  background:#2563eb;color:#fff}
+.r{margin-top:18px;border:1px solid #2a3a52;border-radius:10px;overflow:hidden}
+.r div{padding:11px 13px;border-top:1px solid #2a3a52}
+.r div:first-child{border-top:0}
+.n{font-weight:700}
+.ok{color:#4ade80}.no{color:#f87171}.w{color:#fbbf24}
+pre{white-space:pre-wrap;word-break:break-word;margin:6px 0 0;font-size:13px;color:#9fb0c6}
+</style>
+<h1>RFL Connection Test</h1>
+<p class="lead">Paste the web app address from the deployment and press the button. Three ways of
+  calling it are tried. The answer tells the build which one to use.</p>
+
+<label for="u">Web App Address</label>
+<input id="u" placeholder="https://script.google.com/macros/s/..." autocapitalize="off"
+       autocorrect="off" spellcheck="false">
+<button onclick="run()">Run the Test</button>
+
+<div class="r" id="out" hidden></div>
+
+<script>
+function line(name, cls, msg, detail){
+  var d = document.createElement('div');
+  d.innerHTML = '<span class="n">' + name + '</span> &nbsp; <span class="' + cls + '">' + msg
+              + '</span>' + (detail ? '<pre>' + detail + '</pre>' : '');
+  document.getElementById('out').appendChild(d);
+}
+function show(o){ try { return JSON.stringify(o); } catch(e){ return String(o); } }
+
+function jsonp(url){
+  return new Promise(function(res, rej){
+    var cb = 'rfl_' + Math.random().toString(36).slice(2);
+    var s = document.createElement('script');
+    var t = setTimeout(function(){ clean(); rej(new Error('no answer within 15 seconds')); }, 15000);
+    function clean(){ clearTimeout(t); delete window[cb]; if (s.parentNode) s.parentNode.removeChild(s); }
+    window[cb] = function(d){ clean(); res(d); };
+    s.onerror = function(){ clean(); rej(new Error('the address could not be loaded')); };
+    s.src = url + (url.indexOf('?') < 0 ? '?' : '&') + 'callback=' + cb;
+    document.body.appendChild(s);
+  });
+}
+
+async function run(){
+  var url = document.getElementById('u').value.trim();
+  var out = document.getElementById('out');
+  out.innerHTML = ''; out.hidden = false;
+  if (!url){ line('Address', 'no', 'nothing was pasted in'); return; }
+
+  line('Testing', 'w', 'one moment');
+
+  try { var a = await jsonp(url);
+        line('1. Wrapped GET', 'ok', 'worked', show(a)); }
+  catch (e){ line('1. Wrapped GET', 'no', 'failed', e.message); }
+
+  try { var r = await fetch(url); var b = await r.json();
+        line('2. Plain GET', 'ok', 'worked', show(b)); }
+  catch (e){ line('2. Plain GET', 'no', 'blocked by the browser', e.message); }
+
+  try { var r2 = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+                                   body: JSON.stringify({hello:'rfl', n:1})});
+        var c = await r2.json();
+        line('3. POST', 'ok', 'worked', show(c)); }
+  catch (e){ line('3. POST', 'no', 'blocked by the browser', e.message); }
+
+  line('Done', 'w', 'send Claude what this says');
+}
+</script>
