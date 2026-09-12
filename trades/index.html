@@ -1288,7 +1288,35 @@ function emailFor(seatK, rows){
 /* ---- shell ---------------------------------------------------------------------------------- */
 var TABS = [['signin','Sign In'],['trades','My Trades'],['run','Run It'],
             ['access','Access List'],['rosters','Rosters']];
-function setTab(t){ TAB = t; render(); window.scrollTo(0, 0); }
+/* WHICH TABS ARE THE COMMISSIONER'S. Casey, 12 Sep 2026: "Will the Run It tab only be shown to
+   me and Bob?" It was not. Every tab drew for everybody, which was harmless while he was the
+   only person opening the practice copy and wrong the moment 27 owners have the link.
+   THE ROLE COMES FROM THE ACCESS TAB, which is typed in the spreadsheet and read on every load.
+   Nobody can give themselves the role from inside the page. */
+var COMMISH_TABS = {run: 1, access: 1};
+function isCommish(){
+  var s = session();
+  return !!(s && !s.dead && s.role === 'commissioner');
+}
+function allowedTabs(){
+  var ok = isCommish();
+  return TABS.filter(function(t){ return ok || !COMMISH_TABS[t[0]]; });
+}
+/* AND THE VIEW REFUSES TOO, not only the button. A tab can be reached by other means than
+   pressing its button, so the check lives with the thing being protected as well as with the
+   way in. */
+function commishOnly(what){
+  return '<div class="card"><h2>' + esc(what) + ' Is the Commissioner&rsquo;s</h2>'
+    + '<p class="note">This part of the page belongs to the commissioner. Your own trades are on '
+    + 'the <b>My Trades</b> tab.</p>'
+    + '<p class="note">If you are the commissioner and you are seeing this, the Role column on '
+    + 'your row of the league spreadsheet does not say <b>commissioner</b>, or you are not '
+    + 'signed in on this device.</p></div>';
+}
+function setTab(t){
+  if (COMMISH_TABS[t] && !isCommish()) t = 'signin';
+  TAB = t; render(); window.scrollTo(0, 0);
+}
 function closeHelp(){ OPEN = null; var b = el('help'); b.hidden = true; b.innerHTML = '';
   document.body.style.overflow = ''; }
 function showHelp(title, html){
@@ -1337,12 +1365,21 @@ function render(){
     + 'one will use. ' + (s && s.seat
       ? 'Signed in on <b>device ' + esc(S.device) + '</b> as <b>' + esc(s.seat) + '</b>.'
       : 'Not signed in on device ' + esc(S.device) + '.');
-  el('tabs').innerHTML = TABS.map(function(t){
+  var shown = allowedTabs();
+  /* A TAB THAT IS NO LONGER ALLOWED CANNOT STAY OPEN. Signing out of a commissioner's seat
+     while the Run It tab is showing would otherwise leave it on screen. */
+  if (!shown.some(function(t){ return t[0] === TAB; })) TAB = 'signin';
+  el('tabs').innerHTML = shown.map(function(t){
     return '<button class="' + (TAB === t[0] ? 'on' : '') + '" onclick="setTab(\'' + t[0] + '\')">'
       + esc(t[1]) + '</button>';
   }).join('');
-  el('body').innerHTML = ({signin: viewSignIn, trades: viewTrades, run: viewRun,
-                           access: viewAccess, rosters: viewRosters}[TAB] || viewSignIn)();
+  var view = {signin: viewSignIn, trades: viewTrades, run: viewRun,
+              access: viewAccess, rosters: viewRosters}[TAB] || viewSignIn;
+  if (COMMISH_TABS[TAB] && !isCommish()){
+    el('body').innerHTML = commishOnly(TAB === 'run' ? 'Run It' : 'The Access List');
+  } else {
+    el('body').innerHTML = view();
+  }
 }
 
 /* ---- the clock panel, on every tab that cares about it -------------------------------------- */
