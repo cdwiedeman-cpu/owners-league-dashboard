@@ -189,7 +189,7 @@ td.num,th.num{text-align:right}
 try { if (/[?&]only=/.test(location.search)) document.documentElement.className += ' embed'; }
 catch (e) {}
 </script></head><body>
-<div class="sandbar" id="sandbar">THE LIVE LEAGUE — <b>everything here is real and everybody sees it.</b>
+<div class="sandbar" id="sandbar"><b>Reality Football League</b>
   <span id="clockchip"></span><span id="savechip" class="chip" hidden></span></div>
 <div class="wrap">
   <h1>Reality Football League — Trades</h1>
@@ -1510,9 +1510,20 @@ function render(){
     return;
   }
   var s = session();
-  el('clockchip').innerHTML = ' &nbsp;·&nbsp; ' + esc(pretty(now())) + ' &nbsp;·&nbsp; '
-    + (mode() === 'fcfs' ? 'first come, first served' : 'peloton entry open')
-    + ' &nbsp;·&nbsp; week ' + weekNo();
+  /* WHAT AN OWNER NEEDS TO KNOW AT A GLANCE, and nothing about how any of it works.
+     Casey, 13 Sep 2026: "I don't know what the date means or why it matters. The Peloton Entry is
+     open for Week 1 is helpful." So on the real page it is the week and what is open, in words.
+     The clock itself stays on the practice copy, where moving it is the whole point, and for a
+     commissioner, who needs to see the moment the page is working from. */
+  var openNow = (mode() === 'fcfs' ? 'First Come, First Served Is Open' : 'Peloton Entry Is Open');
+  if (Store.live()){
+    el('clockchip').innerHTML = esc(openNow) + ' &nbsp;·&nbsp; Week ' + weekNo()
+      + (isCommish() ? ' &nbsp;·&nbsp; <span class="d">' + esc(pretty(now())) + '</span>' : '');
+  } else {
+    el('clockchip').innerHTML = ' &nbsp;·&nbsp; ' + esc(pretty(now())) + ' &nbsp;·&nbsp; '
+      + (mode() === 'fcfs' ? 'first come, first served' : 'peloton entry open')
+      + ' &nbsp;·&nbsp; week ' + weekNo();
+  }
   el('subline').innerHTML = 'A copy of the real rosters, a clock you can move, and the same rules the live '
     + 'one will use. ' + (s && s.seat
       ? 'Signed in on <b>device ' + esc(S.device) + '</b> as <b>' + esc(s.seat) + '</b>.'
@@ -1772,7 +1783,16 @@ function redeemFromUrl(){
   if (!m) return false;
   var code = decodeURIComponent(m[1]);
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
-  Store.redeem(code).then(function(a){
+  /* SOMETHING ON SCREEN WHILE IT HAPPENS. Casey, 13 Sep 2026: "When I clicked the sign in link it
+     took me to a page with only saying THE LIVE LEAGUE ... None of the tabs on the page." The page
+     was waiting on the league sheet and drawing nothing at all, so a slow answer looked like a
+     broken page -- and a failed one looked like a broken page for ever, because there was nothing
+     to catch it. A PAGE THAT IS WORKING SAYS SO. */
+  el('body').innerHTML = '<div class="card"><h2>Signing You In</h2>'
+    + '<p class="note">One moment. The league sheet is checking your link.</p></div>';
+  Store.redeem(code).catch(function(err){
+    return {ok: false, note: String(err && err.message ? err.message : err)};
+  }).then(function(a){
     if (a && a.ok){
       LIVE_ME = null;
       boot();
@@ -1789,8 +1809,10 @@ function redeemFromUrl(){
                nolink: 'That is not a link this league issued.',
                seat: 'That address is no longer on an active seat. Ask the commissioner.'
               }[(a && a.why) || ''] || ((a && a.note) || 'The league sheet did not answer.');
-    showHelp('That Link Did Not Work', '<p>' + esc(why) + '</p>');
-    render();
+    LIVE_ME = null;
+    boot();                       /* whatever happened, leave a page that can be used */
+    showHelp('That Link Did Not Work',
+      '<p>' + esc(why) + '</p><p>Ask for a new link on the Sign In tab.</p>');
   });
   return true;
 }
@@ -3330,16 +3352,20 @@ function saveLight(st, why){
   var b = el('savechip');
   if (!b) return;
   if (!Store.live()){ b.hidden = true; return; }
-  var say = {saving: ['w', 'Saving'], saved: ['g', 'Saved to the League Sheet'],
-             offline: ['b', 'Not Saved'], stale: ['b', 'Reloaded'],
-             nokey: ['b', 'Key Needed'], ready: ['', '']};
-  var m = say[st] || ['', st];
+  /* NOTHING WHEN IT IS WORKING. Casey, 13 Sep 2026: "why do we need the Saved to League sheet.
+     End users aren't going to understand that and I don't either." He is right: a light that is
+     on whenever everything is fine is a light nobody reads, and it raises a question about
+     machinery the reader should never have to think about. It appears only when something has
+     gone wrong, which is the only time it tells anybody anything. */
+  var say = {offline: ['b', 'Not Saved'], stale: ['b', 'Reloaded'], nokey: ['b', 'Sign In Needed']};
+  var m = say[st];
+  if (!m){ b.hidden = true; b.textContent = ''; return; }
   b.hidden = false;
   b.className = 'chip ' + m[0];
   b.textContent = m[1];
   if (st === 'nokey'){
-    b.title = 'This device has not been given the commissioner key yet, so the league sheet will '
-            + 'not answer it.';
+    b.title = 'This device has not signed in, so the league sheet will not answer it. Ask for a '
+            + 'sign-in link on the Sign In tab.';
     return;
   }
   b.title = st === 'offline'
