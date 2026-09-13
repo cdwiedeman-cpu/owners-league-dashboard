@@ -869,7 +869,24 @@ const COMMISH_SECTIONS = ['ctrades','crun','caccess'];
 const COMMISH_PAGE = {ctrades: 'auto', crun: 'run', caccess: 'access'};
 const OWNER_TAB = [['ctrades','My Trades']];
 const COMMISH_ONLY_TABS = [['crun','Run It'],['caccess','Access List']];
-let TABS = (TABSETS[MODE] || TABSETS.personal).concat(TRADES_HOME ? OWNER_TAB : []);
+/* WHAT THE SHEET SAID LAST TIME. Casey, 13 Sep 2026: "when I load the App, the Run It and Access
+   list tabs are not there for a few seconds and then they appear." They were waiting on a round
+   trip to Google before anything was drawn, which is a second of a tab bar rearranging itself
+   under the reader's eyes.
+   So the last answer is remembered and the tabs are drawn at once, then the sheet is asked and
+   the answer corrected if it has changed. THIS GIVES NOBODY ANYTHING: the sheet refuses a
+   commissioner's request from an owner's key whatever this browser remembers, so the worst case
+   is two tabs that appear for a moment and remove themselves. */
+const COMMISH_MEMO = 'rfl_was_commish';
+function rememberedCommish(){
+  try { return localStorage.getItem(COMMISH_MEMO) === 'yes'; } catch (e) { return false; }
+}
+function rememberCommish(yes){
+  try { localStorage.setItem(COMMISH_MEMO, yes ? 'yes' : 'no'); } catch (e) {}
+}
+let TABS = (TABSETS[MODE] || TABSETS.personal)
+  .concat(TRADES_HOME ? OWNER_TAB : [])
+  .concat(TRADES_HOME && rememberedCommish() ? COMMISH_ONLY_TABS : []);
 const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','tx']
   .concat(COMMISH_SECTIONS);
 
@@ -1583,7 +1600,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '12 Sep 2026, 6:40 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '12 Sep 2026, 6:56 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7964,14 +7981,27 @@ if (TRADES_API){
 }
 
 function addCommishTabs(yes){
+  rememberCommish(yes);
+  const shown = TABS.some(([k]) => k === 'crun');
+  if (!yes){
+    /* THE SHEET SAYS NO. If this browser remembered otherwise, take them away again rather than
+       leave somebody looking at a tab that will refuse them. */
+    if (shown){
+      TABS = TABS.filter(([k]) => k !== 'crun' && k !== 'caccess');
+      buildTabs();
+      const cur = TABS.map(([k]) => k).find(k => { const n = el(k); return n && !n.hidden; });
+      showTab(cur || TABS[0][0]);
+    }
+    return;
+  }
   {
-    if (!yes) return;
-    if (TABS.some(([k]) => k === 'crun')) return;
-    TABS = TABS.concat(COMMISH_ONLY_TABS);
-    buildTabs();
-    /* The bar is rebuilt, so whichever tab was showing has to be marked again. */
-    const open = TABS.map(([k]) => k).find(k => { const n = el(k); return n && !n.hidden; });
-    if (open) showTab(open);
+    if (!shown){
+      TABS = TABS.concat(COMMISH_ONLY_TABS);
+      buildTabs();
+      /* The bar is rebuilt, so whichever tab was showing has to be marked again. */
+      const open = TABS.map(([k]) => k).find(k => { const n = el(k); return n && !n.hidden; });
+      if (open) showTab(open);
+    }
     /* AND THE COMMISSIONER'S TWO, one after the other rather than all at once -- three copies of
        the same page asking Google the same two questions at the same moment is slower than
        three in a row, not faster. */
