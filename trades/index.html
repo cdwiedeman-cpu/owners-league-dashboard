@@ -3222,13 +3222,38 @@ function viewAccess(){
      their league. */
   return '<div class="card"><h2>Access List</h2>'
     + (Store.live()
-      ? '<p class="note"><b>This is what the Access tab of the league spreadsheet says right '
-        + 'now.</b> It is read every time anybody signs in or sends a trade, so a change in the '
-        + 'spreadsheet takes effect on the next thing anybody does. Nothing is rebuilt and nobody '
-        + 'else has to be involved.</p>'
-        + '<p class="note"><b>Change it in the spreadsheet, not here.</b> Open <b>RFL Trades</b>, '
-        + 'go to the <b>Access</b> tab, and edit the row. Retiring a seat&rsquo;s keys is the one '
-        + 'thing you do from this page, because it has to happen at a moment you choose.</p>'
+      /* WHAT IT IS FOR, THEN WHAT TO DO WHERE. Casey, 13 Sep 2026: "why did you start with the
+         wording that this is what the access tab of the league spreadsheet says right now ... I
+         don't even know what that means ... what are we supposed to use this for. In comparison
+         to what we use the spreadsheet for ... what tabs are we supposed to use in the
+         spreadsheet?" Every one of those is a question the copy should have answered before it
+         was asked. It opened by describing where the numbers came from, which is a fact about
+         the machinery and not a thing anybody needs. */
+      ? '<p class="note">These are the 27 seats in the league and who sits on them. It is the '
+        + 'same list as the <b>Access</b> tab of the <b>RFL Trades</b> spreadsheet.</p>'
+        + '<p class="note"><b>On this page you do one thing: retire a seat&rsquo;s keys.</b> That '
+        + 'signs out every phone and computer signed in to that seat. It is here because it has '
+        + 'to happen at a moment you choose. Everything else on this page you are only reading.'
+        + '</p>'
+        + '<p class="note"><b>Everything else you change in the spreadsheet.</b> Open <b>RFL '
+        + 'Trades</b>, go to the <b>Access</b> tab, find the owner&rsquo;s row, and change one of '
+        + 'three things:</p>'
+        + '<ul class="note">'
+        + '<li><b>Email</b> &mdash; the address that owner signs in with. Blank means they cannot '
+        + 'sign in, and you enter their trades for them.</li>'
+        + '<li><b>Status</b> &mdash; <b>active</b> normally. <b>inactive</b> stops that seat '
+        + 'submitting anything, and changes nothing else.</li>'
+        + '<li><b>Role</b> &mdash; <b>owner</b> for everybody except you and Bob, whose rows say '
+        + '<b>commissioner</b>.</li>'
+        + '</ul>'
+        + '<p class="note">You do not have to tell anybody or rebuild anything. The next time '
+        + 'that owner signs in or sends a trade, the row as it stands then is the one that '
+        + 'counts.</p>'
+        + '<p class="note"><b>Two tabs are yours. The rest belong to the script.</b> You edit '
+        + '<b>Access</b>. You read the commissioner key off <b>Settings</b> and never change it. '
+        + '<b>Transactions</b> and <b>Log</b> are worth reading and are rewritten by the script, '
+        + 'so anything typed into them is lost. <b>State</b>, <b>Keys</b> and <b>Links</b> are '
+        + 'the script&rsquo;s working papers and editing one will break something.</p>'
       : '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
         + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
         + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
