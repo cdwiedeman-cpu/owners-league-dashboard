@@ -1430,12 +1430,40 @@ function allowedTabs(){
    pressing its button, so the check lives with the thing being protected as well as with the
    way in. */
 function commishOnly(what){
-  return '<div class="card"><h2>' + esc(what) + ' Is the Commissioner&rsquo;s</h2>'
-    + '<p class="note">This part of the page belongs to the commissioner. Your own trades are on '
-    + 'the <b>My Trades</b> tab.</p>'
-    + '<p class="note">If you are the commissioner and you are seeing this, the Role column on '
-    + 'your row of the league spreadsheet does not say <b>commissioner</b>, or you are not '
-    + 'signed in on this device.</p></div>';
+  /* A WALL THAT SAYS WHY, AND WHAT TO DO. Casey, 13 Sep 2026: "I can also see the access list
+     tab, but it says only the commissioner has access. So I don't see anything." A refusal that
+     does not name its own cause sends the reader looking in the wrong place -- and there are
+     three different causes here, each with a different fix. */
+  var h = '<div class="card"><h2>' + esc(what) + ' Is the Commissioner&rsquo;s</h2>';
+  if (!Store.live()){
+    return h + '<p class="note">This part of the page belongs to the commissioner. Your own '
+      + 'trades are on the <b>My Trades</b> tab.</p></div>';
+  }
+  var m = LIVE_ME;
+  if (m === null){
+    return h + '<p class="note">Asking the league sheet who this device is. One moment.</p></div>';
+  }
+  if (!m.ok && m.why === 'nokey'){
+    return h + '<p class="note"><b>This device is not signed in.</b> Nothing is wrong with your '
+      + 'seat. Go to <b>My Trades</b> and ask for a sign-in link, and these tabs come back if '
+      + 'the league has you as a commissioner.</p></div>';
+  }
+  if (!m.ok && m.why === 'dead'){
+    return h + '<p class="note"><b>This device was signed out.</b> ' + esc(cap(m.note || ''))
+      + '. Go to <b>My Trades</b> and sign in again.</p></div>';
+  }
+  if (!m.ok){
+    return h + '<p class="note">The league sheet could not say who this device is, so nothing '
+      + 'is shown rather than something that might be wrong.</p>'
+      + '<p class="note">' + esc(m.note || '') + '</p></div>';
+  }
+  return h + '<p class="note">This part of the page belongs to the commissioner, and the league '
+    + 'spreadsheet has <b>' + esc(m.me && m.me.seat ? m.me.seat : 'this device')
+    + '</b> down as an owner.</p>'
+    + '<p class="note">If that is wrong, the fix is one cell: set <b>Role</b> to '
+    + '<b>commissioner</b> on that row of the <b>Access</b> tab. It takes effect the next time '
+    + 'this page is opened.</p>'
+    + '<p class="note">Your own trades are on the <b>My Trades</b> tab.</p></div>';
 }
 function setTab(t){
   if (COMMISH_TABS[t] && !isCommish()) t = 'signin';
