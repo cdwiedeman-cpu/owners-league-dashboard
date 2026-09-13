@@ -1663,6 +1663,16 @@ function doRequestLive(){
       render();
       return;
     }
+    if (a && a.why === 'nomail'){
+      showHelp('The League Cannot Send Email Yet',
+        '<p>No link went out, and it is nothing to do with your address. The league account has '
+        + 'not yet given its script permission to send email.</p>'
+        + '<p>Casey does this once: open the script on the RFL Trades spreadsheet, choose '
+        + '<b>authorizeEmail</b> from the list of functions at the top, and press <b>Run</b>. '
+        + 'Google asks for the permission, he approves it, and links go out from then on.</p>');
+      render();
+      return;
+    }
     if (a && a.why === 'email'){
       showHelp('That Is Not an Email Address',
         '<p>Check it and try again. It needs an @ in it.</p>');
