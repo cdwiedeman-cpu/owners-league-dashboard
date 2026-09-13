@@ -840,6 +840,38 @@ var Store = (function () {
     reload: function (opts) { this.boot(opts); },
     key: ckey,
     setKey: setKey,
+
+    /* ---- SIGNING IN, ON THE REAL PAGE -------------------------------------------------------
+     * The practice copy does all of this in the browser, with a pretend inbox. The real one has
+     * to ask the league sheet, because only the league sheet can send an email and only it can
+     * issue a key that means anything. `where` is this page's own address, sent so the link in
+     * the email comes back to the page the person was standing on. */
+    signin: function (email, where) {
+      return fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                         body: JSON.stringify({fn: 'signin', email: email, page: where})})
+        .then(function (r) { return r.json(); });
+    },
+
+    /* ONE LINK, ONE KEY. Whatever comes back is stored as this device's key, and from then on
+     * every request carries it. Nothing else about the person is kept in the browser: the seat
+     * is looked up from the key by the script, every time. */
+    redeem: function (code) {
+      return fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                         body: JSON.stringify({fn: 'redeem', t: code})})
+        .then(function (r) { return r.json(); })
+        .then(function (a) { if (a && a.ok && a.key) setKey(a.key); return a; });
+    },
+
+    /* WHO DOES THE SHEET SAY THIS DEVICE IS. Asked rather than remembered, so a role taken away
+     * in the spreadsheet takes effect on the next tap. */
+    me: function () {
+      return fetch(api + (api.indexOf('?') < 0 ? '?' : '&') + 'fn=me&key='
+                   + encodeURIComponent(ckey()))
+        .then(function (r) { return r.json(); });
+    },
+
+    forget: function () { setKey(''); },
+
     live: live,
     status: function () { return state; },
     why: function () { return lastWhy; },
@@ -1356,6 +1388,12 @@ var ONLY = (function(){
   return m ? m[1] : null;
 })();
 function isCommish(){
+  /* ON THE REAL PAGE THE ANSWER IS THE LEAGUE SHEET'S, not this browser's. The sheet refuses a
+     commissioner request from an owner's key whatever this function says, so this only decides
+     whether the tabs are worth drawing. */
+  if (Store.live()){
+    return !!(LIVE_ME && LIVE_ME.ok && LIVE_ME.me && LIVE_ME.me.role === 'commissioner');
+  }
   var s = session();
   return !!(s && !s.dead && s.role === 'commissioner');
 }
@@ -1519,6 +1557,7 @@ function nextDow(dow, h, m){
 
 /* ---- TAB: sign in ---------------------------------------------------------------------------- */
 function viewSignIn(){
+  if (Store.live()) return viewSignInLive();
   var s = session();
   var h = '<div class="card"><h2>Which device is this?</h2>'
     + '<p class="note">Real devices each keep their own key, so this switcher stands in for '
@@ -1602,7 +1641,146 @@ function viewSignIn(){
       + 'here.</div></div>';
   return h + clockCard();
 }
+/* ---- SIGNING IN ON THE REAL PAGE ---------------------------------------------------------
+ * The practice copy runs sign-in in this browser with a pretend inbox, which is the only way it
+ * could work with no server behind it. The real page asks the league sheet, which sends a real
+ * email and issues a real key.
+ * THE TWO MUST NOT DRIFT IN WHAT THEY SAY. Both answer "a link is on its way" whether or not the
+ * address is on the access list, because saying otherwise turns the sign-in box into a way of
+ * finding out who is in the league.
+ */
+function doRequestLive(){
+  var v = el('em').value.trim();
+  if (!v) return;
+  var btn = document.activeElement;
+  if (btn && btn.tagName === 'BUTTON'){ btn.disabled = true; btn.textContent = 'Sending…'; }
+  Store.signin(v, location.href.split('?')[0]).then(function(a){
+    if (a && a.why === 'group'){
+      showHelp('That Looks Like a Group Address',
+        '<p>A sign-in link sent to a group or an alias is delivered to everybody on it, so it '
+        + 'would be a key to that seat for the whole league. The access list takes personal '
+        + 'inboxes only.</p>');
+      render();
+      return;
+    }
+    if (a && a.why === 'email'){
+      showHelp('That Is Not an Email Address',
+        '<p>Check it and try again. It needs an @ in it.</p>');
+      render();
+      return;
+    }
+    if (!a || !a.ok){
+      showHelp('The League Sheet Could Not Be Reached',
+        '<p>Nothing was sent, because the league sheet did not answer. Check that you are online '
+        + 'and try again.</p><p class="note">' + esc((a && a.note) || '') + '</p>');
+      render();
+      return;
+    }
+    showHelp('Check Your Email',
+      '<p>If <b>' + esc(v) + '</b> is the address the league has for you, a sign-in link is on '
+      + 'its way to it. Open the link on the device you want to use.</p>'
+      + '<p>The link works once and stops working after thirty minutes.</p>'
+      + '<p class="note">This page says the same thing whether or not the address is on the '
+      + 'access list, so nobody can use it to find out who is in the league. If nothing arrives '
+      + 'after a few minutes, the league may have a different address for you. Ask the '
+      + 'commissioner, because it is not something you can fix by trying again.</p>');
+    render();
+  });
+}
+
+/* THE LINK IN THE EMAIL LANDS HERE. The code is exchanged for this device's key and then taken
+   off the address, so the link cannot be used again by going back in the browser, and so a
+   screenshot of the address bar carries nothing. */
+function redeemFromUrl(){
+  var m = /[?&]t=([^&#]+)/.exec(String(location.search || ''));
+  if (!m) return false;
+  var code = decodeURIComponent(m[1]);
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  Store.redeem(code).then(function(a){
+    if (a && a.ok){
+      LIVE_ME = null;
+      boot();
+      showHelp('You Are Signed In',
+        '<p>This device is now <b>' + esc(a.seat) + '</b> in '
+        + esc(DATA.div_names[a.div] || a.div) + '.</p>'
+        + '<p>It stays signed in on this device until the commissioner retires the keys on your '
+        + 'seat. You do not have to do this again on this phone.</p>');
+      return;
+    }
+    var why = {used: 'That link has already been used. A sign-in link works once, so ask for '
+                     + 'another one.',
+               expired: 'That link is more than thirty minutes old. Ask for another one.',
+               nolink: 'That is not a link this league issued.',
+               seat: 'That address is no longer on an active seat. Ask the commissioner.'
+              }[(a && a.why) || ''] || ((a && a.note) || 'The league sheet did not answer.');
+    showHelp('That Link Did Not Work', '<p>' + esc(why) + '</p>');
+    render();
+  });
+  return true;
+}
+
+/* THE REAL SIGN-IN TAB. No device switcher, because a real phone is a real phone, and no pretend
+   inbox, because the email is real. What is left is the one box and what it means. */
+function viewSignInLive(){
+  var who = LIVE_ME;
+  var h = '';
+  if (who && who.ok && who.me && who.me.seat){
+    var m = who.me;
+    h += '<div class="card"><h2>Signed In</h2><table><tbody>'
+      + '<tr><th>Seat</th><td><b>' + esc(m.seat) + '</b> &mdash; '
+      + esc(DATA.div_names[m.div] || m.div) + '</td></tr>'
+      + '<tr><th>Address</th><td>' + esc(m.email || '') + '</td></tr>'
+      + '<tr><th>Role</th><td>' + (m.role === 'commissioner'
+          ? '<span class="pill gold">commissioner</span>' : 'owner') + '</td></tr>'
+      + '</tbody></table>'
+      + '<p class="note" style="margin-top:8px">This device stays signed in until the '
+      + 'commissioner retires the keys on your seat. Your seat is worked out by the league sheet '
+      + 'every time, from the key this device holds, so nothing this page sends can claim to be '
+      + 'somebody else.</p>'
+      + '<div class="row" style="margin-top:8px">'
+      + '<button onclick="doSignOutLive()">Sign Out on This Device</button></div></div>';
+    return h + clockCard();
+  }
+  if (who && who.why === 'dead'){
+    h += '<div class="card warn"><h2>This Device Was Signed Out</h2>'
+      + '<p class="note">' + esc(cap(who.note || 'the key on this device was refused'))
+      + '. Sign in again to carry on.</p>'
+      + '<div class="row"><button onclick="doSignOutLive()">Clear It and Start Again</button>'
+      + '</div></div>';
+  }
+  h += '<div class="card"><h2>Sign In</h2>'
+    + '<p class="note">Type the email address the league has for you. A link comes back to that '
+    + 'address, and opening it signs this device in for good.</p>'
+    + '<div class="row"><div class="grow"><label class="lb" for="em">Email Address</label>'
+    + '<input id="em" type="email" autocomplete="email" inputmode="email" '
+    + 'autocapitalize="off" spellcheck="false" placeholder="you@example.com"></div>'
+    + '<button class="pri" onclick="doRequest()">Send Me a Link</button></div>'
+    + '<p class="note" style="margin-top:8px">Open the link on the device you want to use. It '
+    + 'works once and stops working after thirty minutes.</p>'
+    + '<p class="note"><b>Nothing arrives after a few minutes?</b> The league may have a '
+    + 'different address for you. Ask the commissioner, because it is not something you can fix '
+    + 'by trying again.</p></div>';
+  return h + clockCard();
+}
+
+/* WHAT THE LEAGUE SHEET SAYS THIS DEVICE IS. Asked once when the page opens and after signing
+   in, never remembered across a reload, so a role or a seat changed in the spreadsheet takes
+   effect the next time the page is opened. */
+var LIVE_ME = null;
+function refreshMe(then){
+  if (!Store.live()){ if (then) then(); return; }
+  Store.me().then(function(a){ LIVE_ME = a; if (then) then(); })
+            .catch(function(){ LIVE_ME = null; if (then) then(); });
+}
+function doSignOutLive(){
+  Store.forget();
+  LIVE_ME = null;
+  closeHelp();
+  boot();
+}
+
 function doRequest(){
+  if (Store.live()) return doRequestLive();
   var v = el('em').value.trim();
   S.lastEmail = v; save();
   var r = requestLink(v);
@@ -3130,6 +3308,13 @@ function accessWarning(){
 }
 
 function boot(){
+  /* WHO THIS DEVICE IS, ASKED BEFORE ANYTHING IS DRAWN. The tabs depend on the answer, and a
+     page that drew an owner's tabs and then added the commissioner's a second later would be
+     worse than one that waited. */
+  if (Store.live() && Store.key() && LIVE_ME === null){
+    refreshMe(function(){ boot(); });
+    return;
+  }
   Store.boot({
     api: (DATA.api || null),
     get: function(){ return S; },
@@ -3151,6 +3336,8 @@ function boot(){
   });
 }
 buildRulesNote();
-boot();
+/* A LINK FROM AN EMAIL IS HANDLED BEFORE THE PAGE ASKS WHO IT IS, because redeeming the link is
+   what makes there be an answer. */
+if (!redeemFromUrl()) boot();
 </script>
 </body></html>
