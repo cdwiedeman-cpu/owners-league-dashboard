@@ -928,6 +928,13 @@ function adopt(x){
   S = (x && typeof x === 'object') ? x : b;
   Object.keys(b).forEach(function(k){ if (S[k] == null) S[k] = b[k]; });
   if (!S.access || !S.access.length) S.access = seedAccess();
+  /* AN OLDER PRACTICE COPY MAY HAVE NOBODY AS A COMMISSIONER, which is a locked room with the key
+     inside it. Nothing in the real league is repaired this way -- there the spreadsheet decides. */
+  if (!Store.live() && !S.access.some(function(a){ return a.role === 'commissioner'; })){
+    S.access.forEach(function(a){
+      if (DATA.me && a.div === DATA.me.div && a.seat === DATA.me.seat) a.role = 'commissioner';
+    });
+  }
   S.divCodes = divCodeTable();     // never trusted from storage: the page is the authority
   if (typeof render === 'function' && el('tabs')) render();
 }
@@ -3330,8 +3337,16 @@ function reallyReset(){
 function seedAccess(){
   return DATA.seats.map(function(s){
     var mine = (DATA.me && s.div === DATA.me.div && s.owner === DATA.me.seat);
+    /* CASEY'S OWN SEAT STARTS AS A COMMISSIONER IN THE PRACTICE COPY.
+       Casey, 13 Sep 2026: "I no longer see the run it or access or roster tabs on the sandbox
+       trade app." Every seat was seeded as an owner, so the moment those two tabs became the
+       commissioner's, nothing in the practice copy was one -- and the Access List, the one place
+       a role can be changed, is itself a commissioner tab. A LOCKOUT. Testing the commissioner's
+       side is most of what the practice copy is for, so the seat he signs in on starts as one.
+       In the real league the role is the Role column of the spreadsheet and nothing else. */
     return {div: s.div, seat: s.owner, email: mine ? (DATA.me.email || '') : '',
-            status: 'active', validAfter: '', role: 'owner'};
+            status: 'active', validAfter: '',
+            role: mine ? 'commissioner' : 'owner'};
   });
 }
 function blank(){
