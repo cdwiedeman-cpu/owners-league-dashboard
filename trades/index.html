@@ -830,6 +830,9 @@ var Store = (function () {
           rev = a.rev;
           set(a.state || opts.blank());
           if (opts.access && a.access) opts.access(a.access);
+          /* WHO THIS DEVICE IS CAME BACK WITH THE DATA, so the page does not have to ask
+             separately. One round trip to Google instead of two. */
+          if (opts.whoami && a.me) opts.whoami(a);
           setStatus('saved');
           opts.ready();
           if (!a.state) { dirty = true; schedule(get, set); }   // first run: put the fresh one up
@@ -3462,6 +3465,8 @@ function boot(){
     blank: blank,
     access: adoptAccess,
     status: saveLight,
+    /* THE LOAD ALREADY KNOWS WHO THIS IS, so `refreshMe` is skipped after it. */
+    whoami: function(a){ LIVE_ME = {ok: true, me: a.me}; },
     needKey: askForKey,
     ready: function(stuck){
       if (!S) adopt(null);
