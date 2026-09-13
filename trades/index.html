@@ -1750,14 +1750,16 @@ function doRequestLive(){
       render();
       return;
     }
+    /* WHAT THE READER NEEDS AND NOTHING ELSE. Casey, 13 Sep 2026, on the paragraph that used to
+       follow: "I think you should remove the following from the pop up because it will be
+       confusing to other users." He is right twice over. It explained why the page is careful
+       about what it reveals, which is a design decision the reader never knew was made; and it
+       repeated the line about nothing arriving, which is already printed on the sign-in card
+       where somebody who is still waiting will be looking. */
     showHelp('Check Your Email',
-      '<p>If <b>' + esc(v) + '</b> is the address the league has for you, a sign-in link is on '
-      + 'its way to it. Open the link on the device you want to use.</p>'
-      + '<p>The link works once and stops working after thirty minutes.</p>'
-      + '<p class="note">This page says the same thing whether or not the address is on the '
-      + 'access list, so nobody can use it to find out who is in the league. If nothing arrives '
-      + 'after a few minutes, the league may have a different address for you. Ask the '
-      + 'commissioner, because it is not something you can fix by trying again.</p>');
+      '<p>A sign-in link is on its way to <b>' + esc(v) + '</b>. Open it on the device you want '
+      + 'to use.</p>'
+      + '<p>The link works once and stops working after thirty minutes.</p>');
     render();
   });
 }
