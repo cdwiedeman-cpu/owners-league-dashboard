@@ -3158,6 +3158,22 @@ function note(row, what){
                   .concat(S.accessLog || []).slice(0, 80);
 }
 function logCard(){
+  /* ON THE REAL PAGE THERE IS NO SECOND HISTORY, because it could only ever be a partial one and
+     it would say otherwise. Addresses are changed in the spreadsheet, so this page never sees
+     those; it would record retirements pressed here and nothing else, under a sentence promising
+     "every address change". Casey, 13 Sep 2026: "are we going to see the recent changes there
+     once we start making changes? Or does that not belong on this page?" It does not. The script
+     writes the whole history on the Log tab and that is the one to read.
+     TWO STORES OF ONE FACT ARE WRITTEN TOGETHER OR ONE OF THEM LIES, and this one could not be. */
+  if (Store.live()){
+    return '<div class="card"><h2>The History</h2>'
+      + '<p class="note">Every sign-in, every retirement and every trade is written on the '
+      + '<b>Log</b> tab of the <b>RFL Trades</b> spreadsheet, newest at the bottom, each with its '
+      + 'date. Settled trades are also on the <b>Transactions</b> tab, one per row.</p>'
+      + '<p class="note">This page does not keep its own copy. Addresses are changed in the '
+      + 'spreadsheet, so a list kept here would be missing exactly the changes you would come '
+      + 'looking for.</p></div>';
+  }
   var L = S.accessLog || [];
   if (!L.length){
     return '<div class="card"><h2>Recent Changes</h2><p class="note">Nothing on this list has '
@@ -3210,10 +3226,11 @@ function sheetCard(){
         return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
       }).join('')
     + '</tbody></table></div>'
-    + '<p class="note"><b>The cut-off date is not a column at all.</b> The script keeps it where '
-    + 'nobody can type over it or paste it away, and writes the retirement on the <b>Log</b> tab '
-    + 'with its date. Bob never needs to read the date to do his job — he needs to know '
-    + 'whether anybody is signed in, which is the column above.</p></div>';
+    /* THE PARAGRAPH THAT USED TO CLOSE THIS CARD IS GONE. It explained why there is no
+       "keys last retired" column, which defends a decision the reader never knew was taken.
+       Casey, 13 Sep 2026: "is that even needed? That seems like it's more for you than it would
+       be for Bob." It was. */
+    + '</div>';
 }
 function viewAccess(){
   var rows = S.access;
