@@ -85,7 +85,12 @@ section{display:flex;flex-direction:column;gap:16px}
 .routes{width:100%;border-collapse:collapse;font-family:Archivo,sans-serif;font-size:14.5px}
 .routes th,.routes td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
 .routes th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
-.routes td:last-child{white-space:nowrap;font-weight:600}
+/* NO NOWRAP. This was written for a short last column -- a yes, a no, a dollar amount -- and
+   every generated document inherited it, including the rules table whose last column is a
+   paragraph. That table then ran off the side of the page and had to be scrolled across to be
+   read. NOTHING IN THESE DOCUMENTS SCROLLS SIDEWAYS. A short cell does not wrap anyway, because
+   there is nothing in it to wrap. */
+.routes td:last-child{font-weight:600}
 .yes{color:var(--good)} .no{color:var(--stop)}
 .scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
