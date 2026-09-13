@@ -2814,10 +2814,14 @@ function viewRun(){
          own phones, so there is nothing to stage. Rather than delete the hint -- it is genuinely
          how you make a flip happen in here -- it is LABELLED, because an unlabelled instruction
          is one Bob may carry over to the real thing. */
-      + '<p class="note sandonly"><b>Sandbox only.</b> To make a coin flip happen in here, sign '
-      + 'in on another device as a different owner in the same division and ask for the same '
-      + 'team. On the real page the other owners are real people entering their own lists, so '
-      + 'nothing in this paragraph exists there.</p></div>';
+      /* AND IT IS NOT PRINTED AT ALL ON THE REAL PAGE. A paragraph that ends by saying it does
+         not apply here is a paragraph that should not be here. */
+      + (Store.live() ? ''
+          : '<p class="note sandonly"><b>Sandbox only.</b> To make a coin flip happen in here, '
+            + 'sign in on another device as a different owner in the same division and ask for '
+            + 'the same team. On the real page the other owners are real people entering their '
+            + 'own lists, so nothing in this paragraph exists there.</p>')
+      + '</div>';
   }
   return h + clockCard();
 }
@@ -3209,25 +3213,47 @@ function viewAccess(){
      some instruction of what he needs to populate, and what the status column means, and what
      keys last retired means and what to do with that." A grid of editable cells with no key is
      a form that assumes the reader already knows the model. */
+  /* THE SAME TABLE MEANS TWO DIFFERENT THINGS ON THE TWO PAGES, so it says which.
+     In the practice copy it is a toy: type into it, watch what happens, nothing leaves the
+     browser. On the real page it is a WINDOW ONTO THE SPREADSHEET -- what it shows was typed
+     into the Access tab, and that is where it is changed. Casey, 13 Sep 2026: "Should the access
+     list be on the dashboard. It reads that it is a practice copy." It read that way on both,
+     which made the real one look like a toy and would have had somebody typing into a copy of
+     their league. */
   return '<div class="card"><h2>Access List</h2>'
-    + '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
-    + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
-    + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
-    + 'league Bob edits the Sheet itself. The script reads it on every sign-in and every trade, '
-    + 'so <b>an edit takes effect on the next thing anybody does</b> — nothing is rebuilt and '
-    + 'nobody else has to be involved.</p>'
-    + '<ol class="note"><li>Type each owner&#39;s email into the <b>Email</b> column. '
-    + '<b>Personal inboxes only</b> — not the league list, and not an address that forwards to '
-    + 'several people.</li>'
-    + '<li>Leave <b>Email</b> blank for anybody without one. You enter their trades for them.</li>'
-    + '<li>Two rows with the <b>same seat</b> is how two people share one team — add a row and '
-    + 'give it the same seat.</li>'
-    + '<li>When it is filled in, press <b>Copy It as CSV for the Sheet</b> and paste it into the '
-    + 'Google Sheet.</li></ol>'
+    + (Store.live()
+      ? '<p class="note"><b>This is what the Access tab of the league spreadsheet says right '
+        + 'now.</b> It is read every time anybody signs in or sends a trade, so a change in the '
+        + 'spreadsheet takes effect on the next thing anybody does. Nothing is rebuilt and nobody '
+        + 'else has to be involved.</p>'
+        + '<p class="note"><b>Change it in the spreadsheet, not here.</b> Open <b>RFL Trades</b>, '
+        + 'go to the <b>Access</b> tab, and edit the row. Retiring a seat&rsquo;s keys is the one '
+        + 'thing you do from this page, because it has to happen at a moment you choose.</p>'
+      : '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
+        + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
+        + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
+        + 'league Bob edits the Sheet itself. The script reads it on every sign-in and every '
+        + 'trade, so <b>an edit takes effect on the next thing anybody does</b> — nothing is '
+        + 'rebuilt and nobody else has to be involved.</p>')
+    /* THE STEPS ARE FOR FILLING A COPY IN AND PASTING IT ACROSS, which is a thing you do once,
+       in the practice copy. On the real page the spreadsheet is already the truth and there is
+       nothing to paste anywhere. */
+    + (Store.live() ? ''
+        : '<ol class="note"><li>Type each owner&#39;s email into the <b>Email</b> column. '
+          + '<b>Personal inboxes only</b> — not the league list, and not an address that forwards '
+          + 'to several people.</li>'
+          + '<li>Leave <b>Email</b> blank for anybody without one. You enter their trades for '
+          + 'them.</li>'
+          + '<li>Two rows with the <b>same seat</b> is how two people share one team — add a row '
+          + 'and give it the same seat.</li>'
+          + '<li>When it is filled in, press <b>Copy It as CSV for the Sheet</b> and paste it '
+          + 'into the Google Sheet.</li></ol>')
     + '<p class="note"><b>' + filled + ' of ' + rows.length + '</b> row'
     + (rows.length === 1 ? '' : 's') + ' have an address so far.</p>'
-    + '<div class="row"><button onclick="addAccess()">Add a Row</button>'
-    + '<button class="pri" onclick="copyCSV()">Copy It as CSV for the Sheet</button>'
+    + '<div class="row">'
+    + (Store.live() ? ''
+        : '<button onclick="addAccess()">Add a Row</button>'
+          + '<button class="pri" onclick="copyCSV()">Copy It as CSV for the Sheet</button>')
     + '<button onclick="showHelp(\'Owner leaves, new email, no email, commissioner\', ACCESSNOTE)">'
     + 'What to Do When Somebody Changes</button></div></div>'
     + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
@@ -3376,9 +3402,13 @@ function copyCSV(){
 
 /* ---- TAB: rosters ------------------------------------------------------------------------------ */
 function viewRosters(){
-  var h = '<div class="card"><h2>Where the Sandbox Stands</h2>'
-    + '<p class="note">Started as a copy of the real rosters. Everything below is the result of '
-    + 'what you have done in here, and none of it has left this browser.</p>'
+  var h = '<div class="card"><h2>' + (Store.live() ? 'Rosters' : 'Where the Sandbox Stands')
+    + '</h2>'
+    + '<p class="note">' + (Store.live()
+        ? 'Every seat and the eleven teams on it, as the league stands now. Trades that have '
+          + 'been settled are already in here.'
+        : 'Started as a copy of the real rosters. Everything below is the result of what you have '
+          + 'done in here, and none of it has left this browser.') + '</p>'
     + '<div class="row"><button class="dang" onclick="doReset()">Put the Real Rosters Back</button>'
     + '</div></div>';
   h += S.log.length ? '<div class="card"><h2>What Has Moved</h2><div class="scr"><table>'
