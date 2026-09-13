@@ -173,8 +173,22 @@ td.num,th.num{text-align:right}
 .chip.g{background:#123324;border-color:#1f5a3a;color:#7ee2a8}
 .chip.w{background:#33290f;border-color:#5d4a17;color:#f2c85c}
 .chip.b{background:#3a1717;border-color:#6b2626;color:#ff9a9a}
+/* INSIDE ANOTHER PAGE, THIS PAGE HAS NO CHROME OF ITS OWN.
+   The league dashboard shows one view of this page in a frame. Its banner, heading and tab strip
+   used to be hidden by JavaScript on the first draw, which meant they PAINTED FIRST and vanished.
+   Casey, 13 Sep 2026: "it showed a different page for a few seconds ... It flashes with this Live
+   League thing on all the new tabs. If it is intended, it is too fast to read."
+   It was not intended. A class is set on the document before the body is parsed, so none of it is
+   ever drawn. Hiding a thing after it has been seen is not hiding it. */
+.embed #sandbar, .embed h1, .embed #subline, .embed #tabs{display:none!important}
+.embed body{padding-top:0}
 [hidden]{display:none!important}
-</style></head><body>
+</style>
+<script>
+/* BEFORE THE BODY EXISTS. A query in the address decides it, and CSS cannot read one. */
+try { if (/[?&]only=/.test(location.search)) document.documentElement.className += ' embed'; }
+catch (e) {}
+</script></head><body>
 <div class="sandbar" id="sandbar">THE LIVE LEAGUE — <b>everything here is real and everybody sees it.</b>
   <span id="clockchip"></span><span id="savechip" class="chip" hidden></span></div>
 <div class="wrap">
