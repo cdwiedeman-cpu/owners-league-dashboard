@@ -914,6 +914,7 @@ function adopt(x){
   S = (x && typeof x === 'object') ? x : b;
   Object.keys(b).forEach(function(k){ if (S[k] == null) S[k] = b[k]; });
   if (!S.access || !S.access.length) S.access = seedAccess();
+  S.divCodes = divCodeTable();     // never trusted from storage: the page is the authority
   if (typeof render === 'function' && el('tabs')) render();
 }
 /* THE ACCESS TAB IS TYPED BY PEOPLE AND READ BY THE PROGRAM. Email, status and role come from
@@ -927,6 +928,16 @@ function adopt(x){
    THIS IS THE SAME CLASS OF BUG AS THE TEAM NAMES, and the same answer: one place that folds
    every spelling of a division onto the one the program uses. `DATA.div_names` already maps the
    code to the name, so the reverse of it is the table -- never a second list to keep in step. */
+/* THE TABLE, WRITTEN OUT FOR THE SCRIPT. Lower case keys, because a person typing into a
+   spreadsheet will not match a capital letter reliably. */
+function divCodeTable(){
+  var m = {};
+  Object.keys(DATA.div_names || {}).forEach(function(code){
+    m[String(code).toLowerCase()] = code;
+    m[String(DATA.div_names[code]).toLowerCase()] = code;
+  });
+  return m;
+}
 var DIV_CODE = (function(){
   var m = {};
   Object.keys(DATA.div_names || {}).forEach(function(code){
@@ -3248,6 +3259,12 @@ function seedAccess(){
 }
 function blank(){
   return {clock: rightNow(), device: 'A', devices: {}, tokens: {}, links: [], seq: 0,
+          /* THE DIVISION SPELLINGS, CARRIED WITH THE STATE ON PURPOSE. The spreadsheet says
+             "Predator" and everything in the program says "PFD". The script on the sheet has to
+             agree with this page about which is which, and the only way to guarantee that is for
+             the page to say so once rather than for both to keep a list. Same fault this page hit
+             on its own Access join; same answer. */
+          divCodes: divCodeTable(),
           access: seedAccess(), former: [], requests: {}, rosters: freshRosters(),
           acquiredAt: {}, log: [], accessLog: [],
           results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, autoEmail: true, ranWeeks: {}, claimQueue: [], lastEmail: (DATA.me || {}).email || ''};
