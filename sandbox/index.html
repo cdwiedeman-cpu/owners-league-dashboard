@@ -1430,6 +1430,19 @@ var ONLY = (function(){
   var m = /[?&]only=([a-z]+)/.exec(String(location.search || ''));
   return m ? m[1] : null;
 })();
+/* SWITCHING VIEW WITHOUT RELOADING.
+   The dashboard used to hold three copies of this page, one per tab, and each one loaded itself
+   and asked the league sheet who this device is and what the league looks like. Three page loads
+   and six trips to Google for three tabs that are the same program. Casey saw it as a delay every
+   time he pressed one.
+   So the dashboard holds ONE copy now and calls this when the tab changes. No load, no fetch, no
+   wait -- it is the same draw that happens when you press a tab inside this page. */
+window.showOnly = function(view){
+  if (!ONLY) return;
+  ONLY = view;
+  render();
+  try { window.scrollTo(0, 0); } catch (e) {}
+};
 function isCommish(){
   /* ON THE REAL PAGE THE ANSWER IS THE LEAGUE SHEET'S, not this browser's. The sheet refuses a
      commissioner request from an owner's key whatever this function says, so this only decides
