@@ -995,7 +995,15 @@ var ACCESS_JOIN = null;
  * 'YYYY-MM-DDTHH:MM' string and treats it as Mountain wall-clock — no zone conversion, because
  * converting a made-up time into a real one only invites the reader to wonder which they are
  * looking at. */
-function now(){ return S.clock; }
+/* WHAT TIME IT IS.
+   THE PRACTICE COPY runs on a clock Casey can move, which is the whole point of it.
+   THE REAL PAGE runs on the actual time, and there is no way to change it. Casey, 13 Sep 2026:
+   "I also don't think we need to have the ability to change the dates and clock on the live
+   dashboard ... We won't want all of that date changing stuff for bob or other owners to see."
+   He is right, and there is a second reason beyond tidiness: a stored moment goes stale the
+   longer a page sits open, so a phone left on the Trades tab overnight would still think it was
+   yesterday. Read fresh every time, it cannot. */
+function now(){ return Store.live() ? rightNow() : S.clock; }
 /* THE SANDBOX OPENS ON THE REAL DATE AND TIME. Casey, 11 Sep 2026: "basically it is as if I were
    trying to make a trade ... based on today." It used to open on the Tuesday of league week 1, on
    the reasoning that a fixed opening moment is the same page every day. That was the wrong trade:
@@ -1579,6 +1587,11 @@ function render(){
 
 /* ---- the clock panel, on every tab that cares about it -------------------------------------- */
 function clockCard(){
+  /* NOTHING ON THE REAL PAGE. No presets, no boxes, no explanation of a clock nobody can move.
+     A commissioner who wants to try a week early does not need to move time: they enter the
+     trades and press Run It, which is what Casey said -- "as long as I can put in trades and run
+     it manually and then undo the trades, then I should be able to test it." */
+  if (Store.live()) return '';
   /* THE LABEL CARRIES THE DATE IT JUMPS TO, computed from the destination so the two cannot
      disagree. A preset is relative to where the clock already is -- "the next Monday" from a
      Tuesday is a week further on than from a Friday -- and a button that says only "Monday"
@@ -2206,6 +2219,10 @@ function clockTime(s){
    for a week's worth of games. Both states are printed: an absence is never an answer, so "it is
    really now" has to be said rather than implied by the lack of a warning. */
 function clockBanner(){
+  /* THE REAL PAGE CANNOT BE ON THE WRONG DAY, so it says nothing about which day it is on. This
+     whole line exists because a moved clock has to be visible; with no way to move it there is
+     nothing to declare. */
+  if (Store.live()) return '';
   var real = rightNow(), moved = now().slice(0, 16) !== real.slice(0, 16);
   if (!moved){
     return '<p class="asof"><span class="pill good">right now</span> '
