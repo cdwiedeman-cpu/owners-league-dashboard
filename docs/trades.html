@@ -328,17 +328,19 @@ ol li,ul li{margin:0 0 7px}
 <tr><td><b>Role</b></td><td>A drop-down. <span class="kbd">owner</span> for everybody except
     Casey and Bob, whose rows say <span class="kbd">commissioner</span>. The commissioner tabs
     appear for those two rows and for no others.</td></tr>
-<tr><td><b>Retire?</b></td><td>Type an <b>x</b> here to turn away every device already signed in
-    to that seat. The script does it within five minutes, <b>empties the cell again</b>, and
-    writes a line on the Log tab. The empty cell is the receipt. While the x is still sitting
+<tr><td><b>Retire?</b></td><td>A drop-down with one choice on it, <b>x</b>. Pick it to turn away
+    every device already signed in to that seat. The script does it, <b>empties the cell again</b>,
+    and writes a line on the Log tab. The empty cell is the receipt. While the x is still sitting
     there, it has not happened yet.</td></tr>
-<tr><td><b>Signed in</b></td><td>Written by the script. How many devices are holding a working key
-    for that seat. Look at this before you retire anything. It tells you whether there is anything
-    to turn away, and it goes to <span class="kbd">0</span> once the retirement has happened.</td></tr>
+<tr><td><b>Signed in</b></td><td>Written by the script, never typed. How many devices are holding a
+    working key for that seat. Look at this before you retire anything. It tells you whether there
+    is anything to turn away, and it goes to <span class="kbd">0</span> once the retirement has
+    happened. A blank cell means the row has no seat on it. A seat nobody has signed in to reads
+    <span class="kbd">0</span>.</td></tr>
 </tbody></table>
-<p>Role and Status are drop-downs, so neither can be mistyped. The script sets them up on its own
-   and puts them back if they are ever removed. A capital letter or a trailing space in either of
-   those two columns would change what the software does, and it would not look wrong on the
+<p>Role, Status and Retire? are drop-downs, so none of the three can be mistyped. The script sets
+   them up on its own and puts them back if they are ever removed. A capital letter or a trailing space in either of
+   those columns would change what the software does, and it would not look wrong on the
    screen.</p>
 <p>There is deliberately no column recording the date keys were retired. The script keeps that
    date where nobody can type over it, and the Log tab is where you read the history. A column
