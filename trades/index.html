@@ -3183,14 +3183,23 @@ function logCard(){
    the Google Sheet where he's telling it to retire the keys?" A spreadsheet has no buttons, so
    the answer has to be written down rather than implied by a page that has them. */
 function sheetCard(){
-  return '<div class="card"><h2>The Same Thing in the Google Sheet</h2>'
-    + '<p class="note">A spreadsheet has no buttons, so <b>Retire Keys Now</b> is typed there '
-    + 'instead. Adding and removing a row is just adding and removing a spreadsheet row. The '
-    + 'Sheet has one row per seat and these columns:</p>'
+  /* ON THE REAL PAGE THIS IS THE INSTRUCTIONS, not a description of something that will exist
+     later. The spreadsheet is where the work is done, so the card names the columns you type in
+     rather than explaining what the Sheet is going to be. */
+  return '<div class="card"><h2>' + (Store.live()
+      ? 'What Each Column in the Spreadsheet Means'
+      : 'The Same Thing in the Google Sheet') + '</h2>'
+    + '<p class="note">' + (Store.live()
+        ? 'The <b>Access</b> tab of <b>RFL Trades</b> has one row per seat and these columns.'
+        : 'A spreadsheet has no buttons, so <b>Retire Keys Now</b> is typed there instead. '
+          + 'Adding and removing a row is just adding and removing a spreadsheet row. The Sheet '
+          + 'has one row per seat and these columns:') + '</p>'
     + '<div class="scr"><table>'
     + '<colgroup><col style="width:30%"><col style="width:70%"></colgroup><tbody>'
     + [['Division, Seat', 'Written once when the season is set up. Bob never touches them.'],
-       ['Email, Status, Role', 'Bob types these. The same three columns as above.'],
+       ['Email, Status, Role', 'The three you type. Email is the address that owner signs in '
+        + 'with. Status is <b>active</b> or <b>inactive</b>. Role is <b>owner</b>, or '
+        + '<b>commissioner</b> for Casey and Bob.'],
        ['Retire?', 'Bob types an <b>x</b> here instead of pressing <b>Retire Keys Now</b>. Within '
         + 'five minutes the script turns away every device signed in to that seat, empties the '
         + 'cell again, and writes a line on the <b>Log</b> tab. <b>The empty cell is the '
