@@ -3280,7 +3280,7 @@ function viewAccess(){
         : '<button onclick="addAccess()">Add a Row</button>'
           + '<button class="pri" onclick="copyCSV()">Copy It as CSV for the Sheet</button>')
     + '<button onclick="showHelp(\'Owner leaves, new email, no email, commissioner\', ACCESSNOTE)">'
-    + 'What to Do When Somebody Changes</button></div></div>'
+    + 'What to Do When an Owner Changes Something</button></div></div>'
     + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
     + '<colgroup><col style="width:32%"><col style="width:68%"></colgroup><tbody>'
     + [['Seat', 'The owner as the league names them. Never edited here.'],
@@ -3334,19 +3334,47 @@ function viewAccess(){
       }).join('') + '</tbody></table></div></div>'
     + sheetCard() + logCard();
 }
-var ACCESSNOTE = '<p><b>An owner changes their email.</b> Type the new address over the old one. '
-  + 'The old address stops receiving links immediately. Their phone stays signed in, which is '
-  + 'what you want when they are just moving from work to personal.</p>'
-  + '<p><b>An owner leaves and somebody new takes the team.</b> Same two edits, plus '
-  + '<i>Retire Keys Now</i> — in the Google Sheet that one is an <b>x</b> in the '
-  + '<b>Retire?</b> cell. It is what reaches a phone that is already signed in — '
-  + 'deleting an address only stops new links. The seat keeps its roster, its points and its '
-  + 'history, because the team’s season carries on regardless of who holds it.</p>'
-  + '<p><b>Nobody has replaced them yet.</b> Set the row to inactive. Submissions are refused, '
-  + 'the seat still appears in standings and scores.</p>'
-  + '<p><b>An owner has no email.</b> Leave the row blank. They call Bob and he enters it under '
-  + 'their seat — the same feature as any other commissioner submission, so there is no second '
-  + 'mechanism to maintain.</p>';
+/* WRITTEN AS FOUR SITUATIONS AND WHAT TO DO IN EACH, after Casey read the old version twice and
+   could not get through it. Three things were wrong with it.
+     1. It explained WHY a phone stays signed in with "when they are just moving from work to
+        personal", which is an aside about a case nobody asked about. He: "what does moving from
+        work to personal have anything to do with changing their email address?"
+     2. It said retiring keys is "an x in the Retire? cell" when the Access List tab has a button
+        that does it. He: "I thought we clicked the retire key on the access list tab, not put
+        the X in the spreadsheet. I'm confused." TWO WAYS TO DO ONE THING, AND THE COPY NAMED THE
+        SECOND ONE. The button is the way; the cell is a fallback and is named as one.
+     3. Losing an owner is really two situations -- somebody has taken the team, or nobody has --
+        and they were in the wrong order, so the second read like an alternative to the first. */
+var ACCESSNOTE =
+    '<p><b>An owner changes their email address.</b></p>'
+  + '<ol><li>Type the new address over the old one on the <b>Access</b> tab.</li></ol>'
+  + '<p class="note">That is all. Their phone stays signed in, so they do not have to do '
+  + 'anything. From then on every email the league sends them goes to the new address, and the '
+  + 'old one can no longer be used to sign in.</p>'
+
+  + '<p><b>An owner leaves and somebody new takes the team.</b></p>'
+  + '<ol><li>Type the new owner&rsquo;s address over the old one on the <b>Access</b> tab.</li>'
+  + '<li>Come back to this page, find that seat, and press <b>Retire Keys Now</b>.</li></ol>'
+  + '<p class="note"><b>Both steps matter, and the second is the one people forget.</b> Changing '
+  + 'the address stops the old owner getting any NEW sign-in link. It does nothing to the phone '
+  + 'they are already signed in on. Retiring the keys is what signs that phone out.</p>'
+  + '<p class="note">The seat keeps its roster, its points and its history. A team&rsquo;s season '
+  + 'carries on whoever holds it.</p>'
+  + '<p class="note">If you happen to be in the spreadsheet already, typing an <b>x</b> in that '
+  + 'row&rsquo;s <b>Retire?</b> cell does the same thing within a few minutes. The button here is '
+  + 'quicker and tells you it worked.</p>'
+
+  + '<p><b>An owner leaves and nobody has taken the team yet.</b></p>'
+  + '<ol><li>Set that row&rsquo;s <b>Status</b> to <b>inactive</b> on the <b>Access</b> tab.</li>'
+  + '<li>Press <b>Retire Keys Now</b> on this page if they are signed in somewhere.</li></ol>'
+  + '<p class="note">The seat can no longer send anything in. It still appears in the standings '
+  + 'and the scores, and its teams still earn points, because the season does not stop for a '
+  + 'seat with nobody in it.</p>'
+
+  + '<p><b>An owner has no email address.</b></p>'
+  + '<ol><li>Leave their <b>Email</b> cell blank.</li></ol>'
+  + '<p class="note">They tell Bob what they want and he enters it under their seat, the same way '
+  + 'he can for anybody.</p>';
 function setAccess(i, f, v){
   if (f === 'email'){
     var old = String(S.access[i].email || '').trim().toLowerCase();
