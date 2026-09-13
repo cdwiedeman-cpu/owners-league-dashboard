@@ -842,22 +842,43 @@ const TABSETS = {
   league:   [['scores','Live Scores'],['stand','Standings'],['weekly','Weekly / Quarterly'],
              ['summary','Season Summary'],['tx','Transactions']],
 };
-/* WHETHER THIS DEVICE IS A COMMISSIONER'S. The key is the credential: it is typed once, on the
-   trades page, out of the Settings tab of the league spreadsheet, and it never appears in any
-   page's source. An owner's device does not have it, so an owner never sees these tabs.
-   IT IS NOT THE WHOLE PROTECTION AND IT IS NOT MEANT TO BE. The league sheet refuses a request
-   without the key, and the trades application checks the Role column too. This decides only
-   whether the tabs are worth drawing. */
-function hasCommishKey(){
-  try { return !!localStorage.getItem('rfl_commish_key'); } catch (e) { return false; }
-}
+/* THE TRADE TABS ON THIS PAGE.
+ *
+ * MY TRADES IS FOR EVERYBODY AND IT IS ALWAYS THERE. Casey, 13 Sep 2026: "There is no sign in tab
+ * because I had previously signed in." There never was one -- the commissioner tabs were added
+ * and Sign In was not, so an owner handed this page had no way in at all. That would have blocked
+ * the whole rollout. The My Trades tab shows the sign-in box until the reader has signed in, and
+ * their own trades afterwards, so one tab covers both and nobody has to be given a second
+ * address.
+ *
+ * RUN IT AND THE ACCESS LIST ARE THE COMMISSIONER'S, and whether somebody is one is the league
+ * sheet's answer, not this browser's. The page asks. Until the answer comes back the two tabs are
+ * simply not there, which is the safe way round.
+ * THIS IS NOT THE PROTECTION. The sheet refuses a commissioner request from an owner's key
+ * whatever this page draws. This only decides what is worth putting on screen.
+ */
 const COMMISH_SECTIONS = ['ctrades','crun','caccess'];
-const COMMISH_PAGE = {ctrades: 'trades', crun: 'run', caccess: 'access'};
-const COMMISH_TABS = [['ctrades','My Trades'],['crun','Run It'],['caccess','Access List']];
-const TABS = (TABSETS[MODE] || TABSETS.personal)
-  .concat(TRADES_HOME && hasCommishKey() ? COMMISH_TABS : []);
+const COMMISH_PAGE = {ctrades: 'auto', crun: 'run', caccess: 'access'};
+const OWNER_TAB = [['ctrades','My Trades']];
+const COMMISH_ONLY_TABS = [['crun','Run It'],['caccess','Access List']];
+let TABS = (TABSETS[MODE] || TABSETS.personal).concat(TRADES_HOME ? OWNER_TAB : []);
 const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','tx']
   .concat(COMMISH_SECTIONS);
+
+/* ASK THE LEAGUE SHEET WHETHER THIS DEVICE IS A COMMISSIONER'S, then add the two tabs. A key
+   this browser holds may be a seat key whose Role says commissioner, or the spare key from the
+   Settings tab; only the sheet can tell the difference, and it is the sheet that has to agree. */
+function askCommish(){
+  if (!TRADES_HOME || !TRADES_API) return Promise.resolve(false);
+  let k = '';
+  try { k = localStorage.getItem('rfl_commish_key') || ''; } catch (e) { k = ''; }
+  if (!k) return Promise.resolve(false);
+  return fetch(TRADES_API + (TRADES_API.indexOf('?') < 0 ? '?' : '&') + 'fn=me&key='
+               + encodeURIComponent(k))
+    .then(r => r.json())
+    .then(a => !!(a && a.ok && a.me && a.me.role === 'commissioner'))
+    .catch(() => false);
+}
 /* THE TAB IDS ARE A CONTRACT, NOT AN IMPLEMENTATION DETAIL. test_season_ui.js drives this page
    by id — tabStand, tabPick — so making the bar data-driven must not rename them. The id is
    derived the way it was always spelt, and the new tabs join the same scheme. */
@@ -1535,7 +1556,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '12 Sep 2026, 2:48 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '12 Sep 2026, 6:07 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7901,6 +7922,15 @@ paintAll();
 if (TRADES_API){
   fetchLiveTrades().then(paintAll);
   setInterval(() => fetchLiveTrades().then(paintAll), 300000);
+  /* AND THE COMMISSIONER'S TWO TABS, once the sheet has said so. */
+  askCommish().then(yes => {
+    if (!yes) return;
+    TABS = TABS.concat(COMMISH_ONLY_TABS);
+    buildTabs();
+    /* The bar is rebuilt, so whichever tab was showing has to be marked again. */
+    const open = TABS.map(([k]) => k).find(k => { const n = el(k); return n && !n.hidden; });
+    if (open) showTab(open);
+  });
 }
 /* ASK ONCE, ON FIRST OPEN. After the page has drawn, so a reader who skips is looking at a
    working dashboard and not a blank one, and so nothing here can stop the page rendering. */
