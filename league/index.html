@@ -1114,6 +1114,17 @@ function showTab(which){
  * dashboard opens no slower than before.
  */
 let COMMISH_LOADED = {};
+/* IT IS LOADED BEFORE IT IS ASKED FOR.
+ *
+ * Casey, 13 Sep 2026: "Why is a delay when clicking on the new tabs before the pages then
+ * displays". Because three waits were stacked on the click: the trades page had to be fetched,
+ * then it asked the league sheet who this device is, then it asked for the league's data. Two of
+ * those are round trips to Google and neither is quick.
+ *
+ * None of it has to happen on the click. It starts as soon as the dashboard has finished drawing,
+ * so by the time the tab is pressed the page behind it is already there. The scores are painted
+ * first, so nothing here slows down what the reader came for.
+ */
 function openCommish(which){
   const page = COMMISH_PAGE[which];
   if (!page || COMMISH_LOADED[which]) return;
@@ -1123,9 +1134,11 @@ function openCommish(which){
   const f = document.createElement('iframe');
   f.src = TRADES_HOME + '?only=' + page;
   f.title = which === 'crun' ? 'Run It' : (which === 'caccess' ? 'Access List' : 'My Trades');
-  f.setAttribute('loading', 'lazy');
   f.style.cssText = 'width:100%;border:0;display:block;min-height:70vh;background:transparent';
-  host.innerHTML = '';
+  /* SOMETHING TO LOOK AT WHILE IT ARRIVES, on the slow first visit or a bad signal. An empty
+     panel and a broken panel look the same. */
+  host.innerHTML = '<div class="card"><div class="empty">Opening&hellip;</div></div>';
+  f.addEventListener('load', () => { const n = host.querySelector('.card'); if (n) n.remove(); });
   host.appendChild(f);
   /* IT GROWS TO ITS CONTENT RATHER THAN SCROLLING INSIDE THE PAGE. Two scrollbars, one inside
      the other, is the thing that makes a page inside a page feel wrong on a phone. */
@@ -1556,7 +1569,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '12 Sep 2026, 6:07 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '12 Sep 2026, 6:38 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7923,6 +7936,9 @@ if (TRADES_API){
   fetchLiveTrades().then(paintAll);
   setInterval(() => fetchLiveTrades().then(paintAll), 300000);
   /* AND THE COMMISSIONER'S TWO TABS, once the sheet has said so. */
+  /* MY TRADES IS EVERYBODY'S, so it starts loading straight away. */
+  const warm = () => { if (TRADES_HOME) openCommish('ctrades'); };
+  if (window.requestIdleCallback) requestIdleCallback(warm, {timeout: 2500}); else setTimeout(warm, 1200);
   askCommish().then(yes => {
     if (!yes) return;
     TABS = TABS.concat(COMMISH_ONLY_TABS);
@@ -7930,6 +7946,11 @@ if (TRADES_API){
     /* The bar is rebuilt, so whichever tab was showing has to be marked again. */
     const open = TABS.map(([k]) => k).find(k => { const n = el(k); return n && !n.hidden; });
     if (open) showTab(open);
+    /* AND THE COMMISSIONER'S TWO, one after the other rather than all at once -- three copies of
+       the same page asking Google the same two questions at the same moment is slower than
+       three in a row, not faster. */
+    const rest = ['crun', 'caccess'];
+    rest.forEach((k, i) => setTimeout(() => openCommish(k), 1500 + i * 1500));
   });
 }
 /* ASK ONCE, ON FIRST OPEN. After the page has drawn, so a reader who skips is looking at a
