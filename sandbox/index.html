@@ -1757,7 +1757,9 @@ function doRequestLive(){
      owners keep to apps. I thought the link would reopen the entire RFL dashboard and I would be
      signed in." Right. When this is running inside the dashboard, the address to come back to is
      the DASHBOARD'S, not this page's -- an owner should never learn that this page exists. */
-  Store.signin(v, backTo()).then(function(a){
+  Store.signin(v, backTo()).catch(function(err){
+    return {ok: false, note: String(err && err.message ? err.message : err)};
+  }).then(function(a){
     if (a && a.why === 'group'){
       showHelp('That Looks Like a Group Address',
         '<p>A sign-in link sent to a group or an alias is delivered to everybody on it, so it '
