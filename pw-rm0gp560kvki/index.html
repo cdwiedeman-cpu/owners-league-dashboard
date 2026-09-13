@@ -821,6 +821,14 @@ const el = id => document.getElementById(id);
    declared beside the code that uses them at the end of the file -- a `const` read before its
    own line throws, and the page would not paint at all. The same trap is noted where the results
    chip is built. */
+/* A SIGN-IN CODE FROM AN EMAILED LINK. Taken off the address straight away, so the link cannot
+   be used again by going back, and so a screenshot of the address bar carries nothing. */
+const SIGNIN_CODE = (() => {
+  const m = /[?&]t=([^&#]+)/.exec(location.search || '');
+  if (!m) return '';
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  return decodeURIComponent(m[1]);
+})();
 const TRADES_API = 'https://script.google.com/macros/s/AKfycbwi0sPS4cxHkpSSlQak2Pk2J29HnpW1l0HKEixdB9d3I97mdzKzjUxQGyzSyyoDGPgG/exec';
 /* A path on this same site, so it is one address to change and the two pages share a browser
    store. Empty when there is no script to talk to, and then no commissioner tab is built. */
@@ -1132,7 +1140,13 @@ function openCommish(which){
   if (!host) return;
   COMMISH_LOADED[which] = true;
   const f = document.createElement('iframe');
-  f.src = TRADES_HOME + '?only=' + page;
+  /* A SIGN-IN CODE ARRIVING IN THIS PAGE'S ADDRESS IS HANDED STRAIGHT THROUGH.
+     The link in the email comes back HERE, which is the whole point of it -- an owner should land
+     on the dashboard signed in, not on a page they have never heard of. Redeeming it is the
+     trades page's job and stays there, in one place, so the code is passed to it rather than
+     handled twice. */
+  f.src = TRADES_HOME + '?only=' + page + (which === 'ctrades' && SIGNIN_CODE
+            ? '&t=' + encodeURIComponent(SIGNIN_CODE) : '');
   f.title = which === 'crun' ? 'Run It' : (which === 'caccess' ? 'Access List' : 'My Trades');
   f.style.cssText = 'width:100%;border:0;display:block;min-height:70vh;background:transparent';
   /* SOMETHING TO LOOK AT WHILE IT ARRIVES, on the slow first visit or a bad signal. An empty
@@ -1569,7 +1583,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '12 Sep 2026, 6:38 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '12 Sep 2026, 6:40 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7936,11 +7950,23 @@ if (TRADES_API){
   fetchLiveTrades().then(paintAll);
   setInterval(() => fetchLiveTrades().then(paintAll), 300000);
   /* AND THE COMMISSIONER'S TWO TABS, once the sheet has said so. */
-  /* MY TRADES IS EVERYBODY'S, so it starts loading straight away. */
+  /* MY TRADES IS EVERYBODY'S, so it starts loading straight away -- and at once, not on an idle
+     moment, when somebody has just arrived from a sign-in link and is waiting to see that it
+     worked. */
   const warm = () => { if (TRADES_HOME) openCommish('ctrades'); };
-  if (window.requestIdleCallback) requestIdleCallback(warm, {timeout: 2500}); else setTimeout(warm, 1200);
-  askCommish().then(yes => {
+  if (SIGNIN_CODE){ warm(); showTab('ctrades'); }
+  else if (window.requestIdleCallback) requestIdleCallback(warm, {timeout: 2500});
+  else setTimeout(warm, 1200);
+  /* THE TRADES PAGE CALLS THIS WHEN SOMEBODY HAS JUST SIGNED IN, so the commissioner's tabs
+     appear without the dashboard having to be reloaded by hand. */
+  window.signedInNow = () => { askCommish().then(addCommishTabs); };
+  askCommish().then(addCommishTabs);
+}
+
+function addCommishTabs(yes){
+  {
     if (!yes) return;
+    if (TABS.some(([k]) => k === 'crun')) return;
     TABS = TABS.concat(COMMISH_ONLY_TABS);
     buildTabs();
     /* The bar is rebuilt, so whichever tab was showing has to be marked again. */
@@ -7951,7 +7977,7 @@ if (TRADES_API){
        three in a row, not faster. */
     const rest = ['crun', 'caccess'];
     rest.forEach((k, i) => setTimeout(() => openCommish(k), 1500 + i * 1500));
-  });
+  }
 }
 /* ASK ONCE, ON FIRST OPEN. After the page has drawn, so a reader who skips is looking at a
    working dashboard and not a blank one, and so nothing here can stop the page rendering. */
