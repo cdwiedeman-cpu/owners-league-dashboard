@@ -1795,11 +1795,13 @@ function doRequestLive(){
        about what it reveals, which is a design decision the reader never knew was made; and it
        repeated the line about nothing arriving, which is already printed on the sign-in card
        where somebody who is still waiting will be looking. */
-    showHelp('Check Your Email',
-      '<p>A sign-in link is on its way to <b>' + esc(v) + '</b>. Open it on the device you want '
-      + 'to use.</p>'
-      + '<p>The link works once and stops working after thirty minutes.</p>');
+    ASKED_FOR = v;
     render();
+    showHelp('Check Your Email',
+      '<p>A six character code is on its way to <b>' + esc(v) + '</b>. Type it into the box on '
+      + 'this page and you are signed in.</p>'
+      + '<p>It works once and stops working after thirty minutes.</p>');
+    if (el('pin')) el('pin').focus();
   });
 }
 
@@ -1833,20 +1835,14 @@ function redeemFromUrl(){
   /* THE PAGE AROUND THIS ONE HAS TABS THAT DEPEND ON WHO THIS IS, so it is told to look again
      once there is an answer. Without it the commissioner's tabs would not appear until the
      dashboard was reloaded by hand. */
-  var tellParent = function(){
-    try {
-      if (window.parent && window.parent !== window && window.parent.signedInNow) {
-        window.parent.signedInNow();
-      }
-    } catch (e) {}
-  };
+
   Store.redeem(code).catch(function(err){
     return {ok: false, note: String(err && err.message ? err.message : err)};
   }).then(function(a){
     if (a && a.ok){
       LIVE_ME = null;
       boot();
-      tellParent();
+      tellParentSignedIn();
       showHelp('You Are Signed In',
         '<p>This device is now <b>' + esc(a.seat) + '</b> in '
         + esc(DATA.div_names[a.div] || a.div) + '.</p>'
@@ -1898,18 +1894,68 @@ function viewSignInLive(){
       + '</div></div>';
   }
   h += '<div class="card"><h2>Sign In</h2>'
-    + '<p class="note">Type the email address the league has for you. A link comes back to that '
-    + 'address, and opening it signs this device in for good.</p>'
+    + '<p class="note">Step one. Type the email address the league has for you.</p>'
     + '<div class="row"><div class="grow"><label class="lb" for="em">Email Address</label>'
     + '<input id="em" type="email" autocomplete="email" inputmode="email" '
-    + 'autocapitalize="off" spellcheck="false" placeholder="you@example.com"></div>'
-    + '<button class="pri" onclick="doRequest()">Send Me a Link</button></div>'
-    + '<p class="note" style="margin-top:8px">Open the link on the device you want to use. It '
-    + 'works once and stops working after thirty minutes.</p>'
+    + 'autocapitalize="off" spellcheck="false" value="' + esc(ASKED_FOR || '') + '" '
+    + 'placeholder="you@example.com"></div>'
+    + '<button class="pri" onclick="doRequest()">Send My Code</button></div>'
+    /* STEP TWO IS ON THIS PAGE, NOT SOMEWHERE ELSE. The code is typed back in here, so nobody
+       has to leave the page they are already looking at. */
+    + '<p class="note" style="margin-top:14px">Step two. A six character code is emailed to you. '
+    + 'Type it in and you are done.</p>'
+    + '<div class="row"><div class="grow"><label class="lb" for="pin">Code From the Email</label>'
+    + '<input id="pin" inputmode="text" autocapitalize="characters" autocorrect="off" '
+    + 'spellcheck="false" maxlength="8" placeholder="ABC123"></div>'
+    + '<button class="' + (ASKED_FOR ? 'pri' : '') + '" onclick="doPin()">Sign Me In</button></div>'
+    + '<p class="note" style="margin-top:8px">The code works once and stops working after thirty '
+    + 'minutes. The email also has a link, if you would rather tap that.</p>'
     + '<p class="note"><b>Nothing arrives after a few minutes?</b> The league may have a '
     + 'different address for you. Ask the commissioner, because it is not something you can fix '
     + 'by trying again.</p></div>';
   return h + clockCard();
+}
+
+/* WHICH ADDRESS A CODE WAS JUST ASKED FOR, so the box keeps it and the page can say whose code it
+   is waiting on. Not stored anywhere: it belongs to this visit. */
+var ASKED_FOR = '';
+
+function doPin(){
+  var v = el('pin') ? el('pin').value : '';
+  if (!String(v).replace(/[^A-Za-z0-9]/g, '')) return;
+  var btn = document.activeElement;
+  if (btn && btn.tagName === 'BUTTON'){ btn.disabled = true; btn.textContent = 'Checking…'; }
+  Store.redeem(v).catch(function(err){
+    return {ok: false, note: String(err && err.message ? err.message : err)};
+  }).then(function(a){
+    if (a && a.ok){
+      LIVE_ME = null;
+      ASKED_FOR = '';
+      boot();
+      tellParentSignedIn();
+      showHelp('You Are Signed In',
+        '<p>This device is now <b>' + esc(a.seat) + '</b> in '
+        + esc(DATA.div_names[a.div] || a.div) + '.</p>'
+        + '<p>It stays signed in on this device. You do not have to do this again here.</p>');
+      return;
+    }
+    var why = {used: 'That code has already been used. Ask for a new one.',
+               expired: 'That code is more than thirty minutes old. Ask for a new one.',
+               nolink: 'That code is not one the league issued. Check it and try again.',
+               seat: 'That address is no longer on an active seat. Ask the commissioner.'
+              }[(a && a.why) || ''] || ((a && a.note) || 'The league sheet did not answer.');
+    render();
+    showHelp('That Code Did Not Work', '<p>' + esc(why) + '</p>');
+  });
+}
+
+/* THE PAGE AROUND THIS ONE HAS TABS THAT DEPEND ON WHO THIS IS. */
+function tellParentSignedIn(){
+  try {
+    if (window.parent && window.parent !== window && window.parent.signedInNow) {
+      window.parent.signedInNow();
+    }
+  } catch (e) {}
 }
 
 /* WHAT THE LEAGUE SHEET SAYS THIS DEVICE IS. Asked once when the page opens and after signing
