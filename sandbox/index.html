@@ -873,8 +873,14 @@ var Store = (function () {
      * every request carries it. Nothing else about the person is kept in the browser: the seat
      * is looked up from the key by the script, every time. */
     redeem: function (code) {
+      /* HAND BACK THE KEY THIS BROWSER ALREADY HOLDS. Signing in again on a phone that was
+         already signed in used to leave two keys on the seat, and only the newer one could ever
+         be used again -- the browser keeps one. The Signed in column counted both, so Casey's
+         row read 3 when one phone and one laptop were the honest answer. Casey, 13 Sep 2026:
+         "why ... does a three mean? Am I signed in three times?" Telling the script which key
+         this browser is replacing lets it drop the old one in the same breath. */
       return fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
-                         body: JSON.stringify({fn: 'redeem', t: code})})
+                         body: JSON.stringify({fn: 'redeem', t: code, old: ckey()})})
         .then(function (r) { return r.json(); })
         .then(function (a) { if (a && a.ok && a.key) setKey(a.key); return a; });
     },
