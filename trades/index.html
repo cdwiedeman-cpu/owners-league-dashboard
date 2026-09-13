@@ -1482,10 +1482,21 @@ function render(){
     var sb = el('sandbar'); if (sb) sb.hidden = true;
     var h1 = document.querySelector('h1'); if (h1) h1.hidden = true;
     var sl = el('subline'); if (sl) sl.hidden = true;
+    /* `only=auto` LETS THE PAGE DECIDE. The league dashboard shows one tab called My Trades and
+       an owner who has not signed in has to be able to sign in from it -- otherwise the only way
+       in is an address nobody gave them. So: signed in, they get their trades; not signed in,
+       they get the sign-in box, in the same tab. */
+    var want = ONLY;
+    if (want === 'auto'){
+      var signedIn = Store.live()
+        ? !!(LIVE_ME && LIVE_ME.ok && LIVE_ME.me && LIVE_ME.me.seat)
+        : !!(session() && session().seat);
+      want = signedIn ? 'trades' : 'signin';
+    }
     var only = {signin: viewSignIn, trades: viewTrades, run: viewRun,
-                access: viewAccess, rosters: viewRosters}[ONLY] || viewSignIn;
-    el('body').innerHTML = accessWarning() + ((COMMISH_TABS[ONLY] && !isCommish())
-      ? commishOnly(ONLY === 'run' ? 'Run It' : 'The Access List')
+                access: viewAccess, rosters: viewRosters}[want] || viewSignIn;
+    el('body').innerHTML = accessWarning() + ((COMMISH_TABS[want] && !isCommish())
+      ? commishOnly(want === 'run' ? 'Run It' : 'The Access List')
       : only());
     return;
   }
