@@ -3577,6 +3577,101 @@ function copyCSV(){
 }
 
 /* ---- TAB: rosters ------------------------------------------------------------------------------ */
+/* ---------- what a trade costs, and changing it ------------------------------------------ */
+
+/* THE AMOUNT IS RECORDED ON THE LINE, NOT COUNTED FROM THE LINES. Casey, 10 Sep 2026: a
+   correction can take two or three roster moves to put one trade right, "and you wouldn't want
+   to double or triple charge somebody for their fees." A total that is rows times three cannot
+   be corrected -- there is nothing to correct, only rows to delete, and deleting a row loses the
+   history that explains the roster. So each row carries its own amount and the total is a sum.
+
+   THE CONTROL DID NOT EXIST UNTIL NOW. The guide described it for days, the data structure
+   supported it, and there was no way to do it. Casey, 13 Sep 2026: "rebuild it to fix the gap."
+   A CAPABILITY DESCRIBED IN A DOCUMENT AND MISSING FROM THE PAGE IS THE SAME DEFECT AS A COLUMN
+   NOBODY WRITES. */
+function FEE(){ return DATA.trade_cost == null ? 3 : DATA.trade_cost; }
+function money(n){ return (n < 0 ? '\u2212$' : '$') + Math.abs(Number(n)).toFixed(0); }
+function feeOfRow(e){ return (e && typeof e.fee === 'number') ? e.fee : FEE(); }
+
+/* A ROW IS FOUND BY WHAT IT IS, NOT BY WHERE IT SITS. `S.log` is unshifted on every settle, so
+   an index captured when the panel opened would point at a different trade by the time it was
+   saved. */
+function feeKeyOf(e){ return [e.when || '', e.div || '', e.owner || '', e['in'] || ''].join('|'); }
+function feeRow(k){
+  var L = S.log || [];
+  for (var i = 0; i < L.length; i++) if (feeKeyOf(L[i]) === k) return L[i];
+  return null;
+}
+function feeCell(e){
+  var v = feeOfRow(e), std = v === FEE();
+  return '<button class="f" style="padding:3px 8px;font-size:11px" '
+    + 'onclick="openFee(' + jq(feeKeyOf(e)) + ')" '
+    + 'title="' + esc(std ? 'The standard ' + money(FEE()) + ' transaction fee. Tap to change it.'
+        : 'Set to ' + money(v) + ' rather than the standard ' + money(FEE())
+          + (e.fee_note ? ': ' + e.fee_note : '. No reason was recorded.') + ' Tap to change it.')
+    + '">' + (std ? '' : '<span class="pill gold" style="margin-right:4px">changed</span>')
+    + esc(money(v)) + '</button>';
+}
+
+/* AN IN-PAGE PANEL, NEVER prompt(). The file is opened on a phone inside an app that may not
+   draw a native dialog at all -- prompt() returns nothing and the change silently does not
+   happen. */
+function openFee(k){
+  var e = feeRow(k);
+  if (!e) return;
+  var v = feeOfRow(e);
+  showHelp('What This Trade Costs',
+    '<p>' + esc(e.owner) + ' \u2014 <b>' + esc(e['in']) + '</b> in, ' + esc(e.out || '\u2014')
+      + ' out, week ' + e.week + '.</p>'
+    + '<div class="row" style="margin-top:8px">'
+    + '<button class="f" onclick="setFee(' + jq(k) + ',' + FEE() + ')">Standard '
+      + money(FEE()) + '</button>'
+    + '<button class="f" onclick="setFee(' + jq(k) + ',0)">No Charge</button>'
+    + '<button class="f" onclick="setFee(' + jq(k) + ',' + (-FEE()) + ')">Credit '
+      + money(-FEE()) + '</button></div>'
+    + '<label class="lb" style="margin-top:10px" for="feeAmt">Or another amount</label>'
+    + '<input class="search" id="feeAmt" type="text" inputmode="text" '
+      + 'value="' + esc(String(v)) + '" style="max-width:140px">'
+    + '<label class="lb" style="margin-top:10px" for="feeWhy">Why it is not the standard '
+      + money(FEE()) + '</label>'
+    + '<input class="search" id="feeWhy" type="text" value="' + esc(e.fee_note || '') + '" '
+      + 'placeholder="Second move of one correction" style="max-width:100%">'
+    + '<p class="note" id="feeErr" style="margin:6px 0 0"></p>'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="saveFee(' + jq(k) + ')">Save</button>'
+    + '<button onclick="closeHelp()">Cancel</button></div>');
+}
+function setFee(k, v){
+  var amt = el('feeAmt'); if (amt) amt.value = String(v);
+  saveFee(k);
+}
+function saveFee(k){
+  var e = feeRow(k); if (!e) { closeHelp(); return; }
+  var amt = el('feeAmt'), why = el('feeWhy');
+  var raw = amt ? String(amt.value).trim().replace(/[$,\s]/g, '').replace(/\u2212/g, '-') : '';
+  var v = Number(raw);
+  var err = el('feeErr');
+  /* AN EMPTY BOX IS NOT ZERO. "No charge" is a decision somebody makes; a blank field is a
+     question nobody answered, and writing 0 for it would be inventing the decision. */
+  if (raw === '' || !isFinite(v)){
+    if (err) err.innerHTML = '<b class="b">Type an amount.</b> A blank box is not the same as no '
+      + 'charge \u2014 there is a No Charge button for that.';
+    return;
+  }
+  var note = why ? String(why.value).trim() : '';
+  /* A CHANGED AMOUNT WITHOUT A REASON IS A NUMBER NOBODY CAN DEFEND LATER. The Transactions tab
+     prints the reason beside it, and "no reason was recorded" is what it has to say otherwise. */
+  if (v !== FEE() && !note){
+    if (err) err.innerHTML = '<b class="b">Say why.</b> This is not the standard '
+      + money(FEE()) + ', and the reason is printed beside it on the Transactions tab.';
+    if (why) why.focus();
+    return;
+  }
+  e.fee = Math.round(v * 100) / 100;
+  e.fee_note = (v === FEE()) ? '' : note;
+  save(); closeHelp(); render();
+}
+
 function viewRosters(){
   var h = '<div class="card"><h2>' + (Store.live() ? 'Rosters' : 'Where the Sandbox Stands')
     + '</h2>'
@@ -3587,15 +3682,25 @@ function viewRosters(){
           + 'done in here, and none of it has left this browser.') + '</p>'
     + '<div class="row"><button class="dang" onclick="doReset()">Put the Real Rosters Back</button>'
     + '</div></div>';
+  var boss = isCommish();
   h += S.log.length ? '<div class="card"><h2>What Has Moved</h2><div class="scr"><table>'
-      + '<colgroup><col style="width:24%"><col style="width:22%"><col style="width:22%">'
-      + '<col style="width:32%"></colgroup>'
-      + '<thead><tr><th>Seat</th><th>In</th><th>Out</th><th>How</th></tr></thead><tbody>'
+      + '<colgroup><col style="width:22%"><col style="width:20%"><col style="width:20%">'
+      + '<col style="width:' + (boss ? '24' : '38') + '%">'
+      + (boss ? '<col style="width:14%">' : '') + '</colgroup>'
+      + '<thead><tr><th>Seat</th><th>In</th><th>Out</th><th>How</th>'
+      + (boss ? '<th class="num">Cost</th>' : '') + '</tr></thead><tbody>'
       + S.log.map(function(e){
           return '<tr><td>' + esc(e.owner) + '</td><td class="g">' + esc(e['in']) + '</td>'
             + '<td class="d">' + esc(e.out) + '</td><td class="d">wk ' + e.week + ' · '
-            + esc(e.how) + (e.by ? ' · entered by ' + esc(e.by) : '') + '</td></tr>';
-        }).join('') + '</tbody></table></div></div>'
+            + esc(e.how) + (e.by ? ' · entered by ' + esc(e.by) : '') + '</td>'
+            + (boss ? '<td class="num">' + feeCell(e) + '</td>' : '') + '</tr>';
+        }).join('') + '</tbody></table></div>'
+      + (boss ? '<p class="note">Every trade costs ' + money(FEE()) + ' and the total each owner '
+          + 'owes is the sum of these lines. Putting one trade right can take two or three moves, '
+          + 'and nobody should be charged three times for one mistake, so a line can be set to '
+          + 'nothing or turned into a credit. Anything you change says so on the Transactions '
+          + 'tab, with the reason you type.</p>' : '')
+      + '</div>'
     : '<div class="card"><div class="empty">Nothing has moved yet. Rosters are exactly as '
       + 'drafted.</div></div>';
   h += DATA.divisions.map(function(d){
