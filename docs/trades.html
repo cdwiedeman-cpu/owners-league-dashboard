@@ -267,103 +267,104 @@ ol li,ul li{margin:0 0 7px}
 </section>
 
 <section><h2>Setting It Up</h2><p class="lead">What is done, and what is left.</p>
-<p>Casey has already done the first half of this. What is written here is where things stand and
-   what is still to do. Either of you can do any of it.</p>
+<p>All of the machinery is built and running. What is left is one job, and it is not a technical
+   one: collecting the other owners' email addresses.</p>
 
-<h3>What Is Already Set Up</h3>
+<h3>What Is Already Working</h3>
 <ul>
   <li>The league has its own Google account, <span class="kbd">realityfootballcommish@gmail.com</span>.
       Casey and Bob both sign in to it with the same password.</li>
   <li>The spreadsheet exists. It is called <span class="kbd">RFL Trades</span> and it lives in
-      that account&rsquo;s Google Drive.</li>
-  <li>It has a tab named <span class="kbd">Access</span>, with all 27 seats listed and spelled
-      correctly.</li>
+      that account's Google Drive. Its <span class="kbd">Access</span> tab lists all 27 seats,
+      spelled correctly.</li>
+  <li>The script is installed and deployed, and it is answering right now.</li>
+  <li>Signing in has been tested from end to end. The link arrived by email, the six character
+      code was accepted, and the same code was refused the second time it was used.</li>
+  <li>The trades page is inside the live dashboard rather than in a practice copy. Settled trades
+      move the real rosters.</li>
+  <li>The commissioner tabs appear for Casey and Bob and for nobody else. An owner who opens the
+      same page does not have them and cannot reach them.</li>
 </ul>
-<p>Three things sit behind the RFL application: that spreadsheet, a script that runs on Mondays,
-   and the emails owners receive. All three belong to the league account rather than to either of
-   your personal ones. Owners get league email from a league address, and nothing stops working if
-   one of you steps back for a season.</p>
+<p>Three things sit behind the RFL application: the spreadsheet, the script, and the emails owners
+   receive. All three belong to the league account rather than to either of your personal ones.
+   Owners get league email from a league address, and nothing stops working if one of you steps
+   back for a season.</p>
 <p><b>The password is not written down here.</b> This guide is published on the league website, so
    anybody who opens the site can read it.</p>
 <p>Whatever one of you does in the account, the other sees, and there is no record of which of you
    did it. That is fine for a league, and it is the trade-off that comes with one login.</p>
 
-<h3>When You Sit Down Together</h3>
+<h3>Setting Bob Up</h3>
 <p>Setting Bob up is its own sheet, so it can be read off a phone while you are doing it. It is
    called <b>Setting Bob Up</b> and it lives at <span class="kbd">/docs/bob.html</span>.</p>
 
 <h3>What Is Left to Do</h3>
-<p>Do these in order. The first one is the one everything else waits on.</p>
 <ol>
-  <li><b>Collect the 27 email addresses and type them into the Email column.</b> Personal inboxes
-      only. Do not use the league email list, and do not use an address that forwards to several
-      people. Bob&rsquo;s scoring workbook does not hold email addresses, so there is nowhere to
-      copy them from. They have to be gathered from the owners.</li>
-  <li><b>Set the Role column to <span class="kbd">commissioner</span> on two rows</b>,
-      Bob&rsquo;s and Casey&rsquo;s. Bob is the commissioner of the league. Casey runs the
-      software and needs the same two abilities to fix anything that goes wrong. Every other row
-      stays <span class="kbd">owner</span>.</li>
-  <li><b>Turn Role and Status into drop-downs</b> so neither can be mistyped. Select the Role
-      column, then choose Data, then Data validation, then Add rule. Set the rule to Dropdown and
-      give it two values, <span class="kbd">owner</span> and
-      <span class="kbd">commissioner</span>. Do the same on the Status column with
-      <span class="kbd">active</span> and <span class="kbd">inactive</span>.</li>
-  <li><b>Install the script.</b> Click Extensions, then Apps Script, then paste it in, click
-      Deploy, and add the trigger described in What the Trigger Is.</li>
+  <li><b>Collect the 27 email addresses and type them into the Email column.</b> Two of them are
+      already in, Casey's and Bob's, so there are 25 to go. Use personal inboxes only. Do not use
+      the league email list, and do not use an address that forwards to several people. Bob's
+      scoring workbook does not hold email addresses, so there is nowhere to copy them from. They
+      have to be gathered from the owners.</li>
+  <li><b>Turn the Monday schedule on when you get to stage three.</b> Until then Bob presses the
+      button himself, which is the point of stage one.</li>
 </ol>
-<p><b>The script is not written yet.</b> That is the one piece of this that does not exist, and
-   Casey is building it. Steps 1 to 3 are worth doing now and none of them will need redoing,
-   because the script reads the Access tab those steps fill in.</p>
-<p>Nobody can sign in until the Email column is filled, so that is the real starting line.</p>
+<p>Nobody can sign in until their address is in the Email column, so that is the real starting
+   line. An owner with no address is not locked out of the league. Bob enters their trades for
+   them, the same way he does today.</p>
 
-<h3>The Access Tab&rsquo;s Columns</h3>
-<p>Four of them you type. Two the script writes, and you leave those alone.</p>
+<h3>The Access Tab's Columns</h3>
+<p><b>The spreadsheet is where you type, and the Access List page is where you look.</b> The page
+   inside the application shows you what the Access tab says right now, and none of it can be
+   edited there. That is deliberate. Two places to change the same fact is how the two stop
+   agreeing.</p>
+<p>Four columns you type. Two the script writes, and you leave those alone.</p>
 <table><thead><tr><th>Column</th><th>What it is</th></tr></thead><tbody>
-<tr><td><b>Division, Seat</b></td><td>Already filled in from the CSV. Never edited.</td></tr>
-<tr><td><b>Email</b></td><td>The owner&rsquo;s personal inbox. Blank means they cannot sign in and
-    you enter their trades for them.</td></tr>
-<tr><td><b>Status</b></td><td><span class="kbd">active</span> is normal.
+<tr><td><b>Division, Seat</b></td><td>Already filled in. Never edited.</td></tr>
+<tr><td><b>Email</b></td><td>The owner's personal inbox. Blank means they cannot sign in and you
+    enter their trades for them. Changing this address does not sign anybody out, so put an
+    <b>x</b> in Retire? on the same row when an owner moves to a new address.</td></tr>
+<tr><td><b>Status</b></td><td>A drop-down. <span class="kbd">active</span> is normal.
     <span class="kbd">inactive</span> refuses anything that seat tries to submit and changes
-    nothing else &mdash; the team still appears in the standings and the scores.</td></tr>
-<tr><td><b>Role</b></td><td><span class="kbd">owner</span> for everybody except Bob, whose row
-    says <span class="kbd">commissioner</span>.</td></tr>
+    nothing else. The team still appears in the standings and the scores.</td></tr>
+<tr><td><b>Role</b></td><td>A drop-down. <span class="kbd">owner</span> for everybody except
+    Casey and Bob, whose rows say <span class="kbd">commissioner</span>. The commissioner tabs
+    appear for those two rows and for no others.</td></tr>
 <tr><td><b>Retire?</b></td><td>Type an <b>x</b> here to turn away every device already signed in
-    to that seat. Within five minutes the script does it, <b>empties the cell again</b>, and
-    writes a line on the Log tab. The empty cell is the receipt: while the x is still sitting
+    to that seat. The script does it within five minutes, <b>empties the cell again</b>, and
+    writes a line on the Log tab. The empty cell is the receipt. While the x is still sitting
     there, it has not happened yet.</td></tr>
 <tr><td><b>Signed in</b></td><td>Written by the script. How many devices are holding a working key
-    for that seat, as of the last time the script ran, which is never more than five minutes ago.
-    This is the column to look at before you retire anything &mdash; it tells you whether there is
-    anything to turn away, and it goes to <span class="kbd">0</span> when the retirement has
-    happened.</td></tr>
+    for that seat. Look at this before you retire anything. It tells you whether there is anything
+    to turn away, and it goes to <span class="kbd">0</span> once the retirement has happened.</td></tr>
 </tbody></table>
-<p>There is deliberately no &ldquo;date the keys were retired&rdquo; column. The script keeps that
+<p>Role and Status are drop-downs, so neither can be mistyped. The script sets them up on its own
+   and puts them back if they are ever removed. A capital letter or a trailing space in either of
+   those two columns would change what the software does, and it would not look wrong on the
+   screen.</p>
+<p>There is deliberately no column recording the date keys were retired. The script keeps that
    date where nobody can type over it, and the Log tab is where you read the history. A column
-   Bob looks at before acting should say what is true now; what happened in August belongs in a
+   Bob looks at before acting should say what is true now. What happened in August belongs in a
    log.</p>
 
-<h3>What the Trigger Is</h3>
-<p>A trigger is a schedule Google keeps on its own servers. It runs a piece of the script without
-   anybody opening anything &mdash; no computer has to be switched on, and nobody has to
-   remember. That is what makes Monday afternoon happen by itself.</p>
-<p>The obvious setup would be &ldquo;run this weekly, Mondays, at 4:00pm AZ&rdquo;, and it is the
-   wrong one. Google&rsquo;s weekly schedules are only accurate to the hour &mdash; asking for
-   4:00pm AZ means <i>somewhere between 4:00 and 5:00</i>, and which minute is up to them. For a
-   deadline that owners are typing against, that is not good enough.</p>
-<p>So the trigger runs <b>every five minutes</b>, and the script itself decides whether there is
-   anything to do. Almost every run does nothing at all and finishes instantly. The one just
-   after 4:00pm AZ on a Monday settles the week.</p>
-<p>The deadline itself does not depend on any of that. <b>Every request is stamped with the time
-   it was sent, and anything stamped 4:00pm AZ Monday or later is too late</b> &mdash; whether the
-   script happens to run at 4:01 or 4:04. Results are posted within about five minutes, and first
-   come, first served opens the moment they are.</p>
+<h3>Monday Settles Itself</h3>
+<p>Neither of you has to press anything on a Monday, and no computer has to be switched on. The
+   script wakes up every five minutes on Google's own servers and checks whether there is anything
+   to do. Almost every time there is nothing and it stops immediately. The one just after 4:00pm
+   AZ on a Monday settles the week.</p>
+<p><b>The deadline is the time a request was sent, not the time the script happens to wake up.</b>
+   Every request is stamped when it arrives, and anything stamped 4:00pm AZ Monday or later is too
+   late. Results are posted within about five minutes of four o'clock, and first come, first
+   served opens the moment they are.</p>
 
-<h3>After That</h3>
-<p>The only thing anybody edits by hand is the Access tab, and Bob can do that with ordinary edit
-   access to the Sheet &mdash; no password needed. Three other tabs appear on their own. <b>Requests</b> is
-   filled in by the RFL application when owners submit. <b>Results</b> is written every Monday and becomes
-   the record of every trade. <b>Log</b> keeps a dated line for every address change and every
-   retirement. Leave all three alone. Log is there to be read, not edited.</p>
+<h3>The Tabs the Script Writes</h3>
+<p>The Access tab is the only one anybody edits by hand. Three others appear on their own, and
+   all three should be left alone.</p>
+<ul>
+  <li><b>Requests</b> is filled in by the application when owners submit.</li>
+  <li><b>Results</b> is written every Monday and becomes the record of every trade.</li>
+  <li><b>Log</b> keeps a dated line for every address change and every retirement. It is there to
+      be read, not edited.</li>
+</ul>
 </section>
 
 <section><h2>How Owners Sign In</h2><p class="lead">No passwords, and no way to submit a trade as somebody else.</p>
@@ -628,8 +629,8 @@ ol li,ul li{margin:0 0 7px}
    notices the third.</p>
 
 <h3>Stage One &mdash; It Runs, and Only Bob Uses It</h3>
-<p>The Sheet and the script go live. Nothing changes for the other owners: they keep emailing and
-   phoning Bob exactly as they do now.</p>
+<p>This is the stage you are in now. Nothing changes for the other owners. They keep emailing and
+   phoning Bob exactly as they do today.</p>
 <p>What changes is what Bob does with those messages. His Monday looks like this:</p>
 <ol>
   <li>Owners email him their requests through the day, as always, up to 4:00pm AZ.</li>
