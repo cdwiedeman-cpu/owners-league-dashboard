@@ -1752,7 +1752,12 @@ function doRequestLive(){
   if (!v) return;
   var btn = document.activeElement;
   if (btn && btn.tagName === 'BUTTON'){ btn.disabled = true; btn.textContent = 'Sending…'; }
-  Store.signin(v, location.href.split('?')[0]).then(function(a){
+  /* THE LINK COMES BACK TO THE PAGE THE PERSON WAS STANDING ON.
+     Casey, 13 Sep 2026: "it open a page that only has the trade tabs. This is dumb and makes
+     owners keep to apps. I thought the link would reopen the entire RFL dashboard and I would be
+     signed in." Right. When this is running inside the dashboard, the address to come back to is
+     the DASHBOARD'S, not this page's -- an owner should never learn that this page exists. */
+  Store.signin(v, backTo()).then(function(a){
     if (a && a.why === 'group'){
       showHelp('That Looks Like a Group Address',
         '<p>A sign-in link sent to a group or an alias is delivered to everybody on it, so it '
@@ -1801,6 +1806,18 @@ function doRequestLive(){
 /* THE LINK IN THE EMAIL LANDS HERE. The code is exchanged for this device's key and then taken
    off the address, so the link cannot be used again by going back in the browser, and so a
    screenshot of the address bar carries nothing. */
+/* WHERE A SIGN-IN LINK SHOULD LAND. Inside the dashboard that is the dashboard; on its own it is
+   this page. Same site either way, so the parent's address can simply be read. */
+function backTo(){
+  try {
+    if (window.parent && window.parent !== window && window.parent.location
+        && window.parent.location.href){
+      return String(window.parent.location.href).split('?')[0].split('#')[0];
+    }
+  } catch (e) {}
+  return location.href.split('?')[0];
+}
+
 function redeemFromUrl(){
   var m = /[?&]t=([^&#]+)/.exec(String(location.search || ''));
   if (!m) return false;
@@ -1813,12 +1830,23 @@ function redeemFromUrl(){
      to catch it. A PAGE THAT IS WORKING SAYS SO. */
   el('body').innerHTML = '<div class="card"><h2>Signing You In</h2>'
     + '<p class="note">One moment. The league sheet is checking your link.</p></div>';
+  /* THE PAGE AROUND THIS ONE HAS TABS THAT DEPEND ON WHO THIS IS, so it is told to look again
+     once there is an answer. Without it the commissioner's tabs would not appear until the
+     dashboard was reloaded by hand. */
+  var tellParent = function(){
+    try {
+      if (window.parent && window.parent !== window && window.parent.signedInNow) {
+        window.parent.signedInNow();
+      }
+    } catch (e) {}
+  };
   Store.redeem(code).catch(function(err){
     return {ok: false, note: String(err && err.message ? err.message : err)};
   }).then(function(a){
     if (a && a.ok){
       LIVE_ME = null;
       boot();
+      tellParent();
       showHelp('You Are Signed In',
         '<p>This device is now <b>' + esc(a.seat) + '</b> in '
         + esc(DATA.div_names[a.div] || a.div) + '.</p>'
