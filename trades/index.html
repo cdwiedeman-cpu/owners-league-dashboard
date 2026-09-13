@@ -1460,6 +1460,15 @@ function isCommish(){
   return !!(s && !s.dead && s.role === 'commissioner');
 }
 function allowedTabs(){
+  /* THE PRACTICE COPY SHOWS EVERY TAB, ALWAYS. Casey, 13 Sep 2026: "on the sandbox trade
+     practice tool, I no longer have a Run It or Access List tab to be able to test the Run It
+     process." Hiding them there was the live rule applied to the wrong page. The sandbox exists
+     to rehearse the whole week, and the commissioner's half of the week is the half worth
+     rehearsing: the coin flips, the undo, the access list. There is nothing to protect in it
+     either -- it holds made-up state in one browser and no real seat can be reached from it.
+     THE GATE BELONGS WHERE THE DATA IS REAL. On the live page the league sheet decides, and it
+     refuses a commissioner request from an owner's key whatever this page draws. */
+  if (!Store.live()) return TABS;
   var ok = isCommish();
   return TABS.filter(function(t){ return ok || !COMMISH_TABS[t[0]]; });
 }
