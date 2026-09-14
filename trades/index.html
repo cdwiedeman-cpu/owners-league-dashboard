@@ -2595,7 +2595,7 @@ function viewTrades(){
            uses. */
         + '<li>Your rows are taken <b>in order, top to bottom</b>, so put what you want most at '
         + 'the top.</li>'
-        + '<li>From row 2 on, a row can depend on an earlier one. <b>When to Try This Row</b> '
+        + '<li>From row 2 on, a row can depend on an earlier one. <b>When to Try This Trade</b> '
         + 'gives you three choices: always try it, only if you miss an earlier row, or only if '
         + 'you get an earlier row. That is how you say &ldquo;if I miss out on Navy, try Alabama '
         + 'instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as well&rdquo;.</li>'
@@ -3077,7 +3077,7 @@ function rowForm(r, i, free, mine, k){
   if (i > 0){
     var above = c.row || 1;
     h += '<label class="lb step done" style="margin-top:11px"><span class="num">3</span>'
-      + 'When to Try This Row</label>'
+      + 'When to Try This Trade</label>'
       + '<select onchange="editRow(' + i + ',\'condtype\',this.value)">'
       + '<option value="always"' + (c.type === 'always' ? ' selected' : '')
       + '>Always try it</option>'
