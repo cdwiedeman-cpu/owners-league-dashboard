@@ -1317,12 +1317,34 @@ function parts(s){
    Tuesday 5:00pm AZ; peloton entry is Tuesday 5:01pm AZ through Monday 3:59pm AZ. Two states and no gap
    — the clock always knows which kind of submission the form is taking, so the form never has
    to ask. */
-function mode(s){
+function clockMode(s){
   var p = parts(s || now());
   if (!p) return 'queue';
   if (p.day === 1 && p.mins >= 16 * 60) return 'fcfs';       // Monday from 4:00pm AZ
   if (p.day === 2 && p.mins <  17 * 60) return 'fcfs';       // through Tuesday 4:59pm AZ
   return 'queue';
+}
+/* FIRST COME OPENS WHEN THE COIN FLIPS HAVE RUN, NOT AT 4:00PM.
+ *
+ * Casey, 15 Sep 2026, mid-settle with Bob: "because we have switched past four o'clock, My Trades
+ * only lets you do Claim It Now, and it doesn't give us the ability to edit what we put in for
+ * Michael Spielman. It should not switch to Claim It Now until Bob runs the coin flips."
+ *
+ * He is right, and the old rule was only ever right by accident. On an AUTOMATIC Monday 4:00pm
+ * and the flips are the same moment, so reading the clock gave the correct answer. On a Monday
+ * Bob settles by hand they are not the same moment at all, and everything in between was a hole:
+ * the lists were locked, the flips had not run, and a team nobody had won yet was being offered
+ * first come, first served.
+ *
+ * THE HONEST QUESTION IS NOT WHAT TIME IS IT, IT IS HAS THE WEEK BEEN SETTLED. Before 4:00pm the
+ * answer is the clock's, as it always was. After 4:00pm, first come opens once the week has
+ * actually been settled -- which on an automatic Monday is a few minutes later, and on a manual
+ * one is when Bob presses the button. Nothing can be claimed before the flips decide it.
+ */
+function mode(s){
+  var m = clockMode(s);
+  if (m !== 'fcfs') return m;
+  return (S && (S.ranWeeks || {})[weekNo(s)]) ? 'fcfs' : 'queue';
 }
 function isFlipMoment(s){
   var p = parts(s || now());
@@ -2785,8 +2807,17 @@ function waysStrip(fcfs){
     + '<span class="pill good">Open Now</span>'
     + '<span class="big">' + (fcfs ? 'First Come, First Served' : 'Build Your List for Monday')
     + '</span>'
-    + '<span class="pill">' + (fcfs ? 'until Tuesday 5:00pm AZ' : 'until Monday 3:59pm AZ')
-    + '</span></div></div>';
+    /* AFTER 4:00PM AND NOT YET SETTLED, "until Monday 3:59pm AZ" is a deadline that has passed.
+       Say what is actually true: lists stay open until the flips are run. */
+    + '<span class="pill">' + (fcfs ? 'until Tuesday 5:00pm AZ'
+        : (clockMode() === 'fcfs' ? 'until the coin flips are run'
+                                  : 'until Monday 3:59pm AZ'))
+    + '</span></div>'
+    + (!fcfs && clockMode() === 'fcfs'
+        ? '<p class="note">It is past 4:00pm AZ and this week has not been settled yet, so lists '
+          + 'are still open. First come, first served starts the moment the coin flips are run.</p>'
+        : '')
+    + '</div>';
 }
 /* ---- CHOOSING A TEAM ---------------------------------------------------------------------
  * A TYPE-TO-FIND PICKER, NOT A 296-LONG DROPDOWN. Casey, 11 Sep 2026: "it needs to be a
