@@ -4118,58 +4118,114 @@ function reallyRetire(div, seat, member, who){
 
 /* THE PRACTICE COPY'S TABLE, UNCHANGED. Every control stays editable here, because trying
    "an owner leaves" without waiting for an owner to leave is what this copy is for. */
+/* THE PRACTICE ACCESS LIST IS THE LIVE ONE, IN THE SAME SHAPE.
+ *
+ * Casey, 14 Sep 2026: "it doesn't look the same as what's in the live app ... I think the access
+ * list is still built for the old method because it has Retire Keys Now and some of that
+ * information."
+ *
+ * He is right, and it is the same fault as the retire button: PRACTISING ON DIFFERENT CONTROLS
+ * TEACHES THE WRONG THING. This table had editable email cells, a status dropdown, Add a Row and
+ * a delete cross -- all of which belonged to a spreadsheet-shaped page that no longer exists. The
+ * columns and the buttons are the live ones now, so what he learns here is what he will do.
+ *
+ * THE ONE REAL DIFFERENCE IS STATED ON THE PAGE. The practice copy carries ONE person per seat,
+ * because its whole sign-in model is built on that, so Add a Second Owner is not here. An absence
+ * is never an answer, so it says so rather than leaving him hunting for a button.
+ */
 function practiceAccessTable(rows){
-  return '<div class="card"><div class="scr"><table>'
-    /* CSS CANNOT OVERRIDE A COLGROUP, and the real page has one column fewer, so the widths
-       are built rather than written out twice. */
-    + (Store.live()
-        ? '<colgroup><col style="width:30%"><col style="width:34%"><col style="width:14%">'
-          + '<col style="width:22%"></colgroup>'
-        : '<colgroup><col style="width:26%"><col style="width:30%"><col style="width:14%">'
-          + '<col style="width:20%"><col style="width:10%"></colgroup>')
-    /* A CONTROL BEATS A SENTENCE. Casey, 13 Sep 2026: "if we're not supposed to change emails on
-       that page ... then the email field should not be editable for us to change, correct? As
-       well as the active inactive ... and then there's an X, remove the address." He is right,
-       and it is the stronger version of the point: a page that says "change it in the
-       spreadsheet" while offering a box to type in has contradicted itself, and the reader will
-       believe the box. On the real page the only thing that does anything is Retire Keys Now.
-       In the practice copy every control stays, because trying "an owner leaves" without waiting
-       for an owner to leave is the whole point of it. */
-    + '<thead><tr><th>Seat</th><th>Email</th><th>Status</th>'
-    + '<th title="How many devices can use the page as this seat right now.">'
-    + 'Signed in</th>'
-    + (Store.live() ? '' : '<th></th>') + '</tr></thead><tbody>'
-    + rows.map(function(r, i){
-        var L = liveSessions(r);
-        return '<tr><td>' + esc(r.seat) + '<div class="f" style="font-size:11px">'
-          + esc(DATA.div_names[r.div] || r.div) + (r.role === 'commissioner'
-            ? ' · <span class="pill gold">commish</span>' : '') + '</div></td>'
-          + (Store.live()
-              ? '<td>' + (r.email ? esc(r.email) : '<span class="f">no address</span>') + '</td>'
-                + '<td>' + (r.status === 'removed'
-                    ? '<span class="pill bad">inactive</span>' : '<span class="f">active</span>')
-                + '</td>'
-              : '<td><input type="email" value="' + esc(r.email || '') + '" '
-                + 'onchange="setAccess(' + i + ',\'email\',this.value)"></td>'
-                + '<td><select onchange="setAccess(' + i + ',\'status\',this.value)">'
-                + '<option value="active"' + (r.status !== 'removed' ? ' selected' : '')
-                + '>active</option>'
-                + '<option value="removed"' + (r.status === 'removed' ? ' selected' : '')
-                + '>inactive</option></select></td>')
-          + '<td>' + (L.n
-              ? '<span class="pill good">' + L.n + ' device' + (L.n === 1 ? '' : 's')
-                + '</span><div class="f" style="font-size:11px">since '
-                + esc(pretty(L.since)) + '</div>'
-              : '<span class="f">nobody signed in</span>')
-          + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px"'
-          + (L.n ? '' : ' title="Nothing is signed in to this seat, so nothing is signed out. '
-                        + 'It still issues a new code and stops the old one."')
-          + ' onclick="bump(' + i + ')">Retire and Issue a New Code</button></div></td>'
-          + (Store.live() ? ''
-              : '<td><button style="min-height:30px;padding:4px 8px" onclick="delAccess(' + i
-                + ')" title="Remove this address">✕</button></td>')
-          + '</tr>';
-      }).join('') + '</tbody></table></div></div>';
+  var out = rows.map(function(r, i){
+    var L = liveSessions(r);
+    var off = r.status === 'removed';
+    return '<tr><td><b>' + esc(r.seat) + '</b><div class="f" style="font-size:11px">'
+      + esc(DATA.div_names[r.div] || r.div)
+      + (off ? ' · <span class="pill bad">Inactive</span>' : '') + '</div></td>'
+      + '<td>' + (r.email ? esc(r.email) : '<span class="f">no address</span>')
+      + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:3px" '
+      + 'onclick="editPersonP(' + i + ')">Change Address</button></div></td>'
+      + '<td><span class="mono" style="background:#fff;color:#111;padding:2px 6px;'
+      + 'border-radius:5px;letter-spacing:1px">' + esc(r.code || '') + '</span>'
+      + '<div style="margin-top:4px"><button style="font-size:11px;min-height:26px;padding:3px 7px" '
+      + 'onclick="copyCode(' + jq(r.code || '') + ',this)">Copy Code</button></div>'
+      + '<div style="margin-top:4px"><button style="font-size:11px;min-height:26px;padding:3px 7px" '
+      + 'onclick="copyWelcome(' + jq(r.seat) + ',' + jq(r.code || '') + ','
+      + jq(r.email || '') + ',this)">Create an Email Copy</button></div></td>'
+      + '<td><select style="min-height:30px" onchange="setRoleP(' + i + ',this.value)">'
+      + '<option value="owner"' + (r.role === 'commissioner' ? '' : ' selected') + '>owner</option>'
+      + '<option value="commissioner"' + (r.role === 'commissioner' ? ' selected' : '')
+      + '>commissioner</option></select></td>'
+      + '<td>' + (L.n
+          ? '<span class="pill good">' + L.n + ' device' + (L.n === 1 ? '' : 's') + '</span>'
+          : '<span class="f">nobody signed in</span>')
+      + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px"'
+      + (L.n ? '' : ' title="Nothing is signed in to this seat, so nothing is signed out. '
+                    + 'It still issues a new code and stops the old one."')
+      + ' onclick="bump(' + i + ')">Retire and Issue a New Code</button></div>'
+      + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px" '
+      + 'onclick="setSeatStatusP(' + i + ',' + jq(off ? 'active' : 'removed') + ')">'
+      + (off ? 'Put This Seat Back' : 'Switch This Seat Off') + '</button></div></td></tr>';
+  }).join('');
+  return '<div class="card"><p class="note">This is the same list, with the same buttons, as the '
+    + 'real page. <b>One difference:</b> the practice copy carries one person per seat, so there '
+    + 'is no <b>Add a Second Owner</b> here. Everything else does what it does for real.</p>'
+    + '<div class="scr"><table>'
+    + '<colgroup><col style="width:18%"><col style="width:24%"><col style="width:22%">'
+    + '<col style="width:16%"><col style="width:20%"></colgroup>'
+    + '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
+    + '<th title="How many devices can use the page as this seat right now.">Signed In</th>'
+    + '</tr></thead><tbody>' + out + '</tbody></table></div></div>';
+}
+/* THE PRACTICE COPY'S OWN VERSIONS OF THE LIVE ACTIONS. Same panels, same words, same result --
+   written into this browser instead of sent to the league. */
+function editPersonP(i){
+  var r = S.access[i]; if (!r) return;
+  showHelp('Change This Address',
+    '<p>The address is how you know whose row this is. Changing it does <b>not</b> sign them out '
+    + 'and does <b>not</b> change their code.</p>'
+    + '<label class="lb" for="pe">Email Address</label>'
+    + '<input id="pe" type="email" autocapitalize="off" autocorrect="off" spellcheck="false" '
+    + 'value="' + esc(r.email || '') + '" placeholder="them@example.com">'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="savePersonP(' + i + ')">Save It</button>'
+    + '<button onclick="closeHelp()">Leave It Alone</button></div>');
+}
+function savePersonP(i){
+  var v = el('pe') ? el('pe').value.trim() : '';
+  setAccess(i, 'email', v);
+  closeHelp();
+}
+function setRoleP(i, role){
+  /* THE LAST COMMISSIONER CANNOT BE STOOD DOWN, here as on the real page. A locked room is a
+     locked room whichever copy you are in, and finding that out for the first time on the live
+     page is exactly what the practice copy is for. */
+  if (role !== 'commissioner'){
+    var others = S.access.filter(function(x, j){
+      return j !== i && x.role === 'commissioner' && x.status !== 'removed';
+    }).length;
+    if (!others){
+      render();
+      showHelp('That Did Not Go Through',
+        '<p>That would leave the league with no commissioner, so it is refused. Make somebody '
+        + 'else a commissioner first.</p>');
+      return;
+    }
+  }
+  setAccess(i, 'role', role);
+  note(S.access[i], 'made a ' + role);
+  save();
+  showHelp('Role Changed', '<p>That takes effect on their next request. Nobody has to sign in '
+    + 'again.</p>');
+}
+function setSeatStatusP(i, status){
+  var r = S.access[i]; if (!r) return;
+  setAccess(i, 'status', status);
+  note(r, status === 'removed' ? 'seat switched off' : 'seat put back');
+  save();
+  showHelp(status === 'removed' ? 'Seat Switched Off' : 'Seat Put Back',
+    status === 'removed'
+      ? '<p>Nobody on <b>' + esc(r.seat) + '</b> can sign in or send a trade now. Everything else '
+        + 'stays as it was: the team is still in the standings and still scores every week.</p>'
+      : '<p><b>' + esc(r.seat) + '</b> can sign in and send trades again.</p>');
 }
 
 function viewAccess(){
@@ -4225,9 +4281,6 @@ function viewAccess(){
     + '<p class="note"><b>' + filled + ' of ' + rows.length + '</b> row'
     + (rows.length === 1 ? '' : 's') + ' have an address so far.</p>'
     + '<div class="row">'
-    + (Store.live() ? ''
-        : '<button onclick="addAccess()">Add a Row</button>'
-          )
     + '<button onclick="showHelp(\'What Each Column Is For\', columnHelp())">'
     + 'What Each Column Is For</button>'
     + '<button onclick="showHelp(\'What to Do When Something Changes\', ACCESSNOTE)">'
@@ -4280,9 +4333,8 @@ function columnHelp(){
     + '</tbody></table>';
 }
 function columnRows(){
-  var live = Store.live();
-  var rows = live
-    ? [['Seat', 'The team, as the league names it. It is never edited here. A seat keeps its '
+  /* ONE LIST FOR BOTH COPIES, because the two tables are the same table now. */
+  var rows = [['Seat', 'The team, as the league names it. It is never edited here. A seat keeps its '
                 + 'roster, its points and its history whoever holds it.'],
        ['Person', 'One row for each person on that seat. Six teams have two owners, so those '
                 + 'seats have two rows. <b>Change Address</b> corrects an email address. It does '
@@ -4311,25 +4363,12 @@ function columnRows(){
        ['Add a Second Owner', 'Puts another person on the same team. They get their own address, '
                 + 'their own code and their own role. Either of them can enter that '
                 + 'team&rsquo;s trades. A trade is recorded against the team, not against '
-                + 'whichever of them sent it.'],
+                + 'whichever of them sent it. <i>The practice copy carries one person per seat, '
+                + 'so this button is only on the real page.</i>'],
        ['Switch This Seat Off', 'Refuses everything that seat tries to send. Nothing else '
                 + 'changes: the team is still in the standings and still scores every week. Use '
                 + 'it when an owner leaves and nobody has taken the team. <b>Put This Seat '
-                + 'Back</b> undoes it.']]
-    : [['Seat', 'The owner as the league names them. Never edited here.'],
-       ['Email', 'A personal inbox. Blank means that owner cannot sign in yet, so you enter '
-                + 'their trades for them.'],
-       ['Status', '<b>active</b> is normal. <b>inactive</b> refuses everything that seat tries '
-                + 'to send and changes nothing else. The seat still appears in the standings and '
-                + 'still scores. Use it when an owner leaves and nobody has taken over.'],
-       ['Signed in', 'How many devices can use the page as that seat right now, and the date the '
-                + 'oldest of them signed in. <b>nobody signed in</b> means none of them can.'],
-       ['Retire and Issue a New Code', 'Signs that seat out on every device and gives you a new '
-                + 'code for it straight away. <b>Press it when a seat changes hands</b>, and when '
-                + 'somebody loses a phone. Changing the address on its own signs nobody out, so '
-                + 'the old owner stays signed in until you press this.'],
-       ['Role', '<b>owner</b> for everybody except a commissioner. A commissioner can also '
-                + 'submit for any seat and enter a correction.']];
+                + 'Back</b> undoes it.']];
   return rows;
 }
 var ACCESSNOTE =
@@ -4447,15 +4486,9 @@ function bump(i){
     + 'this. Changing the address on its own signs nobody out.</p>');
   render();
 }
-function delAccess(i){ S.access.splice(i, 1); save(); render(); }
-function addAccess(){
-  S.access.push({div: DATA.seats[0].div, seat: DATA.seats[0].owner, email: '', status: 'active',
-                 validAfter: '', role: 'owner'});
-  save(); render();
-}
-/* THE PASTE-INTO-A-SPREADSHEET COPY BUTTON IS GONE WITH THE SPREADSHEET. Nothing called it
-   any more, and a function that builds a CSV of the access list is a thing somebody would wire
-   back up one day, into a page that has nowhere to paste it. */
+/* ADD A ROW AND THE DELETE CROSS ARE GONE FROM THE PRACTICE COPY. The real page has neither --
+   the 27 seats are the league's and they are fixed for the season -- and a control that exists
+   only where it does not matter is a control that teaches a habit the live page will refuse.
 
 /* ---- TAB: rosters ------------------------------------------------------------------------------ */
 /* ---------- what a trade costs, and changing it ------------------------------------------ */
