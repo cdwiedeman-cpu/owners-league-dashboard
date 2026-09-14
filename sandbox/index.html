@@ -1309,6 +1309,33 @@ function weekNo(s){
   var n = Math.floor((p.d - w1) / 604800000) + 1;
   return n < 0 ? 0 : n;
 }
+/* THE WEEK A LIST IS FOR IS NOT THE WEEK IT IS SENT IN.
+ *
+ * Casey, 14 Sep 2026, testing a submission: "it said your list is in for week one. Technically
+ * it's in for week two, because we're putting in trades for the following week even though we
+ * just finished week one."
+ *
+ * He is right, and the number itself was not wrong -- it was the wrong number to show him. A
+ * league week runs Tuesday to Monday. The list window for a Monday's coin flips opens on the
+ * Tuesday that starts that week and closes at 3:59pm on the Monday that ends it, so EVERY list is
+ * entered inside one week and settled for the NEXT one. `weekNo()` answers "what week is it",
+ * which is what the clock chip and the commissioner's Run It tab want. An owner sending a list
+ * wants "which games is this for", and that is always the week after.
+ *
+ * WHAT IS STORED DOES NOT CHANGE. A request carries the week it was ENTERED in, and the resolver
+ * matches on that. This is a label, and a label is the only thing that was wrong.
+ */
+function playWeek(){ return weekNo() + 1; }
+/* THE SAME SHIFT, FOR A WEEK THAT WAS STORED EARLIER -- a settled result, a week being undone.
+   ONE FUNCTION DOES IT. A second place that added one would be a second place to forget to. */
+function playOf(stored){ return (stored == null ? weekNo() : Number(stored)) + 1; }
+/* THE TUESDAY THOSE GAMES START ON. A number alone means nothing to somebody who does not carry
+   the league calendar in their head; a date does. */
+function playWeekStarts(){
+  var w1 = new Date((DATA.week1 || '2026-09-08') + 'T00:00');
+  var d = new Date(w1.getTime() + (playWeek() - 1) * 604800000);
+  return d.toLocaleDateString(undefined, {weekday: 'long', month: 'short', day: 'numeric'});
+}
 function pretty(s){
   var p = parts(s); if (!p) return s;
   var DAY = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1641,7 +1668,7 @@ function sentence(r, seat){
 }
 function emailFor(seatK, rows){
   var bits = seatK.split('|'), div = bits[0], seat = bits[1];
-  var lines = ['Your trades — week ' + weekNo() + ' · ' + seat
+  var lines = ['Your trades — week ' + playWeek() + ' · ' + seat
                + ' (' + (DATA.div_names[div] || div) + ')', ''];
   var gotAny = false;
   (rows || []).forEach(function(r){
@@ -1814,12 +1841,15 @@ function render(){
      commissioner, who needs to see the moment the page is working from. */
   var openNow = (mode() === 'fcfs' ? 'First Come, First Served Is Open' : 'Peloton Entry Is Open');
   if (Store.live()){
-    el('clockchip').innerHTML = esc(openNow) + ' &nbsp;·&nbsp; Week ' + weekNo()
+    /* "SEASON WEEK", NOT "WEEK". Two different weeks are on this page at once -- the one the
+       season is in, and the one a list is for -- and calling both of them "Week 1" and "Week 2"
+       with no other word is how they get read as the same thing. This one is today. */
+    el('clockchip').innerHTML = esc(openNow) + ' &nbsp;·&nbsp; Season Week ' + weekNo()
       + (isCommish() ? ' &nbsp;·&nbsp; <span class="d">' + esc(pretty(now())) + '</span>' : '');
   } else {
     el('clockchip').innerHTML = ' &nbsp;·&nbsp; ' + esc(pretty(now())) + ' &nbsp;·&nbsp; '
       + (mode() === 'fcfs' ? 'first come, first served' : 'peloton entry open')
-      + ' &nbsp;·&nbsp; week ' + weekNo();
+      + ' &nbsp;·&nbsp; season week ' + weekNo();
   }
   el('subline').innerHTML = 'A copy of the real rosters, a clock you can move, and the same rules the live '
     + 'one will use. ' + (s && s.seat
@@ -2380,7 +2410,8 @@ function submitList(){
   S.requests[key(a.div, a.seat)].submitted = now();
   save();
   showHelp('You Are Entered for Monday',
-    '<p>Your list is in for week ' + weekNo() + '. Nothing happens until Monday at 4:00pm AZ.</p>'
+    '<p>Your list is in for <b>week ' + playWeek() + '</b>, the games that start on '
+    + esc(playWeekStarts()) + '. Nothing happens until Monday at 4:00pm AZ.</p>'
     + '<p>You can change it any time before then — press <b>Change My List</b>, make the change, '
     + 'and send it again.</p>');
   render();
@@ -2451,7 +2482,7 @@ function myResultCard(){
   var m = myResult();
   if (!m) return '';
   var got = m.rows.filter(function(r){ return r && sentence(r, m.seat).kind === 'won'; }).length;
-  return '<div class="card"><h2>Week ' + m.week + ' &mdash; What Happened to Your List</h2>'
+  return '<div class="card"><h2>Week ' + playOf(m.week) + ' &mdash; What Happened to Your List</h2>'
     + '<p class="note">Settled ' + esc(pretty(m.at)) + '. '
     + (got ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + '.'
            : 'You did not get a team this week.')
@@ -2469,7 +2500,7 @@ function offerResult(){
   if (alreadySeen(m.seat, m.week)) return;
   markSeen(m.seat, m.week);
   var got = m.rows.filter(function(r){ return r && sentence(r, m.seat).kind === 'won'; }).length;
-  showHelp('Week ' + m.week + ' Is Settled',
+  showHelp('Week ' + playOf(m.week) + ' Is Settled',
     '<p>' + (got ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + ' this week.'
                  : 'You did not get a team this week.') + '</p>'
     + resultLines(m)
@@ -2581,8 +2612,10 @@ function viewTrades(){
      button that changes it, and nowhere else. */
   if (sent){
     h += '<div class="card" style="border-color:#245c39"><h2 class="g">You Are Entered for '
-      + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. Nothing happens '
-      + 'until Monday at 4:00pm AZ, and you can change it any time before then.</p>'
+      + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. This list is for '
+      + '<b>week ' + playWeek() + '</b>, the games that start on ' + esc(playWeekStarts())
+      + '. Nothing happens until Monday at 4:00pm AZ, and you can change it any time before '
+      + 'then.</p>'
       + '<div class="row"><button onclick="unsubmit()">Change My List</button></div></div>';
   }
 
@@ -3121,7 +3154,7 @@ function viewRun(){
        thing or the place, is worse than saying nothing: the reader now knows to hunt for it. */
     + '<div class="setrow"><div class="setlab">Results Emails</div>'
     + '<div class="setwhy">Nothing is emailed by this tool, and nothing ever will be. '
-    + 'When a week is settled, the <b>Week ' + weekNo() + ' &mdash; What Happened</b> section '
+    + 'When a week is settled, the <b>Week ' + playWeek() + ' &mdash; What Happened</b> section '
     + 'gains a <b>Copy Every Owner&#39;s Email</b> button. It puts every message on your '
     + 'clipboard at once, each one headed with the address it goes to. You paste them into your '
     + 'own mail and send them. That is the same whether the week settled itself on Monday or you '
@@ -3130,7 +3163,10 @@ function viewRun(){
 
   /* WHERE THE WEEK STANDS, in a sentence, before any button. The question somebody opens this
      tab with is "has it run yet and is everything in", and a row of controls does not answer it. */
-  h += '<div class="card"><h2>Week ' + weekNo() + '</h2><div class="statline">'
+  h += '<div class="card"><h2>Week ' + playWeek() + '</h2>'
+    + '<p class="note">These are the lists sent for the games that start on '
+    + esc(playWeekStarts()) + '. A list is entered during the week BEFORE the games it is '
+    + 'for, so this is always the week ahead.</p><div class="statline">'
     + '<span class="big">' + (prev
         ? 'Settled at ' + esc(pretty(prev.at))
         : reqs.length ? 'Not settled yet' : 'Nothing entered yet') + '</span>'
@@ -3146,12 +3182,12 @@ function viewRun(){
     + '<div class="row">'
     + '<button class="pri" ' + (reqs.length ? '' : 'disabled')
     + ' title="' + esc(reqs.length
-        ? 'Settle every list that has been sent for week ' + weekNo()
-        : 'Nothing has been sent for week ' + weekNo() + ' yet')
+        ? 'Settle every list that has been sent for week ' + playWeek()
+        : 'Nothing has been sent for week ' + playWeek() + ' yet')
     + '" onclick="askRun()">Run the Coin Flips</button>'
     + (prev && canUndo()
         ? '<button class="dang" onclick="askUndo()" title="Put every roster back to how it stood '
-          + 'at 4:00pm AZ and keep every list exactly as it was typed">Undo week ' + weekNo()
+          + 'at 4:00pm AZ and keep every list exactly as it was typed">Undo week ' + playWeek()
           + '</button>' : '')
     + '<button onclick="showHelp(\'How the Coin Flip Works\', SEEDNOTE)">How the Coin Flip '
     + 'Works</button></div>'
@@ -3159,7 +3195,7 @@ function viewRun(){
         ? 'Settles all ' + reqs.length + ' list' + (reqs.length === 1 ? '' : 's') + ' at once, '
           + 'running a coin flip wherever more than one owner asked for the same team.'
           + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm AZ.' : '')
-        : 'Nothing has been sent for week ' + weekNo() + ' yet. Enter a list on <b>My trades</b> '
+        : 'Nothing has been sent for week ' + playWeek() + ' yet. Enter a list on <b>My trades</b> '
           + 'and press <b>Send My List</b>.')
     + '</p></div>';
 
@@ -3225,7 +3261,7 @@ function askRun(){
   var prev = ranBefore();
   if (!prev) return doRun();
   var u = canUndo();
-  showHelp('Week ' + weekNo() + ' has already been settled',
+  showHelp('Week ' + playWeek() + ' has already been settled',
     '<p>It ran at <b>' + esc(pretty(prev.at)) + '</b> and moved ' + prev.n + ' team'
     + (prev.n === 1 ? '' : 's') + '.</p>'
     + '<p><b>If you missed somebody, undo it and run the whole week again.</b> A late request '
@@ -3374,7 +3410,7 @@ function resultsCard(){
   /* THE COPY BLOCK IS ALWAYS HERE. It used to be hidden whenever the email switch was on, and
      the switch was on by default, so the normal case printed "Each owner has been emailed their
      own results" while nothing had been sent. Nothing sends mail. */
-  return '<div class="card"><h2>Week ' + R.week + ' &mdash; What Happened</h2>'
+  return '<div class="card"><h2>Week ' + playOf(R.week) + ' &mdash; What Happened</h2>'
     + '<p class="note">Run at ' + esc(pretty(R.at)) + '. Every row gets a sentence. A blank row '
     + 'would leave an owner unable to tell a loss from a bug.</p>'
     + '<div class="card warn" style="margin:0 0 10px"><b>Nobody has been emailed yet.</b>'
