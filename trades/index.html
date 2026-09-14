@@ -1805,12 +1805,58 @@ function setTab(t){
 }
 function closeHelp(){ OPEN = null; var b = el('help'); b.hidden = true; b.innerHTML = '';
   document.body.style.overflow = ''; }
+/* ---- A PANEL HAS TO OPEN WHERE THE READER IS LOOKING ------------------------------------------
+ *
+ * Casey, 14 Sep 2026: "when you send in the list, the pop-up comes up and says you are entered
+ * for Monday. But you're all the way down at the bottom of the screen and the screen goes dark,
+ * and it's like, what's going on? Until you scroll back up."
+ *
+ * `position: fixed` pins a panel to the viewport, which is right on this page standing alone and
+ * wrong inside the dashboard. This page is loaded in a frame that is GROWN TO ITS FULL CONTENT
+ * HEIGHT, so the frame never scrolls -- the dashboard around it does. A frame that does not
+ * scroll has no viewport of its own worth the name, so "fixed" lands at the top of the frame,
+ * which can be two screens above the button that was just pressed. The dark shade was the panel,
+ * open, off screen.
+ *
+ * THE DASHBOARD KNOWS WHERE THE READER IS AND THIS PAGE DOES NOT, so it tells it: which band of
+ * this page is on screen right now, in this page's own pixels. The panel is then positioned over
+ * that band and centred in it. It follows as the reader scrolls, and standing alone, with nothing
+ * sending the message, it stays exactly as it was.
+ */
+var FRAME_VIEW = null;
+window.addEventListener('message', function(e){
+  var d = e && e.data;
+  if (!d || d.rfl !== 'view') return;
+  if (typeof d.top !== 'number' || typeof d.height !== 'number') return;
+  FRAME_VIEW = d;
+  placeModal();
+});
+function placeModal(){
+  var b = el('help');
+  if (!b || b.hidden) return;
+  if (!FRAME_VIEW || !(FRAME_VIEW.height > 0)){
+    b.style.position = ''; b.style.top = ''; b.style.height = '';
+    b.style.left = ''; b.style.right = ''; b.style.alignItems = '';
+    return;
+  }
+  b.style.position = 'absolute';
+  b.style.left = '0';
+  b.style.right = '0';
+  b.style.top = Math.max(0, FRAME_VIEW.top) + 'px';
+  b.style.height = Math.max(180, FRAME_VIEW.height) + 'px';
+  /* CENTRED IN THE BAND, not pinned to the top of it: a short panel opening level with the
+     button reads as an answer to the press. */
+  b.style.alignItems = 'center';
+}
 function showHelp(title, html){
   OPEN = title; var b = el('help'); b.hidden = false;
   b.innerHTML = '<div class="modalbox"><div class="modalhd"><h2>' + esc(title) + '</h2>'
     + '<button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button></div>'
     + '<div class="note">' + html + '</div></div>';
-  document.body.style.overflow = 'hidden';
+  /* ONLY WHEN THIS PAGE IS THE ONE SCROLLING. Inside the frame this does nothing to the
+     dashboard, and locking a scroll the reader can still move would be a lie either way. */
+  if (!FRAME_VIEW) document.body.style.overflow = 'hidden';
+  placeModal();
 }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && OPEN) closeHelp(); });
 
