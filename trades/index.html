@@ -3503,17 +3503,45 @@ function sheetCard(){ return ''; }
  * clipboard, which has no colours at all, and the code on the row is drawn on white with black
  * text so that a manual selection pastes readably too.
  */
-function copyPlain(text, title, lead){
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text);
+/* A COPY BUTTON SAYS SO ON ITSELF. IT DOES NOT OPEN A PANEL.
+   Casey, 14 Sep 2026: "when I did the copy code it worked, but the screen is grayed out. I can't
+   do anything until I scrolled all the way back up to the top, and it said Code Copied, and then
+   I have to X out. Do we really need that pop-up?" No. The Access List is 33 rows long, so the
+   button he pressed is halfway down the page and the panel opens at the top of it. The answer
+   lands ON the button: it says Copied for two seconds and goes back to its own name. */
+function flash(btn, word){
+  if (!btn || !btn.tagName) return;
+  if (btn.dataset && btn.dataset.flashing) return;
+  var was = btn.innerHTML;
+  if (btn.dataset) btn.dataset.flashing = '1';
+  btn.innerHTML = esc(word);
+  btn.classList.add('pri');
+  setTimeout(function(){
+    btn.innerHTML = was;
+    btn.classList.remove('pri');
+    if (btn.dataset) delete btn.dataset.flashing;
+  }, 1800);
+}
+/* THE PANEL IS THE FALLBACK, NOT THE ANSWER. A browser that refuses the clipboard leaves the
+   reader with nothing to show for a press, and an absence is never an answer -- so in that one
+   case the text is put on screen to select by hand. */
+function copyPlain(text, btn, word, title){
+  var done = false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text);
+      done = true;
+    }
+  } catch (e) { done = false; }
+  if (done){ flash(btn, word); return; }
   showHelp(title,
-    '<p>' + lead + '</p>'
+    '<p>This browser would not let the page use the clipboard. Select the text below and copy '
+    + 'it by hand.</p>'
     + '<pre class="mono" style="white-space:pre-wrap;background:#fff;color:#111;padding:10px;'
     + 'border-radius:8px;max-height:340px;overflow:auto">' + esc(text) + '</pre>');
 }
-function copyCode(code){
-  copyPlain(String(code || ''), 'Code Copied',
-    'It is on your clipboard as plain text, so it pastes with no colours on it. '
-    + 'Send it to that one person on its own.');
+function copyCode(code, btn){
+  copyPlain(String(code || ''), btn, 'Copied', 'Here Is the Code');
 }
 /* THE ADDRESS THIS PAGE IS BEING READ FROM. Never typed in: the dashboard moves house, and a
    typed address would still name the old one the next morning. */
@@ -3570,10 +3598,8 @@ function welcomeText(seat, code, email){
   + '\n'
   + 'If the code will not work, reply to this message and I will send you a new one.\n';
 }
-function copyWelcome(seat, code, email){
-  copyPlain(welcomeText(seat, code, email), 'Message Copied',
-    'The whole message is on your clipboard as plain text. Paste it into an email or a text to '
-    + '<b>' + esc(email || 'that owner') + '</b> and send it.');
+function copyWelcome(seat, code, email, btn){
+  copyPlain(welcomeText(seat, code, email), btn, 'Copied', 'Here Is the Message');
 }
 
 /* ONE ROW PER PERSON, BECAUSE A CODE BELONGS TO A PERSON AND NOT TO A SEAT.
@@ -3599,12 +3625,12 @@ function liveAccessTable(){
         + 'border-radius:5px;letter-spacing:1px">' + esc(m.code || '') + '</span>'
         + '<div style="margin-top:4px">'
         + '<button style="font-size:11px;min-height:26px;padding:3px 7px" '
-        + 'onclick="copyCode(' + jsq(m.code || '') + ')" title="Puts just the six characters on '
+        + 'onclick="copyCode(' + jsq(m.code || '') + ',this)" title="Puts just the six characters on '
         + 'your clipboard, with no colours on them">Copy Code</button></div>'
         + '<div style="margin-top:4px">'
         + '<button style="font-size:11px;min-height:26px;padding:3px 7px" '
         + 'onclick="copyWelcome(' + jsq(a.seat) + ',' + jsq(m.code || '') + ','
-        + jsq(m.email || '') + ')" title="Their address, their code, the website link, how to '
+        + jsq(m.email || '') + ',this)" title="Their address, their code, the website link, how to '
         + 'sign in, and how to put it on a phone home screen">Create an Email Copy</button></div>'
         + '</td>'
         + '<td><select style="min-height:30px" onchange="setRole(' + jsq(a.div) + ','
