@@ -87,23 +87,34 @@ const putJSON = (env, k, v) => env.RFL.put(k, JSON.stringify(v));
  * He was right, and the first version had this wrong. One code per SEAT meant Casey's
  * commissioner powers came with the seat, so his co-owner would have had them too.
  *
- * So a seat has MEMBERS. Each member has their own name, their own code and their own role.
- * Casey and Dominic share the Palma/Wiedeman roster, see the same teams, and can both enter
- * that seat's trades. Only Casey's code opens the commissioner half. Several seats in this
- * league are two people -- Jason/Greg, Twitchell/Fryer, Brian/Dave -- so two people on one seat
- * is the normal case here, not a special one.
+ * So a seat has MEMBERS. Each one has their own code and their own role. Casey and Dominic
+ * share the Palma/Wiedeman roster, see the same teams, and can both enter that seat's trades.
+ * Only Casey's code opens the commissioner half. Several seats here are two people, so this is
+ * the normal case and not a special one.
  *
- * THE SEAT AND THE PERSON ARE BOTH LOOKED UP FROM THE KEY, EVERY TIME, AND THE ROLE IS READ
- * FRESH. Nothing the page sends says who is asking. That is the whole of why one owner cannot
- * submit a trade as another: there is no field for it.
+ * A PERSON IS IDENTIFIED BY AN EMAIL ADDRESS, NOT A NAME. Casey, 14 Sep 2026: "I don't
+ * necessarily know the names of all each and every owner", and he does hold every address. A
+ * name he would have to invent is a name that will be wrong; the address is the thing he
+ * actually has.
+ *
+ * BUT THE ID IS NOT THE ADDRESS. Every member carries a short `id` that never changes. The
+ * address is an attribute hanging off it. Correcting somebody's address must not sign them out
+ * of every device they own, and it would if the address were the identity.
+ *
+ * THE ADDRESSES ARE THE ONE PRIVATE THING IN HERE. `view`, which every owner calls, returns no
+ * address and no member list at all -- only how many devices a seat has signed in. Only the
+ * commissioner half ever sees who is on a seat.
  */
 function membersOf(seat) {
-  /* A SEAT WRITTEN BEFORE MEMBERS EXISTED READS AS ONE MEMBER NAMED AFTER THE SEAT. Nobody is
-     signed out by the upgrade and no code changes. */
+  /* A SEAT WRITTEN BEFORE MEMBERS EXISTED READS AS ONE MEMBER. Nobody is signed out by the
+     upgrade and no code changes. */
   if (seat.members && seat.members.length) return seat.members;
-  return [{ name: seat.seat, code: seat.code, role: seat.role || 'owner',
-            email: seat.email || '', retiredSeq: seat.retiredSeq || 0 }];
+  return [{ id: 'm1', email: seat.email || '', label: '', code: seat.code,
+            role: seat.role || 'owner', retiredSeq: seat.retiredSeq || 0 }];
 }
+
+/* HOW A PERSON IS NAMED BACK TO A HUMAN READER, on the Access List and nowhere else. */
+const memberLabel = (m) => m.label || m.email || m.id;
 
 async function whois(env, given) {
   const key = String(given || '').trim();
@@ -117,15 +128,14 @@ async function whois(env, given) {
   if (seat.status === 'inactive' || seat.status === 'removed') {
     return { dead: 'that seat has been made inactive' };
   }
-  const me = membersOf(seat).find((m) => m.name === row.member);
+  const me = membersOf(seat).find((m) => m.id === row.member);
   if (!me) return { dead: 'that person is no longer on that seat' };
-  /* A KEY ISSUED BEFORE THAT PERSON WAS LAST RETIRED IS DEAD. Retiring is how a commissioner
-     turns away a phone somebody lost, and a counter cannot be wound backwards like a clock.
-     It is counted per person, so retiring Dominic does not sign Casey out of the same seat. */
+  /* A KEY ISSUED BEFORE THAT PERSON WAS LAST RETIRED IS DEAD. Counted per person, so retiring
+     one co-owner does not sign the other out of the same seat. */
   if ((me.retiredSeq || 0) > (row.seq || 0)) {
     return { dead: 'the sign-ins for that person were retired' };
   }
-  return { key, div: row.div, seat: row.seat, member: me.name,
+  return { key, div: row.div, seat: row.seat, member: me.id,
            role: me.role || 'owner', email: me.email || '' };
 }
 
@@ -208,10 +218,14 @@ async function handle(request, env) {
       /* AN EXISTING SEAT KEEPS ITS PEOPLE, THEIR CODES AND THEIR ROLES. Re-running setup must
          never sign the league out or quietly demote a commissioner. */
       if (had) return { ...had, members: membersOf(had) };
-      const names = (s.members && s.members.length) ? s.members : [s.owner];
+      /* A SEAT SEEDED WITH NO ADDRESSES STILL GETS ONE MEMBER AND ONE CODE. The addresses can
+         be filled in later without anybody signing in again, because the id is what the key
+         points at. */
+      const people = (s.members && s.members.length) ? s.members : [{ email: '' }];
       return { div: s.div, seat: s.owner, status: 'active',
-               members: names.map((n) => ({ name: String(n), code: rand(CODE_LEN, CODE_ABC),
-                                            role: 'owner', email: '', retiredSeq: 0 })) };
+               members: people.map((x, i) => ({ id: 'm' + (i + 1),
+                 email: String((x && x.email) || ''), label: String((x && x.label) || ''),
+                 code: rand(CODE_LEN, CODE_ABC), role: 'owner', retiredSeq: 0 })) };
     });
     /* THE FIRST COMMISSIONERS. Without one, the Access List -- the only place a role can be
        changed -- belongs to nobody, which is a locked room with the key inside it.
@@ -220,13 +234,15 @@ async function handle(request, env) {
     for (const f of firsts) {
       const seat = access.find((a) => a.div === f.div && a.seat === f.owner);
       if (!seat) continue;
-      const m = f.member ? seat.members.find((x) => x.name === f.member) : seat.members[0];
+      const want = f.member || f.email;
+      const m = want ? seat.members.find((x) => x.id === want || (x.email && x.email === want))
+                     : seat.members[0];
       if (m) m.role = 'commissioner';
     }
     await putJSON(env, 'access', access);
     return out({ ok: true, seats: access.length,
                  codes: access.flatMap((a) => a.members.map((m) => ({ div: a.div, seat: a.seat,
-                        member: m.name, code: m.code, role: m.role }))) });
+                        member: m.id, who: memberLabel(m), code: m.code, role: m.role }))) });
   }
 
   /* SIGNING IN. The owner types the code their commissioner gave them and this device gets a key
@@ -256,15 +272,15 @@ async function handle(request, env) {
        use it, and the signed-in count went up by one every time. It is dropped only if it belongs
        to this same person, so Casey signing in cannot knock Dominic off the shared seat. */
     if (old && keys[old] && keys[old].div === seat.div && keys[old].seat === seat.seat
-        && keys[old].member === me.name) {
+        && keys[old].member === me.id) {
       delete keys[old];
     }
     const key = rand(KEY_LEN);
-    keys[key] = { div: seat.div, seat: seat.seat, member: me.name, seq: me.retiredSeq || 0,
+    keys[key] = { div: seat.div, seat: seat.seat, member: me.id, seq: me.retiredSeq || 0,
                   issued: new Date().toISOString(), lastSeen: new Date().toISOString() };
     await putJSON(env, 'keys', keys);
-    return out({ ok: true, key, div: seat.div, seat: seat.seat, member: me.name,
-                 role: me.role || 'owner' });
+    /* THE PAGE IS TOLD THE SEAT, BECAUSE THE SEAT IS WHAT IT SHOWS. */
+    return out({ ok: true, key, div: seat.div, seat: seat.seat, role: me.role || 'owner' });
   }
 
   /* Everything past here needs a key. */
@@ -276,7 +292,7 @@ async function handle(request, env) {
   if (who.dead) return out({ ok: false, why: 'dead', note: who.dead });
 
   if (fn === 'me') return out({ ok: true, me: { div: who.div, seat: who.seat,
-                                member: who.member, email: who.email, role: who.role } });
+                                email: who.email, role: who.role } });
 
   if (fn === 'view') {
     const box = await readState(env);
@@ -292,13 +308,11 @@ async function handle(request, env) {
     const reqs = s.requests || {};
     return out({
       ok: true, rev: box.rev, at: new Date().toISOString(),
-      me: { div: who.div, seat: who.seat, member: who.member, email: who.email,
-            role: who.role },
+      me: { div: who.div, seat: who.seat, email: who.email, role: who.role },
       /* THE SEATS ARE NOT SECRET -- every owner sees the standings. The ADDRESSES are, so this
          is rebuilt with only what a roster needs. */
       seats: access.map((a) => ({ div: a.div, seat: a.seat, status: a.status,
-                                  signedIn: counts[a.div + '|' + a.seat] || 0,
-                                  people: membersOf(a).map((m) => m.name) })),
+                                  signedIn: counts[a.div + '|' + a.seat] || 0 })),
       rosters: s.rosters || null,
       acquiredAt: s.acquiredAt || {},
       mine: reqs[mine] || null,
@@ -326,10 +340,13 @@ async function handle(request, env) {
       const rows = p('rows');
       if (!rows || !rows.length) return out({ ok: false, why: 'empty',
                                               note: 'there was nothing to send' });
-      /* WHO ON THE SEAT SENT IT. With two people on one seat, "we both thought the other had
-         done it" is a real Monday, and the answer should be written down. */
+      /* THE SEAT SENT IT, NOT A PERSON. Casey, 14 Sep 2026: "I don't think we'd want the
+         trade recorded as the person that did the trade. It should still show the team that did
+         the trade, not the individual person." Two co-owners are one owner as far as the league
+         is concerned. The person who typed it is not recorded -- not shown, and not held quietly
+         in the record either, because a field that exists gets displayed eventually. */
       s.requests[mine] = { div: who.div, seat: who.seat, rows,
-                           submitted: new Date().toISOString(), by: who.member };
+                           submitted: new Date().toISOString(), by: who.seat };
     }
     const rev = box.rev + 1;
     await writeState(env, s, rev);
@@ -345,8 +362,8 @@ async function handle(request, env) {
   if (fn === 'codes') {
     const access = await getJSON(env, 'access', []);
     return out({ ok: true, codes: access.flatMap((a) => membersOf(a).map((m) => ({
-      div: a.div, seat: a.seat, member: m.name, code: m.code,
-      role: m.role || 'owner', status: a.status }))) });
+      div: a.div, seat: a.seat, member: m.id, email: m.email || '', who: memberLabel(m),
+      code: m.code, role: m.role || 'owner', status: a.status }))) });
   }
 
   /* RETIRING A SEAT TURNS AWAY EVERY DEVICE ON IT AND ISSUES A FRESH CODE. One button, because
@@ -357,8 +374,9 @@ async function handle(request, env) {
     const seat = access.find((a) => a.div === p('div') && a.seat === p('seat'));
     if (!seat) return out({ ok: false, why: 'noseat', note: 'no seat by that name' });
     seat.members = membersOf(seat);
-    const only = p('member');
-    const hit = only ? seat.members.filter((m) => m.name === only) : seat.members;
+    const only = p('member') || p('email');
+    const hit = only ? seat.members.filter((m) => m.id === only || m.email === only)
+                     : seat.members;
     if (only && !hit.length) {
       return out({ ok: false, why: 'noperson', note: 'nobody by that name is on that seat' });
     }
@@ -366,12 +384,12 @@ async function handle(request, env) {
       m.retiredSeq = (m.retiredSeq || 0) + 1;
       m.code = rand(CODE_LEN, CODE_ABC);
     }
-    const names = hit.map((m) => m.name);
+    const ids = hit.map((m) => m.id);
     const keys = await getJSON(env, 'keys', {});
     let gone = 0;
     for (const k of Object.keys(keys)) {
       const r = keys[k];
-      if (r.div === seat.div && r.seat === seat.seat && names.indexOf(r.member) >= 0) {
+      if (r.div === seat.div && r.seat === seat.seat && ids.indexOf(r.member) >= 0) {
         delete keys[k]; gone++;
       }
     }
@@ -380,7 +398,8 @@ async function handle(request, env) {
     await putJSON(env, 'access', access);
     await putJSON(env, 'keys', keys);
     return out({ ok: true, gone,
-                 codes: hit.map((m) => ({ member: m.name, code: m.code })) });
+                 codes: hit.map((m) => ({ member: m.id, who: memberLabel(m),
+                                          code: m.code })) });
   }
 
   /* SETTING A SEAT'S ROLE OR STATUS. The Access List is where this is done now; there is no
@@ -394,26 +413,39 @@ async function handle(request, env) {
     /* STATUS IS THE SEAT'S. A seat leaving the league takes its people with it. */
     if (status === 'active' || status === 'inactive') seat.status = status;
 
-    /* ROLE AND ADDRESS BELONG TO A PERSON, so they need one named. With one person on the seat
-       there is nothing to choose and the name can be left out. */
-    const role = p('role'), email = p('email'), add = p('add');
+    /* ADDING THE SECOND PERSON TO A SEAT. Send the address; they get their own code and start
+       as a plain owner. This is how a co-owner is added without touching the first one. */
+    const add = p('add');
+    let added = null;
     if (add) {
-      if (seat.members.some((m) => m.name === add)) {
-        return out({ ok: false, why: 'already', note: 'that person is already on that seat' });
+      const addr = String((typeof add === 'string') ? add : (add.email || '')).trim();
+      if (!addr) return out({ ok: false, why: 'noaddress', note: 'that had no address on it' });
+      if (seat.members.some((m) => m.email && m.email.toLowerCase() === addr.toLowerCase())) {
+        return out({ ok: false, why: 'already', note: 'that address is already on that seat' });
       }
-      seat.members.push({ name: String(add), code: rand(CODE_LEN, CODE_ABC),
-                          role: 'owner', email: '', retiredSeq: 0 });
+      let n = seat.members.length + 1;
+      while (seat.members.some((m) => m.id === 'm' + n)) n++;
+      added = { id: 'm' + n, email: addr, label: String((add && add.label) || ''),
+                code: rand(CODE_LEN, CODE_ABC), role: 'owner', retiredSeq: 0 };
+      seat.members.push(added);
     }
-    if (role != null || email != null) {
-      const name = p('member');
-      const m = name ? seat.members.find((x) => x.name === name)
+
+    /* ROLE AND ADDRESS BELONG TO A PERSON. Say which one by id or by their current address.
+       With one person on the seat there is nothing to choose and it can be left out. */
+    const role = p('role'), email = p('email'), label = p('label');
+    if (role != null || email != null || label != null) {
+      const want = p('member');
+      const m = want ? seat.members.find((x) => x.id === want || x.email === want)
                      : (seat.members.length === 1 ? seat.members[0] : null);
       if (!m) {
         return out({ ok: false, why: 'whichperson',
                      note: 'that seat has more than one person on it, so say which one' });
       }
       if (role === 'owner' || role === 'commissioner') m.role = role;
+      /* CHANGING AN ADDRESS DOES NOT SIGN ANYBODY OUT. The key points at the id, not the
+         address, which is the whole reason the id exists. */
       if (email != null) m.email = String(email).trim();
+      if (label != null) m.label = String(label).trim();
     }
     /* THE LAST COMMISSIONER CANNOT BE STOOD DOWN. That is the locked room again. */
     if (!anyCommish(access)) {
@@ -421,8 +453,9 @@ async function handle(request, env) {
                    note: 'that would leave the league with no commissioner' });
     }
     await putJSON(env, 'access', access);
-    return out({ ok: true, members: seat.members.map((m) => ({ name: m.name, role: m.role,
-                 code: m.code })) });
+    return out({ ok: true, added: added && { member: added.id, code: added.code },
+                 members: seat.members.map((m) => ({ member: m.id, email: m.email || '',
+                   who: memberLabel(m), role: m.role || 'owner', code: m.code })) });
   }
 
   if (fn === 'load') {
@@ -438,12 +471,11 @@ async function handle(request, env) {
     }
     return out({ ok: true, rev: box.rev, state: box.state,
                  access: access.map((a) => ({ div: a.div, seat: a.seat, status: a.status,
-                   members: membersOf(a).map((m) => ({ name: m.name, email: m.email,
-                     role: m.role || 'owner', code: m.code,
-                     signedIn: perPerson[a.div + '|' + a.seat + '|' + m.name] || 0 })) })),
+                   members: membersOf(a).map((m) => ({ member: m.id, email: m.email || '',
+                     who: memberLabel(m), role: m.role || 'owner', code: m.code,
+                     signedIn: perPerson[a.div + '|' + a.seat + '|' + m.id] || 0 })) })),
                  signedIn: counts,
-                 me: { div: who.div, seat: who.seat, member: who.member, email: who.email,
-            role: who.role },
+                 me: { div: who.div, seat: who.seat, email: who.email, role: who.role },
                  at: new Date().toISOString() });
   }
 
