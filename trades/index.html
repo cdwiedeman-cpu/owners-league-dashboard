@@ -1651,7 +1651,7 @@ function sentence(r, seat){
       return {kind: 'other', head: t + ': not attempted.', body: 'This row was ' + r.detail + '.'};
     case O.NO_DROP:
       return {kind: 'other', head: t + ': couldn’t run, no drop left.',
-        body: 'Every team you listed to drop was already used by an earlier row, still inside its '
+        body: 'Every team you listed to drop was already used by an earlier trade, still inside its '
               + (DATA.hold_games || 3) + '-game hold, or no longer on your roster.'};
     case O.OWNED:
       return {kind: 'other', head: t + ': couldn’t run, already owned.',
@@ -1672,7 +1672,7 @@ function sentence(r, seat){
       return {kind: 'other', head: t + ': too few games left.',
         body: t + ' does not have the ' + (DATA.claim_min || 3) + ' games left that a claim needs.'};
     case O.DUPLICATE:
-      return {kind: 'other', head: t + ': an earlier row already took it.', body: 'Nothing to do.'};
+      return {kind: 'other', head: t + ': an earlier trade already took it.', body: 'Nothing to do.'};
     default:
       return {kind: 'other', head: t + ': this row could not be read.',
         body: r.detail || 'It was ' + r.outcome + '.'};
@@ -2594,7 +2594,7 @@ function viewTrades(){
         + 'prefer to drop them.</li>'
         + '<li><b>Only one team gets dropped.</b> It is the first team on your drop list that '
         + 'you still hold and are still allowed to drop. The teams below it are your backups, in '
-        + 'case an earlier row on your list has already dropped one.</li>'
+        + 'case an earlier trade on your list has already dropped one.</li>'
         /* SAY IT THE WAY AN OWNER THINKS ABOUT IT. Casey, 10 Sep 2026: "they don't know we're
            part of a run-it process — they're thinking in terms of a trade." "Run" and "come
            through" are the machinery's words. "Got it" and "didn't get it" are the owner's, and
@@ -2604,8 +2604,9 @@ function viewTrades(){
         + '<li>Your rows are taken <b>in order, top to bottom</b>, so put what you want most at '
         + 'the top.</li>'
         + '<li>From row 2 on, a row can depend on an earlier one. <b>When to Try This Trade</b> '
-        + 'gives you three choices: always try it, only if you miss an earlier row, or only if '
-        + 'you get an earlier row. That is how you say &ldquo;if I miss out on Navy, try Alabama '
+        + 'gives you three choices: always try it, only if you miss an earlier trade, or only '
+        + 'if you get an earlier trade. That is how you say &ldquo;if I miss out on Navy, try '
+        + 'Alabama '
         + 'instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as well&rdquo;.</li>'
         /* NAME THE PLACE AND THE ACTION. Casey, 10 Sep 2026: "nothing is entered WHERE until
            you do. Do WHAT?" Both halves were pronouns pointing at nothing. */
@@ -2649,7 +2650,8 @@ function viewTrades(){
       var c = r.cond || {type: 'always'};
       return '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
         + (c.type === 'always' ? '' : '<span>only if you '
-            + (c.type === 'won' ? 'DID' : 'did NOT') + ' get row ' + c.row + '</span>') + '</div>'
+            + (c.type === 'won' ? 'DO' : 'do NOT') + ' get the trade from row ' + c.row
+            + '</span>') + '</div>'
         + '<div><b>' + esc(r.pickup) + '</b> <span class="d">for</span> '
         + esc((r.drops || []).filter(Boolean).join(' or ')) + '</div></div>';
     }).join('');
@@ -2659,12 +2661,12 @@ function viewTrades(){
     if (!rows.length){
       h += '<div class="empty" style="padding-bottom:6px">Nothing on your list yet.</div>'
         + '<div class="row" style="justify-content:center;margin-bottom:6px">'
-        + '<button class="pri" onclick="addRow()">Add a Row</button></div>';
+        + '<button class="pri" onclick="addRow()">Add a Trade</button></div>';
     } else {
       h += rows.map(function(r, i){ return rowForm(r, i, free, mine, k); }).join('');
       h += '<div class="row" style="margin-top:6px">'
         + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
-        + 'Add Another Row (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
+        + 'Add Another Trade (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
         + '<button class="dang" onclick="setRows([]);render()">Clear Them All</button></div>';
     }
     if (rows.length){
@@ -3060,7 +3062,7 @@ function rowForm(r, i, free, mine, k){
     + '<p class="note" style="margin:0 0 6px">Put them in the order you would prefer to drop '
     + 'them. <b>Only one team gets dropped.</b> It is the first team on your list that you still '
     + 'hold and are still allowed to drop. The teams below it are your backups, in case an '
-    + 'earlier row on your list has already dropped one.'
+    + 'earlier trade on your list has already dropped one.'
     + (kind
         ? ' Showing your <b>' + (kind === 'NFL' ? 'NFL' : 'college') + '</b> teams, because '
           + esc(r.pickup) + ' is ' + (kind === 'NFL' ? 'an NFL team' : 'a college team') + '.'
@@ -3096,18 +3098,18 @@ function rowForm(r, i, free, mine, k){
       + '<option value="always"' + (c.type === 'always' ? ' selected' : '')
       + '>Always try it</option>'
       + '<option value="lost"' + (c.type === 'lost' ? ' selected' : '')
-      + '>Only if I miss an earlier row</option>'
+      + '>Only if I miss an earlier trade</option>'
       + '<option value="won"' + (c.type === 'won' ? ' selected' : '')
-      + '>Only if I get an earlier row</option></select>';
+      + '>Only if I get an earlier trade</option></select>';
     if (c.type === 'always'){
       /* NOT "EVERY WEEK". Casey, 14 Sep 2026: "that makes it sound like we're gonna try to make
          that trade every single week once they enter it. That's not the case." Right -- a list is
          for ONE Monday and is cleared when the week settles. "Always" here means "wherever the
          rows above it land", not "for ever". */
       h += '<p class="note" style="margin:6px 0 0">This trade is always tried on Monday. It does '
-        + 'not matter whether you got the teams in the rows above it.</p>';
+        + 'not matter whether you got the trades above it.</p>';
     } else {
-      h += '<label class="lb" style="margin-top:7px">Which earlier row?</label>'
+      h += '<label class="lb" style="margin-top:7px">Which earlier trade?</label>'
         + '<select onchange="editRow(' + i + ',\'condrow\',this.value)">'
         + Array.apply(null, {length: i}).map(function(_, n){
             return '<option value="' + (n + 1) + '"' + (above === n + 1 ? ' selected' : '')
@@ -3117,10 +3119,10 @@ function rowForm(r, i, free, mine, k){
         + '</select>'
         + '<p class="note" style="margin:6px 0 0">'
         + (c.type === 'lost'
-            ? 'This row is only tried if you do <b>not</b> get row ' + above + '. If you do get '
-              + 'row ' + above + ', this row is skipped.'
-            : 'This row is only tried if you <b>do</b> get row ' + above + '. If you miss row '
-              + above + ', this row is skipped.')
+            ? 'This trade is only tried if you do <b>not</b> get the trade from row ' + above
+              + '. If you do get the trade from row ' + above + ', this trade is skipped.'
+            : 'This trade is only tried if you <b>do</b> get the trade from row ' + above
+              + '. If you miss the trade from row ' + above + ', this trade is skipped.')
         + '</p>';
     }
   }
