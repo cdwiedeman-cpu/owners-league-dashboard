@@ -1666,7 +1666,7 @@ var ONLY = (function(){
 })();
 /* SWITCHING VIEW WITHOUT RELOADING.
    The dashboard used to hold three copies of this page, one per tab, and each one loaded itself
-   and asked the league sheet who this device is and what the league looks like. Three page loads
+   and asked the league who this device is and what the league looks like. Three page loads
    and six trips to Google for three tabs that are the same program. Casey saw it as a delay every
    time he pressed one.
    So the dashboard holds ONE copy now and calls this when the tab changes. No load, no fetch, no
@@ -1706,7 +1706,7 @@ function commishOnly(what){
   }
   var m = LIVE_ME;
   if (m === null){
-    return h + '<p class="note">Asking the league sheet who this device is. One moment.</p></div>';
+    return h + '<p class="note">Asking the league who this device is. One moment.</p></div>';
   }
   if (!m.ok && m.why === 'nokey'){
     return h + '<p class="note"><b>This device is not signed in.</b> Nothing is wrong with your '
@@ -1718,7 +1718,7 @@ function commishOnly(what){
       + '. Go to <b>My Trades</b> and sign in again.</p></div>';
   }
   if (!m.ok){
-    return h + '<p class="note">The league sheet could not say who this device is, so nothing '
+    return h + '<p class="note">The league could not say who this device is, so nothing '
       + 'is shown rather than something that might be wrong.</p>'
       + '<p class="note">' + esc(m.note || '') + '</p></div>';
   }
@@ -2031,11 +2031,11 @@ function redeemFromUrl(){
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
   /* SOMETHING ON SCREEN WHILE IT HAPPENS. Casey, 13 Sep 2026: "When I clicked the sign in link it
      took me to a page with only saying THE LIVE LEAGUE ... None of the tabs on the page." The page
-     was waiting on the league sheet and drawing nothing at all, so a slow answer looked like a
+     was waiting on the league and drawing nothing at all, so a slow answer looked like a
      broken page -- and a failed one looked like a broken page for ever, because there was nothing
      to catch it. A PAGE THAT IS WORKING SAYS SO. */
   el('body').innerHTML = '<div class="card"><h2>Signing You In</h2>'
-    + '<p class="note">One moment. The league sheet is checking your link.</p></div>';
+    + '<p class="note">One moment. The league is checking your link.</p></div>';
   /* THE PAGE AROUND THIS ONE HAS TABS THAT DEPEND ON WHO THIS IS, so it is told to look again
      once there is an answer. Without it the commissioner's tabs would not appear until the
      dashboard was reloaded by hand. */
@@ -2059,7 +2059,7 @@ function redeemFromUrl(){
                expired: 'That link is more than thirty minutes old. Ask for another one.',
                nolink: 'That is not a link this league issued.',
                seat: 'That address is no longer on an active seat. Ask the commissioner.'
-              }[(a && a.why) || ''] || ((a && a.note) || 'The league sheet did not answer.');
+              }[(a && a.why) || ''] || ((a && a.note) || 'The league did not answer.');
     LIVE_ME = null;
     boot();                       /* whatever happened, leave a page that can be used */
     showHelp('That Link Did Not Work',
@@ -4018,7 +4018,7 @@ function viewRosters(){
 function doReset(){
   var body = Store.live()
     ? '<p>This throws away <b>every trade the league has run</b> and puts the drafted rosters '
-      + 'back. It happens in the league sheet, so it happens for everybody, not only on this '
+      + 'back. It happens in the league, so it happens for everybody, not only on this '
       + 'device.</p>'
       + '<p>Do it when you have been testing and want a clean start. Do not do it after a week '
       + 'has been settled for real.</p>'
@@ -4084,17 +4084,17 @@ function saveLight(st, why){
   b.className = 'chip ' + m[0];
   b.textContent = m[1];
   if (st === 'nokey'){
-    b.title = 'This device has not signed in, so the league sheet will not answer it. Ask for a '
+    b.title = 'This device has not signed in, so the league will not answer it. Ask for a '
             + 'sign-in link on the Sign In tab.';
     return;
   }
   b.title = st === 'offline'
-    ? 'The league sheet could not be reached, so this change is still only on this device. '
+    ? 'The league could not be reached, so this change is still only on this device. '
       + 'It will be sent again by itself. ' + (why || '')
     : (st === 'stale'
         ? 'Somebody else changed this while you had it open, so what you are looking at was '
-          + 'reloaded from the league sheet.'
-        : 'Everything on this page is stored in the league sheet.');
+          + 'reloaded from the league.'
+        : 'Everything on this page is stored in the league.');
 }
 
 /* ASKING FOR THE KEY. Typed once per device and remembered by that browser. It is never in the
