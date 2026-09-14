@@ -212,7 +212,7 @@ ol li,ul li{margin:0 0 7px}
   <li>Through the <b>Monday coin flips</b>. During the week an owner builds a list of teams they
       want. At 4:00pm AZ Monday the RFL application works through every list that was submitted and settles
       them, including running a coin flip wherever more than one owner asked for the same team.
-      Everybody is emailed what happened to each of their requests.</li>
+      Everybody can see what happened to each of their requests on their own page.</li>
   <li>Through <b>first come, first served</b>. From Monday 4:00pm AZ until Tuesday 5:00pm AZ, any team
       still unowned can be taken outright by whoever asks first. This does not go through the
       Monday process at all &mdash; it is immediate, and there is no coin flip.</li>
@@ -273,176 +273,94 @@ ol li,ul li{margin:0 0 7px}
 
 <section><h2>Setting It Up</h2><p class="lead">What is done, and what is left.</p>
 <p>All of the machinery is built and running. What is left is one job, and it is not a technical
-   one: collecting the other owners' email addresses. That step is written out in
-   <b>Setting Bob Up</b>, which is the sheet the two of you work through together.</p>
+   one: giving each owner their sign-in code.</p>
 
 <h3>What Is Already Working</h3>
 <ul>
-  <li>The league has its own Google account, <span class="kbd">realityfootballcommish@gmail.com</span>.
-      Casey and Bob both sign in to it with the same password.</li>
-  <li>The spreadsheet exists. It is called <span class="kbd">RFL Trades</span> and it lives in
-      that account's Google Drive. Its <span class="kbd">Access</span> tab lists all 27 seats,
-      spelled correctly.</li>
-  <li>The script is installed and deployed, and it is answering right now.</li>
-  <li>Signing in has been tested from end to end. The link arrived by email, the six character
-      code was accepted, and the same code was refused the second time it was used.</li>
+  <li>The league has its own back end. It holds the 27 seats, the people on them, the rosters and
+      every trade. It belongs to the league rather than to any person's private account.</li>
+  <li>All 27 seats are loaded, spelled the way the league spells them. Six of those seats have two
+      owners on them, and each of those people has their own sign-in.</li>
+  <li>Every person has a code. Thirty-three codes in all.</li>
+  <li>Casey and Bob are both commissioners. Either of you can hand out a code, change somebody's
+      role, or turn a lost phone away.</li>
+  <li>Signing in has been tested from end to end, including the part that matters most: two people
+      on one seat get different codes, and only one of them is a commissioner.</li>
   <li>The trades page is inside the live dashboard rather than in a practice copy. Settled trades
       move the real rosters.</li>
-  <li>The commissioner tabs appear for Casey and Bob and for nobody else. An owner who opens the
-      same page does not have them and cannot reach them.</li>
+  <li>The commissioner tabs appear for the two of you and for nobody else.</li>
 </ul>
-<p>Three things sit behind the RFL application: the spreadsheet, the script, and the emails owners
-   receive. All three belong to the league account rather than to either of your personal ones.
-   Owners get league email from a league address, and nothing stops working if one of you steps
-   back for a season.</p>
-<p><b>The password is not written down here.</b> This guide is published on the league website, so
-   anybody who opens the site can read it.</p>
-<p>Whatever one of you does in the account, the other sees, and there is no record of which of you
-   did it. That is fine for a league, and it is the trade-off that comes with one login.</p>
 
-<h3>What the Google Sheet Is For</h3>
-<p>The spreadsheet is the league's list of who is who. It holds one row for each of the 27 seats.
-   That row says which division and seat it is, which email address the owner signs in with,
-   whether the seat is active, and whether that person is an owner or a commissioner. The tab it
-   all sits on is called <span class="kbd">Access</span>.</p>
-<p><b>It is not where trades are made.</b> Owners submit their trades on the RFL page and the
-   script settles them on Monday. The sheet answers a different question. When somebody asks to
-   sign in, who are they, and what are they allowed to do once they are in?</p>
-<p>It lives in the league Google account, so the two of you can open it and nobody else can. An
-   owner never sees it. What an owner sees is their own name at the top of the trades page.</p>
-<p>The script also uses the same spreadsheet as its filing cabinet. Three more tabs appear on
-   their own, and they are described at the end of this section.</p>
-<p><b>The spreadsheet is where you type, and the Access List page in the application is where you
-   look.</b> That page shows what the Access tab says right now and none of it can be edited
-   there. That is deliberate. Two places to change the same fact is how the two stop agreeing.</p>
+<h3>There Is No Spreadsheet and No Password to Share</h3>
+<p>This used to run on a Google account that the two of you signed in to with the same password.
+   Google disabled that account without warning, and everything behind the trades page went with
+   it in one afternoon. Nothing about the league had changed. The account simply stopped
+   existing.</p>
+<p>So it does not work that way any more. There is no shared login, no spreadsheet to keep in
+   step, and no password written down anywhere. Your sign-in code is your own, Bob's is his, and
+   the back end works out who is asking from the code rather than from anything the page says.</p>
+<p>That also means the league no longer sends email. Nothing arrives in anybody's inbox and
+   nobody waits on one.</p>
 
-<h4>The Columns</h4>
-<p>Four of them you type. Two the script writes, and you leave those alone.</p>
-<table><thead><tr><th>Column</th><th>What it is</th></tr></thead><tbody>
-<tr><td><b>Division, Seat</b></td><td>Already filled in. Never edited.</td></tr>
-<tr><td><b>Email</b></td><td>The owner's personal inbox. Blank means they cannot sign in and you
-    enter their trades for them. Changing this address does not sign anybody out, so put an
-    <b>x</b> in Retire? on the same row when an owner moves to a new address.</td></tr>
-<tr><td><b>Status</b></td><td>A drop-down. <span class="kbd">active</span> is normal.
-    <span class="kbd">inactive</span> refuses anything that seat tries to submit and changes
-    nothing else. The team still appears in the standings and the scores.</td></tr>
-<tr><td><b>Role</b></td><td>A drop-down. <span class="kbd">owner</span> for everybody except
-    Casey and Bob, whose rows say <span class="kbd">commissioner</span>. The commissioner tabs
-    appear for those two rows and for no others.</td></tr>
-<tr><td><b>Retire?</b></td><td>A drop-down with one choice on it, <b>x</b>. Pick it to turn away
-    every device already signed in to that seat. The script does it, <b>empties the cell again</b>,
-    and writes a line on the Log tab. The empty cell is the receipt. While the x is still sitting
-    there, it has not happened yet.</td></tr>
-<tr><td><b>Signed in</b></td><td>Written by the script, never typed. How many devices are holding a
-    working key for that seat. Look at this before you retire anything. It tells you whether there
-    is anything to turn away, and it goes to <span class="kbd">0</span> once the retirement has
-    happened. A blank cell means the row has no seat on it. A seat nobody has signed in to reads
-    <span class="kbd">0</span>. Signing in again on a device that was already signed in does not
-    add to the count, and a device that has not been used for 90 days drops off on its own.</td></tr>
-</tbody></table>
-<p>Role, Status and Retire? are drop-downs, so none of the three can be mistyped. The script sets
-   them up on its own and puts them back if they are ever removed. A capital letter or a trailing space in either of
-   those columns would change what the software does, and it would not look wrong on the
-   screen.</p>
-<h4>A Seat With Two Owners on It</h4>
-<p>Some teams are run by two people. A seat is still one seat, and it still gets one set of
-   teams, one set of trades and one row in the standings. What changes is that two people can
-   reach it.</p>
-<p><b>Give that seat a second row.</b> Copy the row, keep the Division and Seat exactly the same,
-   and put the other person's email in the Email column. Nothing else differs. Both of them can
-   then sign in, and both are working the same roster.</p>
-<p>Two things follow from that, and both are worth knowing before you do it.</p>
-<ul>
-  <li><b>Retiring one of them retires both.</b> Devices are signed in to the seat, not to the row,
-      so an <b>x</b> on either row turns away everybody holding that seat. They both sign in again
-      afterwards.</li>
-  <li><b>Signed in is the seat's number, so both rows show the same figure.</b> A seat with two
-      people on two phones reads 2 on both rows, not 2 and 2 making 4.</li>
-</ul>
-<p>Role and Status are still read per person. You can make one of the two a commissioner without
-   making the other one, and you can set one of them inactive on their own.</p>
+<h3>What a Code Is</h3>
+<p>Six characters, letters and numbers. Something like <span class="kbd">X2FV4J</span>.</p>
+<p>It does not expire, and using it does not use it up. The same six characters sign that person
+   in on their phone and on their computer. They type it once on each device and that device stays
+   signed in.</p>
+<p>There is no letter O and no number 1 in any code, because these get read out over the phone.
+   A character that looks like one of those is the other.</p>
+<p><b>Treat a code like a password.</b> Whoever holds it can enter trades for that seat. Read it
+   to the owner directly. Never put one where the league can see it, and never send one to an
+   address that reaches more than one person.</p>
 
-<p>There is deliberately no column recording the date keys were retired. The script keeps that
-   date where nobody can type over it, and the Log tab is where you read the history. A column
-   Bob looks at before acting should say what is true now. What happened in August belongs in a
-   log.</p>
-
-<h3>Monday Settles Itself</h3>
-<p>Neither of you has to press anything on a Monday, and no computer has to be switched on. The
-   script wakes up every five minutes on Google's own servers and checks whether there is anything
-   to do. Almost every time there is nothing and it stops immediately. The one just after 4:00pm
-   AZ on a Monday settles the week.</p>
-<p><b>The deadline is the time a request was sent, not the time the script happens to wake up.</b>
-   Every request is stamped when it arrives, and anything stamped 4:00pm AZ Monday or later is too
-   late. Results are posted within about five minutes of four o'clock, and first come, first
-   served opens the moment they are.</p>
-
-<h3>The Tabs the Script Writes</h3>
-<p>The Access tab is the only one anybody edits by hand. Three others appear on their own, and
-   all three should be left alone.</p>
-<ul>
-  <li><b>Requests</b> is filled in by the application when owners submit.</li>
-  <li><b>Results</b> is written every Monday and becomes the record of every trade.</li>
-  <li><b>Log</b> keeps a dated line for every address change and every retirement. It is there to
-      be read, not edited.</li>
-</ul>
+<h3>What Is Left to Do</h3>
+<ol>
+  <li>Open the <b>Access List</b> tab. Every person is on it with their code beside their
+      name.</li>
+  <li>Give each owner theirs. A phone call, a text to them alone, or in person.</li>
+  <li>Tell them to open the dashboard, go to <b>My Trades</b>, and type it in.</li>
+</ol>
+<p>You do not have to do all 27 at once, and nothing breaks if somebody never signs in. An owner
+   without a code simply tells you their trade and you enter it for them, exactly as before.</p>
 </section>
 
 <section><h2>How Owners Sign In</h2><p class="lead">No passwords, and no way to submit a trade as somebody else.</p>
-<p>Owners never get a password. There is nothing for them to remember and nothing for you to
-   reset.</p>
+<p>An owner signs in once on each device they use. After that the device stays signed in and they
+   never think about it again.</p>
+
+<h3>The Three Steps</h3>
 <ol>
-  <li>The owner opens the league dashboard and taps the <b>My Trades</b> tab. The sign-in box is
-      the first thing on it.</li>
-  <li>They type their email address and press <b>Send My Code</b>.</li>
-  <li>An email arrives holding a six character code. It works once and stops working after 30
-      minutes.</li>
-  <li>They type that code back into the My Trades tab and press <b>Sign Me In</b>. Capitals and spaces do not matter, so a
-      phone that helpfully changes the case is not a problem.</li>
-  <li>They are in, and the tab fills with their own roster and their own trades.</li>
+  <li>You read them their six character code.</li>
+  <li>They open the dashboard and go to the <b>My Trades</b> tab.</li>
+  <li>They type the code into the box and press <b>Sign Me In</b>.</li>
 </ol>
-<p><b>Signing in also tells the rest of the dashboard who they are.</b> Live Scores highlights
-   their eleven teams and its My Teams button filters to them. Standings tags their row. Weekly
-   and Quarterly and Season Summary open on them. They are never asked to pick their name out of
-   a list, because the sheet has already said which seat their key belongs to.</p>
-<p>The same email also carries a link, underneath the code, for anybody who would rather tap than
-   type. It opens the dashboard on the My Trades tab and signs them in without a code. Either one
-   works and using one cancels the other.</p>
-<p>That device stays signed in for the season. An owner does this once on their phone and once on
-   their laptop, and that is the last they think about it.</p>
+<p>That is the whole of it. Nothing is emailed and there is nothing to wait for.</p>
 
-<h3>Why an Owner Cannot Enter Trades as Somebody Else</h3>
-<p>When they tap that link, the application stores a long random code in their browser. They never see
-   it or type it. Every trade they submit carries that code, and the league looks it up to find
-   out whose seat it is. Nothing announces a name, so there is no name for anybody to change.</p>
-<p>Knowing another owner's email address gets somebody nowhere. Ask for a link at that address
-   and the link goes to that owner's inbox. That owner also gets an email saying somebody tried
-   to sign in as them.</p>
+<h3>What Happens the Moment They Are In</h3>
+<p>The page learns whose seat it is, and so does the rest of the dashboard. Their own teams, their
+   own roster and their own trades are what they see from then on. It is not only the trades tab
+   that changes.</p>
+<p>The seat is worked out fresh on every request, from what that device is holding. Nothing the
+   page sends says who the person is, so nothing it sends can claim to be somebody else. That is
+   what stops one owner entering a trade under another owner's name.</p>
 
-<h3>If Somebody Cannot Sign In</h3>
-<p>The sign-in box says the same thing to everybody, whatever happened underneath &mdash;
-   otherwise anybody could use it to find out who is in the league by typing addresses.</p>
-<p>What it does say, to everyone, is: if nothing arrives in a few minutes, your address may not
-   be the one the league has for you, so contact the commissioner. That reaches the person
-   sitting there and gives nothing away.</p>
-<p>An address the league <b>has used before</b> is treated differently. A former owner, or
-   somebody whose address was changed, gets a real email saying the address is no longer on a seat
-   and to contact you. That is safe, because an email lands with whoever owns the address, never
-   with whoever typed it. An address the league has never used gets nothing at all, so nobody can use
-   the sign-in box to send mail to strangers.</p>
+<h3>Two People on One Seat</h3>
+<p>Six seats in this league have two owners. They each get their own code and they are listed
+   separately on the Access List.</p>
+<p>They share everything the seat has. The same roster, the same teams, and either of them can
+   enter that seat's trades. A trade is recorded against the team, not against whichever of them
+   typed it.</p>
+<p>Their roles are separate. One of them can be a commissioner while the other is not, and turning
+   one of their sign-ins off leaves the other one signed in.</p>
 
-<h3>Two Things It Does Not Do</h3>
-<ul>
-  <li>It does not stop anybody <b>reading</b> the page. The dashboard is a public web page and
-      always has been. What is protected is submitting a trade.</li>
-  <li>It does not help if somebody can open another owner's inbox. Forwarding a sign-in email
-      hands over your seat, the same as giving out a password.</li>
-</ul>
-
-<h3>Two Owners on One Team</h3>
-<p>Casey and Dominic share a seat, so they get two rows on the Access tab with the same seat name
-   and different email addresses. Both sign in on their own phones, both see the same thing, and
-   neither has to sign out for the other.</p>
+<h3>When a Code Is Not Accepted</h3>
+<p>The page says so and does not explain why. That is deliberate. If it told the difference
+   between a code that never existed and a code belonging to a seat that has been switched off,
+   somebody could use the sign-in box to work out who is in the league.</p>
+<p>So the answer is always the same, and the answer to the owner is always the same too: check it
+   with the commissioner. Read the code back to them. If it still will not take, press
+   <b>Retire and Issue a New Code</b> on their row and read them the new one.</p>
+<p>Trying again does not help, and there is nothing for the owner to fix at their end.</p>
 </section>
 
 <section><h2>How an Owner Submits a Trade</h2><p class="lead">Their week, in order. You do nothing in any of it.</p>
@@ -462,16 +380,24 @@ ol li,ul li{margin:0 0 7px}
 </section>
 
 <section><h2>What Happens on Monday, by Itself</h2><p class="lead">The part that replaces you being the switchboard.</p>
-<p>Nobody starts this and nobody can stop it half way. It runs on a schedule Google keeps, so no
-   computer has to be switched on.</p>
+<p><b>One of you presses Run It.</b> That is the honest state of this today, and it is a change
+   from how it used to work.</p>
+<p>It used to start itself on a Monday afternoon without anybody being there. The thing that
+   started it was part of the Google account that was disabled, and nothing has replaced it yet.
+   The settling itself is unchanged and takes seconds.</p>
+<p>What has not changed is the part that matters for fairness. <b>The cut-off does not depend on
+   when anybody presses anything.</b> Every entry is stamped with the moment it was sent, and
+   anything sent at or after 4:00pm is too late no matter when the week is settled. Running it at
+   half past four gives nobody an advantage.</p>
 <ol>
   <li><b>Monday 4:00pm AZ.</b> Entry closes. Anything sent at 4:00pm or later is too late, and is
       stamped with the time it was sent, so the cut-off does not depend on when the script
       happens to run.</li>
-  <li>The RFL application settles every list that was submitted, division by division, in this order.
-      Nobody presses anything.</li>
-  <li><b>Within about five minutes.</b> Every owner gets an email telling them what happened to
-      each of their entries. The results are on the page as well.</li>
+  <li><b>One of you presses Run It.</b> The application settles every list that was submitted,
+      division by division, in the order below.</li>
+  <li><b>Straight away.</b> Every owner can see what happened to each of their entries on their
+      own page. The results tab also writes the message for you, owner by owner, if you would
+      rather send it to them yourself.</li>
   <li><b>Then first come, first served opens</b>, and runs until Tuesday 5:00pm AZ.</li>
   <li><b>Tuesday 5:01pm AZ.</b> Entry opens for the following Monday, already showing the new
       rosters.</li>
@@ -521,7 +447,7 @@ ol li,ul li{margin:0 0 7px}
 </ol>
 <p>The clock applies to you the same as to them. Before Monday 4:00pm AZ it goes into the coin
    flips. After that it is a first-come claim. It costs that owner the usual $3, the record shows
-   your name as the person who entered it, and the owner is emailed.</p>
+   your name as the person who entered it, and the owner sees it on their own page.</p>
 <p>You will use this a lot in the first few weeks, because that is the whole of stage one: the
    owners email you and you type it in.</p>
 
@@ -624,8 +550,9 @@ ol li,ul li{margin:0 0 7px}
 <h3>Sending the Results Yourself</h3>
 <p>A second switch, next to the first one, decides whether the tool emails owners their results.</p>
 <ul>
-  <li><b>On</b> &mdash; each owner is emailed within a minute of a week being settled.</li>
-  <li><b>Off</b> &mdash; nobody is emailed, and the results appear on screen for you to send
+  <li><b>On</b> &mdash; the message for each owner is written out for you the moment a week is
+      settled.</li>
+  <li><b>Off</b> &mdash; nothing is written out, and the results appear on screen for you to send
       instead. <b>Copy every owner&rsquo;s email</b> gives you all of them in one block, each
       with the address it goes to, ready to paste.</li>
 </ul>
@@ -688,50 +615,43 @@ ol li,ul li{margin:0 0 7px}
 </section>
 
 <section><h2>Rolling It Out</h2><p class="lead">Three stages. Owners are not let in until it has been run for real for a few weeks.</p>
-<p>Nobody is asked to trust this on day one. It goes live in three stages, and the league only
-   notices the third.</p>
+<p>Twenty-seven seats and thirty-three people. You do not have to do them all at once, and nothing
+   breaks while somebody has not signed in yet.</p>
 
-<h3>Stage One &mdash; It Runs, and Only Bob Uses It</h3>
-<p>This is the stage you are in now. Nothing changes for the other owners. They keep emailing and
-   phoning Bob exactly as they do today.</p>
-<p>What changes is what Bob does with those messages. His Monday looks like this:</p>
-<ol>
-  <li>Owners email him their requests through the day, as always, up to 4:00pm AZ.</li>
-  <li>He puts each one into the page under that owner&rsquo;s name, using
-      <b>Submitting for</b>. These are requests, not finished trades &mdash; he is typing in what
-      the owner asked for.</li>
-  <li>After 4:00pm AZ, once they are all in, he presses <b>Run the coin flips</b> himself.</li>
-  <li>The page settles everything, including any team more than one owner wanted, and emails
-      each owner what happened.</li>
-  <li>First come, first served requests arrive through Tuesday and he enters those as they come,
-      the same way.</li>
-</ol>
-<p>The important part is that <b>the tool is doing the real work from week one</b>. Bob is doing
-   the typing, not the deciding &mdash; the coin flips, the hold rules, the like-for-like check
-   and the running totals are all being run for real. If they are right for three weeks with two
-   people watching, they are right in December with twenty-seven.</p>
-<p>Two switches on that page are set for this stage. Settling is <b>by hand</b>, so the schedule
-   waits for him. Results emails are <b>off</b>, so nothing reaches the league until he has looked
-   at it and sent it himself. Both are ordinary settings rather than a temporary mode, and they
-   are flipped the other way at stage three.</p>
-<p>Only two people sign in during this stage, which is also the cheapest possible test of the
-   sign-in: if it works for two, the twenty-seventh is not different.</p>
+<h3>Start With the Two of You</h3>
+<p>Sign in yourself first, then get Bob signed in, before anybody else is involved. If something
+   is wrong you want to find it with one person watching, not twenty-seven.</p>
+<p>Check three things once you are both in. You can each see the commissioner tabs. You can each
+   open the Access List and read the codes. An owner's seat name shows at the top of the page and
+   it is the right one.</p>
 
-<h3>Stage Two &mdash; A Few Weeks of Watching It</h3>
-<p>Run it this way for two or three weeks. The buttons have already been tested. What is being
-   checked now is whether the <i>record</i> the page produces matches what actually happened in
-   the league. Compare the Transactions tab against what Bob would have
-   written down. If those agree for three weeks, they will agree in December.</p>
-<p>Anything that comes up gets fixed while the audience is two people rather than twenty-seven.</p>
+<h3>Then a Handful, Then the Rest</h3>
+<p>Pick three or four owners you can ring easily and do those next. If they get in without needing
+   you to explain anything, the wording on the page is doing its job and the rest can follow.</p>
+<p>Send the rest in your own time. There is no deadline and no batch to get right.</p>
 
-<h3>Stage Three &mdash; The Owners</h3>
-<p>Fill in the remaining email addresses. Set settling to <b>automatic</b> and results emails
-   <b>on</b>. Then tell the league. From that Monday,
-   owners enter their own requests, Monday settles itself a few minutes after four, and everyone
-   is emailed what happened without you touching it.</p>
-<p>Bob keeps everything he had. <b>Submitting for</b> does not go away. It is how anybody without
-   an email address, or having a bad week, still gets their trade in. The job that disappears is
-   being the switchboard, not being the commissioner.</p>
+<h3>What to Say</h3>
+<p>Keep it to four lines. Anything longer gets skimmed.</p>
+<ul>
+  <li>Open the league dashboard.</li>
+  <li>Go to the <b>My Trades</b> tab.</li>
+  <li>Type in this code: their six characters.</li>
+  <li>That is it. You will not have to do it again on that phone.</li>
+</ul>
+<p>Give the code to that person and to nobody else. Not in a group message, not in a reply-all,
+   and not anywhere the league can read it. The code is the sign-in.</p>
+
+<h3>Owners Who Never Sign In</h3>
+<p>Some will not, and that is fine. They tell you their trade and you enter it for them, which is
+   what happened before any of this existed. Nothing about the league depends on all 27 of them
+   using the page.</p>
+
+<h3>When Somebody Cannot Get In</h3>
+<p>Read the code back to them slowly. Nearly every failure is a character misheard, and the two
+   worth checking are the ones that look alike on a screen. No code contains the letter O or the
+   number 1, so what they are reading as one of those is the other.</p>
+<p>If it still will not take, open the Access List, press <b>Retire and Issue a New Code</b> on
+   their row, and read them the new one.</p>
 </section>
 
 <section><h2>What an Owner Sees After Monday</h2><p class="lead">Every entry comes back with one of these 13 answers, so nobody is left guessing whether they lost or the page broke.</p><table class="rules"><tbody><tr><td class="pool">You got it, and nobody else had asked</td><td>This is most trades in a normal week. Nobody else wanted the team, so there was no coin flip at all.</td></tr><tr><td class="pool">You got it, and you won the coin flip</td><td>More than one owner asked for the same team. The email names everyone who was in it.</td></tr><tr><td class="pool">You lost the coin flip</td><td>Somebody else won it. You keep the team you had offered to drop, and the email tells you who ended up with it.</td></tr><tr><td class="pool">You were not eligible for this one</td><td>You had already won a coin flip earlier the same afternoon, so you were held out of this one and the other owners went for it without you.</td></tr><tr><td class="pool">This request was not attempted</td><td>You had told it to run only if an earlier request did, or did not, come through. It did not need to run.</td></tr><tr><td class="pool">It could not run, because there was nothing left to drop</td><td>Every team offered up had already been used by an earlier request, was still inside its three-game hold, or was no longer on the roster. Listing more backup drops prevents this.</td></tr><tr><td class="pool">It could not run, because the team is already owned</td><td>Somebody in the division holds it. Under the normal windows this should not happen, and the email says so plainly if it does.</td></tr><tr><td class="pool">The teams you offered to drop were the wrong kind</td><td>College teams are traded for college teams and NFL teams for NFL teams, so that every roster stays at eight college and three NFL. None of the drops offered matched the team being picked up.</td></tr><tr><td class="pool">That team was dropped this week</td><td>A team that has just been dropped has to play a game before anybody can pick it up, so it is not available again the same afternoon.</td></tr><tr><td class="pool">You already hold that team</td><td>Nothing to do.</td></tr><tr><td class="pool">That team has too few games left</td><td>A team has to have three games still to play before anybody can claim it.</td></tr><tr><td class="pool">An earlier request of yours already took it</td><td>Two of your own requests asked for the same team, and the first one got it.</td></tr><tr><td class="pool">The request could not be read</td><td>A request with no team on it, more than four drops, or a condition pointing at something further down the list. The form will not normally let anybody build one.</td></tr></tbody></table></section>
