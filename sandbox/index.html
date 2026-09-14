@@ -4162,8 +4162,8 @@ function practiceAccessTable(rows){
                 + esc(pretty(L.since)) + '</div>'
               : '<span class="f">nobody signed in</span>')
           + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px"'
-          + (L.n ? '' : ' title="Nothing is signed in to this seat, so there is nothing for this '
-                        + 'to turn away."')
+          + (L.n ? '' : ' title="Nothing is signed in to this seat, so nothing is signed out. '
+                        + 'It still issues a new code and stops the old one."')
           + ' onclick="bump(' + i + ')">Retire and Issue a New Code</button></div></td>'
           + (Store.live() ? ''
               : '<td><button style="min-height:30px;padding:4px 8px" onclick="delAccess(' + i
