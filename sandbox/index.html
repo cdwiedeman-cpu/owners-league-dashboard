@@ -2542,9 +2542,16 @@ function viewTrades(){
      THE PROCESS** — the reader needs the shape of the week before they need today's form. */
   var h = clockBanner() + myResultCard() + twoWays(fcfs);
   if (s.role === 'commissioner'){
-    h += '<div class="card"><h2>Commissioner — Entering for Someone Else</h2>'
-      + '<p class="note">Same form, same rules, same clock. The only difference is the line in '
-      + 'the log saying you entered it, and the email that goes to them saying so.</p>'
+    /* THE EMAIL IN THIS SENTENCE DOES NOT EXIST. Nothing sends mail, on purpose, and the line
+       had outlived the thing it described. And the sentence never answered the question a
+       commissioner actually arrives with, which Casey asked outright on 14 Sep 2026: "if I'm
+       gonna make a trade for myself, do I use this?" No. It is already set to you. */
+    h += '<div class="card"><h2>Commissioner &mdash; Entering for Someone Else</h2>'
+      + '<p class="note"><b>Leave this set to yourself to enter your own trade.</b> It already '
+      + 'is. Your own list works exactly as any owner\'s does.</p>'
+      + '<p class="note">Change it only to enter a trade for an owner who has told you theirs. '
+      + 'Same form, same rules, same clock. The trade is recorded against <b>their team</b>, not '
+      + 'against you, and the log keeps a line saying you were the one who entered it.</p>'
       + '<label class="lb" for="ba">Submitting for</label><select id="ba" '
       + 'onchange="S.actingAs=this.value||null;save();render()"><option value="">— myself ('
       + esc(s.seat) + ') —</option>'
