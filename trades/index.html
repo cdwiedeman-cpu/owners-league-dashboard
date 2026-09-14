@@ -3437,21 +3437,27 @@ function sheetCard(){
 function liveAccessTable(){
   var rows = S.access || [];
   var out = '';
-  rows.forEach(function(a){
+  rows.forEach(function(a, ai){
     var people = (a.members && a.members.length) ? a.members
                : [{member: 'm1', email: a.email || '', code: '', role: a.role || 'owner',
                    signedIn: 0}];
+    var off = a.status === 'removed';
     people.forEach(function(m, k){
-      var off = a.status === 'removed';
       out += '<tr><td>' + (k === 0 ? '<b>' + esc(a.seat) + '</b><div class="f" '
              + 'style="font-size:11px">' + esc(DATA.div_names[a.div] || a.div)
              + (off ? ' · <span class="pill bad">Inactive</span>' : '') + '</div>'
              : '<span class="f">&#8220;</span>') + '</td>'
-        + '<td>' + (m.email ? esc(m.email) : '<span class="f">no address</span>') + '</td>'
+        + '<td>' + (m.email ? esc(m.email) : '<span class="f">no address</span>')
+        + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:3px" '
+        + 'onclick="editPerson(' + jsq(a.div) + ',' + jsq(a.seat) + ',' + jsq(m.member) + ','
+        + jsq(m.email || '') + ')">Change Address</button></div></td>'
         + '<td class="mono f">' + esc(m.code || '') + '</td>'
-        + '<td>' + (m.role === 'commissioner'
-            ? '<span class="pill gold">commissioner</span>' : '<span class="f">owner</span>')
-        + '</td>'
+        + '<td><select style="min-height:30px" onchange="setRole(' + jsq(a.div) + ','
+        + jsq(a.seat) + ',' + jsq(m.member) + ',this.value)">'
+        + '<option value="owner"' + (m.role === 'commissioner' ? '' : ' selected')
+        + '>owner</option>'
+        + '<option value="commissioner"' + (m.role === 'commissioner' ? ' selected' : '')
+        + '>commissioner</option></select></td>'
         + '<td>' + (m.signedIn
             ? '<span class="pill good">' + m.signedIn + ' device'
               + (m.signedIn === 1 ? '' : 's') + '</span>'
@@ -3460,13 +3466,109 @@ function liveAccessTable(){
         + 'onclick="retirePerson(' + jsq(a.div) + ',' + jsq(a.seat) + ',' + jsq(m.member) + ','
         + jsq(m.email || a.seat) + ')">Retire and Issue a New Code</button></div></td></tr>';
     });
+    /* THE SEAT'S OWN CONTROLS, once, under its people. Adding the second owner of a team and
+       switching a seat off are things done to the SEAT, not to a person on it. */
+    out += '<tr><td colspan="5" style="padding-top:2px;padding-bottom:10px">'
+      + '<button style="font-size:11px;min-height:26px;padding:3px 7px" '
+      + 'onclick="addPerson(' + jsq(a.div) + ',' + jsq(a.seat) + ')">Add a Second Owner</button> '
+      + '<button style="font-size:11px;min-height:26px;padding:3px 7px" '
+      + 'onclick="setSeatStatus(' + jsq(a.div) + ',' + jsq(a.seat) + ','
+      + jsq(off ? 'active' : 'inactive') + ')">'
+      + (off ? 'Put This Seat Back' : 'Switch This Seat Off') + '</button></td></tr>';
   });
   return '<div class="card"><div class="scr"><table>'
-    + '<colgroup><col style="width:22%"><col style="width:28%"><col style="width:13%">'
-    + '<col style="width:17%"><col style="width:20%"></colgroup>'
+    + '<colgroup><col style="width:20%"><col style="width:28%"><col style="width:12%">'
+    + '<col style="width:18%"><col style="width:22%"></colgroup>'
     + '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
     + '<th title="How many devices this person is signed in on right now.">Signed In</th>'
     + '</tr></thead><tbody>' + out + '</tbody></table></div></div>';
+}
+
+/* ONE ANSWER FOR EVERY CHANGE MADE ON THIS PAGE. Each of them is a round trip to the league, and
+   each can be refused for a reason worth reading -- the last commissioner, an address already on
+   the seat, a seat that is not there. A refusal that showed nothing would look like a control
+   that does not work. */
+function accessDo(fn, args, done){
+  Store.call(fn, args).catch(function(e){
+    return {ok: false, note: String(e && e.message ? e.message : e)};
+  }).then(function(a){
+    if (!a || !a.ok){
+      showHelp('That Did Not Go Through',
+        '<p>' + esc((a && a.note) || 'The league did not answer.') + '</p>');
+      return;
+    }
+    if (done) done(a); else closeHelp();
+    Store.reload(bootOpts());
+  });
+}
+
+/* CHANGING SOMEBODY'S ADDRESS DOES NOT SIGN THEM OUT. The key points at the person, not at the
+   address, which is the whole reason a person carries an id of their own. */
+function editPerson(div, seat, member, now){
+  showHelp('Change This Address',
+    '<p>The address is how you know whose row this is. Changing it does <b>not</b> sign them out '
+    + 'and does <b>not</b> change their code.</p>'
+    + '<label class="lb" for="pe">Email Address</label>'
+    + '<input id="pe" type="email" autocapitalize="off" autocorrect="off" spellcheck="false" '
+    + 'value="' + esc(now) + '" placeholder="them@example.com">'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="savePerson(' + jsq(div) + ',' + jsq(seat) + ','
+    + jsq(member) + ')">Save It</button>'
+    + '<button onclick="closeHelp()">Leave It Alone</button></div>');
+}
+function savePerson(div, seat, member){
+  var v = el('pe') ? el('pe').value.trim() : '';
+  accessDo('seat', {div: div, seat: seat, member: member, email: v});
+}
+
+function setRole(div, seat, member, role){
+  accessDo('seat', {div: div, seat: seat, member: member, role: role}, function(){
+    closeHelp();
+    showHelp('Role Changed', '<p>That takes effect on their next request. Nobody has to sign in '
+      + 'again.</p>');
+  });
+}
+
+/* ADDING THE SECOND OWNER OF A TEAM. They get their own code and start as a plain owner. */
+function addPerson(div, seat){
+  showHelp('Add a Second Owner to ' + esc(seat),
+    '<p>They get their <b>own code</b> and their own role. You both see the same roster and '
+    + 'either of you can enter that team&rsquo;s trades.</p>'
+    + '<p>Retiring one of you later leaves the other signed in.</p>'
+    + '<label class="lb" for="pa">Their Email Address</label>'
+    + '<input id="pa" type="email" autocapitalize="off" autocorrect="off" spellcheck="false" '
+    + 'placeholder="them@example.com">'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="saveAdd(' + jsq(div) + ',' + jsq(seat) + ')">Add Them</button>'
+    + '<button onclick="closeHelp()">Not Now</button></div>');
+}
+function saveAdd(div, seat){
+  var v = el('pa') ? el('pa').value.trim() : '';
+  if (!v){ showHelp('That Had No Address On It', '<p>Type their email address and try again.</p>');
+           return; }
+  accessDo('seat', {div: div, seat: seat, add: {email: v}}, function(a){
+    closeHelp();
+    var c = (a.added && a.added.code) || '';
+    showHelp('Added. Here Is Their Code.',
+      '<p><b>' + esc(v) + '</b> is on <b>' + esc(seat) + '</b>.</p>'
+      + '<p>Their code is <b class="mono">' + esc(c) + '</b>. Read it out to them.</p>');
+  });
+}
+
+/* SWITCHING A SEAT OFF REFUSES EVERYTHING IT TRIES TO SEND and changes nothing else. The team
+   still appears in the standings and still scores; this is about the people, not the football. */
+function setSeatStatus(div, seat, to){
+  showHelp(to === 'inactive' ? 'Switch Off ' + esc(seat) + '?' : 'Put ' + esc(seat) + ' Back?',
+    '<p>' + (to === 'inactive'
+      ? 'Nobody on this seat will be able to sign in or send a trade. The team stays in the '
+        + 'standings and keeps scoring. Use it when an owner leaves and nobody has taken over.'
+      : 'This seat can sign in and send trades again. The codes it already had still work.')
+    + '</p>'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="closeHelp();accessDo(\'seat\',{div:' + jsq(div)
+    + ',seat:' + jsq(seat) + ',status:' + jsq(to) + '})">'
+    + (to === 'inactive' ? 'Switch It Off' : 'Put It Back') + '</button>'
+    + '<button onclick="closeHelp()">Leave It Alone</button></div>');
 }
 
 /* A STRING GOING INTO AN onclick IS QUOTED ONCE, HERE. Seat names contain apostrophes --
@@ -3598,6 +3700,13 @@ function viewAccess(){
         + '<p class="note"><b>Never send a code to a group address and never post one where the '
         + 'league can see it.</b> The code is the sign-in. Anyone holding it can enter trades for '
         + 'that seat.</p>'
+        + '<p class="note"><b>Everything about who is in this league is changed here.</b> Correct '
+        + 'somebody&rsquo;s address, make them a commissioner, add the second owner of a team, or '
+        + 'switch a seat off when an owner leaves. Each one takes effect on that person&rsquo;s '
+        + 'next request. Nobody has to sign in again and nothing has to be rebuilt.</p>'
+        + '<p class="note"><b>Changing an address does not sign anybody out</b> and does not '
+        + 'change their code. The two are separate on purpose, so a typo can be fixed without '
+        + 'anybody losing their phone.</p>'
         + '<p class="note"><b>Somebody loses their phone, or a code gets seen.</b> Press '
         + '<b>Retire and Issue a New Code</b> on that person. Every device they are signed in on '
         + 'is turned away at once and a fresh code appears in their row. Read them the new one.'
