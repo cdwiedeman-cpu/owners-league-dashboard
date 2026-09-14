@@ -1217,9 +1217,9 @@ function openSetup(auto){
   if (auto && TRADES_API && !CODE_FALLBACK && !SIGNED_IN){
     box.innerHTML = `<div class="modalbox">
       <div class="modalhd"><div><h2>Sign In</h2></div></div>
-      <div class="note"><b>Your commissioner gave you a six character code.</b> Type it in once
-        and this device stays signed in. The page then shows your own teams, your own row in the
-        standings, and your own trades.</div>
+      <div class="note"><b>Your commissioner emailed or texted you a six character code.</b> Type
+        it in once and this device stays signed in. The page then shows your own teams, your own
+        row in the standings, and your own trades.</div>
       <div class="bar" style="margin-top:12px">
         <input class="search" id="setupCode" style="flex:1 1 200px;max-width:100%"
           inputmode="text" autocapitalize="characters" autocorrect="off" spellcheck="false"
@@ -1880,7 +1880,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '13 Sep 2026, 11:24 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 12:10 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
