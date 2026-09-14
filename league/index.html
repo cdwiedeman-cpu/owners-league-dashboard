@@ -830,6 +830,13 @@ details>summary::marker{color:var(--faint)}
        view to show. -->
   <!-- SIGN IN HAS ITS OWN SECTION so it can be its own tab. Same frame, a different view of the
        same page, which is how the other three work. -->
+  <!-- THE LEAGUE RULES, ON THE DASHBOARD RATHER THAN IN AN ATTACHMENT. Casey, 14 Sep 2026:
+       "another tab for the owners that just is a league rules tab that they can get to and it
+       shows them the league rules, rather than us having to send it to them." It is the SAME
+       generated document that lives at /docs/rules.html, shown in a frame -- not a copy. So it
+       is current the moment build_rules_doc.py runs, with nothing to remember and no second
+       place for a rule to go stale. -->
+  <section id="rules" hidden><div id="rulesBody"></div></section>
   <section id="csignin" hidden></section>
   <section id="ctrades" hidden><div id="ctradesBody"></div></section>
   <section id="crun" hidden></section>
@@ -878,9 +885,10 @@ const TABSETS = {
      for both. His page keeps its projections; the all-owners page still has none. */
   personal: [['scores','Live Scores'],['stand','Standings'],['pick','Pickups'],
              ['slots','Slots'],['race','Race'],['weekly','Weekly / Quarterly'],
-             ['summary','Season Summary'],['tx','Transactions']],
+             ['summary','Season Summary'],['tx','Transactions'],
+             ['rules','League Rules']],
   league:   [['scores','Live Scores'],['stand','Standings'],['weekly','Weekly / Quarterly'],
-             ['summary','Season Summary'],['tx','Transactions']],
+             ['summary','Season Summary'],['tx','Transactions'],['rules','League Rules']],
 };
 /* THE TRADE TABS ON THIS PAGE.
  *
@@ -956,7 +964,7 @@ let TABS = (TRADES_HOME && !rememberedSignedIn() && !hasKey() ? SIGNIN_TAB : [])
   .concat(TABSETS[MODE] || TABSETS.personal)
   .concat(TRADES_HOME ? OWNER_TAB : [])
   .concat(TRADES_HOME && rememberedCommish() ? COMMISH_ONLY_TABS : []);
-const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','tx']
+const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','tx','rules']
   .concat(COMMISH_SECTIONS);
 
 /* PUT THE TAB UP, OR TAKE IT DOWN, TO MATCH WHO THE LEAGUE SAYS THIS IS. */
@@ -1377,6 +1385,7 @@ function showTab(which){
   if (which === 'summary') renderSummary();
   if (which === 'tx') renderTx();
   if (COMMISH_PAGE[which]) openCommish(which);
+  if (which === 'rules') openRules();
   /* The header only folds on the scores tab, so leaving it has to unfold. */
   if (RETICK) RETICK();
 }
@@ -1466,6 +1475,50 @@ function openCommish(which){
     } catch (e) {}
   };
   f.addEventListener('load', () => { fit(); setInterval(fit, 700); });
+}
+
+/* THE RULES DOCUMENT, LOADED ONCE, THE FIRST TIME THE TAB IS PRESSED.
+ *
+ * It is a frame over the generated document rather than a copy baked into this page. TWO STORES
+ * OF ONE FACT ARE WRITTEN TOGETHER OR ONE OF THEM LIES -- and a copy here would only be rewritten
+ * when this page is rebuilt, which is not when a rule changes. This way `build_rules_doc.py` is
+ * the only thing that has to run, and both dashboards show the new wording immediately.
+ *
+ * IT IS THE OWNERS' EDITION. Never the commissioner's copy, which carries provenance and the
+ * whole rulebook, and is not shared.
+ */
+let RULES_LOADED = false;
+function openRules(){
+  if (RULES_LOADED) return;
+  const host = el('rulesBody');
+  if (!host) return;
+  RULES_LOADED = true;
+  /* AN ABSENCE IS NEVER AN ANSWER. Opened from a file on a laptop there is no /docs/ beside this
+     page, and a blank frame would read as a broken tab. */
+  if (!TRADES_API){
+    host.innerHTML = '<div class="card"><div class="empty"><p><b>The rules are not in this '
+      + 'copy of the page.</b></p><p>This tab reads the rules document that sits beside the '
+      + 'dashboard on the league website. Open the dashboard from its web address and the rules '
+      + 'appear here.</p></div></div>';
+    return;
+  }
+  host.innerHTML = '<div class="card"><div class="empty">Opening&hellip;</div></div>';
+  const f = document.createElement('iframe');
+  f.id = 'rulesFrame';
+  f.src = '../docs/rules.html';
+  f.title = 'League Rules';
+  f.style.cssText = 'width:100%;border:0;display:block;min-height:70vh;background:transparent';
+  f.addEventListener('load', () => {
+    const n = host.querySelector('.card'); if (n) n.remove();
+    const fit = () => {
+      try {
+        const d = f.contentDocument;
+        if (d && d.body) f.style.height = Math.max(400, d.body.scrollHeight + 24) + 'px';
+      } catch (e) {}
+    };
+    fit(); setInterval(fit, 700);
+  });
+  host.appendChild(f);
 }
 
 /* ---------------- header chips ---------------- */
@@ -1886,7 +1939,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 12:39 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 1:01 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
