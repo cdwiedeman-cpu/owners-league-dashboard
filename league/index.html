@@ -934,6 +934,21 @@ function whoAmI(){
     .catch(() => null);
 }
 function askCommish(){ return whoAmI().then(me => !!(me && me.role === 'commissioner')); }
+
+/* ONE WAY FOR THIS PAGE TO ASK THE BACK END ANYTHING. The key is read fresh every time, because
+   signing in on the trades tab writes it while this page is already open. A page that captured
+   the key at load would keep answering "not signed in" until it was reloaded. */
+function tradesCall(fn, args){
+  if (!TRADES_API) return Promise.resolve(null);
+  let k = '';
+  try { k = localStorage.getItem('rfl_commish_key') || ''; } catch (e) { k = ''; }
+  if (!k) return Promise.resolve({ok: false, why: 'nokey'});
+  const body = Object.assign({fn: fn, key: k}, args || {});
+  return fetch(TRADES_API, {method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify(body)})
+    .then(r => r.json())
+    .catch(() => null);
+}
 /* THE TAB IDS ARE A CONTRACT, NOT AN IMPLEMENTATION DETAIL. test_season_ui.js drives this page
    by id — tabStand, tabPick — so making the bar data-driven must not rename them. The id is
    derived the way it was always spelt, and the new tabs join the same scheme. */
@@ -1687,7 +1702,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '13 Sep 2026, 5:52 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '13 Sep 2026, 6:30 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3414,7 +3429,16 @@ function watchPanel(){
   }).join('');
 
   const colInc = slotFor('COL'), nflInc = slotFor('NFL');
+  const syncNote = WATCH_ERR
+    ? `<div class="note"><b class="y">Saved in this browser only.</b> ${WATCH_ERR}
+       Sign in on the <b>My Trades</b> tab and it will follow you to your other devices.</div>`
+    : (WATCH_SYNCED
+        ? `<div class="note g">Saved to the league, so this list follows you to any device you
+           sign in on.</div>`
+        : `<div class="note">This list is saved in this browser. Sign in on the
+           <b>My Trades</b> tab and it will follow you to your other devices instead.</div>`);
   return `<div class="card"><h2>Watch List</h2>
+    ${syncNote}
     <div class="scrhint"><b>Swipe</b> the table sideways to see Season pts and Season gain.</div>
     <div class="scr"><table>
       <thead><tr><th class="c-team">Team</th>
@@ -3463,6 +3487,19 @@ function toggleMine(n){ OPEN_MINE = (OPEN_MINE === n) ? null : n; renderPick(); 
  */
 const WATCH_KEY = 'rfl_watch_v1';
 let WATCH = [];
+
+/* WHERE THE LIST REALLY LIVES.
+ * Casey, 14 Sep 2026: "move it to the league backend so it follows me." So the back end is the
+ * AUTHORITY whenever he is signed in, and this browser keeps a copy only so the tab can paint
+ * before the answer comes back. The copy is never merged with the answer -- it is REPLACED by
+ * it. Merging two versions of a list somebody edits on two devices invents entries that were
+ * deliberately removed, and a shortlist that grows back is worse than one that is occasionally
+ * behind.
+ * SIGNED OUT, the browser copy is all there is, and it behaves exactly as it did before.
+ */
+let WATCH_SYNCED = false;      // has the back end answered at least once this page load
+let WATCH_ERR = null;          // the last push that did not land, in words
+
 function watchLoad(){
   if (LEAGUE) return;                        // the all-owners page has no personal anything
   try {
@@ -3474,9 +3511,44 @@ function watchLoad(){
     if (Array.isArray(v)) WATCH = v.filter(n => typeof n === 'string' && BY.get(n));
   } catch (e) { WATCH = []; }
 }
-function watchSave(){
+function watchCache(){
   try { localStorage.setItem(WATCH_KEY, JSON.stringify(WATCH)); } catch (e) {}
 }
+
+/* THE BACK END'S COPY, ASKED FOR ONCE THE PAGE KNOWS WHO IS SIGNED IN. */
+function watchPull(){
+  if (LEAGUE || !TRADES_API) return;
+  tradesCall('prefs').then(a => {
+    if (!a || !a.ok) return;                 // not signed in, or it did not answer: keep local
+    const v = (a.prefs && Array.isArray(a.prefs.watch)) ? a.prefs.watch : [];
+    WATCH = v.filter(n => typeof n === 'string' && BY.get(n));
+    WATCH_SYNCED = true;
+    WATCH_ERR = null;
+    watchCache();
+    if (PROJ_ON && el('pick') && !el('pick').hidden) renderPick();
+  }).catch(() => {});
+}
+
+/* AND THE PUSH. A failure is SAID OUT LOUD on the tab rather than swallowed -- a list he thinks
+   is following him and is not is the one outcome worth more than a quiet retry. */
+function watchPush(){
+  watchCache();
+  if (LEAGUE || !TRADES_API) return;
+  tradesCall('setprefs', {prefs: {watch: WATCH}}).then(a => {
+    const ok = !!(a && a.ok);
+    WATCH_ERR = ok ? null
+      : (a && a.why === 'nokey'
+          ? 'Not signed in on this device, so this list is only saved in this browser.'
+          : 'The league did not save this list, so it is only in this browser for now.');
+    WATCH_SYNCED = ok || WATCH_SYNCED;
+    if (PROJ_ON && el('pick') && !el('pick').hidden) renderPick();
+  }).catch(() => {
+    WATCH_ERR = 'The league could not be reached, so this list is only in this browser for now.';
+    if (PROJ_ON && el('pick') && !el('pick').hidden) renderPick();
+  });
+}
+
+function watchSave(){ watchPush(); }
 const watching = n => WATCH.indexOf(n) >= 0;
 
 function watchToggle(n){
@@ -8312,6 +8384,9 @@ if (TRADES_API){
   const adopt = me => {
     addCommishTabs(!!(me && me.role === 'commissioner'));
     if (me && me.div && me.seat) signedInAs(me.div, me.seat);
+    /* HIS OWN SETTINGS FOLLOW THE SIGN-IN, not the browser. Asked for here rather than at boot
+       because before this answer there is nobody to ask about. */
+    if (me && me.seat) watchPull();
   };
   /* THE TRADES PAGE CALLS THIS WHEN SOMEBODY HAS JUST SIGNED IN, so the tabs and the name on
      every other tab follow without the dashboard having to be reloaded by hand. */
