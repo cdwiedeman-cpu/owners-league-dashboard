@@ -2568,6 +2568,7 @@ function offerResult(){
 
 function viewTrades(){
   var s = whoIsThis();
+  var s0 = s;
   if (!s || !s.seat) return '<div class="card"><div class="empty"><p><b>Sign in first.</b></p>'
     + '<p>The seat a trade lands on comes from what this device is holding, so there is nothing '
     + 'to fill in until you have signed in.</p>'
@@ -2586,86 +2587,59 @@ function viewTrades(){
      clock was in, so an owner in the Monday-list window had no way to learn the other half
      existed, let alone what to do in it. **A TOOL THAT SHOWS ONLY THE CURRENT STEP CANNOT TEACH
      THE PROCESS** — the reader needs the shape of the week before they need today's form. */
-  var h = clockBanner() + myResultCard() + twoWays(fcfs);
-  if (s.role === 'commissioner'){
-    /* THE EMAIL IN THIS SENTENCE DOES NOT EXIST. Nothing sends mail, on purpose, and the line
-       had outlived the thing it described. And the sentence never answered the question a
-       commissioner actually arrives with, which Casey asked outright on 14 Sep 2026: "if I'm
-       gonna make a trade for myself, do I use this?" No. It is already set to you. */
-    h += '<div class="card"><h2>Commissioner &mdash; Entering for Someone Else</h2>'
-      + '<p class="note"><b>Leave this set to yourself to enter your own trade.</b> It already '
-      + 'is. Your own list works exactly as any owner\'s does.</p>'
-      + '<p class="note">Change it only to enter a trade for an owner who has told you theirs. '
-      + 'Same form, same rules, same clock. The trade is recorded against <b>their team</b>, not '
-      + 'against you, and the log keeps a line saying you were the one who entered it.</p>'
-      + '<label class="lb" for="ba">Submitting for</label><select id="ba" '
-      + 'onchange="S.actingAs=this.value||null;save();render()"><option value="">— myself ('
-      + esc(s.seat) + ') —</option>'
-      + DATA.seats.map(function(x){
-          var kk = key(x.div, x.owner);
-          return '<option value="' + esc(kk) + '"' + (S.actingAs === kk ? ' selected' : '') + '>'
-            + esc(x.owner) + ' — ' + esc(DATA.div_names[x.div] || x.div) + '</option>';
-        }).join('') + '</select></div>';
-  }
-  /* TELL THEM WHAT TO DO, IN ORDER, BEFORE SHOWING THEM ANY CONTROLS. Casey, 10 Sep 2026:
-     "'Rows run in order' doesn't give any sort of instruction to the end user as to what they
-     should be doing." He is right — that sentence describes the MECHANISM to somebody who
-     already knows what a row is for. An owner opening this tab for the first time needs the
-     three things to press, in the order they press them, with the buttons named. */
-  h += '<div class="card"><h2>' + (fcfs
-      ? 'First come, first served &mdash; Open Now'
-      : 'Your List for Monday') + '</h2>'
+  /* THE ORDER IS: WHERE YOU ARE, WHAT HAPPENED, THEN THE THING YOU CAME TO DO.
+     Everything that explains rather than does is a button now, not a wall of text above the form.
+     The commissioner's own panel moved to the BOTTOM: it is read once, in August, and it sat
+     between an owner and the only control on the page. */
+  var howTitle = fcfs ? 'How to Claim a Team' : 'How to Enter a Trade';
+  var howNote = fcfs
+    ? '<ol class="note"><li>Choose the team you want to <b>pick up</b>. Only teams nobody in '
+      + esc(DATA.div_names[a.div] || a.div) + ' owns are listed.</li>'
+      + '<li>Choose the team you will <b>drop</b> for it. It has to be the same kind of team — '
+      + 'college for college, NFL for NFL.</li>'
+      + '<li>Press <b>Claim It Now</b>. It happens immediately.</li></ol>'
+      + '<p class="note">There is no queue and no coin flip between Monday at 4:00pm AZ and 5:00pm AZ '
+      + 'Tuesday. Whoever asks first gets the team, so one at a time is all there is.</p>'
+    : '<ol class="note"><li>Press <b>Add a Trade</b> for each team you want. One trade is one '
+      + 'team.</li>'
+      + '<li>On each one, choose the team to <b>pick up</b>, then up to ' + P.MAX_DROPS
+      + ' teams you would be willing to <b>drop</b> for it. Put them in the order you would '
+      + 'prefer to drop them.</li>'
+      + '<li><b>Only one team gets dropped.</b> It is the first team on your drop list that '
+      + 'you still hold and are still allowed to drop. The teams below it are your backups, in '
+      + 'case an earlier trade on your list has already dropped one.</li>'
+      + '<li>Your trades are taken <b>in order, top to bottom</b>, so put what you want most at '
+      + 'the top.</li>'
+      + '<li>From row 2 on, a trade can depend on an earlier one. <b>When to Try This Trade</b> '
+      + 'gives you three choices: always try it, only if you do not win an earlier trade, or '
+      + 'only if you do win an earlier trade. That is how you say &ldquo;if I miss out on Navy, '
+      + 'try Alabama instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as '
+      + 'well&rdquo;.</li>'
+      + '<li>Press <b>Send My List</b>. Until you press it, your list is only saved on this '
+      + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
+      + '<p class="note">Up to ' + P.MAX_ROWS + ' trades. You can change and re-send as often as '
+      + 'you like, right up to Monday at 3:59pm AZ.</p>';
+  HOWNOTE = howNote;
+  WAYSNOTE = waysBlocks(fcfs);
+
+  var h = clockBanner() + myResultCard() + waysStrip(fcfs)
+    + '<div class="card"><h2>' + (fcfs ? 'Claim a Team' : 'Your List for Monday') + '</h2>'
     + (fcfs
         ? '<p class="note">The coin flips have been run. Anything still unowned is yours if you '
-          + 'ask first, until <b>Tuesday at 5:00pm AZ</b>. After that, list-building for next Monday '
-          + 'opens again.</p>'
-        : '<p class="note">Entry closes at <b>Monday at 3:59pm AZ</b>. First come, first served opens '
-          + 'straight afterwards and runs until Tuesday at 5:00pm AZ.</p>')
-    + (fcfs
-      ? '<ol class="note"><li>Choose the team you want to <b>pick up</b>. Only teams nobody in '
-        + esc(DATA.div_names[a.div] || a.div) + ' owns are listed.</li>'
-        + '<li>Choose the team you will <b>drop</b> for it. It has to be the same kind of team — '
-        + 'college for college, NFL for NFL.</li>'
-        + '<li>Press <b>Claim It Now</b>. It happens immediately.</li></ol>'
-        + '<p class="note">There is no queue and no coin flip between Monday at 4:00pm AZ and 5:00pm AZ '
-        + 'Tuesday. Whoever asks first gets the team, so one at a time is all there is.</p>'
-      : '<ol class="note"><li>Press <b>Add a Row</b> for each team you want. One row is one '
-        + 'team.</li>'
-        /* "THE FIRST ONE" HAD TWO CANDIDATES IN THE SAME SENTENCE. Casey, 10 Sep 2026: "it
-           makes it sound like the first pickup is the one used — that's also true, but that's
-           not what you mean." A pronoun with two live antecedents is a coin flip the reader has
-           to call. Name the list. */
-        + '<li>On each row, choose the team to <b>pick up</b>, then up to ' + P.MAX_DROPS
-        + ' teams you would be willing to <b>drop</b> for it. Put them in the order you would '
-        + 'prefer to drop them.</li>'
-        + '<li><b>Only one team gets dropped.</b> It is the first team on your drop list that '
-        + 'you still hold and are still allowed to drop. The teams below it are your backups, in '
-        + 'case an earlier trade on your list has already dropped one.</li>'
-        /* SAY IT THE WAY AN OWNER THINKS ABOUT IT. Casey, 10 Sep 2026: "they don't know we're
-           part of a run-it process — they're thinking in terms of a trade." "Run" and "come
-           through" are the machinery's words. "Got it" and "didn't get it" are the owner's, and
-           they are also MORE accurate: a row can fail to get a team without ever reaching a coin
-           flip. The two examples do the real work — a rule stated abstractly is a rule nobody
-           uses. */
-        + '<li>Your rows are taken <b>in order, top to bottom</b>, so put what you want most at '
-        + 'the top.</li>'
-        + '<li>From row 2 on, a row can depend on an earlier one. <b>When to Try This Trade</b> '
-        + 'gives you three choices: always try it, only if you do not win an earlier trade, or '
-        + 'only if you do win an earlier trade. That is how you say &ldquo;if I miss out on Navy, '
-        + 'try Alabama '
-        + 'instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as well&rdquo;.</li>'
-        /* NAME THE PLACE AND THE ACTION. Casey, 10 Sep 2026: "nothing is entered WHERE until
-           you do. Do WHAT?" Both halves were pronouns pointing at nothing. */
-        + '<li>Press <b>Send My List</b>. Until you press it, your list is only saved on this '
-        + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
-        + '<p class="note">Up to ' + P.MAX_ROWS + ' rows. You can change and re-send as often as '
-        + 'you like, right up to Monday at 3:59pm AZ.</p>')
-    + '<p class="note" style="border-top:1px solid var(--line);padding-top:9px">You are '
-    + '<b>' + esc(a.seat) + '</b> in ' + esc(DATA.div_names[a.div] || a.div) + ' · '
+          + 'ask first, until <b>Tuesday at 5:00pm AZ</b>.</p>'
+        : '<p class="note">Entry closes at <b>Monday at 3:59pm AZ</b>. First come, first served '
+          + 'opens straight afterwards and runs until Tuesday at 5:00pm AZ.</p>')
+    + '<div class="row">'
+    + '<button onclick="showHelp(' + jq(howTitle) + ',HOWNOTE)">' + esc(howTitle) + '</button>'
+    + '<button onclick="showHelp(\'What You Are Allowed to Trade\',RULESNOTE)">What Am I '
+    + 'Allowed to Trade?</button>'
+    + '<button onclick="showHelp(\'How the Week Works\',WAYSNOTE)">How the Week Works</button>'
+    + '</div>'
+    + '<p class="note" style="border-top:1px solid var(--line);padding-top:9px;margin-top:10px">'
+    + 'You are <b>' + esc(a.seat) + '</b> in ' + esc(DATA.div_names[a.div] || a.div) + ' · '
     + free.length + ' team' + (free.length === 1 ? '' : 's') + ' nobody in your division owns · '
-    + mine.length + ' on your roster</p></div>' + rulesCard();
-
-  if (fcfs) return h + fcfsForm(a, free, mine, k) + clockCard();
+    + mine.length + ' on your roster</p></div>';
+  if (fcfs) return h + fcfsForm(a, free, mine, k) + commishCard(s) + clockCard();
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
 
@@ -2727,10 +2701,22 @@ function viewTrades(){
     }
   }
   h += '</div>';
-  return h + clockCard();
+  return h + commishCard(s0) + clockCard();
 }
 
-function twoWays(fcfs){
+/* THE SHAPE OF THE WEEK, WITHOUT THE WALL.
+ *
+ * Casey, 14 Sep 2026: "you start out with a lot of text at the front, Two Ways to Get a Team,
+ * then the commissioner section, then your list for Monday, and then it's all the way at the
+ * bottom is Add a Trade. It seems like you got to go through a lot to get down to add a trade."
+ *
+ * He is right about the order and I was right about the content, so neither is thrown away. The
+ * page opens with ONE LINE saying which window is open and when it closes -- which is the only
+ * part of this that changes hour to hour -- and the full explanation is one tap behind it. A
+ * TOOL THAT SHOWS ONLY THE CURRENT STEP CANNOT TEACH THE PROCESS still holds: the other window
+ * is named on the strip and explained in full in the panel. It is just not in the way.
+ */
+function waysBlocks(fcfs){
   var block = function(open, when, title, what){
     return '<div class="wway' + (open ? ' on' : '') + '">'
       + '<div class="wwhen">' + esc(when) + (open ? ' &nbsp;<span class="pill good">Open Now'
@@ -2738,8 +2724,7 @@ function twoWays(fcfs){
       + '<div class="wtit">' + esc(title) + '</div>'
       + '<div class="wwhat">' + what + '</div></div>';
   };
-  return '<div class="card"><h2>Two Ways to Get a Team</h2>'
-    + '<p class="note">Every week runs the same way. Only one of these is open at a time, and '
+  return '<p class="note">Every week runs the same way. Only one of these is open at a time, and '
     + 'the one that is Open Now is marked.</p>'
     + '<div class="ways">'
     + block(!fcfs, 'Tuesday 5:01pm AZ — Monday 3:59pm AZ', 'Build a list for Monday',
@@ -2751,7 +2736,15 @@ function twoWays(fcfs){
         'Whatever is still unowned after the coin flips can be taken outright &mdash; one team, '
         + 'one drop, yours the moment you press the button. <b>No coin flip and no queue</b>, so '
         + 'if two of you want the same team it goes to whoever asks first.')
-    + '</div></div>';
+    + '</div>';
+}
+function waysStrip(fcfs){
+  return '<div class="card"><div class="statline">'
+    + '<span class="pill good">Open Now</span>'
+    + '<span class="big">' + (fcfs ? 'First Come, First Served' : 'Build Your List for Monday')
+    + '</span>'
+    + '<span class="pill">' + (fcfs ? 'until Tuesday 5:00pm AZ' : 'until Monday 3:59pm AZ')
+    + '</span></div></div>';
 }
 /* ---- CHOOSING A TEAM ---------------------------------------------------------------------
  * A TYPE-TO-FIND PICKER, NOT A 296-LONG DROPDOWN. Casey, 11 Sep 2026: "it needs to be a
@@ -2987,15 +2980,35 @@ function ppick(id, name){
    named MY difficulty in keeping the two numbers straight, and the labels were shorthand for a
    distinction the reader had not been told about yet. Say the two numbers, in two sentences, and
    let the reader see they are different. */
-function rulesCard(){
-  return '<div class="row" style="margin-top:10px;border-top:1px solid var(--line);'
-    + 'padding-top:10px"><button onclick="showHelp(\'What You Are Allowed to Trade\',RULESNOTE)">'
-    /* NO CAPTION BESIDE IT. Casey, 11 Sep 2026: "just take that off. What am I allowed to trade
-       is all you need. And what's inside of there is more than just the three game rule." The
-       caption was also WRONG, which is the better reason to cut it: the panel holds six rules,
-       only two of which are about three games. */
-    + 'What am I allowed to trade?</button></div>';
+var HOWNOTE = '', WAYSNOTE = '';
+/* THE COMMISSIONER'S OWN PANEL, AT THE BOTTOM. It is read once and then never again -- Bob sets
+   it and forgets it -- and it used to sit between an owner and the form. It stays OPEN whenever
+   he has actually chosen somebody else, because then it is not a setting any more, it is the
+   answer to "whose list am I looking at". */
+function commishCard(s){
+  if (!s || s.role !== 'commissioner') return '';
+  var on = !!S.actingAs;
+  return '<div class="card"' + (on ? ' style="border-color:#5b4a12"' : '') + '>'
+    + '<h2>Entering for Someone Else</h2>'
+    + (on
+        ? '<p class="note b">You are entering for <b>' + esc(String(S.actingAs).split('|')[1])
+          + '</b>, not for yourself. Set it back to yourself when you are done.</p>'
+        : '<p class="note">This is set to <b>you</b>, so the list above is your own. Change it '
+          + 'only to enter a trade an owner has told you about.</p>')
+    + '<label class="lb" for="ba">Submitting for</label><select id="ba" '
+    + 'onchange="S.actingAs=this.value||null;save();render()"><option value="">— myself ('
+    + esc(s.seat) + ') —</option>'
+    + DATA.seats.map(function(x){
+        var kk = key(x.div, x.owner);
+        return '<option value="' + esc(kk) + '"' + (S.actingAs === kk ? ' selected' : '') + '>'
+          + esc(x.owner) + ' — ' + esc(DATA.div_names[x.div] || x.div) + '</option>';
+      }).join('') + '</select>'
+    + '<p class="note" style="margin-top:8px">Same form, same rules, same clock. The trade is '
+    + 'recorded against <b>their team</b>, not against you, and the log keeps a line saying you '
+    + 'entered it.</p></div>';
 }
+/* THE RULES BUTTON MOVED INTO THE HEADER ROW WITH THE OTHER TWO, so this card is gone rather
+   than left behind for somebody to wire back in under the form it was taken out of. */
 function rulesRows(){
   /* SIX SHORT ROWS. Casey cut this himself on 11 Sep 2026, line by line, and every cut was the
      same kind of thing: a sentence that was true but was written for ME.
