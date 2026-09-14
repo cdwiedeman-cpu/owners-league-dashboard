@@ -199,14 +199,8 @@ async function handle(request, env) {
   if (fn === 'ping') {
     const access = await getJSON(env, 'access', []);
     const box = await readState(env);
-    /* WHETHER THE SETUP WORD IS CONFIGURED, AND NEVER WHAT IT IS.
-       Cloudflare does not list secrets on the bindings diagram, so the only way to tell from
-       outside was to try using it -- and a wrong word and a missing one give the same answer, on
-       purpose. A yes-or-no says what is needed and gives away nothing: knowing that a password
-       exists has never helped anybody guess it. */
     return out({ ok: true, at: new Date().toISOString(), seats: access.length,
-                 ready: !!box.state, rev: box.rev, store: 'cloudflare',
-                 admin_set: !!env.ADMIN, cron: '0 23 * * 1 (Mon 4:00pm AZ)' });
+                 ready: !!box.state, rev: box.rev, store: 'cloudflare' });
   }
 
   if (fn === 'public') return out(publicOf(await readState(env)));
@@ -380,12 +374,7 @@ async function handle(request, env) {
          the trade, not the individual person." Two co-owners are one owner as far as the league
          is concerned. The person who typed it is not recorded -- not shown, and not held quietly
          in the record either, because a field that exists gets displayed eventually. */
-      /* THE WEEK GOES ON THE ROW. A settle only takes entries stamped with the week it is
-         settling -- last week's list is spent, not pending. The first version of this stored no
-         week at all, so every entry sent through here would have been skipped on Monday and the
-         page would have shown a week that settled nothing. */
       s.requests[mine] = { div: who.div, seat: who.seat, rows,
-                           week: p('week') == null ? null : Number(p('week')),
                            submitted: new Date().toISOString(), by: who.seat };
     }
     const rev = box.rev + 1;
@@ -498,13 +487,6 @@ async function handle(request, env) {
                    who: memberLabel(m), role: m.role || 'owner', code: m.code })) });
   }
 
-  /* THE SAME SETTLE THE SCHEDULE RUNS, ASKED FOR BY HAND. Not a second implementation: Run It
-     on the page and this call and the Monday schedule all end in settleWeek(). */
-  if (fn === 'settle') {
-    return out(await settleWeek(env, {week: p('week') == null ? null : Number(p('week')),
-                                      force: !!p('force'), by: who.seat}));
-  }
-
   if (fn === 'load') {
     const box = await readState(env);
     const access = await getJSON(env, 'access', []);
@@ -543,117 +525,7 @@ async function handle(request, env) {
   return out({ ok: false, why: 'unknown', note: 'no such request: ' + fn });
 }
 
-/* ---------- SETTLING A WEEK, IN HERE ------------------------------------------------------
- *
- * Casey, 14 Sep 2026: "I'd prefer it to be automatic." It used to be, on a schedule Google kept,
- * and that died with the account.
- *
- * NOTHING ABOUT HOW A WEEK IS DECIDED LIVES HERE. `Peloton.resolve` decides it and `Board.build`
- * works out the four league facts it is handed. Both are the same files the page uses, bundled
- * in above. This function only fetches, calls, and writes down -- if it started making a
- * judgement of its own, the automatic Monday and the manual one could part company.
- *
- * THE BOARD IS FETCHED, NOT STORED. It is published beside this Worker's own source, so the
- * board a week is settled against is the board that is actually on the site. A copy kept in KV
- * would go stale the first time a rebuild was not pushed.
- */
-const BOARD_URL = 'https://cdwiedeman-cpu.github.io/owners-league-dashboard/backend/board.json';
-
-/* ARIZONA DOES NOT MOVE ITS CLOCKS. UTC-7 all year, so this is right in January and in July --
-   do not "fix" it in March. The league runs on AZ time and every date in the state is AZ. */
-function azNow(at) {
-  const d = at ? new Date(at) : new Date();
-  return new Date(d.getTime() - 7 * 3600 * 1000);
-}
-const azDay = (at) => azNow(at).toISOString().slice(0, 10);
-
-function weekOf(day, week1) {
-  const w1 = Date.parse((week1 || '2026-09-08') + 'T00:00:00Z');
-  const n = Math.floor((Date.parse(day + 'T00:00:00Z') - w1) / 604800000) + 1;
-  return n < 0 ? 0 : n;
-}
-
-async function settleWeek(env, opts) {
-  const o = opts || {};
-  const board = await fetch(BOARD_URL, {cf: {cacheTtl: 60}}).then((r) => r.json());
-  if (!board || !board.teams || !board.teams.length) {
-    return {ok: false, why: 'noboard', note: 'the board could not be read, so nothing was settled'};
-  }
-  const box = await readState(env);
-  const s = box.state;
-  if (!s) return {ok: false, why: 'empty', note: 'the league has not been set up yet'};
-
-  const day = o.day || azDay();
-  const week = o.week != null ? Number(o.week) : weekOf(day, board.week1);
-
-  /* A WEEK IS SETTLED ONCE. The schedule could fire twice, or fire after somebody pressed Run It,
-     and settling again would move rosters a second time on requests that are already spent. */
-  if (!o.force && s.ranWeeks && s.ranWeeks[week]) {
-    return {ok: false, why: 'already', week, note: 'that week has already been settled'};
-  }
-
-  /* THE SAME SELECTION THE PAGE MAKES, out of the same file. The first version of this built a
-     map keyed by seat and skipped both filters; the resolver wants a LIST, and a draft nobody
-     sent is not an entry. */
-  const pending = Board.pending(s.requests, week);
-  if (!pending.length) {
-    /* NOTHING TO DO IS NOT A FAILURE, and the week is still marked as run so the schedule does
-       not come back to it every hour. */
-    s.ranWeeks = s.ranWeeks || {};
-    s.ranWeeks[week] = {at: new Date().toISOString(), n: 0, by: o.by || 'schedule'};
-    await writeState(env, s, box.rev + 1);
-    return {ok: true, week, settled: 0, note: 'nobody sent a list, so there was nothing to settle'};
-  }
-
-  const league = Board.build({
-    teams: board.teams, rosters: s.rosters, acquiredAt: s.acquiredAt,
-    today: day, divisions: board.divisions, rules: board.rules,
-  });
-  const res = Peloton.resolve({league, requests: pending, week,
-                               seed: s.seed || 'RFL', fee: board.rules.trade_cost});
-
-  s.rosters = res.rosters;
-  s.acquiredAt = s.acquiredAt || {};
-  const when = new Date().toISOString();
-  (res.log || []).forEach((e) => {
-    const k = e.div + '|' + e.owner;
-    (s.acquiredAt[k] = s.acquiredAt[k] || {})[e['in']] = String(e.effective || day).slice(0, 10);
-    s.log = s.log || [];
-    s.log.unshift(Object.assign({when}, e));
-  });
-  s.results = {week, at: when, results: res.results, log: res.log};
-  s.requests = {};
-  s.ranWeeks = s.ranWeeks || {};
-  const prev = s.ranWeeks[week];
-  s.ranWeeks[week] = {at: when, n: (prev ? prev.n : 0) + (res.log || []).length,
-                      by: o.by || 'schedule'};
-  await writeState(env, s, box.rev + 1);
-  return {ok: true, week, settled: (res.log || []).length, at: when};
-}
-
 export default {
-  /* MONDAY, 4:00pm ARIZONA. The cron is `0 23 * * 1` in UTC, which is Monday 16:00 AZ all year
-     because Arizona does not observe daylight saving.
-     IT IS A SWITCH, NOT A LAW. `autoPeloton` is the same flag the Run It tab already shows as
-     Automatically / I Do It Myself. Set to do-it-myself, this fires and does nothing, and the
-     commissioner presses the button when they are ready. */
-  async scheduled(event, env, ctx) {
-    try {
-      const box = await readState(env);
-      const s = box.state;
-      if (!s) return;
-      if (s.autoPeloton === false) return;
-      await settleWeek(env, {at: event && event.scheduledTime, by: 'schedule'});
-    } catch (e) {
-      /* A SCHEDULED RUN HAS NOBODY WATCHING IT. Swallowing the error would leave a Monday that
-         quietly did not happen, so it is written where the next person to look will find it. */
-      try {
-        await putJSON(env, 'lastScheduleError',
-          {at: new Date().toISOString(), note: String((e && e.message) || e)});
-      } catch (e2) {}
-    }
-  },
-
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
     try {

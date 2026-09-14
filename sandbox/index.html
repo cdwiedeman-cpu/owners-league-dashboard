@@ -1059,6 +1059,9 @@ var Store = (function () {
           if (a.me) { role = a.me.role || 'owner'; mine = {div: a.me.div, seat: a.me.seat}; }
           set(a.state || opts.blank());
           if (opts.access && a.access) opts.access(a.access);
+          /* THE ACCESS HISTORY COMES BACK WITH THE ACCESS LIST, because it is a history OF
+             that list and a second round trip for it would be a second thing to go wrong. */
+          if (opts.accessLog) opts.accessLog(a.accessLog || []);
           /* WHO THIS DEVICE IS CAME BACK WITH THE DATA, so the page does not have to ask
              separately. One round trip to Google instead of two. */
           if (opts.whoami && a.me) opts.whoami(a);
@@ -1227,6 +1230,9 @@ function divCode(x){
   return DIV_CODE[k] || x;
 }
 
+/* WHAT THE LEAGUE SAYS HAS BEEN CHANGED ON THE ACCESS LIST, newest first. It is the league's
+   copy and not this browser's, so Bob's changes and Casey's are one list. */
+var LIVE_LOG = [];
 function adoptAccess(rows){
   if (!rows || !rows.length) return;
   var by = {}, hit = 0;
@@ -1415,6 +1421,17 @@ function code6(){
 /* A PRACTICE ADDRESS THAT BELONGS TO NOBODY. The sandbox is published, so it cannot carry a real
    owner's address, and it used to carry Casey's. example.com exists for exactly this and can
    never be registered by anyone. */
+/* THE PRACTICE COPY'S CODES ARE ITS OWN, and Casey's seat is the one he will reach for. Casey,
+   14 Sep 2026: "I copied my code from the access list, and it said the code is not one this
+   league issued." He had typed his REAL code into the practice copy. That is not a mistake he
+   made; it is the only code he has ever been given, and nothing on the tab said the practice copy
+   issues its own. So his own practice code is now the first thing on the tab, with a button. */
+function myPracticeRow(){
+  var me = DATA.me || {};
+  return (S.access || []).filter(function(a){
+    return a.div === me.div && a.seat === me.seat;
+  })[0] || null;
+}
 function practiceEmail(seat){
   return String(seat).toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '')
          + '@example.com';
@@ -1723,11 +1740,11 @@ function commishOnly(what){
       + '<p class="note">' + esc(m.note || '') + '</p></div>';
   }
   return h + '<p class="note">This part of the page belongs to the commissioner, and the league '
-    + 'spreadsheet has <b>' + esc(m.me && m.me.seat ? m.me.seat : 'this device')
+    + 'has <b>' + esc(m.me && m.me.seat ? m.me.seat : 'this device')
     + '</b> down as an owner.</p>'
-    + '<p class="note">If that is wrong, the fix is one cell: set <b>Role</b> to '
-    + '<b>commissioner</b> on that row of the <b>Access</b> tab. It takes effect the next time '
-    + 'this page is opened.</p>'
+    + '<p class="note">If that is wrong, ask a commissioner to change your <b>Role</b> to '
+    + '<b>commissioner</b> on the <b>Access List</b> tab. It takes effect on the next thing you '
+    + 'do here.</p>'
     + '<p class="note">Your own trades are on the <b>My Trades</b> tab.</p></div>';
 }
 function setTab(t){
@@ -1924,8 +1941,11 @@ function viewSignIn(){
   if (!(s && s.seat)){
     h += '<div class="card"><h2>Run It and Access List Are Not Shown Yet</h2>'
       + '<p class="note">This device is signed out, and those two tabs belong to a commissioner. '
-      + 'Sign in below on your own seat and both appear. In this practice copy your seat is '
-      + 'always a commissioner, so there is nothing to set up first.</p></div>';
+      + 'Sign in on your own seat and both appear. In this practice copy your seat is always a '
+      + 'commissioner, so there is nothing to set up first.</p>'
+      + '<p class="note"><b>Your practice code is on this tab, under Your Practice Code.</b> It '
+      + 'is not the code your commissioner gave you. The practice copy issues its own.</p>'
+      + '</div>';
   }
 
   if (s && s.seat){
@@ -1953,6 +1973,21 @@ function viewSignIn(){
       + esc(s.dead) + '. This is what an owner sees after their seat changes hands: the phone '
       + 'does not know anything happened until it next tries to do something.</p>'
       + '<button onclick="signOut();render()">Clear It and Start Again</button></div>';
+  }
+  /* HIS OWN CODE, FIRST, WITH THE ONE SENTENCE THAT EXPLAINS WHY HIS REAL ONE WILL NOT WORK. */
+  var meRow = myPracticeRow();
+  if (meRow){
+    h += '<div class="card"><h2>Your Practice Code</h2>'
+      + '<p class="note"><b>This practice copy issues its own codes.</b> The code your '
+      + 'commissioner gave you is for the real page and it will not work here. Yours for '
+      + 'practising is below.</p>'
+      + '<p style="font-size:26px;letter-spacing:3px;margin:10px 0" class="mono"><b>'
+      + esc(meRow.code || '') + '</b></p>'
+      + '<div class="row"><button class="pri" onclick="doCode(' + jq(meRow.code || '')
+      + ')">Sign Me In as ' + esc(meRow.seat) + '</button></div>'
+      + '<p class="note" style="margin-top:8px">That seat is a commissioner in the practice copy, '
+      + 'so signing in with it brings back the <b>Run It</b> and <b>Access List</b> tabs.</p>'
+      + '</div>';
   }
   h += '<div class="card"><h2>Sign In</h2>'
     + '<p class="note">Your commissioner gives you a six character code. Type it here once on '
@@ -2000,7 +2035,21 @@ function doCode(given){
   var v = given != null ? given : (el('pin') ? el('pin').value : '');
   if (!tidyCode(v)) return;
   var r = signInWithCode(v);
-  if (r.error){ render(); showHelp('That Code Did Not Work', '<p>' + esc(r.error) + '</p>'); return; }
+  if (r.error){
+    render();
+    var mine = myPracticeRow();
+    showHelp('That Code Did Not Work',
+      '<p>' + esc(r.error) + '</p>'
+      + (mine ? '<p><b>This is the practice copy, and it issues its own codes.</b> A code from '
+                + 'the real page will not work here.</p>'
+                + '<p>Your practice code is <b class="mono">' + esc(mine.code || '')
+                + '</b>.</p>'
+                + '<div class="row" style="margin-top:8px">'
+                + '<button class="pri" onclick="doCode(' + jq(mine.code || '')
+                + ')">Use It</button></div>'
+              : ''));
+    return;
+  }
   setTab('trades');
   showHelp('You Are Signed In',
     '<p>Device ' + esc(S.device) + ' is now <b>' + esc(r.seat) + '</b> in '
@@ -2965,24 +3014,23 @@ function viewRun(){
         auto ? 'The week settles itself a few minutes after 4:00pm AZ every Monday. You do nothing.'
              : 'Nothing will be settled on its own. Press <b>Run the Coin Flips</b> on this tab when '
                + 'you have entered everything.')
-    /* NAME THE SECTION AND THE BUTTON, NOT "IT APPEARS". Casey, 10 Sep 2026: "copy every owner's
-       email appears with the messages ready to paste — what are you talking about? Where should
-       he be looking?" A promise that something will show up, with no name for the thing or the
-       place, is worse than saying nothing: the reader now knows to hunt for something.
-       AND THE SIGN-IN LINE IS GONE FROM HERE. It answered a question nobody has asked at the
-       moment they are choosing this setting. It lives in the hover text on the option that
-       raises it, and in Bob's guide, where somebody who IS wondering will be. */
-    + setting('Results emails',
-        [{label: 'The Tool Sends Them', on: mail, act: "S.autoEmail=true;save();render()",
-          title: 'Each owner is emailed their own results as soon as a week is settled'},
-         {label: 'I Send Them', on: !mail, act: "S.autoEmail=false;save();render()",
-          title: 'Nobody is emailed their results. Sign-in links are not affected — people can '
-                 + 'still sign in.'}],
-        mail ? 'Each owner is emailed their own results within a minute of a week being settled.'
-             : 'Nobody is emailed. When you settle a week, the <b>Week ' + weekNo()
-               + ' — What Happened</b> section gains a <b>Copy every '
-               + 'owner\'s email</b> button: every message at once, each with the address it '
-               + 'goes to.')
+    /* THERE IS NO EMAIL SWITCH, BECAUSE NOTHING SENDS EMAIL. Casey, 14 Sep 2026: "the tool is
+       not sending emails, right? So that shouldn't be a switch." He is right, and it was worse
+       than a dead control: it DEFAULTED to The Tool Sends Them, and the results card then told
+       Bob every owner had been emailed when nobody had. A switch with only one real position is
+       a sentence. The back end sends no mail on purpose -- that is what got the Google account
+       disabled -- so this row says what happens and names the button that does it.
+       NAME THE SECTION AND THE BUTTON, NOT "IT APPEARS". Casey, 10 Sep 2026: "copy every
+       owner's email appears with the messages ready to paste -- what are you talking about?
+       Where should he be looking?" A promise that something will show up, with no name for the
+       thing or the place, is worse than saying nothing: the reader now knows to hunt for it. */
+    + '<div class="setrow"><div class="setlab">Results Emails</div>'
+    + '<div class="setwhy">Nothing is emailed by this tool, and nothing ever will be. '
+    + 'When a week is settled, the <b>Week ' + weekNo() + ' &mdash; What Happened</b> section '
+    + 'gains a <b>Copy Every Owner&#39;s Email</b> button. It puts every message on your '
+    + 'clipboard at once, each one headed with the address it goes to. You paste them into your '
+    + 'own mail and send them. That is the same whether the week settled itself on Monday or you '
+    + 'pressed <b>Run the Coin Flips</b> yourself.</div></div>'
     + '</div>';
 
   /* WHERE THE WEEK STANDS, in a sentence, before any button. The question somebody opens this
@@ -3228,18 +3276,18 @@ function resultsCard(){
   var keys = Object.keys(R.results).filter(function(k){ return (R.results[k] || []).length; }).sort();
   if (!keys.length) return '<div class="card"><div class="empty">The week resolved with nothing '
     + 'in it — no seat had a readable row.</div></div>';
-  var mailed = S.autoEmail !== false;
-  return '<div class="card"><h2>Week ' + R.week + ' — What Happened</h2>'
+  /* THE COPY BLOCK IS ALWAYS HERE. It used to be hidden whenever the email switch was on, and
+     the switch was on by default, so the normal case printed "Each owner has been emailed their
+     own results" while nothing had been sent. Nothing sends mail. */
+  return '<div class="card"><h2>Week ' + R.week + ' &mdash; What Happened</h2>'
     + '<p class="note">Run at ' + esc(pretty(R.at)) + '. Every row gets a sentence. A blank row '
     + 'would leave an owner unable to tell a loss from a bug.</p>'
-    + (mailed
-        ? '<p class="note g">Each owner has been emailed their own results.</p>'
-        : '<div class="card warn" style="margin:0 0 10px"><b>Nobody has been emailed.</b>'
-          + '<p class="note">Results emails are set to <b>I send them</b>, so none of this has '
-          + 'gone anywhere yet. <b>Copy every owner&#39;s email</b> puts every message on your '
-          + 'clipboard at once, each one headed with the address it goes to.</p>'
-          + '<div class="row"><button class="pri" onclick="copyAllEmails()">Copy every owner\'s '
-          + 'email</button></div></div>')
+    + '<div class="card warn" style="margin:0 0 10px"><b>Nobody has been emailed yet.</b>'
+    + '<p class="note">This tool does not send mail. <b>Copy Every Owner&#39;s Email</b> puts '
+    + 'every message on your clipboard at once, each one headed with the address it goes to. '
+    + 'Paste them into your own mail and send them.</p>'
+    + '<div class="row"><button class="pri" onclick="copyAllEmails()">Copy Every Owner&#39;s '
+    + 'Email</button></div></div>'
     + keys.map(function(k){
         var b = k.split('|'), seat = b[1];
         var rows = R.results[k] || [];
@@ -3382,21 +3430,36 @@ function note(row, what){
                   .concat(S.accessLog || []).slice(0, 80);
 }
 function logCard(){
-  /* ON THE REAL PAGE THERE IS NO SECOND HISTORY, because it could only ever be a partial one and
-     it would say otherwise. Addresses are changed in the spreadsheet, so this page never sees
-     those; it would record retirements pressed here and nothing else, under a sentence promising
-     "every address change". Casey, 13 Sep 2026: "are we going to see the recent changes there
-     once we start making changes? Or does that not belong on this page?" It does not. The script
-     writes the whole history on the Log tab and that is the one to read.
-     TWO STORES OF ONE FACT ARE WRITTEN TOGETHER OR ONE OF THEM LIES, and this one could not be. */
+  /* THE HISTORY IS THE LEAGUE'S, NOT THIS BROWSER'S. Casey, 14 Sep 2026: "you also need to fix
+     the history at the bottom of the access list. It's referring to the RFL trade spreadsheet
+     again." It was, and the older reason for that had stopped being true: the changes are made
+     HERE now, so the back end can record them, and it does. A browser-side list was the thing
+     that could only ever be partial -- Bob's laptop would hold Bob's changes under a sentence
+     promising every change. One list, kept beside the access list it describes. */
   if (Store.live()){
+    var LL = LIVE_LOG || [];
+    if (!LL.length){
+      return '<div class="card"><h2>The History</h2><p class="note">Nothing on the access list '
+        + 'has been changed yet. Every address change, every new code and every seat switched '
+        + 'off is recorded here from now on, with the date and who made it. Both commissioners '
+        + 'read the same list, so a change Bob makes shows up for Casey too.</p></div>';
+    }
     return '<div class="card"><h2>The History</h2>'
-      + '<p class="note">Every sign-in, every retirement and every trade is written on the '
-      + '<b>Log</b> tab of the <b>RFL Trades</b> spreadsheet, newest at the bottom, each with its '
-      + 'date. Settled trades are also on the <b>Transactions</b> tab, one per row.</p>'
-      + '<p class="note">This page does not keep its own copy. Addresses are changed in the '
-      + 'spreadsheet, so a list kept here would be missing exactly the changes you would come '
-      + 'looking for.</p></div>';
+      + '<p class="note">Newest first. Every change made on this page is here, with the date and '
+      + 'the person who made it. Trades are not on this list. Settled trades are on the '
+      + '<b>Rosters</b> tab.</p><div class="scr"><table>'
+      + '<colgroup><col style="width:26%"><col style="width:22%"><col style="width:52%">'
+      + '</colgroup>'
+      + '<thead><tr><th>When</th><th>Seat</th><th>What Changed</th></tr></thead><tbody>'
+      + LL.slice(0, 80).map(function(e){
+          return '<tr><td class="d">' + esc(pretty(e.at)) + '</td><td>' + esc(e.seat || '')
+            + '<div class="f" style="font-size:11px">'
+            + esc(DATA.div_names[e.div] || e.div || '') + '</div></td>'
+            + '<td class="d">' + esc(e.what || '')
+            + (e.by ? '<div class="f" style="font-size:11px">by ' + esc(e.by) + '</div>' : '')
+            + '</td></tr>';
+        }).join('')
+      + '</tbody></table></div></div>';
   }
   var L = S.accessLog || [];
   if (!L.length){
@@ -3470,7 +3533,8 @@ function liveAccessTable(){
     + '<colgroup><col style="width:20%"><col style="width:28%"><col style="width:12%">'
     + '<col style="width:18%"><col style="width:22%"></colgroup>'
     + '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
-    + '<th title="How many devices this person is signed in on right now.">Signed In</th>'
+    + '<th title="How many devices this person can use the page from right now.">'
+    + 'Signed In</th>'
     + '</tr></thead><tbody>' + out + '</tbody></table></div></div>';
 }
 
@@ -3623,8 +3687,8 @@ function practiceAccessTable(rows){
        In the practice copy every control stays, because trying "an owner leaves" without waiting
        for an owner to leave is the whole point of it. */
     + '<thead><tr><th>Seat</th><th>Email</th><th>Status</th>'
-    + '<th title="How many devices are holding a working key for this seat right now. '
-    + 'Retiring keys sends this to nobody signed in.">Signed in</th>'
+    + '<th title="How many devices can use the page as this seat right now.">'
+    + 'Signed in</th>'
     + (Store.live() ? '' : '<th></th>') + '</tr></thead><tbody>'
     + rows.map(function(r, i){
         var L = liveSessions(r);
@@ -3718,21 +3782,7 @@ function viewAccess(){
     + 'What to Do When Something Changes</button></div></div>'
     + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
     + '<colgroup><col style="width:32%"><col style="width:68%"></colgroup><tbody>'
-    + [['Seat', 'The owner as the league names them. Never edited here.'],
-       ['Email', 'A personal inbox. Blank means that owner cannot sign in yet and you enter '
-                 + 'their trades for them.'],
-       ['Status', '<b>active</b> is normal. <b>inactive</b> refuses everything that seat tries '
-                  + 'to submit and changes nothing else — the seat still appears in standings '
-                  + 'and scores. Use it when an owner leaves and nobody has taken over.'],
-       ['Signed in', 'How many devices are holding a working key for that seat right now, and '
-                  + 'since when. It answers the one question worth asking before you retire '
-                  + 'keys: is there anything to turn away? <b>Retire Keys Now</b> sends it to '
-                  + '<i>nobody signed in</i>, and that is how you know it worked. Retire when a '
-                  + 'seat changes hands — changing the address alone does not reach a phone '
-                  + 'that is already signed in, because it never asks for a new link.'],
-       ['Role', '<b>owner</b> for everybody except the commissioner, whose row says '
-                  + '<b>commissioner</b>. That is what lets him submit for any seat and enter a '
-                  + 'correction.']]
+    + columnRows()
       .map(function(r){
         return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
       }).join('')
@@ -3765,6 +3815,59 @@ function viewAccess(){
  * IT IS WRITTEN AS SITUATIONS BECAUSE THAT IS HOW IT ARRIVES. Nobody opens this page wanting to
  * use a button. They open it because an owner rang them.
  */
+/* THE COLUMN CARD MUST DESCRIBE THE TABLE HE IS ACTUALLY LOOKING AT. The live table has Seat,
+   Person, Code, Role and Signed In; the practice copy has Seat, Email, Status and Signed in. One
+   fixed list described the practice copy to a commissioner reading the live page.
+   AND IT DESCRIBES THE BUTTONS TOO. Casey, 14 Sep 2026, on the old Signed in line: "Retire keys
+   now sends it to nobody signed in. And that is how you know it worked. I don't know how I know
+   it worked." That sentence explained the column by describing what a button does to it, which
+   is machinery, not an answer. A column says what its number means. A button gets its own row
+   saying what it does and when to press it. */
+function columnRows(){
+  var live = Store.live();
+  var rows = live
+    ? [['Seat', 'The team, as the league names it. It is never edited here. A seat keeps its '
+                + 'roster, its points and its history whoever holds it.'],
+       ['Person', 'One row for each person on that seat. Six teams have two owners, so those '
+                + 'seats have two rows. <b>Change Address</b> corrects an email address. It does '
+                + 'not sign anybody out and it does not change their code.'],
+       ['Code', 'The six characters that person types to sign in. Read it out to them. It is '
+                + 'theirs alone, it never expires, and the same code works on every device they '
+                + 'own.'],
+       ['Role', '<b>owner</b> for almost everybody. <b>commissioner</b> also lets that person '
+                + 'settle a week, enter a trade for any seat, and open this page. The last '
+                + 'commissioner cannot be stood down.'],
+       ['Signed In', 'How many devices that person can use the page from right now. '
+                + '<b>nobody signed in</b> means none of them can. Read this column before you '
+                + 'retire a code, so you know whether anybody is about to lose their access.'],
+       ['Retire and Issue a New Code', 'Signs that person out on every device and gives you a new '
+                + 'code for them straight away. <b>Press it when a seat changes hands.</b> Also '
+                + 'press it if somebody loses a phone, or reads their code out to the wrong '
+                + 'person. Changing the email address does none of this on its own. The old '
+                + 'owner&rsquo;s phone stays signed in until you press this button.'],
+       ['Add a Second Owner', 'Puts another person on the same team. They get their own address, '
+                + 'their own code and their own role. Either of them can enter that '
+                + 'team&rsquo;s trades. A trade is recorded against the team, not against '
+                + 'whichever of them sent it.'],
+       ['Switch This Seat Off', 'Refuses everything that seat tries to send. Nothing else '
+                + 'changes: the team is still in the standings and still scores every week. Use '
+                + 'it when an owner leaves and nobody has taken the team. <b>Put This Seat '
+                + 'Back</b> undoes it.']]
+    : [['Seat', 'The owner as the league names them. Never edited here.'],
+       ['Email', 'A personal inbox. Blank means that owner cannot sign in yet, so you enter '
+                + 'their trades for them.'],
+       ['Status', '<b>active</b> is normal. <b>inactive</b> refuses everything that seat tries '
+                + 'to send and changes nothing else. The seat still appears in the standings and '
+                + 'still scores. Use it when an owner leaves and nobody has taken over.'],
+       ['Signed in', 'How many devices can use the page as that seat right now, and the date the '
+                + 'oldest of them signed in. <b>nobody signed in</b> means none of them can.'],
+       ['Retire Keys Now', 'Signs that seat out on every device. <b>Press it when a seat changes '
+                + 'hands.</b> Changing the address on its own does not sign anybody out, so the '
+                + 'old owner stays signed in until you press this button.'],
+       ['Role', '<b>owner</b> for everybody except a commissioner. A commissioner can also '
+                + 'submit for any seat and enter a correction.']];
+  return rows;
+}
 var ACCESSNOTE =
     '<p><b>An owner gets a new email address.</b></p>'
   + '<ol><li>Press <b>Change Address</b> on their row and type the new one.</li></ol>'
@@ -3878,23 +3981,9 @@ function addAccess(){
                  validAfter: '', role: 'owner'});
   save(); render();
 }
-function csv(){
-  var q = function(s){ return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; };
-  /* THE SHEET'S COLUMNS, NOT THIS PAGE'S STATE. The cut-off is the script's to keep and is not
-     a column anybody can paste over; `Retire?` is a request Bob types, so it goes out blank; and
-     `Signed in` is written by the script, so pasting a count in would be pasting in a lie. */
-  return ['Division,Seat,Email,Status,Role,Retire?,Signed in'].concat(S.access.map(function(r){
-    return [r.div, r.seat, r.email, r.status || 'active', r.role || 'owner', '', '']
-      .map(q).join(',');
-  })).join('\n');
-}
-function copyCSV(){
-  var t = csv();
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t);
-  showHelp('Paste this into the Sheet', '<p>Copied, if the browser allowed it. Either way here '
-    + 'it is — select it and copy.</p><pre class="mono" style="white-space:pre-wrap;'
-    + 'max-height:280px;overflow:auto">' + esc(t) + '</pre>');
-}
+/* THE PASTE-INTO-A-SPREADSHEET COPY BUTTON IS GONE WITH THE SPREADSHEET. Nothing called it
+   any more, and a function that builds a CSV of the access list is a thing somebody would wire
+   back up one day, into a page that has nowhere to paste it. */
 
 /* ---- TAB: rosters ------------------------------------------------------------------------------ */
 /* ---------- what a trade costs, and changing it ------------------------------------------ */
@@ -4088,7 +4177,7 @@ function blank(){
           divCodes: divCodeTable(),
           access: seedAccess(), former: [], requests: {}, rosters: freshRosters(),
           acquiredAt: {}, log: [], accessLog: [],
-          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, autoEmail: true, ranWeeks: {}, claimQueue: [], lastEmail: ''};
+          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, ranWeeks: {}, claimQueue: [], lastEmail: ''};
 }
 /* THE SAVE LIGHT. On the real one this is the reader's only way of knowing their trade reached
    the league rather than their own browser, so it says which, in words, at all times. */
@@ -4146,12 +4235,12 @@ function askForKey(){
 function accessWarning(){
   if (!Store.live() || !ACCESS_JOIN) return '';
   if (ACCESS_JOIN.matched >= ACCESS_JOIN.rows) return '';
-  return '<div class="card warn"><h2>Some Rows of the Access Tab Do Not Match a Seat</h2>'
+  return '<div class="card warn"><h2>Some Rows of the Access List Do Not Match a Seat</h2>'
     + '<p>The league has <b>' + ACCESS_JOIN.rows + '</b> people on its access list and <b>'
     + ACCESS_JOIN.matched + '</b> of them line up with a seat in this league. Any row that does '
     + 'not match is ignored, so the email address and the role on it do nothing.</p>'
-    + '<p>The Division and Seat columns have to read exactly as the league spells them. Paste '
-    + '<b>Owners_League_Access_List.csv</b> in again if a row has been edited by hand.</p></div>';
+    + '<p>A row only counts when its division and seat read exactly as the league spells them. '
+    + 'Tell Casey which rows do not match and he can correct them.</p></div>';
 }
 
 /* THE OPTIONS THE STORE BOOTS WITH, IN ONE PLACE. Reading the access list again after a
@@ -4164,6 +4253,7 @@ function bootOpts(){
     set: adopt,
     blank: blank,
     access: adoptAccess,
+    accessLog: function(L){ LIVE_LOG = L || []; },
     status: saveLight,
     /* THE LOAD ALREADY KNOWS WHO THIS IS, so `refreshMe` is skipped after it. */
     whoami: function(a){ LIVE_ME = {ok: true, me: a.me}; },
@@ -4171,11 +4261,11 @@ function bootOpts(){
     ready: function(stuck){
       if (!S) adopt(null);
       render();
-      if (stuck) showHelp('The League Sheet Could Not Be Reached',
-        '<p>This page keeps everything in the league spreadsheet, and it could not reach it just '
-        + 'now. Nothing you do here will be saved until it can.</p>'
-        + '<p>Check that you are online and reload the page. If it keeps happening, the script '
-        + 'on the sheet may need to be deployed again.</p>'
+      if (stuck) showHelp('The League Could Not Be Reached',
+        '<p>This page keeps everything with the league, and it could not reach it just now. '
+        + 'Nothing you do here will be saved until it can.</p>'
+        + '<p>Check that you are online, then reload the page. If it keeps happening, tell '
+        + 'Casey.</p>'
         + '<p class="note">' + esc(Store.why()) + '</p>');
     }
   };
