@@ -823,8 +823,14 @@ async function handle(request, env) {
   if (fn === 'ping') {
     const access = await getJSON(env, 'access', []);
     const box = await readState(env);
+    /* WHETHER THE SETUP WORD IS CONFIGURED, AND NEVER WHAT IT IS.
+       Cloudflare does not list secrets on the bindings diagram, so the only way to tell from
+       outside was to try using it -- and a wrong word and a missing one give the same answer, on
+       purpose. A yes-or-no says what is needed and gives away nothing: knowing that a password
+       exists has never helped anybody guess it. */
     return out({ ok: true, at: new Date().toISOString(), seats: access.length,
-                 ready: !!box.state, rev: box.rev, store: 'cloudflare' });
+                 ready: !!box.state, rev: box.rev, store: 'cloudflare',
+                 admin_set: !!env.ADMIN, cron: '0 23 * * 1 (Mon 4:00pm AZ)' });
   }
 
   if (fn === 'public') return out(publicOf(await readState(env)));
