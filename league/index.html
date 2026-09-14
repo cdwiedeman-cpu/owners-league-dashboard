@@ -828,6 +828,9 @@ details>summary::marker{color:var(--faint)}
        program, so three frames meant three page loads and six trips to Google for what is one
        draw. Casey felt that as a delay on every press. One frame, and the tab tells it which
        view to show. -->
+  <!-- SIGN IN HAS ITS OWN SECTION so it can be its own tab. Same frame, a different view of the
+       same page, which is how the other three work. -->
+  <section id="csignin" hidden></section>
   <section id="ctrades" hidden><div id="ctradesBody"></div></section>
   <section id="crun" hidden></section>
   <section id="caccess" hidden></section>
@@ -894,8 +897,20 @@ const TABSETS = {
  * THIS IS NOT THE PROTECTION. The sheet refuses a commissioner request from an owner's key
  * whatever this page draws. This only decides what is worth putting on screen.
  */
-const COMMISH_SECTIONS = ['ctrades','crun','caccess'];
-const COMMISH_PAGE = {ctrades: 'auto', crun: 'run', caccess: 'access'};
+const COMMISH_SECTIONS = ['csignin','ctrades','crun','caccess'];
+const COMMISH_PAGE = {csignin: 'signin', ctrades: 'auto', crun: 'run', caccess: 'access'};
+/* SIGN IN IS ITS OWN TAB, AND IT IS THE FIRST ONE, UNTIL SOMEBODY HAS SIGNED IN.
+ *
+ * Casey, 14 Sep 2026: "where you put in the key, it seems like it's too buried within the My
+ * Trades tab. Shouldn't it be a separate tab right to the far left that's Sign In, so it's more
+ * clear to everyone where to sign in?" He is right, and he is the one person who already knew
+ * where it was. Twenty-seven owners opening this for the first time do not.
+ *
+ * IT GOES AWAY ONCE THEY ARE IN. A Sign In tab sitting there permanently invites somebody to
+ * press it and wonder whether they are signed in or not. Once the league knows who they are, My
+ * Trades is the only tab they need and the sign-in lives inside it, where it was.
+ */
+const SIGNIN_TAB = [['csignin','Sign In']];
 const OWNER_TAB = [['ctrades','My Trades']];
 const COMMISH_ONLY_TABS = [['crun','Run It'],['caccess','Access List']];
 /* WHAT THE SHEET SAID LAST TIME. Casey, 13 Sep 2026: "when I load the App, the Run It and Access
@@ -913,11 +928,36 @@ function rememberedCommish(){
 function rememberCommish(yes){
   try { localStorage.setItem(COMMISH_MEMO, yes ? 'yes' : 'no'); } catch (e) {}
 }
-let TABS = (TABSETS[MODE] || TABSETS.personal)
+/* HAS ANYBODY SIGNED IN ON THIS DEVICE? Remembered, so the tab bar is right on the first paint
+   rather than rearranging itself a second later. The league still decides; this only picks what
+   is worth drawing while the answer is on its way. */
+const SIGNED_MEMO = 'rfl_signed_in';
+function rememberedSignedIn(){
+  try { return localStorage.getItem(SIGNED_MEMO) === 'yes'; } catch (e) { return false; }
+}
+function rememberSignedIn(yes){
+  try { localStorage.setItem(SIGNED_MEMO, yes ? 'yes' : 'no'); } catch (e) {}
+}
+let TABS = (TRADES_HOME && !rememberedSignedIn() ? SIGNIN_TAB : [])
+  .concat(TABSETS[MODE] || TABSETS.personal)
   .concat(TRADES_HOME ? OWNER_TAB : [])
   .concat(TRADES_HOME && rememberedCommish() ? COMMISH_ONLY_TABS : []);
 const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','tx']
   .concat(COMMISH_SECTIONS);
+
+/* PUT THE TAB UP, OR TAKE IT DOWN, TO MATCH WHO THE LEAGUE SAYS THIS IS. */
+function setSignInTab(signedIn){
+  rememberSignedIn(signedIn);
+  const there = TABS.some(([k]) => k === 'csignin');
+  if (signedIn === there){
+    const open = TABS.map(([k]) => k).find(k => { const n = el(k); return n && !n.hidden; });
+    TABS = signedIn ? TABS.filter(([k]) => k !== 'csignin') : SIGNIN_TAB.concat(TABS);
+    buildTabs();
+    /* THE TAB THAT WAS SHOWING STAYS SHOWING -- unless it was the one just removed, and then the
+       obvious place to land is My Trades, which is what they signed in for. */
+    showTab(open === 'csignin' ? 'ctrades' : (open || TABS[0][0]));
+  }
+}
 
 /* ASK THE LEAGUE SHEET WHETHER THIS DEVICE IS A COMMISSIONER'S, then add the two tabs. A key
    this browser holds may be a seat key whose Role says commissioner, or the spare key from the
@@ -1046,6 +1086,47 @@ function viewerLoad(){
 }
 /* ---- first-run setup ------------------------------------------------------------------- */
 let SETUP_OPEN = false;
+/* SOMEBODY WITHOUT A CODE ASKED TO CARRY ON ANYWAY. Held for this visit only: next time the
+   page opens it asks again, because the answer is usually "I have not been given it yet". */
+let CODE_FALLBACK = false;
+
+/* REDEEMING A CODE FROM THE DASHBOARD ITSELF, rather than sending them off to another tab to do
+   it. The trades page still owns signing in; this is the same call it makes. */
+function setupCodeGo(){
+  const box = el('setupCode'); if (!box) return;
+  const code = String(box.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const why = el('setupCodeWhy');
+  const say = (m, bad) => { if (why) why.innerHTML = bad ? `<b class="y">${m}</b>` : m; };
+  if (code.length !== 6){ say('A sign-in code is six letters and numbers. Check you have all six.', true); return; }
+  const btn = el('setupGo'); if (btn){ btn.disabled = true; btn.textContent = 'Checking…'; }
+  let old = '';
+  try { old = localStorage.getItem('rfl_commish_key') || ''; } catch (e) {}
+  fetch(TRADES_API, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                     body: JSON.stringify({fn: 'redeem', t: code, old})})
+    .then(r => r.json())
+    .then(a => {
+      if (btn){ btn.disabled = false; btn.textContent = 'Sign Me In'; }
+      if (!a || !a.ok){
+        say((a && a.note) || 'The league did not answer. Try again in a moment.', true);
+        return;
+      }
+      try { localStorage.setItem('rfl_commish_key', a.key); } catch (e) {}
+      closeSetup();
+      /* EVERYTHING THAT DEPENDS ON WHO THIS IS, ASKED AGAIN: the tabs, the seat on every grid,
+         and their own saved watch list. One answer, one place. */
+      whoAmI().then(me => {
+        setSignInTab(!!(me && me.seat));
+        addCommishTabs(!!(me && me.role === 'commissioner'));
+        if (me && me.div && me.seat) signedInAs(me.div, me.seat);
+        watchPull();
+      });
+    })
+    .catch(() => {
+      if (btn){ btn.disabled = false; btn.textContent = 'Sign Me In'; }
+      say('The league could not be reached. Check your connection and try again.', true);
+    });
+}
+
 function openSetup(){
   if (!LEAGUE) return;
   const box = el('setup'); if (!box) return;
@@ -1078,6 +1159,44 @@ function openSetup(){
     document.body.style.overflow = 'hidden';
     return;
   }
+  /* THE FIRST THING AN OWNER SEES IS THE SIGN-IN, when there is a league to sign in to.
+   *
+   * Casey, 14 Sep 2026: "if it's a one-time sign-in, then the first time you go to the web page
+   * it pops up and asks for the code, and you can't do anything until you put in the code."
+   *
+   * It also fixes something this panel got wrong. It used to ask WHICH OWNER ARE YOU and take
+   * the answer on trust -- its own words were "nothing is verified, it is a convenience, not a
+   * login". Anybody could set the page to anybody. A code makes the same question a real one.
+   *
+   * THERE IS STILL A WAY PAST IT, and deliberately. Not every owner will have a code, and Casey
+   * enters trades for those who do not. Refusing them the scoreboard as well would make the page
+   * useless to the people who need the most help. So the way past is quiet, and it hands them
+   * the old unverified name picker, which is all it ever was.
+   */
+  if (TRADES_API && !CODE_FALLBACK){
+    box.innerHTML = `<div class="modalbox">
+      <div class="modalhd"><div><h2>Sign In</h2></div></div>
+      <div class="note"><b>Your commissioner gave you a six character code.</b> Type it in once
+        and this device stays signed in. The page then shows your own teams, your own row in the
+        standings, and your own trades.</div>
+      <div class="bar" style="margin-top:12px">
+        <input class="search" id="setupCode" style="flex:1 1 200px;max-width:100%"
+          inputmode="text" autocapitalize="characters" autocorrect="off" spellcheck="false"
+          maxlength="8" placeholder="ABC123" aria-label="Your sign-in code"
+          onkeydown="if(event.key==='Enter')setupCodeGo()">
+        <button class="f primary" id="setupGo" onclick="setupCodeGo()">Sign Me In</button>
+      </div>
+      <div class="note" id="setupCodeWhy" style="margin-top:10px">Upper case or lower case both
+        work. No code has the letter O or the number 1 in it, so a character that looks like one
+        of those is the other.</div>
+      <div class="note" style="margin-top:14px"><a href="#" onclick="event.preventDefault();
+        CODE_FALLBACK=true;openSetup()">I do not have a code</a></div>
+    </div>`;
+    document.body.style.overflow = 'hidden';
+    const f = el('setupCode'); if (f) f.focus({preventScroll: true});
+    return;
+  }
+
   box.innerHTML = `<div class="modalbox">
     <div class="modalhd"><div><h2>${VIEWER ? 'Change Owner' : 'Welcome to the Reality Football League Dashboard'}</h2></div>
       <button class="modalx" onclick="closeSetup()" aria-label="Close">✕</button></div>
@@ -1702,7 +1821,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '13 Sep 2026, 6:30 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '13 Sep 2026, 8:10 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8382,6 +8501,7 @@ if (TRADES_API){
      commissioner's key, and whose seat it is. They used to be two separate round trips and only
      the first one existed, which is why signing in changed the trades tab and nothing else. */
   const adopt = me => {
+    setSignInTab(!!(me && me.seat));
     addCommishTabs(!!(me && me.role === 'commissioner'));
     if (me && me.div && me.seat) signedInAs(me.div, me.seat);
     /* HIS OWN SETTINGS FOLLOW THE SIGN-IN, not the browser. Asked for here rather than at boot
