@@ -170,13 +170,26 @@ td.num,th.num{text-align:right}
 .res.other{border-left-color:var(--faint)}
 .res .t{font-weight:600;font-size:13px}
 .res .w{font-size:12px;color:var(--dim);margin-top:2px}
+/* THE PANEL FITS THE SPACE IT IS GIVEN, AND ITS CLOSE BUTTON NEVER LEAVES THE SCREEN.
+   Casey, 14 Sep 2026, on the rules panel: "it pulls up a pretty large window that you can't
+   really scroll properly and the button to close it is hidden. Can you make it wider so it all
+   fits, versus a long and skinny pop-up."
+   Three things were wrong. The box could grow taller than the band it sits in, so its header --
+   which holds the only way out -- scrolled off the top. The scrolling belonged to the backdrop
+   rather than to the box, which is why it fought back. And 660px on a laptop made a wide table
+   into a tall column for no reason. Now: the box is capped at the height available, the HEADER
+   STAYS PUT and only the content under it scrolls, and it is allowed to be wide. */
 .modal{position:fixed;inset:0;background:rgba(4,8,13,.78);z-index:60;display:flex;
- align-items:flex-start;justify-content:center;padding:22px 12px;overflow:auto}
-.modalbox{background:var(--pan);border:1px solid var(--line);border-radius:12px;max-width:660px;
- width:100%;padding:14px}
+ align-items:flex-start;justify-content:center;padding:18px 12px;overflow:hidden}
+.modalbox{background:var(--pan);border:1px solid var(--line);border-radius:12px;max-width:980px;
+ width:100%;padding:14px;display:flex;flex-direction:column;max-height:100%;overflow:hidden}
 .modalhd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
- margin:0 0 8px}
+ margin:0 0 8px;flex:0 0 auto}
 .modalhd h2{margin:0}
+/* min-height:0 is what lets a flex child actually shrink and scroll instead of pushing the box
+   taller than its own max-height. Without it the header goes off screen again. */
+.modalbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+ padding-right:2px}
 .modalx{width:34px;min-width:34px;height:34px;padding:0;border-radius:8px}
 /* THE SAVE LIGHT. On the real page this is the only way a reader can tell that a trade reached
    the league rather than stopping in their own browser, so it is words and not a coloured dot. */
@@ -1850,9 +1863,14 @@ function placeModal(){
 }
 function showHelp(title, html){
   OPEN = title; var b = el('help'); b.hidden = false;
+  /* THE CONTENT GETS ITS OWN SCROLLER so the header, and the only way out, stays put. */
   b.innerHTML = '<div class="modalbox"><div class="modalhd"><h2>' + esc(title) + '</h2>'
     + '<button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button></div>'
-    + '<div class="note">' + html + '</div></div>';
+    + '<div class="note modalbody">' + html
+    + '<div class="row" style="margin-top:12px;justify-content:flex-end">'
+    + '<button onclick="closeHelp()">Close</button></div></div></div>';
+  /* TAPPING THE SHADED PART CLOSES IT. Only the shade itself -- a tap inside the box must not. */
+  b.onclick = function(e){ if (e.target === b) closeHelp(); };
   /* ONLY WHEN THIS PAGE IS THE ONE SCROLLING. Inside the frame this does nothing to the
      dashboard, and locking a scroll the reader can still move would be a lie either way. */
   if (!FRAME_VIEW) document.body.style.overflow = 'hidden';
