@@ -2002,7 +2002,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 4:50 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 4:59 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8595,6 +8595,34 @@ function applyLiveSlot(t, week){
   }
 }
 
+/* WHICH LEAGUE WEEK A DATE FALLS IN. Weeks run Tuesday to Monday from `league_week1_start`. */
+function lWeekOfDate(d){
+  const w1 = (DATA.calendar || {}).league_week1_start;
+  if (!w1 || !d) return null;
+  const n = Math.floor((Date.parse(d + 'T00:00:00Z') - Date.parse(w1 + 'T00:00:00Z'))
+                       / 604800000) + 1;
+  return n < 0 ? 0 : n;
+}
+/* THE WEEK A TRADE TAKES EFFECT IS NOT THE WEEK IT WAS ENTERED IN.
+ *
+ * Casey, 15 Sep 2026, on Spielman trading UNLV away for Virginia: "the slot is correct, it says
+ * traded away, but it's giving him 1.5 points for Virginia and it should not, because he's just
+ * now acquiring Virginia ... he made that trade for the upcoming week."
+ *
+ * He is right, and this was the same off-by-one as the label on the entry form. A list is entered
+ * during league week W, settled at 4:00pm on the Monday that ENDS week W, and the teams play for
+ * their new owner from week W+1. The snapshot was being stamped with W, so every game the team
+ * had already played that week counted for the owner who had just picked it up.
+ *
+ * The trades that come from the workbook were always right, because those carry a real effective
+ * DATE and are filed by it. Only the live path stamped the entry week. Both use the date now
+ * where there is one, and W+1 where there is not.
+ */
+function effWeek(t, w){
+  const byDate = t && t.effective ? lWeekOfDate(t.effective) : null;
+  return (byDate != null && byDate > 0) ? byDate : (w + 1);
+}
+
 function applyLiveTrades(list){
   const hist = DATA.owner_history || (DATA.owner_history = {});
   const txs = DATA.transactions || (DATA.transactions = {});
@@ -8630,6 +8658,9 @@ function applyLiveTrades(list){
   });
   const weeks = [...byWeek.keys()].sort((a, b) => a - b);
   for (const w of weeks){
+    /* Every trade settled in one week takes effect in the same later week, so one stamp covers
+       the group -- worked out from the first of them, which carries the same date as the rest. */
+    const ew = effWeek(byWeek.get(w)[0], w);
     for (const t of byWeek.get(w)){
       const div = t.div, owner = t.owner;
       if (t.out && labels[t.out])
@@ -8644,15 +8675,15 @@ function applyLiveTrades(list){
                           nothing came back charged in full and the correction was invisible. */
                        fee: (typeof t.fee === 'number') ? t.fee
                             : (DATA.trade_cost != null ? DATA.trade_cost : 3),
-                       fee_note: t.fee_note || '', week: w, live: true,
+                       fee_note: t.fee_note || '', week: ew, live: true,
                        how: t.how || '', contested: !!t.contested});
       LIVE_TX_N++;
     }
     /* THE MOVE TAKES EFFECT IN THE WEEK IT WAS SETTLED, so the snapshot is stamped with that
        week and everything before it keeps the old owner. */
-    hist.snapshots.push({asof: null, week: w, source: 'trades page',
+    hist.snapshots.push({asof: null, week: ew, source: 'trades page',
                          labels: _copyLabels(labels)});
-    for (const t of byWeek.get(w)) applyLiveSlot(t, w);
+    for (const t of byWeek.get(w)) applyLiveSlot(t, ew);
   }
   hist.snapshots.sort((a, b) => a.week - b.week);
 }
