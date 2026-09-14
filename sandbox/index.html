@@ -1679,7 +1679,20 @@ var COMMISH_TABS = {run: 1, access: 1};
    the reader sees. Casey, 12 Sep 2026: "I want them inside the dashboard." */
 var ONLY = (function(){
   var m = /[?&]only=([a-z]+)/.exec(String(location.search || ''));
-  return m ? m[1] : null;
+  if (m) return m[1];
+  /* A PAGE INSIDE A FRAME NEVER DRAWS ITS OWN TAB STRIP. Casey, 14 Sep 2026, on the Access List:
+     "out of nowhere the access list changed to Reality Football League trades ... it has sign in,
+     my trades, run it, access list and rosters all under the access list tab." That is this page
+     rendering its whole self inside the dashboard's own tab -- a tab strip inside a tab strip,
+     and a second yellow banner.
+     It happened because the view was read from the address ONCE, and the address can lose its
+     query afterwards: redeeming a sign-in code used to wipe the whole query string, and a frame
+     that reloads itself after that has nothing left to read. FIXING THE ADDRESS IS NOT ENOUGH,
+     because any future reload of this page without the query would do the same thing again.
+     So the rule is about the SITUATION, not the address: framed means no chrome, whatever the
+     address says. `auto` lets the page pick between the trades view and the sign-in box. */
+  try { if (window.parent && window.parent !== window) return 'auto'; } catch (e) { return 'auto'; }
+  return null;
 })();
 /* SWITCHING VIEW WITHOUT RELOADING.
    The dashboard used to hold three copies of this page, one per tab, and each one loaded itself
@@ -2084,7 +2097,14 @@ function redeemFromUrl(){
   var m = /[?&]t=([^&#]+)/.exec(String(location.search || ''));
   if (!m) return false;
   var code = decodeURIComponent(m[1]);
-  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  /* TAKE THE CODE OUT OF THE ADDRESS AND LEAVE EVERYTHING ELSE IN IT. This used to drop the
+     whole query string, which threw away `only=` along with the code. */
+  try {
+    var rest = String(location.search || '').replace(/([?&])t=[^&#]*/, '$1').replace(/[?&]+$/, '')
+                 .replace(/([?&])&+/g, '$1').replace(/^&/, '?');
+    if (rest === '?' ) rest = '';
+    history.replaceState(null, '', location.pathname + rest);
+  } catch (e) {}
   /* SOMETHING ON SCREEN WHILE IT HAPPENS. Casey, 13 Sep 2026: "When I clicked the sign in link it
      took me to a page with only saying THE LIVE LEAGUE ... None of the tabs on the page." The page
      was waiting on the league and drawing nothing at all, so a slow answer looked like a
@@ -3926,15 +3946,14 @@ function viewAccess(){
     + (Store.live() ? ''
         : '<button onclick="addAccess()">Add a Row</button>'
           )
+    + '<button onclick="showHelp(\'What Each Column Is For\', columnHelp())">'
+    + 'What Each Column Is For</button>'
     + '<button onclick="showHelp(\'What to Do When Something Changes\', ACCESSNOTE)">'
     + 'What to Do When Something Changes</button></div></div>'
-    + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
-    + '<colgroup><col style="width:32%"><col style="width:68%"></colgroup><tbody>'
-    + columnRows()
-      .map(function(r){
-        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
-      }).join('')
-    + '</tbody></table></div></div>'
+    /* THE COLUMN GUIDE IS A BUTTON, NOT A WALL. Casey, 14 Sep 2026: "the access list is a little
+       annoying. What each column is for, I think that can just be a button that opens up a
+       screen, and that'll simplify that whole screen." It is read once, by one person, on their
+       first visit; the table under it is read every week by that same person. */
     + (Store.live() ? liveAccessTable() : practiceAccessTable(rows))
     + sheetCard() + logCard();
 }
@@ -3971,6 +3990,13 @@ function viewAccess(){
    it worked." That sentence explained the column by describing what a button does to it, which
    is machinery, not an answer. A column says what its number means. A button gets its own row
    saying what it does and when to press it. */
+function columnHelp(){
+  return '<table><colgroup><col style="width:34%"><col style="width:66%"></colgroup><tbody>'
+    + columnRows().map(function(r){
+        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
+      }).join('')
+    + '</tbody></table>';
+}
 function columnRows(){
   var live = Store.live();
   var rows = live
