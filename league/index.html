@@ -935,10 +935,24 @@ const SIGNED_MEMO = 'rfl_signed_in';
 function rememberedSignedIn(){
   try { return localStorage.getItem(SIGNED_MEMO) === 'yes'; } catch (e) { return false; }
 }
+/* IS THERE A KEY IN THIS BROWSER AT ALL?
+ *
+ * The remembered flag is only written once the league has answered, and that answer may not have
+ * arrived yet, or may have failed on a bad connection. A key sitting here means somebody signed
+ * in on this browser, whichever page they did it on -- the two dashboards share one store,
+ * because they are the same site.
+ *
+ * DEMANDING A CODE FROM SOMEBODY WHO ALREADY HAS ONE IS THE WORST OF BOTH: it reads as broken,
+ * and the honest answer was available without asking. If the key turns out to be dead the league
+ * says so and the Sign In tab is still there.
+ */
+function hasKey(){
+  try { return !!localStorage.getItem('rfl_commish_key'); } catch (e) { return false; }
+}
 function rememberSignedIn(yes){
   try { localStorage.setItem(SIGNED_MEMO, yes ? 'yes' : 'no'); } catch (e) {}
 }
-let TABS = (TRADES_HOME && !rememberedSignedIn() ? SIGNIN_TAB : [])
+let TABS = (TRADES_HOME && !rememberedSignedIn() && !hasKey() ? SIGNIN_TAB : [])
   .concat(TABSETS[MODE] || TABSETS.personal)
   .concat(TRADES_HOME ? OWNER_TAB : [])
   .concat(TRADES_HOME && rememberedCommish() ? COMMISH_ONLY_TABS : []);
@@ -1112,6 +1126,9 @@ function setupCodeGo(){
       }
       try { localStorage.setItem('rfl_commish_key', a.key); } catch (e) {}
       closeSetup();
+      /* THE TRADES TAB HAS ALREADY DECIDED THIS DEVICE IS SIGNED OUT. Rebuild it so it asks the
+         league again, now that there is a key for it to ask with. */
+      resetTradeFrame();
       /* EVERYTHING THAT DEPENDS ON WHO THIS IS, ASKED AGAIN: the tabs, the seat on every grid,
          and their own saved watch list. One answer, one place. */
       whoAmI().then(me => {
@@ -1375,6 +1392,23 @@ function showTab(which){
  * dashboard opens no slower than before.
  */
 let COMMISH_LOADED = {};
+
+/* THE TRADES FRAME IS BUILT ONCE AND KEPT. That is right while nothing about the reader changes,
+ * and wrong the moment somebody signs in.
+ *
+ * Casey, 14 Sep 2026, having just typed his code into the dashboard: "when I click on My Trades
+ * it says sign in first." The frame had already loaded, found no key, and settled into being
+ * signed out. Writing the key into this browser afterwards does not reach a page that has
+ * finished asking. It holds its own answer and nothing told it to ask again.
+ *
+ * So the frame is thrown away and rebuilt. It reads the key at startup, and after a sign-in the
+ * only honest thing to hand it is a startup.
+ */
+function resetTradeFrame(){
+  const host = el(FRAME_HOST + 'Body');
+  if (host) host.innerHTML = '';
+  COMMISH_LOADED = {};
+}
 /* WHICH TABS ARE VIEWS OF THE ONE FRAME, and what each one is called inside it. */
 const FRAME_HOST = 'ctrades';
 /* IT IS LOADED BEFORE IT IS ASKED FOR.
@@ -1846,7 +1880,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '13 Sep 2026, 10:55 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '13 Sep 2026, 11:24 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8573,6 +8607,8 @@ function addCommishTabs(yes){
    personal page asks only while nobody has signed in -- once Casey has, it never asks again. */
 /* ASK ON THE WAY IN, ON BOTH PAGES, UNTIL SOMEBODY HAS ACTUALLY SIGNED IN. The league page also
    still asks a reader it has never seen at all, which is the owner-picker's own case. */
-if ((TRADES_API && !rememberedSignedIn()) || (LEAGUE && !VIEWER)) openSetup(true);
+if ((TRADES_API && !rememberedSignedIn() && !hasKey()) || (LEAGUE && !VIEWER && !hasKey())) {
+  openSetup(true);
+}
 pollNow();
 </script></body></html>
