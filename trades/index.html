@@ -3382,7 +3382,7 @@ function logCard(){
       + 'sit in the columns above.</p></div>';
   }
   return '<div class="card"><h2>Recent Changes</h2>'
-    + '<p class="note">Newest first. In the Google Sheet this is the <b>Log</b> tab, written by '
+    + '<p class="note">Newest first. Every change anybody makes on this page lands here, '
     + 'the script.</p><div class="scr"><table>'
     + '<colgroup><col style="width:30%"><col style="width:26%"><col style="width:44%"></colgroup>'
     + '<thead><tr><th>When</th><th>Seat</th><th>What</th></tr></thead><tbody>'
@@ -3394,44 +3394,10 @@ function logCard(){
       }).join('')
     + '</tbody></table></div></div>';
 }
-/* WHAT THIS LOOKS LIKE IN THE SHEET. Casey, 10 Sep 2026: "if this is in the Google Sheet,
-   nobody's going to see this tab... does Bob retire the keys in here, or is there something in
-   the Google Sheet where he's telling it to retire the keys?" A spreadsheet has no buttons, so
-   the answer has to be written down rather than implied by a page that has them. */
-function sheetCard(){
-  /* ON THE REAL PAGE THIS IS THE INSTRUCTIONS, not a description of something that will exist
-     later. The spreadsheet is where the work is done, so the card names the columns you type in
-     rather than explaining what the Sheet is going to be. */
-  return '<div class="card"><h2>' + (Store.live()
-      ? 'What Each Column in the Spreadsheet Means'
-      : 'The Same Thing in the Google Sheet') + '</h2>'
-    + '<p class="note">' + (Store.live()
-        ? 'The <b>Access</b> tab of <b>RFL Trades</b> has one row per seat and these columns.'
-        : 'A spreadsheet has no buttons, so <b>Retire Keys Now</b> is typed there instead. '
-          + 'Adding and removing a row is just adding and removing a spreadsheet row. The Sheet '
-          + 'has one row per seat and these columns:') + '</p>'
-    + '<div class="scr"><table>'
-    + '<colgroup><col style="width:30%"><col style="width:70%"></colgroup><tbody>'
-    + [['Division, Seat', 'Written once when the season is set up. Bob never touches them.'],
-       ['Email, Status, Role', 'The three you type. Email is the address that owner signs in '
-        + 'with. Status is <b>active</b> or <b>inactive</b>. Role is <b>owner</b>, or '
-        + '<b>commissioner</b> for Casey and Bob.'],
-       ['Retire?', 'Bob types an <b>x</b> here instead of pressing <b>Retire Keys Now</b>. Within '
-        + 'five minutes the script turns away every device signed in to that seat, empties the '
-        + 'cell again, and writes a line on the <b>Log</b> tab. <b>The empty cell is the '
-        + 'receipt</b> — while the x is still sitting there it has not happened yet.'],
-       ['Signed in', 'Written by the script, never typed. The same count as above, as of the last '
-        + 'time the script ran, which is never more than five minutes ago.']]
-      .map(function(r){
-        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
-      }).join('')
-    + '</tbody></table></div>'
-    /* THE PARAGRAPH THAT USED TO CLOSE THIS CARD IS GONE. It explained why there is no
-       "keys last retired" column, which defends a decision the reader never knew was taken.
-       Casey, 13 Sep 2026: "is that even needed? That seems like it's more for you than it would
-       be for Bob." It was. */
-    + '</div>';
-}
+/* THE CARD THAT SHOWED WHAT THIS LOOKED LIKE IN THE GOOGLE SHEET IS GONE.
+   It existed to answer "where is this in the spreadsheet", and there is no spreadsheet. Kept as
+   an empty function rather than chased through every caller. */
+function sheetCard(){ return ''; }
 /* ONE ROW PER PERSON, BECAUSE A CODE BELONGS TO A PERSON AND NOT TO A SEAT.
    Seats with two owners print twice, with the seat named once so the pairing is visible. */
 function liveAccessTable(){
@@ -3708,31 +3674,22 @@ function viewAccess(){
         + 'their own role. They share the roster and either can enter that team\u2019s trades.</p>'
         + '<p class="note">Every change here takes effect on that person\u2019s next request. '
         + 'Nothing is rebuilt and nobody has to sign in again.</p>'
-      : '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
-        + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
-        + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
-        + 'league Bob edits the Sheet itself. The script reads it on every sign-in and every '
-        + 'trade, so <b>an edit takes effect on the next thing anybody does</b> — nothing is '
-        + 'rebuilt and nobody else has to be involved.</p>')
+      : '<p class="note"><b>This is a practice copy.</b> Nothing you type here reaches the real '
+        + 'league and nothing there appears here. It is here so you can try &ldquo;an owner '
+        + 'leaves&rdquo; without waiting for an owner to leave.</p>'
+        + '<p class="note">On the live page this same tab is the real thing, and every change '
+        + 'takes effect on the next thing that person does.</p>')
     /* THE STEPS ARE FOR FILLING A COPY IN AND PASTING IT ACROSS, which is a thing you do once,
        in the practice copy. On the real page the spreadsheet is already the truth and there is
        nothing to paste anywhere. */
-    + (Store.live() ? ''
-        : '<ol class="note"><li>Type each owner&#39;s email into the <b>Email</b> column. '
-          + '<b>Personal inboxes only</b> — not the league list, and not an address that forwards '
-          + 'to several people.</li>'
-          + '<li>Leave <b>Email</b> blank for anybody without one. You enter their trades for '
-          + 'them.</li>'
-          + '<li>Two rows with the <b>same seat</b> is how two people share one team — add a row '
-          + 'and give it the same seat.</li>'
-          + '<li>When it is filled in, press <b>Copy It as CSV for the Sheet</b> and paste it '
-          + 'into the Google Sheet.</li></ol>')
+    /* THE PASTE-IT-INTO-THE-SHEET STEPS ARE GONE WITH THE SHEET. There is nowhere to paste it
+       and a button that copies a CSV for nothing is a button that gets pressed and puzzled over. */
     + '<p class="note"><b>' + filled + ' of ' + rows.length + '</b> row'
     + (rows.length === 1 ? '' : 's') + ' have an address so far.</p>'
     + '<div class="row">'
     + (Store.live() ? ''
         : '<button onclick="addAccess()">Add a Row</button>'
-          + '<button class="pri" onclick="copyCSV()">Copy It as CSV for the Sheet</button>')
+          )
     + '<button onclick="showHelp(\'What to Do When Something Changes\', ACCESSNOTE)">'
     + 'What to Do When Something Changes</button></div></div>'
     + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
@@ -4166,7 +4123,7 @@ function accessWarning(){
   if (!Store.live() || !ACCESS_JOIN) return '';
   if (ACCESS_JOIN.matched >= ACCESS_JOIN.rows) return '';
   return '<div class="card warn"><h2>Some Rows of the Access Tab Do Not Match a Seat</h2>'
-    + '<p>The league sheet has <b>' + ACCESS_JOIN.rows + '</b> rows on its Access tab and <b>'
+    + '<p>The league has <b>' + ACCESS_JOIN.rows + '</b> people on its access list and <b>'
     + ACCESS_JOIN.matched + '</b> of them line up with a seat in this league. Any row that does '
     + 'not match is ignored, so the email address and the role on it do nothing.</p>'
     + '<p>The Division and Seat columns have to read exactly as the league spells them. Paste '
