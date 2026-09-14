@@ -1445,6 +1445,12 @@ function openCommish(which){
   f.src = TRADES_HOME + '?only=' + page + (SIGNIN_CODE
             ? '&t=' + encodeURIComponent(SIGNIN_CODE) : '');
   f.title = 'Trades';
+  /* THE FRAME NEEDS PERMISSION TO USE THE CLIPBOARD. Casey, 14 Sep 2026: "the copy email does not
+     actually copy it to the clipboard. I had to go highlight all the text in the pop-up." A page
+     inside a frame cannot call navigator.clipboard unless the frame is allowed to, and nothing
+     says so -- the call simply does not happen. The trades page also copies the old way as a
+     fallback, which works without this, but this is the half that belongs here. */
+  f.allow = 'clipboard-write';
   f.style.cssText = 'width:100%;border:0;display:block;min-height:70vh;background:transparent';
   /* SOMETHING TO LOOK AT WHILE IT ARRIVES, on the slow first visit or a bad signal. An empty
      panel and a broken panel look the same. */
@@ -1880,7 +1886,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 12:20 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 12:39 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
