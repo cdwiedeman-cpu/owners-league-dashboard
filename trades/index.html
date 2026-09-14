@@ -2604,9 +2604,9 @@ function viewTrades(){
         + '<li>Your rows are taken <b>in order, top to bottom</b>, so put what you want most at '
         + 'the top.</li>'
         + '<li>From row 2 on, a row can depend on an earlier one. <b>When to Try This Trade</b> '
-        + 'gives you three choices: always try it, only if you miss an earlier trade, or only '
-        + 'if you get an earlier trade. That is how you say &ldquo;if I miss out on Navy, try '
-        + 'Alabama '
+        + 'gives you three choices: always try it, only if you do not win an earlier trade, or '
+        + 'only if you do win an earlier trade. That is how you say &ldquo;if I miss out on Navy, '
+        + 'try Alabama '
         + 'instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as well&rdquo;.</li>'
         /* NAME THE PLACE AND THE ACTION. Casey, 10 Sep 2026: "nothing is entered WHERE until
            you do. Do WHAT?" Both halves were pronouns pointing at nothing. */
@@ -2650,7 +2650,7 @@ function viewTrades(){
       var c = r.cond || {type: 'always'};
       return '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
         + (c.type === 'always' ? '' : '<span>only if you '
-            + (c.type === 'won' ? 'DO' : 'do NOT') + ' get the trade from row ' + c.row
+            + (c.type === 'won' ? 'DO' : 'do NOT') + ' win the trade in row ' + c.row
             + '</span>') + '</div>'
         + '<div><b>' + esc(r.pickup) + '</b> <span class="d">for</span> '
         + esc((r.drops || []).filter(Boolean).join(' or ')) + '</div></div>';
@@ -3098,9 +3098,9 @@ function rowForm(r, i, free, mine, k){
       + '<option value="always"' + (c.type === 'always' ? ' selected' : '')
       + '>Always try it</option>'
       + '<option value="lost"' + (c.type === 'lost' ? ' selected' : '')
-      + '>Only if I miss an earlier trade</option>'
+      + '>Only if I don\u2019t win an earlier trade</option>'
       + '<option value="won"' + (c.type === 'won' ? ' selected' : '')
-      + '>Only if I get an earlier trade</option></select>';
+      + '>Only if I win an earlier trade</option></select>';
     if (c.type === 'always'){
       /* NOT "EVERY WEEK". Casey, 14 Sep 2026: "that makes it sound like we're gonna try to make
          that trade every single week once they enter it. That's not the case." Right -- a list is
@@ -3119,10 +3119,10 @@ function rowForm(r, i, free, mine, k){
         + '</select>'
         + '<p class="note" style="margin:6px 0 0">'
         + (c.type === 'lost'
-            ? 'This trade is only tried if you do <b>not</b> get the trade from row ' + above
-              + '. If you do get the trade from row ' + above + ', this trade is skipped.'
-            : 'This trade is only tried if you <b>do</b> get the trade from row ' + above
-              + '. If you miss the trade from row ' + above + ', this trade is skipped.')
+            ? 'This trade is only tried if you do <b>not</b> win the trade in row ' + above
+              + '. If you do win it, this trade is skipped.'
+            : 'This trade is only tried if you <b>do</b> win the trade in row ' + above
+              + '. If you do not win it, this trade is skipped.')
         + '</p>';
     }
   }
