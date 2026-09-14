@@ -3086,8 +3086,12 @@ function rowForm(r, i, free, mine, k){
       + '<option value="won"' + (c.type === 'won' ? ' selected' : '')
       + '>Only if I get an earlier row</option></select>';
     if (c.type === 'always'){
-      h += '<p class="note" style="margin:6px 0 0">This row is tried every week, whether or not '
-        + 'you got the teams in the rows above it.</p>';
+      /* NOT "EVERY WEEK". Casey, 14 Sep 2026: "that makes it sound like we're gonna try to make
+         that trade every single week once they enter it. That's not the case." Right -- a list is
+         for ONE Monday and is cleared when the week settles. "Always" here means "wherever the
+         rows above it land", not "for ever". */
+      h += '<p class="note" style="margin:6px 0 0">This trade is always tried on Monday. It does '
+        + 'not matter whether you got the teams in the rows above it.</p>';
     } else {
       h += '<label class="lb" style="margin-top:7px">Which earlier row?</label>'
         + '<select onchange="editRow(' + i + ',\'condrow\',this.value)">'
