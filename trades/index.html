@@ -191,6 +191,26 @@ td.num,th.num{text-align:right}
 .modalbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
  padding-right:2px}
 .modalx{width:34px;min-width:34px;height:34px;padding:0;border-radius:8px}
+/* ---- ONE TRADE IS ONE CARD, AND ITS DROP CHOICES LIVE INSIDE IT -----------------------------
+   Casey, 15 Sep 2026, watching Bob: "sometimes he was going into the second choice to drop
+   thinking it was row two, and putting the team in there thinking he was going to add [another
+   trade]." The trade and the slots under it were the same weight, in the same column, so a second
+   box under a first box read as a second trade. Now the trade carries a banded header with its
+   number, and everything that belongs to it is indented behind a rule. */
+.tradehd{background:var(--pan2);margin:-9px -9px 10px;padding:9px 11px;
+ border-radius:8px 8px 0 0;border-bottom:1px solid var(--line);
+ display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tradehd .tno{font-weight:700;font-size:15px;color:var(--ink);letter-spacing:.01em}
+.tradehd .tsub{font-size:11px;color:var(--dim)}
+.dropbox{border-left:3px solid var(--line);padding:2px 0 2px 11px;margin:0 0 2px}
+/* ---- THE TWO BUTTONS THAT MATTER ARE ALWAYS ON SCREEN ---------------------------------------
+   He kept scrolling up and down hunting for Add Another Trade and Send My List. On a page this
+   tall that is not a labelling problem, it is a position problem. */
+.stickybar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--pan);
+ border-top:1px solid var(--line);padding:9px 12px;display:flex;flex-wrap:wrap;gap:8px;
+ align-items:center;box-shadow:0 -10px 24px rgba(0,0,0,.45)}
+.stickybar .grow{flex:1 1 120px;min-width:0;font-size:12px;color:var(--dim)}
+body.hasbar{padding-bottom:76px}
 /* THE SAVE LIGHT. On the real page this is the only way a reader can tell that a trade reached
    the league rather than stopping in their own browser, so it is words and not a coloured dot. */
 .chip{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;font-size:12px;
@@ -1865,7 +1885,22 @@ window.addEventListener('message', function(e){
   if (typeof d.top !== 'number' || typeof d.height !== 'number') return;
   FRAME_VIEW = d;
   placeModal();
+  placeBar();
 });
+/* THE ACTION BAR SITS ON THE BOTTOM EDGE OF WHATEVER IS ON SCREEN. Same problem as the panel,
+   same answer: inside the dashboard the frame does not scroll, so `position: fixed` would pin it
+   to the bottom of a page two screens tall. Standing alone the CSS default is already right. */
+function placeBar(){
+  var bar = el('actbar');
+  if (!bar) return;
+  if (!FRAME_VIEW || !(FRAME_VIEW.height > 0)){
+    bar.style.position = ''; bar.style.top = ''; bar.style.bottom = '';
+    return;
+  }
+  bar.style.position = 'absolute';
+  bar.style.bottom = 'auto';
+  bar.style.top = Math.max(0, FRAME_VIEW.top + FRAME_VIEW.height - bar.offsetHeight) + 'px';
+}
 function placeModal(){
   var b = el('help');
   if (!b || b.hidden) return;
@@ -1924,6 +1959,10 @@ document.addEventListener('pointerup', releasePointer, true);
 document.addEventListener('pointercancel', releasePointer, true);
 /* A WATCHDOG, because a held render that never runs is a page frozen on old numbers, which is
    worse than the tap it was protecting. If no pointerup arrives, flush anyway. */
+/* THE BAR IS OVER THE PAGE, so the page has to end above it. */
+function barRoom(on){
+  try { document.body.classList[on ? 'add' : 'remove']('hasbar'); } catch (e) {}
+}
 function render(){
   if (PTR_DOWN){
     if (!RENDER_HELD){ RENDER_HELD = true; setTimeout(releasePointer, 400); }
@@ -1973,6 +2012,7 @@ function render(){
     }
     var only = {signin: viewSignIn, trades: viewTrades, run: viewRun,
                 access: viewAccess, rosters: viewRosters}[want] || viewSignIn;
+    barRoom(want === 'trades');
     el('body').innerHTML = accessWarning() + ((COMMISH_TABS[want] && !isCommish())
       ? commishOnly(want === 'run' ? 'Run It' : 'The Access List')
       : only());
@@ -1988,6 +2028,7 @@ function render(){
   }).join('');
   var view = {signin: viewSignIn, trades: viewTrades, run: viewRun,
               access: viewAccess, rosters: viewRosters}[TAB] || viewSignIn;
+  barRoom(TAB === 'trades');
   if (COMMISH_TABS[TAB] && !isCommish()){
     el('body').innerHTML = accessWarning() + commishOnly(TAB === 'run' ? 'Run It' : 'The Access List');
   } else {
@@ -2732,9 +2773,10 @@ function viewTrades(){
        without noticing you never sent it again. */
     h += rows.map(function(r, i){
       var c = r.cond || {type: 'always'};
-      return '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
-        + (c.type === 'always' ? '' : '<span>only if you '
-            + (c.type === 'won' ? 'DO' : 'do NOT') + ' win the trade in row ' + c.row
+      return '<div class="trow"><div class="tradehd"><span class="tno">Trade ' + (i + 1)
+        + '</span>'
+        + (c.type === 'always' ? '' : '<span class="tsub">only if you '
+            + (c.type === 'won' ? 'DO' : 'do NOT') + ' win trade ' + c.row
             + '</span>') + '</div>'
         + '<div><b>' + esc(r.pickup) + '</b> <span class="d">for</span> '
         + esc((r.drops || []).filter(Boolean).join(' or ')) + '</div></div>';
@@ -2765,6 +2807,25 @@ function viewTrades(){
     }
   }
   h += '</div>';
+  /* THE TWO BUTTONS THAT MATTER, ALWAYS ON SCREEN.
+     Casey, 15 Sep 2026, watching Bob: "he kept struggling with the Add Another Trade button,
+     kept scrolling up and down to try to find it. And the Send My List, he was struggling to
+     find that because this page is pretty busy." The inline buttons stay where they are -- they
+     are where the eye lands after the last trade -- and this bar means he never has to hunt. */
+  if (!sent){
+    h += '<div class="stickybar" id="actbar">'
+      + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
+      + '+ Add Another Trade</button>'
+      + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades · not sent yet'
+      + '</span>'
+      + '<button class="pri" ' + (rows.length ? '' : 'disabled')
+      + ' onclick="submitList()">Send My List</button></div>';
+  } else {
+    h += '<div class="stickybar" id="actbar">'
+      + '<span class="grow"><b class="g">Your list is in.</b> ' + rows.length + ' trade'
+      + (rows.length === 1 ? '' : 's') + ' entered for Monday.</span>'
+      + '<button onclick="unsubmit()">Change My List</button></div>';
+  }
   return h + commishCard(s0) + clockCard();
 }
 
@@ -3179,10 +3240,12 @@ function rowForm(r, i, free, mine, k){
   var dropList = kind ? ofKind(mine, kind) : mine;
   var ups = free.map(function(n){ return {n: n, why: whyNotClaim(n)}; });
   var ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
-  var h = '<div class="trow"><div class="hd"><span>Row ' + (i + 1) + '</span>'
+  var h = '<div class="trow"><div class="tradehd">'
+    + '<span class="tno">Trade ' + (i + 1) + '</span>'
     + (r.pickup ? '<span class="pill">' + (kind === 'NFL' ? 'NFL' : 'college') + '</span>' : '')
-    + '<button onclick="delRow(' + i + ')" title="Remove row ' + (i + 1) + '">Remove</button>'
-    + '</div>'
+    + '<span class="tsub">' + (r.pickup ? esc(r.pickup) : 'nothing chosen yet') + '</span>'
+    + '<button onclick="delRow(' + i + ')" title="Remove trade ' + (i + 1)
+    + '">Remove</button></div>'
     + pickField('p' + i, 'The Team You Want', r.pickup, ups, null, '1')
     + '<label class="lb step' + ((r.drops || []).filter(Boolean).length ? ' done' : '')
     + '" style="margin-top:11px"><span class="num">2</span>What You Would Give Up</label>'
@@ -3204,12 +3267,14 @@ function rowForm(r, i, free, mine, k){
   /* NUMBERED, AND ONE PER LINE. Casey, 11 Sep 2026: "are we reading it left to right or top to
      bottom? That could confuse teams. I think we need to label it 1, 2, 3, 4." A two-column grid
      of identical boxes has no reading order at all, and the ORDER IS THE WHOLE RULE here. */
-  h += drops.map(function(d, j){
+  /* INDENTED BEHIND A RULE, so a second box under the first cannot read as a second trade. */
+  h += '<div class="dropbox">' + drops.map(function(d, j){
     var opts = dropList.map(function(n){ return {n: n, why: whyNotDrop(k, n, r.pickup)}; });
     return '<div class="dropslot">'
-      + pickField('d' + i + '_' + j, (ORD[j] || (j + 1) + 'th') + ' choice to drop', d, opts)
+      + pickField('d' + i + '_' + j,
+          (ORD[j] || (j + 1) + 'th') + ' choice to drop for trade ' + (i + 1), d, opts)
       + '</div>';
-  }).join('');
+  }).join('') + '</div>';
 
   /* STEP 3 DOES NOT EXIST ON THE FIRST ROW, AND IT USED TO.
    *
@@ -3941,8 +4006,10 @@ function welcomeText(seat, code, email){
   + 'PUT IT ON YOUR HOME SCREEN (Android)\n'
   + '1. Open the website link in Chrome.\n'
   + '2. Tap the three dots at the top right.\n'
-  + '3. Tap Add to Home screen, then tap Add or Install.\n'
-  + '4. Open it from the icon and type your code in once more.\n'
+  + '3. Look for Install app. Some phones call it Add to Home screen instead, and on some it\n'
+  + '   sits inside Share. Any of the three does the same thing.\n'
+  + '4. Tap Install or Add to confirm.\n'
+  + '5. Open it from the icon and type your code in once more.\n'
   + '\n'
   + 'ENTERING A TRADE\n'
   + 'Go to the My Trades tab. Name the team you want to pick up and the teams you would be willing to give up for it, then press Send My List.\n'
