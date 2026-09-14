@@ -802,7 +802,40 @@ function build(o) {
           holdMet: holdMet, claimOK: claimOK, tradeAwayOK: tradeAwayOK};
 }
 
-return {holdOf: holdOf, leftOf: leftOf, build: build};
+/* WHICH ENTRIES A SETTLE ACTUALLY TAKES, AND THE SHAPE THE RESOLVER WANTS THEM IN.
+ *
+ * This lived in the trades page. It is here because the back end settles Monday too, and the
+ * first version of the back end got it wrong in two ways at once: it handed the resolver a map
+ * keyed by seat when the resolver wants a LIST, and it skipped both filters below. The suite
+ * caught it. That is the whole argument for this file existing.
+ *
+ * THREE THINGS ARE FILTERED OUT, and each is a different situation:
+ *   a row for a DIFFERENT WEEK  -- last week's entry is spent, not pending
+ *   a list never SENT           -- a draft somebody typed and left is not an entry
+ *   a row with no pickup        -- an empty line in the middle of a list
+ */
+function pending(requests, week) {
+  var out = [];
+  Object.keys(requests || {}).forEach(function (k) {
+    var r = requests[k];
+    if (!r || r.week !== week || !(r.rows || []).length) return;
+    if (!r.submitted) return;
+    var b = k.split('|');
+    out.push({seat: b[1], div: b[0],
+              rows: r.rows.filter(function (x) { return x && x.pickup; })});
+  });
+  return out.filter(function (r) { return r.rows.length; });
+}
+
+/* WHICH LEAGUE WEEK A DAY FALLS IN. One implementation, because a settle that disagrees with the
+   page about the week number settles the wrong set of entries. */
+function weekOf(day, week1) {
+  var w1 = Date.parse((week1 || '2026-09-08') + 'T00:00:00Z');
+  var n = Math.floor((Date.parse(String(day).slice(0, 10) + 'T00:00:00Z') - w1) / 604800000) + 1;
+  return n < 0 ? 0 : n;
+}
+
+return {holdOf: holdOf, leftOf: leftOf, build: build, pending: pending, weekOf: weekOf};
 }));
 </script>
 <script>/* WHERE THE TRADES APPLICATION KEEPS WHAT IT KNOWS.
@@ -2780,17 +2813,7 @@ function doClaim(){
 }
 
 /* ---- TAB: run it ------------------------------------------------------------------------------ */
-function pendingRequests(){
-  var w = weekNo(), out = [];
-  Object.keys(S.requests).forEach(function(k){
-    var r = S.requests[k];
-    if (!r || r.week !== w || !(r.rows || []).length) return;
-    if (!r.submitted) return;                 // a draft is not an entry
-    var b = k.split('|');
-    out.push({seat: b[1], div: b[0], rows: r.rows.filter(function(x){ return x && x.pickup; })});
-  });
-  return out.filter(function(r){ return r.rows.length; });
-}
+function pendingRequests(){ return B_.pending(S.requests, weekNo()); }
 /* Typed but never sent. Shown on the Run tab so an owner missing from a week is explained on
    the screen rather than found by reading the code. */
 function draftSeats(){
