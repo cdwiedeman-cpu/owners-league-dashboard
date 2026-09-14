@@ -1774,7 +1774,9 @@ function render(){
     if (!RENDER_HELD){ RENDER_HELD = true; setTimeout(releasePointer, 400); }
     return;
   }
-  var s = session();
+  /* THE SAME QUESTION, THE SAME ANSWER, WHICHEVER COPY IS RUNNING. This bar names the seat the
+     reader is working as, and on the live page that comes from the league. */
+  var s = whoIsThis();
   /* WHAT AN OWNER NEEDS TO KNOW AT A GLANCE, and nothing about how any of it works.
      Casey, 13 Sep 2026: "I don't know what the date means or why it matters. The Peloton Entry is
      open for Week 1 is helpful." So on the real page it is the week and what is open, in words.
@@ -2193,8 +2195,28 @@ function showTokenTest(){
 }
 
 /* ---- TAB: my trades -------------------------------------------------------------------------- */
+/* WHO THIS DEVICE IS, ON WHICHEVER COPY IS RUNNING.
+ *
+ * The practice copy works it out from its own pretend devices and keys, because that is the
+ * lesson it exists to teach. The real page cannot: there are no devices in its state, and the
+ * only thing that knows whose key this is, is the league.
+ *
+ * Casey, 14 Sep 2026, signed in on the live page as a commissioner, with Run It and the Access
+ * List both open in front of him: "My Trades says sign in first." Both were true at once. The
+ * dashboard had asked the league who he was and been told; the trades tab had asked the practice
+ * copy's device list, found it empty, and concluded nobody was there.
+ */
+function whoIsThis(){
+  if (Store.live()){
+    var m = LIVE_ME && LIVE_ME.ok && LIVE_ME.me;
+    if (!m || !m.seat) return null;
+    return {div: m.div, seat: m.seat, role: m.role || 'owner', email: m.email || ''};
+  }
+  return session();
+}
+
 function actingSeat(){
-  var s = session();
+  var s = whoIsThis();
   if (!s || !s.seat) return null;
   if (s.role === 'commissioner' && S.actingAs){
     var b = S.actingAs.split('|');
@@ -2312,10 +2334,12 @@ function editRow(i, field, v, j){
   rows[i] = row; setRows(rows); render();
 }
 function viewTrades(){
-  var s = session();
-  if (!s || !s.seat) return '<div class="card"><div class="empty">Sign in first — the seat a '
-    + 'trade lands on comes from the key this device is holding, so there is nothing to fill in '
-    + 'until there is one.</div></div>';
+  var s = whoIsThis();
+  if (!s || !s.seat) return '<div class="card"><div class="empty"><p><b>Sign in first.</b></p>'
+    + '<p>The seat a trade lands on comes from what this device is holding, so there is nothing '
+    + 'to fill in until you have signed in.</p>'
+    + '<p>Your commissioner gives you a six character code. Type it in on the <b>Sign In</b> tab.'
+    + '</p></div></div>';
   var a = actingSeat();
   var k = key(a.div, a.seat);
   var free = freeIn(a.div), mine = (S.rosters[k] || []).slice().sort();
