@@ -1834,7 +1834,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '13 Sep 2026, 10:30 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '13 Sep 2026, 10:33 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4753,12 +4753,12 @@ function renderPick(){
       <div class="scr"><table class="rostertbl">
         <colgroup><col style="width:40%"><col style="width:22%"><col style="width:19%"><col style="width:19%"></colgroup>
         <thead><tr><th class="c-team">Team</th>
-          <th title="Keep this team THROUGH this date. It is the day of its third game and you must let it play that game; you can drop it afterwards, and a replacement first plays for you in the game after it.">Held through</th>
+          <th title="Keep this team THROUGH this date. It is the day of its third game and you must let it play that game; you can drop it afterwards, and a replacement first plays for you in the game after it.">Hold Through</th>
           <th class="num" title="Expected points over this team's next three games after it becomes droppable — what you would give up in the near term.">Next 3</th>
           <th class="num" title="Expected points from that point to the end of the regular season. Points already banked are excluded — you keep those whether you swap or not.">Rest</th></tr></thead>
         <tbody>${rosterRows}</tbody></table></div>
       ${gate}
-      ${explain('How to read your roster', `<b>Held through</b> is the date of this team's third
+      ${explain('How to read your roster', `<b>Hold Through</b> is the date of this team's third
       game — it cannot be dropped before that game is played, so a replacement first plays for you
       in the game after it. Both point columns start from there, not today.
       <b>Points you have already scored are excluded</b> — they are yours whether you swap or not,
