@@ -1983,8 +1983,13 @@ function viewSignIn(){
       + 'practising is below.</p>'
       + '<p style="font-size:26px;letter-spacing:3px;margin:10px 0" class="mono"><b>'
       + esc(meRow.code || '') + '</b></p>'
+      /* NOT "Sign Me In as ...". Two buttons whose labels both start with Sign Me In are one
+         button as far as anything matching on text is concerned, and the suite proved it by
+         pressing the wrong one. A button is named for what it does that the other does not. */
       + '<div class="row"><button class="pri" onclick="doCode(' + jq(meRow.code || '')
-      + ')">Sign Me In as ' + esc(meRow.seat) + '</button></div>'
+      + ')">Use My Practice Code</button></div>'
+      + '<p class="note" style="margin-top:6px">That signs this device in as <b>'
+      + esc(meRow.seat) + '</b>.</p>'
       + '<p class="note" style="margin-top:8px">That seat is a commissioner in the practice copy, '
       + 'so signing in with it brings back the <b>Run It</b> and <b>Access List</b> tabs.</p>'
       + '</div>';
