@@ -1136,6 +1136,34 @@ var Store = (function () {
     },
 
     reload: function (opts) { this.boot(opts); },
+
+    /* ---- ASK THE LEAGUE WHAT IT SAYS RIGHT NOW ---------------------------------------------
+     * Casey, 15 Sep 2026: Bob settled the week on his machine, and Casey's Run It tab -- open
+     * since before that -- still read "1 seat waiting to be settled", so he pressed Run the Coin
+     * Flips again. His save was refused as stale and Bob's settle survived, which is the race
+     * guard doing its job. But he was shown a stale screen and walked to a button he should not
+     * have needed to press, and that is a defect even when the data comes out right.
+     *
+     * The page loads the league once and then holds it. This asks again, on demand, and hands
+     * back a promise so the caller can decide AFTER the answer rather than before it.
+     */
+    fresh: function (set) {
+      if (!live() || role !== 'commissioner') return Promise.resolve(null);
+      return fetch(api + (api.indexOf('?') < 0 ? '?' : '&') + 'fn=load&key='
+                   + encodeURIComponent(ckey()))
+        .then(function (r) { return r.json(); })
+        .then(function (a) {
+          if (!a || !a.ok) return null;
+          /* A REFRESH THAT LANDS ON TOP OF UNSENT WORK WOULD THROW IT AWAY. If this page has
+             something waiting to go up, the league's copy is not adopted -- the save will race
+             and the loser is told, which is the path that already works. */
+          if (dirty || sending) return a;
+          rev = a.rev;
+          if (a.state && set) set(a.state);
+          return a;
+        })
+        .catch(function () { return null; });
+    },
     key: ckey,
     setKey: setKey,
 
@@ -3530,6 +3558,17 @@ var SEEDNOTE = '<p><b>It is a randomizer.</b> Nobody can predict it, nobody can 
    identical from the outside. */
 function ranBefore(){ return (S.ranWeeks || {})[weekNo()] || null; }
 function askRun(){
+  /* ASK THE LEAGUE BEFORE SETTLING, because the other commissioner may have settled it already.
+     Casey, 15 Sep 2026: Bob ran it on his machine and Casey's tab still said one seat was
+     waiting. Nothing was lost -- the save was refused -- but he was walked to a button he should
+     not have needed to press. */
+  if (Store.live()){
+    Store.fresh(adopt).then(function(){ render(); askRunNow(); });
+    return;
+  }
+  askRunNow();
+}
+function askRunNow(){
   var prev = ranBefore();
   if (!prev) return doRun();
   var u = canUndo();
@@ -3689,7 +3728,7 @@ function resultsCard(){
     + '<p class="note">This tool does not send mail. <b>Copy Every Owner&#39;s Email</b> puts '
     + 'every message on your clipboard at once, each one headed with the address it goes to. '
     + 'Paste them into your own mail and send them.</p>'
-    + '<div class="row"><button class="pri" onclick="copyAllEmails()">Copy Every Owner&#39;s '
+    + '<div class="row"><button class="pri" onclick="copyAllEmails(this)">Copy Every Owner&#39;s '
     + 'Email</button></div></div>'
     + keys.map(function(k){
         var b = k.split('|'), seat = b[1];
@@ -3702,8 +3741,15 @@ function resultsCard(){
               return '<div class="res ' + s.kind + '"><div class="t">Row ' + r.row + ' — '
                 + esc(s.head) + '</div><div class="w">' + esc(s.body) + '</div></div>';
             }).join('')
-          + '<button onclick="showEmail(\'' + esc(k).replace(/'/g, "\\'")
-          + '\')">See the email ' + esc(seat) + ' gets</button>';
+          /* "SEE THE EMAIL SPIELMAN GETS" IS A LIE AND IT IS GONE. Casey, 15 Sep 2026: "he's not
+             getting an email any more, so that button should be removed." Nothing sends mail.
+             What Bob needs is the message ON HIS CLIPBOARD, per owner, because there are several
+             trades on a Monday and highlighting each one by hand is the thing he was doing.
+             PLAIN TEXT, so it pastes without this page's dark background. */
+          + '<div class="row" style="margin-top:6px">'
+          + '<button class="pri" onclick="copyOne(' + jq(k) + ',this)">Copy ' + esc(seat)
+          + '&rsquo;s Email</button>'
+          + '<button onclick="showEmail(' + jq(k) + ')">Read It First</button></div>';
       }).join('')
     + '</div>';
 }
@@ -3765,26 +3811,27 @@ function dropClaim(i){
   var c = (S.claimQueue || [])[i]; if (!c) return;
   c.state = 'refused'; c.why = 'Taken off the list by hand.'; save(); render();
 }
-function copyAllEmails(){
+function copyAllEmails(btn){
   var R = S.results; if (!R) return;
   var keys = Object.keys(R.results).filter(function(k){ return (R.results[k] || []).length; }).sort();
-  var all = keys.map(function(k){
-    var row = S.access.filter(function(a){ return a.div + '|' + a.seat === k && a.email; })
-                      .map(function(a){ return a.email; });
-    return 'TO: ' + (row.length ? row.join(', ') : '(no address on file — call them)')
-         + '\n\n' + emailFor(k, R.results[k]);
-  }).join('\n\n' + new Array(60).join('-') + '\n\n');
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(all);
-  showHelp('Every owner\'s email',
-    '<p>Copied, if the browser allowed it. Either way here they are — ' + keys.length
-    + ' message' + (keys.length === 1 ? '' : 's') + ', each with the address to send it to.</p>'
-    + '<pre class="mono" style="white-space:pre-wrap;max-height:340px;overflow:auto">'
-    + esc(all) + '</pre>');
+  var all = keys.map(oneEmail).join('\n\n' + new Array(60).join('-') + '\n\n');
+  copyPlain(all, btn, 'Copied ' + keys.length, 'Every Owner\u2019s Message');
+}
+/* ONE OWNER'S MESSAGE, ADDRESSED AND READY. */
+function oneEmail(k){
+  var rows = (S.results && S.results.results[k]) || [];
+  var to = (S.access || []).filter(function(a){ return a.div + '|' + a.seat === k && a.email; })
+             .map(function(a){ return a.email; });
+  return 'To: ' + (to.length ? to.join(', ') : '(no address on file — tell them yourself)')
+       + '\n\n' + emailFor(k, rows);
+}
+function copyOne(k, btn){
+  copyPlain(oneEmail(k), btn, 'Copied', 'Here Is the Message');
 }
 function showEmail(k){
-  var rows = (S.results && S.results.results[k]) || [];
-  showHelp('The email', '<pre class="mono" style="white-space:pre-wrap;margin:0">'
-    + esc(emailFor(k, rows)) + '</pre>');
+  showHelp('The Message ' + String(k).split('|')[1] + ' Gets',
+    '<pre class="mono" style="white-space:pre-wrap;background:#fff;color:#111;padding:10px;'
+    + 'border-radius:8px;margin:0">' + esc(oneEmail(k)) + '</pre>');
 }
 
 /* ---- TAB: access list ------------------------------------------------------------------------- */
@@ -4023,6 +4070,17 @@ function copyWelcome(seat, code, email, btn){
 
 /* ONE ROW PER PERSON, BECAUSE A CODE BELONGS TO A PERSON AND NOT TO A SEAT.
    Seats with two owners print twice, with the seat named once so the pairing is visible. */
+/* THE DATES, SHORTENED, NEWEST FIRST AND NEVER MORE THAN THREE. A column is not a log. */
+function whenList(arr){
+  var a = (arr || []).filter(Boolean).slice().sort().reverse();
+  var out = a.slice(0, 3).map(function(x){
+    var d = new Date(x);
+    return isNaN(d) ? x.slice(0, 10)
+      : d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+  });
+  if (a.length > 3) out.push('+' + (a.length - 3) + ' older');
+  return out.join(', ');
+}
 function liveAccessTable(){
   var rows = S.access || [];
   var out = '';
@@ -4059,8 +4117,12 @@ function liveAccessTable(){
         + '<option value="commissioner"' + (m.role === 'commissioner' ? ' selected' : '')
         + '>commissioner</option></select></td>'
         + '<td>' + (m.signedIn
-            ? '<span class="pill good">' + m.signedIn + ' device'
+            ? '<span class="pill good">' + m.signedIn + ' sign-in'
               + (m.signedIn === 1 ? '' : 's') + '</span>'
+              + ((m.signedWhen || []).length
+                  ? '<div class="f" style="font-size:11px">' + esc(whenList(m.signedWhen))
+                    + '</div>'
+                  : '')
             : '<span class="f">nobody signed in</span>')
         + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px" '
         + 'onclick="retirePerson(' + jsq(a.div) + ',' + jsq(a.seat) + ',' + jsq(m.member) + ','
@@ -4080,8 +4142,9 @@ function liveAccessTable(){
     + '<colgroup><col style="width:18%"><col style="width:24%"><col style="width:22%">'
     + '<col style="width:16%"><col style="width:20%"></colgroup>'
     + '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
-    + '<th title="How many devices this person can use the page from right now.">'
-    + 'Signed In</th>'
+    + '<th title="How many sign-ins this person has stored. One is written every time '
+    + 'they type their code in a browser, and nothing removes one on its own.">'
+    + 'Sign-Ins</th>'
     + '</tr></thead><tbody>' + out + '</tbody></table></div></div>';
 }
 
@@ -4450,9 +4513,12 @@ function columnRows(){
        ['Role', '<b>owner</b> for almost everybody. <b>commissioner</b> also lets that person '
                 + 'settle a week, enter a trade for any seat, and open this page. The last '
                 + 'commissioner cannot be stood down.'],
-       ['Signed In', 'How many devices that person can use the page from right now. '
-                + '<b>nobody signed in</b> means none of them can. Read this column before you '
-                + 'retire a code, so you know whether anybody is about to lose their access.'],
+       ['Sign-Ins', '<b>This counts stored sign-ins, not people.</b> One is written every time '
+                + 'somebody types their code into a browser, and nothing removes one on its own. '
+                + 'A phone, a laptop and a home-screen icon are three, and so is the same person '
+                + 'signing in again after the website address changed. The dates underneath say '
+                + 'when each one was made, so a leftover from testing is easy to spot. '
+                + '<b>Retire and Issue a New Code</b> clears every one of them.'],
        ['Retire and Issue a New Code', 'Signs that person out on every device and gives you a new '
                 + 'code for them straight away. <b>Press it when a seat changes hands.</b> Also '
                 + 'press it if somebody loses a phone, or reads their code out to the wrong '
