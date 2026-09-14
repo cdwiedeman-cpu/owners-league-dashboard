@@ -70,6 +70,16 @@ main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
 /* Sub-tabs inside the Pickups tab. Visually secondary to the main tab strip -- they divide one
    tab's contents, they do not compete with it. */
 .subtabs{margin:0 0 12px;flex-wrap:wrap}
+/* THE WATCH STAR. At least 26x26 so it clears the 12x12 floor with room to spare -- it sits
+   beside a team name and a near miss taps the row instead, which opens a panel he did not ask
+   for. Never smaller on a phone: this is the control most likely to be pressed one-handed. */
+.wstar{display:inline-flex;align-items:center;justify-content:center;min-width:28px;
+  min-height:28px;padding:0 4px;margin-left:4px;border:1px solid var(--rule,#e6e6e2);
+  border-radius:7px;background:transparent;color:var(--dim,#8a8a80);font-size:15px;
+  line-height:1;cursor:pointer;vertical-align:middle}
+.wstar:hover{border-color:var(--ink,#222);color:var(--ink,#222)}
+.wstar.on{color:#c9971a;border-color:#c9971a;background:rgba(201,151,26,.10)}
+.wstar.sm{min-width:26px;min-height:26px;font-size:13px}
 /* THE SUB-TABS STICK BELOW THE PAGE HEADER. Casey, 31 Aug 2026: "the tabs under pickups for my
    roster college and NFL should lock at the top when scrolling, so that it's easy to filter on
    those three if desired without having to scroll back to the top."
@@ -848,7 +858,7 @@ const SIGNIN_CODE = (() => {
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
   return decodeURIComponent(m[1]);
 })();
-const TRADES_API = 'https://script.google.com/macros/s/AKfycbwi0sPS4cxHkpSSlQak2Pk2J29HnpW1l0HKEixdB9d3I97mdzKzjUxQGyzSyyoDGPgG/exec';
+const TRADES_API = '';
 /* A path on this same site, so it is one address to change and the two pages share a browser
    store. Empty when there is no script to talk to, and then no commissioner tab is built. */
 const TRADES_HOME = TRADES_API ? '../trades/' : '';
@@ -1677,7 +1687,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '13 Sep 2026, 1:14 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '13 Sep 2026, 5:48 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3275,7 +3285,8 @@ function availTable(kind){
                       : 'Compare ' + t.n + ' against ' + cmpMine().n + ', in Side by side above'}"
             aria-label="${cs ? 'Remove' : 'Add'} ${t.n} ${cs ? 'from' : 'to'} the comparison">${cs || '+'}</button></td>
         <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
-          <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}</td>
+          <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}
+          ${watchBtn(t.n, true)}</td>
         <td class="num c-p30 ${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
             title="${x.p30==null ? 'No games left in this window.' : p30Why(t, from, x)}">${
           /* A NUMBER, ALWAYS -- AND THE REASON BESIDE IT, NEVER INSTEAD OF IT.
@@ -3328,8 +3339,170 @@ function availTable(kind){
 }
 
 function toggleTeam(n){ OPEN = (OPEN === n) ? null : n; renderPick(); }
+
+let OPEN_WATCH = null;
+function toggleWatch(n){ OPEN_WATCH = (OPEN_WATCH === n) ? null : n; renderPick(); }
+
+/* WHERE A WATCHED TEAM ACTUALLY STANDS. Four situations, and they are not the same situation.
+   Ranking a team you cannot have, beside one you can, with no word about the difference, is the
+   kind of table that gets believed and then acted on. */
+function watchStatus(t){
+  if (t.owner === ME)
+    return {cls: 'v-hold', label: 'YOURS',
+            tip: 'One of your eleven. The My Roster tab is where you decide how long to keep it.'};
+  const held = labelsOf(t.n).filter(l => l.div === MY_DIV);
+  if (held.length)
+    return {cls: 'v-avoid', label: 'TAKEN',
+            tip: 'Another Predator owner holds this team, so you cannot pick it up. Only Predator '
+                 + 'decides that — it can be owned in Viper or Scorpion and still be free to you.'};
+  if (!canClaim(t))
+    return {cls: 'v-stream', label: 'TOO LATE',
+            tip: 'Nobody in Predator owns it, but it cannot finish the '
+                 + DATA.hold_games + '-game hold from the day your slot frees up, so it is not a '
+                 + 'legal pickup this week. That can change as the season moves.'};
+  return {cls: 'v-keep', label: 'FREE', tip: 'Nobody in Predator owns this team. You can pick it up.'};
+}
+
+/* THE WATCH LIST. Every team he flagged, whatever its situation, measured the same way the
+   Pickups table measures a candidate: against the slot he would actually drop, over the same
+   weeks, with everything already played excluded from both sides. */
+function watchPanel(){
+  if (!WATCH.length) return `<div class="card"><h2>Watch List</h2>
+    <div class="empty"><p><b>Nothing on it yet.</b></p>
+    <p>Tap the ☆ beside any team to put it here. There are two places to do it: the
+    <b>College</b> and <b>NFL</b> lists on this tab, and the panel that opens when you tap a team
+    name anywhere on <b>Live Scores</b>.</p>
+    <p>It is for teams that catch your eye but are <b>not on the lists above</b> — a team another
+    owner holds today, one ranked too far down to be shown, or one that cannot start a hold in
+    time this week. Those never appear on the College or NFL tabs, and this is where you keep an
+    eye on them.</p></div></div>`;
+
+  const rows = WATCH.map(n => BY.get(n)).filter(Boolean).map(t => {
+    const kind = t.pool === 'NFL' ? 'NFL' : 'COL';
+    const inc = slotFor(kind);
+    const from = inc ? swapFrom(inc) : null;
+    const mine = inc ? BY.get(inc.n) : null;
+    const b = from ? weekWindow(t, from, DATA.hold_games) : null;
+    const r = from ? windowPts(t, from, null) : null;
+    const iB = (mine && from) ? weekWindow(mine, from, DATA.hold_games) : null;
+    const iR = (mine && from) ? windowPts(mine, from, null) : null;
+    const g3 = (b && iB && b.weeks) ? b.pts - iB.pts : null;
+    const gr = (r && iR && r.games >= DATA.hold_games) ? r.pts - iR.pts : null;
+    const st = watchStatus(t);
+    const rec = inc ? recommend(t, inc) : null;
+    const q = String(t.n).replace(/'/g, "\\'");
+    return `<tr class="clickable" onclick="toggleWatch('${q}')"
+        title="Tap for every game this team has played and has left, with a win probability for each.">
+      <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
+        <span class="d" style="font-size:11px">▸</span>
+        <div style="margin-top:3px"><span class="pill ${st.cls}" title="${st.tip}">${st.label}</span>
+        ${t.owner === ME ? '' : ownerHTML(t.n)}</div></td>
+      <td class="num c-p30 ${!b || b.p == null ? 'd' : b.p >= 0.5 ? 'g' : b.p >= 0.25 ? 'y' : 'b'}">${
+        !b || b.p == null ? '<span class="d">—</span>' : (b.byes ? '0%' : pctP(b.p))}</td>
+      <td class="num c-bank">${b ? b.pts.toFixed(2) : '—'}</td>
+      <td class="num c-gain">${g3 == null ? '<span class="d">—</span>'
+        : `<b class="${g3 > 0.3 ? 'g' : g3 < 0 ? 'b' : 'y'}">${g3 >= 0 ? '+' : ''}${g3.toFixed(2)}</b>`}</td>
+      <td class="num d c-season hide-s">${r ? r.pts.toFixed(2) : '—'}</td>
+      <td class="num c-sgain hide-s">${gr == null ? '<span class="d">—</span>'
+        : `<span class="${gr > 0.5 ? 'g' : gr < 0 ? 'b' : 'd'}">${gr >= 0 ? '+' : ''}${gr.toFixed(2)}</span>`}</td>
+      <td class="c-then">${rec ? `<span class="pill ${rec.cls}" title="${rec.tip}">${rec.label}</span>` : '—'}</td>
+      <td class="c-cmp">${watchBtn(t.n, true)}</td></tr>`
+      + (OPEN_WATCH === t.n
+          ? `<tr><td colspan="8">${teamPanel(t, slotFor(t.pool === 'NFL' ? 'NFL' : 'COL'),
+              t.owner === ME ? 'mine' : 'scout')}</td></tr>`
+          : '');
+  }).join('');
+
+  const colInc = slotFor('COL'), nflInc = slotFor('NFL');
+  return `<div class="card"><h2>Watch List</h2>
+    <div class="scrhint"><b>Swipe</b> the table sideways to see Season pts and Season gain.</div>
+    <div class="scr"><table>
+      <thead><tr><th class="c-team">Team</th>
+        <th class="num c-p30" title="The chance this team wins all three games of the hold.">3-0</th>
+        <th class="num c-bank" title="Points those same three games are worth on average.">Bank 3</th>
+        <th class="num c-gain" title="Bank 3 minus what the team you would drop earns over the same three weeks.">Gain 3</th>
+        <th class="num c-season hide-s">Season</th>
+        <th class="num c-sgain hide-s">Season gain</th>
+        <th class="c-then">Advice</th>
+        <th class="c-cmp"></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    ${explain('How to read your watch list', `Every number here is measured exactly the way the
+      College and NFL lists measure a candidate: against the team you would actually drop, over
+      the same weeks, with points you have already scored left out of both sides.
+      ${colInc ? `A college team is measured against <b>${colInc.n}</b>` : 'You hold no college team'}
+      and ${nflInc ? `an NFL team against <b>${nflInc.n}</b>` : 'you hold no NFL team'}.
+      <br><b>The badge on each team is the part to read first.</b>
+      <b>FREE</b> means you could pick it up now.
+      <b>TAKEN</b> means another Predator owner holds it — the numbers are still true, but you
+      cannot act on them until that changes.
+      <b>TOO LATE</b> means nobody holds it and it still cannot finish a
+      ${DATA.hold_games}-game hold from the day your slot frees up, so it is not legal this week.
+      <b>YOURS</b> is one of your own eleven.
+      <br>A team keeps earning its place here whatever the badge says. That is the reason to have
+      the list: the College and NFL tabs only show teams you can take <b>this week</b>.`)}
+  </div>`;
+}
 let OPEN_MINE = null;
 function toggleMine(n){ OPEN_MINE = (OPEN_MINE === n) ? null : n; renderPick(); }
+
+/* ---- THE WATCH LIST ---------------------------------------------------------------------
+ * Casey, 14 Sep 2026: "as I'm looking at the live scores and I see teams that win that I like,
+ * or when I am searching the My Pickups, if I find a team that I like ... a way that I can flag
+ * and look at those teams, because they might catch my eye that I want to look at them deeper
+ * and pick them up that aren't maybe showing up on your Pickups tab."
+ *
+ * THE LAST CLAUSE IS THE WHOLE POINT. The Pickups tab shows the top 25 college and top 8 NFL
+ * teams that are free AND can finish a hold. A team that is owned today, or ranks 40th, or
+ * cannot start its hold in time, never appears there. The watch list is not a shortlist of that
+ * table -- it holds ANY team on the board, and it says which of those situations each one is in
+ * rather than implying they are all pickable.
+ *
+ * IT LIVES IN THIS BROWSER. Same as the Race tab, and the same limit: it is saved against the
+ * ADDRESS this page was opened from, so it does not follow him from his phone to his laptop.
+ * Worth moving into the league back end later, now that one exists.
+ */
+const WATCH_KEY = 'rfl_watch_v1';
+let WATCH = [];
+function watchLoad(){
+  if (LEAGUE) return;                        // the all-owners page has no personal anything
+  try {
+    const raw = localStorage.getItem(WATCH_KEY);
+    if (!raw) return;
+    const v = JSON.parse(raw);
+    /* A NAME THAT IS NO LONGER ON THE BOARD IS DROPPED, not carried as a row that can never be
+       drawn. Same rule as the saved viewer seat. */
+    if (Array.isArray(v)) WATCH = v.filter(n => typeof n === 'string' && BY.get(n));
+  } catch (e) { WATCH = []; }
+}
+function watchSave(){
+  try { localStorage.setItem(WATCH_KEY, JSON.stringify(WATCH)); } catch (e) {}
+}
+const watching = n => WATCH.indexOf(n) >= 0;
+
+function watchToggle(n){
+  if (!n || !BY.get(n)) return;
+  const i = WATCH.indexOf(n);
+  if (i >= 0) WATCH.splice(i, 1); else WATCH.push(n);
+  watchSave();
+  /* REDRAW WHATEVER IS ACTUALLY IN FRONT OF HIM. The star can be pressed from three places and
+     each of them shows the state it just changed. */
+  if (SCOUT) renderScout();
+  if (PROJ_ON && !el('pick').hidden) renderPick();
+}
+
+/* THE STAR. One control, two states, and its own words for each -- a toggle whose tooltip does
+   not change is a toggle the reader cannot tell the state of. */
+function watchBtn(n, small){
+  const on = watching(n);
+  const q = String(n).replace(/'/g, "\\'");
+  return `<button type="button" class="wstar${on ? ' on' : ''}${small ? ' sm' : ''}"
+    onclick="event.preventDefault();event.stopPropagation();watchToggle('${q}')"
+    title="${on ? 'On your watch list. Press to take it off.'
+                : 'Add ' + n + ' to your watch list, on the Pickups tab.'}"
+    aria-pressed="${on}"
+    aria-label="${on ? 'Remove' : 'Add'} ${n} ${on ? 'from' : 'to'} your watch list">${
+    on ? '\u2605' : '\u2606'}</button>`;
+}
 
 /* THE GAME-BY-GAME PANEL. Casey, 30 Aug 2026: "can you make it so I can click on the team and
    see the schedule with your probability by game and any game by game analysis that I can click
@@ -3692,7 +3865,8 @@ function renderScout(){
   m.innerHTML = `<div class="modalbox">
     <div class="modalhd">
       <div><h2>${t.n} <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span>
-        ${isMine ? '<span class="mytag">YOURS</span>' : ''}</h2>
+        ${isMine ? '<span class="mytag">YOURS</span>' : ''}
+        ${PROJ_ON ? watchBtn(t.n) : ''}</h2>
         <div style="margin-top:4px">${avail}</div>
         <div style="margin-top:4px">${ownerHTML(t.n)}</div></div>
       <button class="modalx" onclick="closeScout()" title="Close and go back to the scoreboard"
@@ -3867,7 +4041,7 @@ function setPickTab(k){
      appear where he is looking, not somewhere he has to scroll back from.
      So: leave the scroll alone. The one exception is a tap made after scrolling down, where the
      strip itself has gone off the top -- then bring it back, and no further. */
-  PICKTAB = k; OPEN = null; OPEN_MINE = null;
+  PICKTAB = k; OPEN = null; OPEN_MINE = null; OPEN_WATCH = null;
   const before = window.scrollY;
   renderPick();
   window.scrollTo({top: before});          // restore first: a shorter panel can clamp the scroll
@@ -4361,10 +4535,15 @@ function renderPick(){
   const subTab = (k, label) => `<button class="tab pick-tab${PICKTAB === k ? ' on' : ''}"
       data-picktab="${k}" onclick="setPickTab('${k}')"
       aria-pressed="${PICKTAB === k}">${label}</button>`;
+  /* THE COUNT IS ON THE TAB. A watch list you have to open to find out whether it has anything
+     in it is one you stop opening. */
   const bar = `<div class="tabs subtabs">${subTab('roster', 'My roster')}${
-    subTab('COL', 'College')}${subTab('NFL', 'NFL')}${rerateControl()}</div>`;
+    subTab('COL', 'College')}${subTab('NFL', 'NFL')}${
+    subTab('watch', 'Watch List' + (WATCH.length ? ' (' + WATCH.length + ')' : ''))}${
+    rerateControl()}</div>`;
 
   const panels = {
+    watch: watchPanel(),
     roster: `<div class="card"><h2>Your roster — what each slot earns from the week you could drop it</h2>
       <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
       <div class="scr"><table class="rostertbl">
@@ -8098,6 +8277,7 @@ function liveTradeChip(){
 
 buildTabs();
 viewerLoad();
+watchLoad();
 VIEWER_SAVED = viewerSaved();
 watchHeader();
 watchScroll();
