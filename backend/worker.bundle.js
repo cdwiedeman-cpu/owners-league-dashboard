@@ -740,6 +740,16 @@ function membersOf(seat) {
 /* HOW A PERSON IS NAMED BACK TO A HUMAN READER, on the Access List and nowhere else. */
 const memberLabel = (m) => m.label || m.email || m.id;
 
+/* NEWEST FIRST, CAPPED, AND WRITTEN IN THE SAME BREATH AS THE CHANGE ITSELF. Two stores of one
+   fact are written together or one of them lies -- so a change that fails to save never gets a
+   history line, because the line is written after the access list it describes. */
+const LOG_MAX = 200;
+async function noteAccess(env, div, seat, what, by) {
+  const log = await getJSON(env, 'accesslog', []);
+  log.unshift({ at: new Date().toISOString(), div, seat, what, by: by || '' });
+  await putJSON(env, 'accesslog', log.slice(0, LOG_MAX));
+}
+
 async function whois(env, given) {
   const key = String(given || '').trim();
   if (!key) return null;
@@ -823,8 +833,14 @@ async function handle(request, env) {
   if (fn === 'ping') {
     const access = await getJSON(env, 'access', []);
     const box = await readState(env);
+    /* WHETHER THE SETUP WORD IS CONFIGURED, AND NEVER WHAT IT IS.
+       Cloudflare does not list secrets on the bindings diagram, so the only way to tell from
+       outside was to try using it -- and a wrong word and a missing one give the same answer, on
+       purpose. A yes-or-no says what is needed and gives away nothing: knowing that a password
+       exists has never helped anybody guess it. */
     return out({ ok: true, at: new Date().toISOString(), seats: access.length,
-                 ready: !!box.state, rev: box.rev, store: 'cloudflare' });
+                 ready: !!box.state, rev: box.rev, store: 'cloudflare',
+                 admin_set: !!env.ADMIN, cron: '0 23 * * 1 (Mon 4:00pm AZ)' });
   }
 
   if (fn === 'public') return out(publicOf(await readState(env)));
@@ -1024,6 +1040,12 @@ async function handle(request, env) {
       code: m.code, role: m.role || 'owner', status: a.status }))) });
   }
 
+  /* THE ACCESS HISTORY LIVES HERE, BECAUSE THIS IS WHERE THE CHANGES HAPPEN. Casey, 14 Sep 2026:
+     the history card on the Access List still pointed at the Log tab of a spreadsheet that no
+     longer exists. A page cannot keep this itself -- one commissioner's browser would only ever
+     hold the changes that commissioner made, under a sentence promising all of them. Bob changes
+     an address on his laptop and Casey has to be able to read it. So it is one list, kept next to
+     the access list it describes, and every commissioner reads the same one. */
   /* RETIRING A SEAT TURNS AWAY EVERY DEVICE ON IT AND ISSUES A FRESH CODE. One button, because
      the two always go together: a code somebody else has seen is exactly when you want the old
      devices gone, and a lost phone is exactly when you want a new code. */
@@ -1055,6 +1077,11 @@ async function handle(request, env) {
        just have a new code. Only a ROLE change can empty the job, and that is checked there. */
     await putJSON(env, 'access', access);
     await putJSON(env, 'keys', keys);
+    await noteAccess(env, seat.div, seat.seat,
+      'new code issued to ' + hit.map(memberLabel).join(' and ')
+      + (gone ? ', ' + gone + ' device' + (gone === 1 ? '' : 's') + ' signed out'
+              : ', nothing was signed in'),
+      who.email || who.seat);
     return out({ ok: true, gone,
                  codes: hit.map((m) => ({ member: m.id, who: memberLabel(m),
                                           code: m.code })) });
@@ -1067,9 +1094,17 @@ async function handle(request, env) {
     const seat = access.find((a) => a.div === p('div') && a.seat === p('seat'));
     if (!seat) return out({ ok: false, why: 'noseat', note: 'no seat by that name' });
     seat.members = membersOf(seat);
+    /* WHAT TO WRITE IN THE HISTORY, gathered as it happens rather than worked out afterwards
+       by comparing two copies. One request can change three things. */
+    const said = [];
     const status = p('status');
     /* STATUS IS THE SEAT'S. A seat leaving the league takes its people with it. */
-    if (status === 'active' || status === 'inactive') seat.status = status;
+    if (status === 'active' || status === 'inactive') {
+      if (seat.status !== status) {
+        said.push(status === 'inactive' ? 'seat switched off' : 'seat put back');
+      }
+      seat.status = status;
+    }
 
     /* ADDING THE SECOND PERSON TO A SEAT. Send the address; they get their own code and start
        as a plain owner. This is how a co-owner is added without touching the first one. */
@@ -1086,6 +1121,7 @@ async function handle(request, env) {
       added = { id: 'm' + n, email: addr, label: String((add && add.label) || ''),
                 code: rand(CODE_LEN, CODE_ABC), role: 'owner', retiredSeq: 0 };
       seat.members.push(added);
+      said.push('added ' + addr + ' as a second owner');
     }
 
     /* ROLE AND ADDRESS BELONG TO A PERSON. Say which one by id or by their current address.
@@ -1099,10 +1135,21 @@ async function handle(request, env) {
         return out({ ok: false, why: 'whichperson',
                      note: 'that seat has more than one person on it, so say which one' });
       }
-      if (role === 'owner' || role === 'commissioner') m.role = role;
+      if (role === 'owner' || role === 'commissioner') {
+        if ((m.role || 'owner') !== role) {
+          said.push(memberLabel(m) + ' made a ' + role);
+        }
+        m.role = role;
+      }
       /* CHANGING AN ADDRESS DOES NOT SIGN ANYBODY OUT. The key points at the id, not the
          address, which is the whole reason the id exists. */
-      if (email != null) m.email = String(email).trim();
+      if (email != null) {
+        const was = String(m.email || '').trim();
+        const now = String(email).trim();
+        if (was !== now) said.push('address changed from ' + (was || 'nothing') + ' to '
+                                  + (now || 'nothing'));
+        m.email = now;
+      }
       if (label != null) m.label = String(label).trim();
     }
     /* THE LAST COMMISSIONER CANNOT BE STOOD DOWN. That is the locked room again. */
@@ -1111,6 +1158,9 @@ async function handle(request, env) {
                    note: 'that would leave the league with no commissioner' });
     }
     await putJSON(env, 'access', access);
+    if (said.length) {
+      await noteAccess(env, seat.div, seat.seat, said.join('; '), who.email || who.seat);
+    }
     return out({ ok: true, added: added && { member: added.id, code: added.code },
                  members: seat.members.map((m) => ({ member: m.id, email: m.email || '',
                    who: memberLabel(m), role: m.role || 'owner', code: m.code })) });
@@ -1140,6 +1190,7 @@ async function handle(request, env) {
                      who: memberLabel(m), role: m.role || 'owner', code: m.code,
                      signedIn: perPerson[a.div + '|' + a.seat + '|' + m.id] || 0 })) })),
                  signedIn: counts,
+                 accessLog: await getJSON(env, 'accesslog', []),
                  me: { div: who.div, seat: who.seat, email: who.email, role: who.role },
                  at: new Date().toISOString() });
   }
