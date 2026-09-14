@@ -2057,6 +2057,16 @@ function viewSignIn(){
      List follow the same rule here as on the real page: they belong to a device signed in as a
      commissioner. A signed-out practice copy therefore shows neither, and that reads as the
      tabs having disappeared rather than as a rule working. */
+  /* WHY THOSE TWO TABS ARE MISSING, WHICHEVER REASON IT IS.
+   *
+   * This used to explain itself only when the device was SIGNED OUT. Casey, 14 Sep 2026: "in the
+   * practice tool I don't see an option for the Run It tab anymore." He was signed in -- on a
+   * device switched to a different seat, from trying the thing the switcher is for -- and an
+   * owner's seat has no Run It. So the page showed no tabs and no reason, which reads as the
+   * feature having been taken away.
+   * A MISSING CONTROL SAYS WHY IT IS MISSING, and hands back the one press that fixes it.
+   */
+  var meRow0 = myPracticeRow();
   if (!(s && s.seat)){
     h += '<div class="card"><h2>Run It and Access List Are Not Shown Yet</h2>'
       + '<p class="note">This device is signed out, and those two tabs belong to a commissioner. '
@@ -2064,6 +2074,20 @@ function viewSignIn(){
       + 'commissioner, so there is nothing to set up first.</p>'
       + '<p class="note"><b>Your practice code is on this tab, under Your Practice Code.</b> It '
       + 'is not the code your commissioner gave you. The practice copy issues its own.</p>'
+      + '</div>';
+  } else if (s.role !== 'commissioner'){
+    h += '<div class="card warn"><h2>Run It and Access List Are Not Shown</h2>'
+      + '<p class="note">Device ' + esc(S.device) + ' is signed in as <b>' + esc(s.seat)
+      + '</b>, and that seat is an owner. Those two tabs belong to a commissioner, so an owner '
+      + 'does not see them. That is the rule working, not a fault.</p>'
+      + (meRow0
+          ? '<p class="note">Your own seat, <b>' + esc(meRow0.seat) + '</b>, is a commissioner in '
+            + 'this practice copy. Sign back in as yourself and both tabs come back.</p>'
+            + '<div class="row"><button class="pri" onclick="doCode(' + jq(meRow0.code || '')
+            + ')">Sign In as ' + esc(meRow0.seat) + '</button>'
+            + '<button onclick="signOut();render()">Sign Out on Device ' + esc(S.device)
+            + '</button></div>'
+          : '')
       + '</div>';
   }
 
