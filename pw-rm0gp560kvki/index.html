@@ -1965,7 +1965,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:58 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 12:15 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8527,12 +8527,35 @@ function openLeagueScout(n){
  * IT REBUILDS FROM THE BAKED SNAPSHOT EVERY TIME rather than adding to what is already there.
  * Applying a move twice would move a team twice, and this runs again every few minutes.
  */
-let BAKED_SNAPS = null, BAKED_TRADES = null, LIVE_TX_AT = null, LIVE_TX_N = 0, LIVE_TX_ERR = null;
+let BAKED_SNAPS = null, BAKED_TRADES = null, BAKED_SLOTS = null,
+    LIVE_TX_AT = null, LIVE_TX_N = 0, LIVE_TX_ERR = null;
 
 function _copyLabels(o){
   const out = {};
   for (const k in o) out[k] = (o[k] || []).map(p => [p[0], p[1]]);
   return out;
+}
+
+/* ONE TRADE, ON MY OWN SLOT LIST. The slot is found by the team that is LEAVING, because that
+   is what identifies the position -- a slot is "the place Nebraska was", not a number anybody
+   typed. A trade whose outgoing team is not on the list is left alone rather than guessed at:
+   a wrong slot would move points onto the wrong row, which is worse than a row that did not move.
+   THE SPELL IS CLOSED AND A NEW ONE OPENED, which is the same shape slots.py writes, so every
+   reader downstream -- the Slots tab, slotTotalsFor, the Race grid -- needs no change at all. */
+function applyLiveSlot(t, week){
+  if (!DATA.slots || !DATA.slots.lineage || !t || !t['in']) return;
+  if (typeof MY_DIV === 'undefined' || !OWNERS || ME == null) return;
+  if (t.div !== MY_DIV || t.owner !== OWNERS[ME]) return;
+  const lin = DATA.slots.lineage;
+  for (const l of lin){
+    const last = l.spells[l.spells.length - 1];
+    if (!last || last.to_week != null) continue;
+    if (t.out && last.team === t.out){
+      last.to_week = week;
+      l.spells.push({team: t['in'], from_week: week, to_week: null});
+      return;
+    }
+  }
 }
 
 function applyLiveTrades(list){
@@ -8541,9 +8564,21 @@ function applyLiveTrades(list){
   if (BAKED_SNAPS === null){
     BAKED_SNAPS = (hist.snapshots || []).slice();
     BAKED_TRADES = (txs.trades || []).slice();
+    /* MY OWN ELEVEN POSITIONS ARE A SECOND STORE OF THE SAME FACT, and it was not being moved.
+     * Casey, 14 Sep 2026: "do the slots stay in line and updated after the trades?" They did for
+     * every other owner and not for him, which is the wrong way round.
+     * Every other owner's slots are RECONSTRUCTED from the ownership snapshots, and those get
+     * rebuilt from the live trades a few lines below. His are OBSERVED -- the workbook records
+     * his positions in order, so the recorded lineage rightly wins over anything reconstructed.
+     * But an observed list only knows what was observed, and a trade settled in the trades page
+     * has not reached the workbook. So the live moves are applied to his lineage too, from a
+     * baked copy each time, exactly as the snapshots are. */
+    BAKED_SLOTS = (DATA.slots && DATA.slots.lineage)
+      ? JSON.parse(JSON.stringify(DATA.slots.lineage)) : null;
   }
   hist.snapshots = BAKED_SNAPS.slice();
   txs.trades = BAKED_TRADES.slice();
+  if (BAKED_SLOTS) DATA.slots.lineage = JSON.parse(JSON.stringify(BAKED_SLOTS));
   LIVE_TX_N = 0;
   if (!list || !list.length) return;
 
@@ -8580,6 +8615,7 @@ function applyLiveTrades(list){
        week and everything before it keeps the old owner. */
     hist.snapshots.push({asof: null, week: w, source: 'trades page',
                          labels: _copyLabels(labels)});
+    for (const t of byWeek.get(w)) applyLiveSlot(t, w);
   }
   hist.snapshots.sort((a, b) => a.week - b.week);
 }
