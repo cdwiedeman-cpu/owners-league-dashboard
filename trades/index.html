@@ -3526,13 +3526,30 @@ function flash(btn, word){
    reader with nothing to show for a press, and an absence is never an answer -- so in that one
    case the text is put on screen to select by hand. */
 function copyPlain(text, btn, word, title){
+  /* TWO WAYS, OLDEST FIRST. `document.execCommand('copy')` is the one that works inside a frame
+     with no permission granted, and this page lives inside a frame. The modern call is tried
+     after it, because it is the one that works where the old one has been removed. */
   var done = false;
   try {
-    if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text);
-      done = true;
-    }
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    done = document.execCommand('copy');
+    document.body.removeChild(ta);
   } catch (e) { done = false; }
+  if (!done){
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text);
+        done = true;
+      }
+    } catch (e2) { done = false; }
+  }
   if (done){ flash(btn, word); return; }
   showHelp(title,
     '<p>This browser would not let the page use the clipboard. Select the text below and copy '
@@ -3553,6 +3570,12 @@ function siteURL(){
 }
 /* THE WHOLE MESSAGE, READY TO SEND. Plain text on purpose: it pastes into any mail app and into a
    text message without carrying anything with it. */
+/* EVERY LINE HERE IS A WHOLE LINE. Casey, 14 Sep 2026, reading the pasted message: "your code is
+   yours alone, anyone who has it ... so please do, then it drops to the next line and says not
+   pass it on. That should be one continuous sentence." It was wrapped at about 95 characters so
+   that it read tidily in the panel, and every one of those wraps became a hard line break in his
+   email. A message is wrapped by whatever is going to display it. DO NOT WRAP THE STRINGS. A long
+   source line here is correct; a newline inside a sentence is a defect the reader sees. */
 function welcomeText(seat, code, email){
   var url = siteURL();
   return ''
@@ -3570,8 +3593,7 @@ function welcomeText(seat, code, email){
   + '2. A box asks for your code. Type in the six characters.\n'
   + '3. That is it. This device stays signed in for the rest of the season.\n'
   + '\n'
-  + 'Your code is yours alone. Anyone who has it can enter trades for your team, so please do\n'
-  + 'not pass it on and do not post it anywhere the league can see it.\n'
+  + 'Your code is yours alone. Anyone who has it can enter trades for your team, so please do not pass it on and do not post it anywhere the league can see it.\n'
   + '\n'
   + 'PUT IT ON YOUR HOME SCREEN (iPhone and iPad)\n'
   + '1. Open the website link in Safari. It has to be Safari for this step.\n'
@@ -3579,8 +3601,7 @@ function welcomeText(seat, code, email){
   + '3. Tap Share. It is the square with an arrow coming out of the top.\n'
   + '4. Scroll down the list and tap Add to Home Screen.\n'
   + '5. Tap Add. The icon appears with your other apps.\n'
-  + '6. Open it from the icon and type your code in once more. The icon keeps its own sign-in,\n'
-  + '   separate from Safari, so it asks you once.\n'
+  + '6. Open it from the icon and type your code in once more. The icon keeps its own sign-in, separate from Safari, so it asks you once.\n'
   + '\n'
   + 'If your Safari shows the share square on the bar already, tap that and skip step 2.\n'
   + '\n'
@@ -3591,10 +3612,8 @@ function welcomeText(seat, code, email){
   + '4. Open it from the icon and type your code in once more.\n'
   + '\n'
   + 'ENTERING A TRADE\n'
-  + 'Go to the My Trades tab. Name the team you want to pick up and the teams you would be\n'
-  + 'willing to give up for it, then press Send My List. You can change your list as often as\n'
-  + 'you like until the window closes at 3:59pm AZ on Monday. AZ is Arizona time, which the\n'
-  + 'league runs on all year.\n'
+  + 'Go to the My Trades tab. Name the team you want to pick up and the teams you would be willing to give up for it, then press Send My List.\n'
+  + 'You can change your list as often as you like until the window closes at 3:59pm AZ on Monday. AZ is Arizona time, which the league runs on all year.\n'
   + '\n'
   + 'If the code will not work, reply to this message and I will send you a new one.\n';
 }
