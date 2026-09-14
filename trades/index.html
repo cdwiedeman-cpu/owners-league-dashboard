@@ -879,6 +879,19 @@ var Store = (function () {
 
     /* WHO DOES THE SHEET SAY THIS DEVICE IS. Asked rather than remembered, so a role taken away
      * in the spreadsheet takes effect on the next tap. */
+    /* ONE WAY TO ASK THE BACK END FOR ANYTHING ELSE. The commissioner's half of the Access
+     * List needs retire, seat and codes, and giving each of them its own near-identical wrapper
+     * is three places for the same mistake. The key goes on every call, because the back end
+     * works out who is asking from the key and from nothing the page says.
+     */
+    call: function (fn, args) {
+      var body = {fn: fn, key: ckey()};
+      if (args) Object.keys(args).forEach(function (k) { body[k] = args[k]; });
+      return fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                         body: JSON.stringify(body)})
+        .then(function (r) { return r.json(); });
+    },
+
     me: function () {
       return fetch(api + (api.indexOf('?') < 0 ? '?' : '&') + 'fn=me&key='
                    + encodeURIComponent(ckey()))
@@ -989,9 +1002,15 @@ function adoptAccess(rows){
     var r = by[key(divCode(a.div), String(a.seat || '').trim())];
     if (!r) return;
     hit++;
-    a.email = r.email || '';
     a.status = r.status || 'active';
-    a.role = r.role || 'owner';
+    /* A SEAT CARRIES ITS PEOPLE NOW. Six of the 27 are two people, each with their own code and
+       their own role, so an address and a role are no longer facts about the SEAT. The seat-level
+       copies are kept filled from the first person only so that older code reading a.email or
+       a.role keeps working and shows something true rather than nothing. */
+    a.members = r.members || null;
+    var first = (r.members && r.members[0]) || r;
+    a.email = first.email || '';
+    a.role = first.role || 'owner';
   });
   /* A JOIN THAT MATCHES NOTHING IS A FAULT, NOT AN EMPTY RESULT. It cost an evening once; it
      says so on the page now rather than looking like a league where nobody is commissioner. */
@@ -3219,103 +3238,89 @@ function sheetCard(){
        be for Bob." It was. */
     + '</div>';
 }
-function viewAccess(){
-  var rows = S.access;
-  var filled = rows.filter(function(r){ return String(r.email || '').trim(); }).length;
-  /* WHAT TO DO, THEN WHAT EACH COLUMN MEANS, THEN THE TABLE. Casey, 10 Sep 2026: "it should have
-     some instruction of what he needs to populate, and what the status column means, and what
-     keys last retired means and what to do with that." A grid of editable cells with no key is
-     a form that assumes the reader already knows the model. */
-  /* THE SAME TABLE MEANS TWO DIFFERENT THINGS ON THE TWO PAGES, so it says which.
-     In the practice copy it is a toy: type into it, watch what happens, nothing leaves the
-     browser. On the real page it is a WINDOW ONTO THE SPREADSHEET -- what it shows was typed
-     into the Access tab, and that is where it is changed. Casey, 13 Sep 2026: "Should the access
-     list be on the dashboard. It reads that it is a practice copy." It read that way on both,
-     which made the real one look like a toy and would have had somebody typing into a copy of
-     their league. */
-  return '<div class="card"><h2>Access List</h2>'
-    + (Store.live()
-      /* WHAT IT IS FOR, THEN WHAT TO DO WHERE. Casey, 13 Sep 2026: "why did you start with the
-         wording that this is what the access tab of the league spreadsheet says right now ... I
-         don't even know what that means ... what are we supposed to use this for. In comparison
-         to what we use the spreadsheet for ... what tabs are we supposed to use in the
-         spreadsheet?" Every one of those is a question the copy should have answered before it
-         was asked. It opened by describing where the numbers came from, which is a fact about
-         the machinery and not a thing anybody needs. */
-      ? '<p class="note">These are the 27 seats in the league and who sits on them. It is the '
-        + 'same list as the <b>Access</b> tab of the <b>RFL Trades</b> spreadsheet.</p>'
-        + '<p class="note"><b>On this page you do one thing: retire a seat&rsquo;s keys.</b> That '
-        + 'signs out every phone and computer signed in to that seat. It is here because it has '
-        + 'to happen at a moment you choose. Everything else on this page you are only reading.'
-        + '</p>'
-        + '<p class="note"><b>Everything else you change in the spreadsheet.</b> Open <b>RFL '
-        + 'Trades</b>, go to the <b>Access</b> tab, find the owner&rsquo;s row, and change one of '
-        + 'three things:</p>'
-        + '<ul class="note">'
-        + '<li><b>Email</b> &mdash; the address that owner signs in with. Blank means they cannot '
-        + 'sign in, and you enter their trades for them.</li>'
-        + '<li><b>Status</b> &mdash; <b>active</b> normally. <b>inactive</b> stops that seat '
-        + 'submitting anything, and changes nothing else.</li>'
-        + '<li><b>Role</b> &mdash; <b>owner</b> for everybody except you and Bob, whose rows say '
-        + '<b>commissioner</b>.</li>'
-        + '</ul>'
-        + '<p class="note">You do not have to tell anybody or rebuild anything. The next time '
-        + 'that owner signs in or sends a trade, the row as it stands then is the one that '
-        + 'counts.</p>'
-        + '<p class="note"><b>Two tabs are yours. The rest belong to the script.</b> You edit '
-        + '<b>Access</b>. You read the commissioner key off <b>Settings</b> and never change it. '
-        + '<b>Transactions</b> and <b>Log</b> are worth reading and are rewritten by the script, '
-        + 'so anything typed into them is lost. <b>State</b>, <b>Keys</b> and <b>Links</b> are '
-        + 'the script&rsquo;s working papers and editing one will break something.</p>'
-      : '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
-        + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
-        + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
-        + 'league Bob edits the Sheet itself. The script reads it on every sign-in and every '
-        + 'trade, so <b>an edit takes effect on the next thing anybody does</b> — nothing is '
-        + 'rebuilt and nobody else has to be involved.</p>')
-    /* THE STEPS ARE FOR FILLING A COPY IN AND PASTING IT ACROSS, which is a thing you do once,
-       in the practice copy. On the real page the spreadsheet is already the truth and there is
-       nothing to paste anywhere. */
-    + (Store.live() ? ''
-        : '<ol class="note"><li>Type each owner&#39;s email into the <b>Email</b> column. '
-          + '<b>Personal inboxes only</b> — not the league list, and not an address that forwards '
-          + 'to several people.</li>'
-          + '<li>Leave <b>Email</b> blank for anybody without one. You enter their trades for '
-          + 'them.</li>'
-          + '<li>Two rows with the <b>same seat</b> is how two people share one team — add a row '
-          + 'and give it the same seat.</li>'
-          + '<li>When it is filled in, press <b>Copy It as CSV for the Sheet</b> and paste it '
-          + 'into the Google Sheet.</li></ol>')
-    + '<p class="note"><b>' + filled + ' of ' + rows.length + '</b> row'
-    + (rows.length === 1 ? '' : 's') + ' have an address so far.</p>'
-    + '<div class="row">'
-    + (Store.live() ? ''
-        : '<button onclick="addAccess()">Add a Row</button>'
-          + '<button class="pri" onclick="copyCSV()">Copy It as CSV for the Sheet</button>')
-    + '<button onclick="showHelp(\'Owner leaves, new email, no email, commissioner\', ACCESSNOTE)">'
-    + 'What to Do When an Owner Changes Something</button></div></div>'
-    + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
-    + '<colgroup><col style="width:32%"><col style="width:68%"></colgroup><tbody>'
-    + [['Seat', 'The owner as the league names them. Never edited here.'],
-       ['Email', 'A personal inbox. Blank means that owner cannot sign in yet and you enter '
-                 + 'their trades for them.'],
-       ['Status', '<b>active</b> is normal. <b>inactive</b> refuses everything that seat tries '
-                  + 'to submit and changes nothing else — the seat still appears in standings '
-                  + 'and scores. Use it when an owner leaves and nobody has taken over.'],
-       ['Signed in', 'How many devices are holding a working key for that seat right now, and '
-                  + 'since when. It answers the one question worth asking before you retire '
-                  + 'keys: is there anything to turn away? <b>Retire Keys Now</b> sends it to '
-                  + '<i>nobody signed in</i>, and that is how you know it worked. Retire when a '
-                  + 'seat changes hands — changing the address alone does not reach a phone '
-                  + 'that is already signed in, because it never asks for a new link.'],
-       ['Role', '<b>owner</b> for everybody except the commissioner, whose row says '
-                  + '<b>commissioner</b>. That is what lets him submit for any seat and enter a '
-                  + 'correction.']]
-      .map(function(r){
-        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
-      }).join('')
-    + '</tbody></table></div></div>'
-    + '<div class="card"><div class="scr"><table>'
+/* ONE ROW PER PERSON, BECAUSE A CODE BELONGS TO A PERSON AND NOT TO A SEAT.
+   Seats with two owners print twice, with the seat named once so the pairing is visible. */
+function liveAccessTable(){
+  var rows = S.access || [];
+  var out = '';
+  rows.forEach(function(a){
+    var people = (a.members && a.members.length) ? a.members
+               : [{member: 'm1', email: a.email || '', code: '', role: a.role || 'owner',
+                   signedIn: 0}];
+    people.forEach(function(m, k){
+      var off = a.status === 'removed';
+      out += '<tr><td>' + (k === 0 ? '<b>' + esc(a.seat) + '</b><div class="f" '
+             + 'style="font-size:11px">' + esc(DATA.div_names[a.div] || a.div)
+             + (off ? ' · <span class="pill bad">Inactive</span>' : '') + '</div>'
+             : '<span class="f">&#8220;</span>') + '</td>'
+        + '<td>' + (m.email ? esc(m.email) : '<span class="f">no address</span>') + '</td>'
+        + '<td class="mono f">' + esc(m.code || '') + '</td>'
+        + '<td>' + (m.role === 'commissioner'
+            ? '<span class="pill gold">commissioner</span>' : '<span class="f">owner</span>')
+        + '</td>'
+        + '<td>' + (m.signedIn
+            ? '<span class="pill good">' + m.signedIn + ' device'
+              + (m.signedIn === 1 ? '' : 's') + '</span>'
+            : '<span class="f">nobody signed in</span>')
+        + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px" '
+        + 'onclick="retirePerson(' + jsq(a.div) + ',' + jsq(a.seat) + ',' + jsq(m.member) + ','
+        + jsq(m.email || a.seat) + ')">Retire and Issue a New Code</button></div></td></tr>';
+    });
+  });
+  return '<div class="card"><div class="scr"><table>'
+    + '<colgroup><col style="width:22%"><col style="width:28%"><col style="width:13%">'
+    + '<col style="width:17%"><col style="width:20%"></colgroup>'
+    + '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
+    + '<th title="How many devices this person is signed in on right now.">Signed In</th>'
+    + '</tr></thead><tbody>' + out + '</tbody></table></div></div>';
+}
+
+/* A STRING GOING INTO AN onclick IS QUOTED ONCE, HERE. Seat names contain apostrophes --
+   Rob O'Conner -- and one of those inside a hand-built onclick ends the attribute early and
+   silently breaks the button. */
+function jsq(v){
+  return '&quot;' + String(v == null ? '' : v)
+    .replace(/\\/g, '\\\\').replace(/"/g, '&quot;').replace(/'/g, '\\u0027')
+    .replace(/</g, '&lt;') + '&quot;';
+}
+
+function retirePerson(div, seat, member, who){
+  showHelp('Retire This Sign-In?',
+    '<p>Every device <b>' + esc(who) + '</b> is signed in on will be turned away straight away, '
+    + 'and they will get a new code.</p>'
+    + '<p>Anybody else on the same seat stays signed in.</p>'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="reallyRetire(' + jsq(div) + ',' + jsq(seat) + ','
+    + jsq(member) + ',' + jsq(who) + ')">Retire It and Issue a New Code</button>'
+    + '<button onclick="closeHelp()">Leave It Alone</button></div>');
+}
+
+function reallyRetire(div, seat, member, who){
+  closeHelp();
+  Store.call('retire', {div: div, seat: seat, member: member}).catch(function(e){
+    return {ok: false, note: String(e && e.message ? e.message : e)};
+  }).then(function(a){
+    if (!a || !a.ok){
+      showHelp('That Did Not Work', '<p>' + esc((a && a.note) || 'The league did not answer.')
+        + '</p>');
+      return;
+    }
+    var code = (a.codes && a.codes[0] && a.codes[0].code) || '';
+    showHelp('Done. Here Is the New Code.',
+      '<p>' + (a.gone ? esc(String(a.gone)) + ' device' + (a.gone === 1 ? '' : 's')
+                        + ' turned away.'
+                      : 'Nothing was signed in, so nothing was turned away.') + '</p>'
+      + '<p>The new code for <b>' + esc(who) + '</b> is '
+      + '<b class="mono">' + esc(code) + '</b>.</p>'
+      + '<p>Read it out to them. The old one no longer works.</p>');
+    Store.reload(bootOpts());
+  });
+}
+
+/* THE PRACTICE COPY'S TABLE, UNCHANGED. Every control stays editable here, because trying
+   "an owner leaves" without waiting for an owner to leave is what this copy is for. */
+function practiceAccessTable(rows){
+  return '<div class="card"><div class="scr"><table>'
     /* CSS CANNOT OVERRIDE A COLGROUP, and the real page has one column fewer, so the widths
        are built rather than written out twice. */
     + (Store.live()
@@ -3365,7 +3370,101 @@ function viewAccess(){
               : '<td><button style="min-height:30px;padding:4px 8px" onclick="delAccess(' + i
                 + ')" title="Remove this address">✕</button></td>')
           + '</tr>';
-      }).join('') + '</tbody></table></div></div>'
+      }).join('') + '</tbody></table></div></div>';
+}
+
+function viewAccess(){
+  var rows = S.access;
+  var filled = rows.filter(function(r){ return String(r.email || '').trim(); }).length;
+  /* WHAT TO DO, THEN WHAT EACH COLUMN MEANS, THEN THE TABLE. Casey, 10 Sep 2026: "it should have
+     some instruction of what he needs to populate, and what the status column means, and what
+     keys last retired means and what to do with that." A grid of editable cells with no key is
+     a form that assumes the reader already knows the model. */
+  /* THE SAME TABLE MEANS TWO DIFFERENT THINGS ON THE TWO PAGES, so it says which.
+     In the practice copy it is a toy: type into it, watch what happens, nothing leaves the
+     browser. On the real page it is a WINDOW ONTO THE SPREADSHEET -- what it shows was typed
+     into the Access tab, and that is where it is changed. Casey, 13 Sep 2026: "Should the access
+     list be on the dashboard. It reads that it is a practice copy." It read that way on both,
+     which made the real one look like a toy and would have had somebody typing into a copy of
+     their league. */
+  return '<div class="card"><h2>Access List</h2>'
+    + (Store.live()
+      /* WHAT IT IS FOR, THEN WHAT TO DO WHERE. Casey, 13 Sep 2026: "why did you start with the
+         wording that this is what the access tab of the league spreadsheet says right now ... I
+         don't even know what that means ... what are we supposed to use this for. In comparison
+         to what we use the spreadsheet for ... what tabs are we supposed to use in the
+         spreadsheet?" Every one of those is a question the copy should have answered before it
+         was asked. It opened by describing where the numbers came from, which is a fact about
+         the machinery and not a thing anybody needs. */
+      ? '<p class="note">Every seat in the league and every person who can sign in to one. '
+        + 'This page is where you do all of it. There is no spreadsheet behind it any more.</p>'
+        + '<p class="note"><b>Giving somebody their code.</b> Find their row and read the code '
+        + 'out to them. They type it into Sign In once on each device they use. It does not '
+        + 'expire and using it does not use it up.</p>'
+        + '<p class="note"><b>Never send a code to a group address and never post one where the '
+        + 'league can see it.</b> The code is the sign-in. Anyone holding it can enter trades for '
+        + 'that seat.</p>'
+        + '<p class="note"><b>Somebody loses their phone, or a code gets seen.</b> Press '
+        + '<b>Retire and Issue a New Code</b> on that person. Every device they are signed in on '
+        + 'is turned away at once and a fresh code appears in their row. Read them the new one.'
+        + '</p>'
+        + '<p class="note"><b>Two people on one seat.</b> Six seats have two owners. Each has '
+        + 'their own code and their own role. They share the roster and either of them can enter '
+        + 'that seat&rsquo;s trades. Retiring one leaves the other signed in.</p>'
+        + '<p class="note"><b>Role.</b> <b>Owner</b> for everybody except you and Bob. A '
+        + '<b>commissioner</b> sees this page, can settle a week, and can enter a trade for any '
+        + 'seat. The league will not let you stand down the last commissioner.</p>'
+        + '<p class="note">Nothing here has to be rebuilt or announced. The next time that person '
+        + 'signs in or sends a trade, the row as it stands then is the one that counts.</p>'
+      : '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
+        + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
+        + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
+        + 'league Bob edits the Sheet itself. The script reads it on every sign-in and every '
+        + 'trade, so <b>an edit takes effect on the next thing anybody does</b> — nothing is '
+        + 'rebuilt and nobody else has to be involved.</p>')
+    /* THE STEPS ARE FOR FILLING A COPY IN AND PASTING IT ACROSS, which is a thing you do once,
+       in the practice copy. On the real page the spreadsheet is already the truth and there is
+       nothing to paste anywhere. */
+    + (Store.live() ? ''
+        : '<ol class="note"><li>Type each owner&#39;s email into the <b>Email</b> column. '
+          + '<b>Personal inboxes only</b> — not the league list, and not an address that forwards '
+          + 'to several people.</li>'
+          + '<li>Leave <b>Email</b> blank for anybody without one. You enter their trades for '
+          + 'them.</li>'
+          + '<li>Two rows with the <b>same seat</b> is how two people share one team — add a row '
+          + 'and give it the same seat.</li>'
+          + '<li>When it is filled in, press <b>Copy It as CSV for the Sheet</b> and paste it '
+          + 'into the Google Sheet.</li></ol>')
+    + '<p class="note"><b>' + filled + ' of ' + rows.length + '</b> row'
+    + (rows.length === 1 ? '' : 's') + ' have an address so far.</p>'
+    + '<div class="row">'
+    + (Store.live() ? ''
+        : '<button onclick="addAccess()">Add a Row</button>'
+          + '<button class="pri" onclick="copyCSV()">Copy It as CSV for the Sheet</button>')
+    + '<button onclick="showHelp(\'Owner leaves, new email, no email, commissioner\', ACCESSNOTE)">'
+    + 'What to Do When an Owner Changes Something</button></div></div>'
+    + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
+    + '<colgroup><col style="width:32%"><col style="width:68%"></colgroup><tbody>'
+    + [['Seat', 'The owner as the league names them. Never edited here.'],
+       ['Email', 'A personal inbox. Blank means that owner cannot sign in yet and you enter '
+                 + 'their trades for them.'],
+       ['Status', '<b>active</b> is normal. <b>inactive</b> refuses everything that seat tries '
+                  + 'to submit and changes nothing else — the seat still appears in standings '
+                  + 'and scores. Use it when an owner leaves and nobody has taken over.'],
+       ['Signed in', 'How many devices are holding a working key for that seat right now, and '
+                  + 'since when. It answers the one question worth asking before you retire '
+                  + 'keys: is there anything to turn away? <b>Retire Keys Now</b> sends it to '
+                  + '<i>nobody signed in</i>, and that is how you know it worked. Retire when a '
+                  + 'seat changes hands — changing the address alone does not reach a phone '
+                  + 'that is already signed in, because it never asks for a new link.'],
+       ['Role', '<b>owner</b> for everybody except the commissioner, whose row says '
+                  + '<b>commissioner</b>. That is what lets him submit for any seat and enter a '
+                  + 'correction.']]
+      .map(function(r){
+        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="d">' + r[1] + '</td></tr>';
+      }).join('')
+    + '</tbody></table></div></div>'
+    + (Store.live() ? liveAccessTable() : practiceAccessTable(rows))
     + sheetCard() + logCard();
 }
 /* WRITTEN AS FOUR SITUATIONS AND WHAT TO DO IN EACH, after Casey read the old version twice and
@@ -3750,15 +3849,11 @@ function accessWarning(){
     + '<b>Owners_League_Access_List.csv</b> in again if a row has been edited by hand.</p></div>';
 }
 
-function boot(){
-  /* WHO THIS DEVICE IS, ASKED BEFORE ANYTHING IS DRAWN. The tabs depend on the answer, and a
-     page that drew an owner's tabs and then added the commissioner's a second later would be
-     worse than one that waited. */
-  if (Store.live() && Store.key() && LIVE_ME === null){
-    refreshMe(function(){ boot(); });
-    return;
-  }
-  Store.boot({
+/* THE OPTIONS THE STORE BOOTS WITH, IN ONE PLACE. Reading the access list again after a
+   retire has to boot with the SAME options, and a second copy of them is a second copy of
+   one fact. */
+function bootOpts(){
+  return {
     api: (DATA.api || null),
     get: function(){ return S; },
     set: adopt,
@@ -3778,7 +3873,18 @@ function boot(){
         + 'on the sheet may need to be deployed again.</p>'
         + '<p class="note">' + esc(Store.why()) + '</p>');
     }
-  });
+  };
+}
+
+function boot(){
+  /* WHO THIS DEVICE IS, ASKED BEFORE ANYTHING IS DRAWN. The tabs depend on the answer, and a
+     page that drew an owner's tabs and then added the commissioner's a second later would be
+     worse than one that waited. */
+  if (Store.live() && Store.key() && LIVE_ME === null){
+    refreshMe(function(){ boot(); });
+    return;
+  }
+  Store.boot(bootOpts());
 }
 buildRulesNote();
 /* A LINK FROM AN EMAIL IS HANDLED BEFORE THE PAGE ASKS WHO IT IS, because redeeming the link is
