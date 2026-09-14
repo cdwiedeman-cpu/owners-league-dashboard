@@ -864,7 +864,13 @@ var Store = (function () {
 
   var KEY = 'rfl_sandbox_v2';
   var CKEY = 'rfl_commish_key';   // the key THIS browser was given, never in the page itself
-  var api = null;             // the script's address, or null for the practice copy
+  var api = null;             // the back end's address, or null for the practice copy
+  /* WHAT THE LEAGUE SAID THIS DEVICE IS. Set from the answer to `view` or `load`, never from
+     anything the page decides, and used only to pick which call to make. The back end refuses on
+     its own account whatever this says. */
+  var role = 'owner';
+  var mine = null;            // {div, seat} of the signed-in seat
+  var sendTimer = null;
   var rev = null;             // the revision the copy in this browser was built on
   var dirty = false, sending = false, timer = null;
   var onstatus = function () {};
@@ -936,6 +942,42 @@ var Store = (function () {
     timer = setTimeout(function () { push(get, set); }, 700);
   }
 
+  /* ONE OWNER'S OWN ROW, SENT ON ITS OWN.
+   *
+   * The application edits its state and calls save() after every change, which is right for a
+   * commissioner and impossible for an owner. This takes the one thing an owner is allowed to
+   * change -- the rows of their own entry for this week -- and sends those.
+   *
+   * IT IS DEBOUNCED THE SAME WAY A SAVE IS. Typing a list one character at a time must not be one
+   * request per keystroke.
+   *
+   * AN EMPTY LIST IS A CLEARED ENTRY, NOT A SILENT NO-OP. Deleting your last row has to reach the
+   * league, or Monday settles a list you thought you had taken back.
+   */
+  function submitMine(get) {
+    clearTimeout(sendTimer);
+    sendTimer = setTimeout(function () {
+      var st = get() || {};
+      if (!mine) { setStatus('offline', 'this device is not signed in'); return; }
+      var k = mine.div + '|' + mine.seat;
+      var r = (st.requests || {})[k];
+      var rows = (r && r.submitted) ? (r.rows || []) : [];
+      setStatus('saving');
+      fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                  body: JSON.stringify(rows.length
+                    ? {fn: 'submit', key: ckey(), rows: rows, week: r.week}
+                    : {fn: 'submit', key: ckey(), clear: true})})
+        .then(function (x) { return x.json(); })
+        .then(function (a) {
+          if (a && a.ok) { rev = a.rev; setStatus('saved'); return; }
+          setStatus('offline', (a && a.note) || 'the league did not take that list');
+        })
+        .catch(function (e) {
+          setStatus('offline', String(e && e.message ? e.message : e));
+        });
+    }, 700);
+  }
+
   /* ---- what the application calls ------------------------------------------------------ */
 
   return {
@@ -961,18 +1003,60 @@ var Store = (function () {
       }
 
       setStatus('saving');
-      fetch(api + (api.indexOf('?') < 0 ? '?' : '&') + 'fn=load&key='
-            + encodeURIComponent(ckey()))
+      /* AN OWNER AND A COMMISSIONER ASK DIFFERENT QUESTIONS, AND ONLY ONE OF THEM MAY ASK THE
+       * BIG ONE.
+       *
+       * This used to boot with `load`, which hands back the WHOLE league -- every roster, every
+       * request, every sign-in code. The back end refuses that to an owner, correctly, and the
+       * page had no other way to start, so an ordinary owner's page never drew at all. Casey and
+       * Bob never saw it because they are both commissioners.
+       *
+       * So it asks `view` first. That answers everybody: the seats, the rosters, your own entry,
+       * the transactions, and NO addresses and no codes. If the answer says commissioner, it
+       * follows up with `load` for the parts only a commissioner has.
+       *
+       * AN OWNER WHO CAN SEND THE WHOLE STATE BACK CAN REWRITE ANY ROSTER. That is why `save` is
+       * gated and why an owner's changes go through `submit`, which writes their row and nothing
+       * else. The store predates the gate; it does not predate the reason for it.
+       */
+      fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+                  body: JSON.stringify({fn: 'view', key: ckey()})})
         .then(function (r) { return r.json(); })
         .then(function (a) {
+          if (a && a.ok && a.me && a.me.role === 'commissioner') {
+            /* THE COMMISSIONER'S OWN QUESTION, asked only once the league has said he is one. */
+            return fetch(api + (api.indexOf('?') < 0 ? '?' : '&') + 'fn=load&key='
+                         + encodeURIComponent(ckey())).then(function (r) { return r.json(); });
+          }
+          if (a && a.ok) {
+            /* AN OWNER'S PAGE IS BUILT FROM WHAT AN OWNER MAY SEE. The application works on one
+               state object, so the view is shaped into one rather than the application being
+               taught a second shape. */
+            var mineKey = a.me.div + '|' + a.me.seat;
+            var st = {rosters: a.rosters || {}, acquiredAt: a.acquiredAt || {},
+                      requests: a.mine ? (function (o) { o[mineKey] = a.mine; return o; })({}) : {},
+                      log: a.transactions || [], results: a.results || null,
+                      ranWeeks: a.ranWeeks || {}};
+            return {ok: true, rev: a.rev, state: st, me: a.me, owner: true};
+          }
+          return a;
+        })
+        .then(function (a) {
           if (a && a.why === 'nokey') {
-            /* NOT AN OUTAGE AND NOT AN EMPTY LEAGUE. The page asks for the key and waits. */
+            /* NOT AN OUTAGE AND NOT AN EMPTY LEAGUE. Nobody has signed in on this device yet.
+               THE PAGE STILL HAS TO DRAW. It used to return here without ever handing the
+               application a state, so the sign-in box it was being sent to had not been built
+               and there was nothing on screen to type into. A page that cannot draw cannot ask
+               anybody for anything. */
             setStatus('nokey', a.note || '');
+            set(opts.blank());
+            opts.ready();
             if (opts.needKey) opts.needKey();
             return;
           }
           if (!a || !a.ok) throw new Error((a && a.note) || 'the league sheet did not answer');
           rev = a.rev;
+          if (a.me) { role = a.me.role || 'owner'; mine = {div: a.me.div, seat: a.me.seat}; }
           set(a.state || opts.blank());
           if (opts.access && a.access) opts.access(a.access);
           /* WHO THIS DEVICE IS CAME BACK WITH THE DATA, so the page does not have to ask
@@ -995,6 +1079,10 @@ var Store = (function () {
         try { localStorage.setItem(KEY, JSON.stringify(get())); } catch (e) {}
         return;
       }
+      /* AN OWNER SENDS THEIR OWN ROW. THE COMMISSIONER SENDS THE STATE.
+         Not a convenience: the back end refuses `save` from an owner's key, so sending the whole
+         state would be a save that silently never happened and a list that never reached Monday. */
+      if (role !== 'commissioner') { submitMine(get); return; }
       dirty = true;
       schedule(get, set);
     },
@@ -3920,27 +4008,22 @@ function saveLight(st, why){
 /* ASKING FOR THE KEY. Typed once per device and remembered by that browser. It is never in the
    page, because the page's source can be read by anybody who opens it, and this key is what
    stands between an owner and the whole Access tab. */
+/* NOBODY IS SIGNED IN ON THIS DEVICE. SHOW THE SIGN-IN, NOT A DIALOG.
+ *
+ * This used to open a panel asking for a COMMISSIONER KEY, read off the Settings tab of a Google
+ * spreadsheet. There is no spreadsheet and no such key, and an owner never had one to begin with.
+ * Casey, 14 Sep 2026, on the live page: "I went to the My Trades tab because I thought I should
+ * be putting in that code you provided me, and it still asked me for a commissioner key."
+ *
+ * There is one way in now and it is the same for all 33 people: type the six characters your
+ * commissioner gave you. So the answer to "this device is not signed in" is the Sign In tab
+ * itself, with the box already on it, rather than a dialog over the top of it asking for
+ * something that does not exist.
+ */
 function askForKey(){
-  showHelp('This Device Needs the Commissioner Key',
-    '<p>The league sheet will not answer a device that has not been given its key. That is what '
-    + 'stops an owner reading the league\'s email addresses.</p>'
-    + '<p>The key is on the <b>Settings</b> tab of the <b>RFL Trades</b> spreadsheet, beside '
-    + '<b>Commissioner key</b>. Only you and Bob can open that spreadsheet.</p>'
-    + '<label class="lb" for="ck">Commissioner Key</label>'
-    + '<input id="ck" autocapitalize="characters" autocorrect="off" spellcheck="false" '
-    + 'placeholder="ABCDEF-GHJKLM-NPQRST-UVWXYZ" value="' + esc(Store.key()) + '">'
-    + '<div class="row" style="margin-top:10px">'
-    + '<button class="pri" onclick="saveKey()">Use This Key</button>'
-    + '<button onclick="closeHelp()">Not Now</button></div>'
-    + '<p class="note">It is remembered on this device only. Each phone and each computer is '
-    + 'told once.</p>');
-}
-function saveKey(){
-  var v = el('ck') ? el('ck').value : '';
-  if (!String(v).trim()) return;
-  Store.setKey(v);
   closeHelp();
-  boot();
+  LIVE_ME = null;
+  setTab('signin');
 }
 
 /* SAYING SO WHEN THE SPREADSHEET AND THE PAGE DO NOT AGREE ABOUT A SEAT. */
