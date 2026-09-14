@@ -2590,10 +2590,11 @@ function viewTrades(){
            not what you mean." A pronoun with two live antecedents is a coin flip the reader has
            to call. Name the list. */
         + '<li>On each row, choose the team to <b>pick up</b>, then up to ' + P.MAX_DROPS
-        + ' teams you would be willing to <b>drop</b> for it. Only one of them is dropped: '
-        + 'working down your drop list, <b>the first team you still hold and are allowed to '
-        + 'drop</b> is the one that goes. The rest are backups, in case an earlier row has '
-        + 'already used one.</li>'
+        + ' teams you would be willing to <b>drop</b> for it. Put them in the order you would '
+        + 'prefer to drop them.</li>'
+        + '<li><b>Only one team gets dropped.</b> It is the first team on your drop list that '
+        + 'you still hold and are still allowed to drop. The teams below it are your backups, in '
+        + 'case an earlier row on your list has already dropped one.</li>'
         /* SAY IT THE WAY AN OWNER THINKS ABOUT IT. Casey, 10 Sep 2026: "they don't know we're
            part of a run-it process — they're thinking in terms of a trade." "Run" and "come
            through" are the machinery's words. "Got it" and "didn't get it" are the owner's, and
@@ -3051,9 +3052,15 @@ function rowForm(r, i, free, mine, k){
     + pickField('p' + i, 'The Team You Want', r.pickup, ups, null, '1')
     + '<label class="lb step' + ((r.drops || []).filter(Boolean).length ? ' done' : '')
     + '" style="margin-top:11px"><span class="num">2</span>What You Would Give Up</label>'
-    + '<p class="note" style="margin:0 0 6px">Put them in the order you would rather lose them. '
-    + 'Only <b>one</b> of them goes: the first on this list that you still hold and are allowed '
-    + 'to drop. The rest are backups.'
+    /* ONE IDEA PER SENTENCE. Casey, 14 Sep 2026: "only one of them goes does, but the way
+       you're trying to describe the first on the list and then the rest are backups ... can you
+       fix that sentence?" It was one sentence carrying three rules with a colon in the middle,
+       and the last clause left the reader to work out why backups exist at all. His own wording
+       for the first line was better than mine and is used here. */
+    + '<p class="note" style="margin:0 0 6px">Put them in the order you would prefer to drop '
+    + 'them. <b>Only one team gets dropped.</b> It is the first team on your list that you still '
+    + 'hold and are still allowed to drop. The teams below it are your backups, in case an '
+    + 'earlier row on your list has already dropped one.'
     + (kind
         ? ' Showing your <b>' + (kind === 'NFL' ? 'NFL' : 'college') + '</b> teams, because '
           + esc(r.pickup) + ' is ' + (kind === 'NFL' ? 'an NFL team' : 'a college team') + '.'
