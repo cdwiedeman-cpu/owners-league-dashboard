@@ -3692,33 +3692,22 @@ function viewAccess(){
          spreadsheet?" Every one of those is a question the copy should have answered before it
          was asked. It opened by describing where the numbers came from, which is a fact about
          the machinery and not a thing anybody needs. */
-      ? '<p class="note">Every seat in the league and every person who can sign in to one. '
-        + 'This page is where you do all of it. There is no spreadsheet behind it any more.</p>'
-        + '<p class="note"><b>Giving somebody their code.</b> Find their row and read the code '
-        + 'out to them. They type it into Sign In once on each device they use. It does not '
-        + 'expire and using it does not use it up.</p>'
-        + '<p class="note"><b>Never send a code to a group address and never post one where the '
-        + 'league can see it.</b> The code is the sign-in. Anyone holding it can enter trades for '
-        + 'that seat.</p>'
-        + '<p class="note"><b>Everything about who is in this league is changed here.</b> Correct '
-        + 'somebody&rsquo;s address, make them a commissioner, add the second owner of a team, or '
-        + 'switch a seat off when an owner leaves. Each one takes effect on that person&rsquo;s '
-        + 'next request. Nobody has to sign in again and nothing has to be rebuilt.</p>'
-        + '<p class="note"><b>Changing an address does not sign anybody out</b> and does not '
-        + 'change their code. The two are separate on purpose, so a typo can be fixed without '
-        + 'anybody losing their phone.</p>'
-        + '<p class="note"><b>Somebody loses their phone, or a code gets seen.</b> Press '
-        + '<b>Retire and Issue a New Code</b> on that person. Every device they are signed in on '
-        + 'is turned away at once and a fresh code appears in their row. Read them the new one.'
-        + '</p>'
-        + '<p class="note"><b>Two people on one seat.</b> Six seats have two owners. Each has '
-        + 'their own code and their own role. They share the roster and either of them can enter '
-        + 'that seat&rsquo;s trades. Retiring one leaves the other signed in.</p>'
-        + '<p class="note"><b>Role.</b> <b>Owner</b> for everybody except you and Bob. A '
-        + '<b>commissioner</b> sees this page, can settle a week, and can enter a trade for any '
-        + 'seat. The league will not let you stand down the last commissioner.</p>'
-        + '<p class="note">Nothing here has to be rebuilt or announced. The next time that person '
-        + 'signs in or sends a trade, the row as it stands then is the one that counts.</p>'
+      /* WHAT SOMEBODY HAS TO KNOW BEFORE TOUCHING ANYTHING, AND NOTHING ELSE.
+         Everything shaped like "this has happened, what do I do" moved into the button below,
+         because the page had grown into a wall of text explaining controls that now say what
+         they are on their own face. */
+      ? '<p class="note">Every seat in the league and every person who can sign in to one. This '
+        + 'page is where all of it is managed. There is no spreadsheet behind it any more.</p>'
+        + '<p class="note"><b>To give somebody their code, read it off their row.</b> They type '
+        + 'it into the dashboard once on each device they use. It does not expire and using it '
+        + 'does not use it up.</p>'
+        + '<p class="note"><b>A code is the sign-in.</b> Anyone holding it can enter trades for '
+        + 'that seat, so give it to that person and nobody else. Never send one to a group '
+        + 'address and never post one where the league can see it.</p>'
+        + '<p class="note"><b>Six seats have two owners.</b> Each person has their own code and '
+        + 'their own role. They share the roster and either can enter that team\u2019s trades.</p>'
+        + '<p class="note">Every change here takes effect on that person\u2019s next request. '
+        + 'Nothing is rebuilt and nobody has to sign in again.</p>'
       : '<p class="note"><b>This is a practice copy of a tab in the Google Sheet.</b> Nothing you '
         + 'type here reaches the real Sheet and nothing there appears here — it is here so you can '
         + 'try &ldquo;an owner leaves&rdquo; without waiting for an owner to leave. In the live '
@@ -3744,8 +3733,8 @@ function viewAccess(){
     + (Store.live() ? ''
         : '<button onclick="addAccess()">Add a Row</button>'
           + '<button class="pri" onclick="copyCSV()">Copy It as CSV for the Sheet</button>')
-    + '<button onclick="showHelp(\'Owner leaves, new email, no email, commissioner\', ACCESSNOTE)">'
-    + 'What to Do When an Owner Changes Something</button></div></div>'
+    + '<button onclick="showHelp(\'What to Do When Something Changes\', ACCESSNOTE)">'
+    + 'What to Do When Something Changes</button></div></div>'
     + '<div class="card"><h2>What Each Column Is For</h2><div class="scr"><table>'
     + '<colgroup><col style="width:32%"><col style="width:68%"></colgroup><tbody>'
     + [['Seat', 'The owner as the league names them. Never edited here.'],
@@ -3781,36 +3770,73 @@ function viewAccess(){
         SECOND ONE. The button is the way; the cell is a fallback and is named as one.
      3. Losing an owner is really two situations -- somebody has taken the team, or nobody has --
         and they were in the wrong order, so the second read like an alternative to the first. */
+/* THE SITUATIONS, NOT THE CONTROLS.
+ *
+ * Casey, 14 Sep 2026: "that information inside of that is wrong and is talking about the old
+ * spreadsheet method ... maybe you should put some of that text into what to do when an owner
+ * changes something."
+ *
+ * He is right twice. It described a spreadsheet that does not exist, and the page above it had
+ * grown a wall of text explaining controls that now explain themselves. So the page keeps the
+ * few things somebody has to know BEFORE touching anything, and everything shaped like "this has
+ * happened, what do I do" lives in here.
+ *
+ * IT IS WRITTEN AS SITUATIONS BECAUSE THAT IS HOW IT ARRIVES. Nobody opens this page wanting to
+ * use a button. They open it because an owner rang them.
+ */
 var ACCESSNOTE =
-    '<p><b>An owner changes their email address.</b></p>'
-  + '<ol><li>Type the new address over the old one on the <b>Access</b> tab.</li></ol>'
-  + '<p class="note">That is all. Their phone stays signed in, so they do not have to do '
-  + 'anything. From then on every email the league sends them goes to the new address, and the '
-  + 'old one can no longer be used to sign in.</p>'
+    '<p><b>An owner gets a new email address.</b></p>'
+  + '<ol><li>Press <b>Change Address</b> on their row and type the new one.</li></ol>'
+  + '<p class="note">That is all. <b>Their phone stays signed in and their code does not '
+  + 'change.</b> The two are separate on purpose, so fixing a typo never costs somebody their '
+  + 'sign-in.</p>'
+
+  + '<p><b>Somebody loses their phone, or a code gets seen.</b></p>'
+  + '<ol><li>Press <b>Retire and Issue a New Code</b> on their row.</li>'
+  + '<li>Read them the new code. It appears on screen straight away.</li></ol>'
+  + '<p class="note">Every device that person was signed in on is turned away at once. Anybody '
+  + 'else on the same seat stays signed in, because you retired their sign-in and not the '
+  + 'team\u2019s.</p>'
+
+  + '<p><b>A team gets a second owner.</b></p>'
+  + '<ol><li>Press <b>Add a Second Owner</b> under that seat and enter their address.</li>'
+  + '<li>Read them the code it gives you.</li></ol>'
+  + '<p class="note">They get their own code and their own role. Both see the same roster and '
+  + 'either can enter that team\u2019s trades. A trade is recorded against the team, not against '
+  + 'whichever of them sent it.</p>'
 
   + '<p><b>An owner leaves and somebody new takes the team.</b></p>'
-  + '<ol><li>Type the new owner&rsquo;s address over the old one on the <b>Access</b> tab.</li>'
-  + '<li>Come back to this page, find that seat, and press <b>Retire Keys Now</b>.</li></ol>'
-  + '<p class="note"><b>Both steps matter, and the second is the one people forget.</b> Changing '
-  + 'the address stops the old owner getting any NEW sign-in link. It does nothing to the phone '
-  + 'they are already signed in on. Retiring the keys is what signs that phone out.</p>'
-  + '<p class="note">The seat keeps its roster, its points and its history. A team&rsquo;s season '
+  + '<ol><li>Press <b>Change Address</b> and put the new owner\u2019s address in.</li>'
+  + '<li>Press <b>Retire and Issue a New Code</b> on that row.</li>'
+  + '<li>Read the new owner their code.</li></ol>'
+  + '<p class="note"><b>Both steps matter and the second is the one people forget.</b> Changing '
+  + 'the address does nothing to the phone the old owner is already signed in on. Retiring is '
+  + 'what signs that phone out.</p>'
+  + '<p class="note">The seat keeps its roster, its points and its history. A team\u2019s season '
   + 'carries on whoever holds it.</p>'
-  + '<p class="note">If you happen to be in the spreadsheet already, typing an <b>x</b> in that '
-  + 'row&rsquo;s <b>Retire?</b> cell does the same thing within a few minutes. The button here is '
-  + 'quicker and tells you it worked.</p>'
 
-  + '<p><b>An owner leaves and nobody has taken the team yet.</b></p>'
-  + '<ol><li>Set that row&rsquo;s <b>Status</b> to <b>inactive</b> on the <b>Access</b> tab.</li>'
-  + '<li>Press <b>Retire Keys Now</b> on this page if they are signed in somewhere.</li></ol>'
-  + '<p class="note">The seat can no longer send anything in. It still appears in the standings '
-  + 'and the scores, and its teams still earn points, because the season does not stop for a '
-  + 'seat with nobody in it.</p>'
+  + '<p><b>An owner leaves and nobody takes the team.</b></p>'
+  + '<ol><li>Press <b>Switch This Seat Off</b> under that seat.</li></ol>'
+  + '<p class="note">Nobody on it can sign in or send a trade. Everything else stays as it was: '
+  + 'the team is still in the standings and still scores every week. <b>Put This Seat Back</b> '
+  + 'when somebody takes it over.</p>'
 
-  + '<p><b>An owner has no email address.</b></p>'
-  + '<ol><li>Leave their <b>Email</b> cell blank.</li></ol>'
-  + '<p class="note">They tell Bob what they want and he enters it under their seat, the same way '
-  + 'he can for anybody.</p>';
+  + '<p><b>Somebody needs to become a commissioner.</b></p>'
+  + '<ol><li>Change the <b>Role</b> on their row from owner to commissioner.</li></ol>'
+  + '<p class="note">They can settle a week, enter a trade for any seat and open this page, from '
+  + 'their next request onwards. <b>The last commissioner cannot be stood down</b>, so there is '
+  + 'no sequence of changes here that locks the two of you out.</p>'
+
+  + '<p><b>An owner has no code and does not want one.</b></p>'
+  + '<ol><li>Nothing to do.</li></ol>'
+  + '<p class="note">They tell you their trade and you enter it under their seat, the same as '
+  + 'before any of this existed. Nothing about the league needs all 27 of them to sign in.</p>'
+
+  + '<p><b>A seat needs adding or removing.</b></p>'
+  + '<p class="note">That cannot be done here, on purpose. The 27 teams are the league\u2019s and '
+  + 'they are fixed for the season. A page where a seat could be deleted by accident is a page '
+  + 'that can lose a roster.</p>';
+
 function setAccess(i, f, v){
   if (f === 'email'){
     var old = String(S.access[i].email || '').trim().toLowerCase();
