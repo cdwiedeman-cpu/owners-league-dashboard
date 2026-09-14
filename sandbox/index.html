@@ -2407,6 +2407,76 @@ function editRow(i, field, v, j){
   else if (field === 'condrow'){ row.cond = {type: (row.cond || {}).type || 'always', row: +v}; }
   rows[i] = row; setRows(rows); render();
 }
+
+/* ---- TELLING AN OWNER WHAT HAPPENED TO THEIR LIST ----------------------------------------------
+ * Casey, 14 Sep 2026: "given that we don't want to send an email on the trade results, where will
+ * owners go on the app to see the actual trade results? And will they know to do that?"
+ *
+ * They will not, and that was the hole. Nothing sends mail, the owner's list is cleared when the
+ * week settles, and My Trades went back to an empty form. AN ABSENCE IS NEVER AN ANSWER: an owner
+ * who asked for three teams and got none of them saw the same empty screen as one who never
+ * entered at all, and could not tell a loss from a bug.
+ *
+ * So the answer is where the question was asked -- on My Trades, not on a tab they have to be
+ * told about. It arrives twice: as a panel the first time they open the page after the week
+ * settles, and as a card that stays on the tab until the next week is settled. The panel is shown
+ * once per device and per week, which is what "the first time" means on a phone AND a laptop.
+ */
+function seenKey(seat, week){ return 'rfl_seen|' + seat + '|' + week; }
+function alreadySeen(seat, week){
+  try { return !!localStorage.getItem(seenKey(seat, week)); } catch (e) { return true; }
+}
+function markSeen(seat, week){
+  try { localStorage.setItem(seenKey(seat, week), '1'); } catch (e) {}
+}
+/* THE ROWS THAT ARE THIS SEAT'S, out of whatever the league sent back. */
+function myResult(){
+  var a = actingSeat();
+  if (!a || !a.seat) return null;
+  var R = S.results;
+  if (!R || !R.results) return null;
+  var rows = R.results[key(a.div, a.seat)];
+  if (!rows || !rows.length) return null;
+  return {week: R.week, at: R.at, seat: a.seat, rows: rows};
+}
+function resultLines(m){
+  return m.rows.map(function(r){
+    if (!r) return '';
+    var t = sentence(r, m.seat);
+    return '<div class="res ' + t.kind + '"><div class="t">' + esc(t.head) + '</div>'
+      + '<div class="w">' + esc(t.body) + '</div></div>';
+  }).join('');
+}
+function myResultCard(){
+  var m = myResult();
+  if (!m) return '';
+  var got = m.rows.filter(function(r){ return r && sentence(r, m.seat).kind === 'won'; }).length;
+  return '<div class="card"><h2>Week ' + m.week + ' &mdash; What Happened to Your List</h2>'
+    + '<p class="note">Settled ' + esc(pretty(m.at)) + '. '
+    + (got ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + '.'
+           : 'You did not get a team this week.')
+    + ' Every row you sent has an answer here. This stays on the tab until the next week is '
+    + 'settled.</p>'
+    + resultLines(m)
+    + '<p class="note">Every settled trade in the league, including everybody else&rsquo;s, is on '
+    + 'the <b>Transactions</b> tab.</p></div>';
+}
+/* SHOWN ONCE, THE FIRST TIME THEY OPEN THE PAGE AFTER IT SETTLES. Never on a later visit -- a
+   panel that reappears every time is a panel people learn to dismiss without reading. */
+function offerResult(){
+  var m = myResult();
+  if (!m) return;
+  if (alreadySeen(m.seat, m.week)) return;
+  markSeen(m.seat, m.week);
+  var got = m.rows.filter(function(r){ return r && sentence(r, m.seat).kind === 'won'; }).length;
+  showHelp('Week ' + m.week + ' Is Settled',
+    '<p>' + (got ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + ' this week.'
+                 : 'You did not get a team this week.') + '</p>'
+    + resultLines(m)
+    + '<p class="note">This is also on the <b>My Trades</b> tab until the next week is settled. '
+    + 'Every settled trade in the league is on the <b>Transactions</b> tab.</p>');
+}
+
 function viewTrades(){
   var s = whoIsThis();
   if (!s || !s.seat) return '<div class="card"><div class="empty"><p><b>Sign in first.</b></p>'
@@ -2427,7 +2497,7 @@ function viewTrades(){
      clock was in, so an owner in the Monday-list window had no way to learn the other half
      existed, let alone what to do in it. **A TOOL THAT SHOWS ONLY THE CURRENT STEP CANNOT TEACH
      THE PROCESS** — the reader needs the shape of the week before they need today's form. */
-  var h = clockBanner() + twoWays(fcfs);
+  var h = clockBanner() + myResultCard() + twoWays(fcfs);
   if (s.role === 'commissioner'){
     h += '<div class="card"><h2>Commissioner — Entering for Someone Else</h2>'
       + '<p class="note">Same form, same rules, same clock. The only difference is the line in '
@@ -4442,6 +4512,11 @@ function bootOpts(){
     ready: function(stuck){
       if (!S) adopt(null);
       render();
+      /* THE WEEK'S ANSWER, ONCE THE PAGE KNOWS WHO THIS IS. It has to be after the load, because
+         before it there is no seat to look the answer up under. Not shown when the page could not
+         be reached -- there would be nothing behind it, and a panel over a broken page is worse
+         than the broken page. */
+      if (!stuck) { try { offerResult(); } catch (e) {} }
       if (stuck) showHelp('The League Could Not Be Reached',
         '<p>This page keeps everything with the league, and it could not reach it just now. '
         + 'Nothing you do here will be saved until it can.</p>'

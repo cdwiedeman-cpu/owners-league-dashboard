@@ -989,7 +989,15 @@ async function handle(request, env) {
          for would let an owner steer their own list. */
       othersWaiting: Math.max(0, Object.keys(reqs).length - (reqs[mine] ? 1 : 0)),
       transactions: publicOf(box).transactions,
-      results: s.results || null,
+      /* AN OWNER GETS THEIR OWN ANSWER AND NOBODY ELSE'S. The whole results object was going out
+         to every reader, and a refused row names the team somebody else asked for -- exactly what
+         `othersWaiting` exists to keep quiet. The settled TRANSACTIONS are public; the wish lists
+         behind them are not. */
+      results: (function () {
+        const R = s.results;
+        if (!R || !R.results) return null;
+        return { week: R.week, at: R.at, results: { [mine]: R.results[mine] || [] } };
+      })(),
       ranWeeks: s.ranWeeks || {},
     });
   }
