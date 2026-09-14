@@ -1173,7 +1173,11 @@ function openSetup(){
    * useless to the people who need the most help. So the way past is quiet, and it hands them
    * the old unverified name picker, which is all it ever was.
    */
-  if (TRADES_API && !CODE_FALLBACK){
+  /* ONLY ON THE WAY IN. Once somebody is identified -- signed in, or having said they have no
+     code and picked a name -- reopening this panel is them wanting to CHANGE something, not
+     wanting to be challenged again. Demanding the code a second time would trap a reader who
+     genuinely has not got one behind a door they already told us they cannot open. */
+  if (TRADES_API && !CODE_FALLBACK && !VIEWER){
     box.innerHTML = `<div class="modalbox">
       <div class="modalhd"><div><h2>Sign In</h2></div></div>
       <div class="note"><b>Your commissioner gave you a six character code.</b> Type it in once
@@ -1821,7 +1825,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '13 Sep 2026, 8:10 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '13 Sep 2026, 8:12 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
