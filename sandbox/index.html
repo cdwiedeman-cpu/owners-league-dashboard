@@ -858,20 +858,12 @@ var Store = (function () {
     key: ckey,
     setKey: setKey,
 
-    /* ---- SIGNING IN, ON THE REAL PAGE -------------------------------------------------------
-     * The practice copy does all of this in the browser, with a pretend inbox. The real one has
-     * to ask the league sheet, because only the league sheet can send an email and only it can
-     * issue a key that means anything. `where` is this page's own address, sent so the link in
-     * the email comes back to the page the person was standing on. */
-    signin: function (email, where) {
-      return fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
-                         body: JSON.stringify({fn: 'signin', email: email, page: where})})
-        .then(function (r) { return r.json(); });
-    },
-
-    /* ONE LINK, ONE KEY. Whatever comes back is stored as this device's key, and from then on
-     * every request carries it. Nothing else about the person is kept in the browser: the seat
-     * is looked up from the key by the script, every time. */
+    /* ---- SIGNING IN ------------------------------------------------------------------------
+     * THERE IS NO signin() ANY MORE. It asked the league sheet to EMAIL a link, and the
+     * account that could send that mail was disabled on 13 Sep 2026. A code handed over by the
+     * commissioner carries the same secret and needs no inbox, so redeem() below is the whole of
+     * signing in now.
+     */
     redeem: function (code) {
       /* HAND BACK THE KEY THIS BROWSER ALREADY HOLDS. Signing in again on a phone that was
          already signed in used to leave two keys on the seat, and only the newer one could ever
@@ -1189,6 +1181,21 @@ function freeIn(div){
  * Casey can SEE the difference he asked about — what the email carries, and what the browser
  * keeps afterwards.
  * The email is faked (there is no server here). Everything else is the real shape.            */
+/* THE SAME ALPHABET THE REAL BACK END USES. No I, O, 0 or 1, because a commissioner reads these
+   out over the phone. Practising on a code shaped differently from the real one teaches the
+   wrong shape. */
+function code6(){
+  var s = '', a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for (var i = 0; i < 6; i++) s += a[Math.floor(Math.random() * a.length)];
+  return s;
+}
+/* A PRACTICE ADDRESS THAT BELONGS TO NOBODY. The sandbox is published, so it cannot carry a real
+   owner's address, and it used to carry Casey's. example.com exists for exactly this and can
+   never be registered by anyone. */
+function practiceEmail(seat){
+  return String(seat).toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '')
+         + '@example.com';
+}
 function rnd(n){
   var s = '', a = 'abcdefghijkmnopqrstuvwxyz23456789';
   for (var i = 0; i < n; i++) s += a[Math.floor(Math.random() * a.length)];
@@ -1215,52 +1222,42 @@ function wasEverOurs(email){
   if (!e) return null;
   return (S.former || []).filter(function(f){ return f.email === e; })[0] || null;
 }
-function requestLink(email){
-  if (looksLikeGroup(email)) return {error: 'group'};
-  var row = rowFor(email);
-  /* WHAT GOES ON THE SCREEN IS THE SAME EITHER WAY. Telling whoever typed it "that address is
-     not in the league" turns the sign-in box into a way to find out who is. The sandbox shows
-     what really happened underneath, because it is a test harness — the live one will not. */
-  var link = null, notice = null;
-  if (row && row.status !== 'removed'){
-    link = {code: rnd(22), email: email, seat: row.seat, div: row.div,
-            issued: now(), expires: 30};
-    S.links.unshift(link);
-  } else {
-    /* AN EMAIL TO THE INBOX TELLS THE TYPIST NOTHING. It lands with whoever owns the address,
-       not with whoever typed it, so answering honestly here leaks nothing — the same reason an
-       unrequested sign-in link is a tripwire rather than a hint. Casey, 10 Sep 2026: "if it was
-       a former owner trying to get in, at least tell them, in case it's an error."
-       ONLY to an address this league has actually used. Mailing every string anybody types
-       would make the sign-in box a way to send mail to strangers. */
-    var was = wasEverOurs(email);
-    if (row && row.status === 'removed'){
-      notice = {email: email, issued: now(), kind: 'notice', seat: row.seat,
-                why: 'that seat is currently inactive'};
-    } else if (was){
-      notice = {email: email, issued: now(), kind: 'notice', seat: was.seat,
-                why: 'this address is no longer on a seat in the league'};
-    }
-    if (notice) S.links.unshift(notice);
+/* SIGNING IN IS A CODE SOMEBODY GAVE YOU, NOT A LINK YOU ASKED FOR.
+   There is no inbox in this design and no waiting. The commissioner reads a code out, it is
+   typed here, and this device holds a key from then on. The code is not used up and it does not
+   expire: one person signs in on a phone and on a laptop with the same six characters. */
+function tidyCode(c){ return String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+function rowForCode(code){
+  var c = tidyCode(code);
+  if (c.length !== 6) return null;
+  for (var i = 0; i < S.access.length; i++){
+    if (tidyCode(S.access[i].code) === c) return S.access[i];
   }
-  S.links = S.links.slice(0, 8);
-  save();
-  return {sent: true, real: !!link, notice: !!notice};
+  return null;
 }
-function useLink(code){
-  var link = S.links.filter(function(l){ return l.code === code; })[0];
-  if (!link) return {error: 'This link is not one the sandbox issued.'};
-  if (link.used) return {error: 'That link has already been used. A sign-in link works once.'};
-  var row = rowFor(link.email);
-  if (!row || row.status === 'removed') return {error: 'That seat is no longer active.'};
-  link.used = true;
+
+function signInWithCode(code){
+  var c = tidyCode(code);
+  if (c.length !== 6) return {error: 'A sign-in code is six letters and numbers.'};
+  var row = rowForCode(c);
+  /* THE SAME ANSWER FOR A CODE THAT DOES NOT EXIST AND A CODE ON A SEAT THAT IS SWITCHED OFF.
+     Telling those apart would let somebody work out which codes are real. */
+  if (!row || row.status === 'removed'){
+    return {error: 'That code is not one this league issued. Check it with your commissioner.'};
+  }
   var tok = rnd(30);
-  S.tokens[tok] = {seat: row.seat, div: row.div, email: link.email, issued: now(),
+  /* THE OLD KEY ON THIS DEVICE GOES, so signing in twice on one phone does not leave a stray
+     key behind and count as two devices. */
+  var had = S.devices[S.device];
+  if (had && had.token) delete S.tokens[had.token];
+  S.tokens[tok] = {seat: row.seat, div: row.div, email: row.email, issued: now(),
                    seq: nextSeq(), device: S.device};
   S.devices[S.device] = {token: tok};
   save();
-  return {ok: true};
+  return {ok: true, seat: row.seat, div: row.div};
 }
+
 /* WHO IS THIS DEVICE? The stored key is looked up EVERY time, never trusted as a name the page
    remembers, and it is re-checked against the access list on every use. That is what makes
    removing an email, or bumping a seat's cut-off, actually reach a phone that is already
@@ -1732,124 +1729,68 @@ function viewSignIn(){
       + 'does not know anything happened until it next tries to do something.</p>'
       + '<button onclick="signOut();render()">Clear It and Start Again</button></div>';
   }
-  h += '<div class="card"><h2>Sign in</h2>'
-    + '<p class="note">Enter an address from the access list. Yours is already on it.</p>'
-    + '<div class="row"><div class="grow"><label class="lb" for="em">Email address</label>'
-    + '<input id="em" type="email" autocomplete="email" placeholder="you@example.com" '
-    + 'value="' + esc(S.lastEmail || '') + '"></div>'
-    + '<button class="pri" onclick="doRequest()">Send Me a Link</button></div>'
-    + '<p class="note" style="margin-top:8px">The real one emails it. This one drops it in the '
-    + 'box below, because there is no server here.</p>'
-    /* THE ONE MESSAGE THAT REACHES EVERYBODY. Whatever happened underneath, the person who
-       typed the address is sitting right here — telling them what to do costs nothing and
-       gives away nothing, because it says the same thing to everyone. */
-    + '<p class="note"><b>Nothing arrives after a few minutes?</b> Your address may not be the '
-    + 'one the league has for you. Contact the commissioner — it is not something you can fix '
-    + 'by trying again.</p></div>';
+  h += '<div class="card"><h2>Sign In</h2>'
+    + '<p class="note">Your commissioner gives you a six character code. Type it here once on '
+    + 'each device you use.</p>'
+    + '<div class="row"><div class="grow"><label class="lb" for="pin">Your Sign-In Code</label>'
+    + '<input id="pin" inputmode="text" autocapitalize="characters" autocorrect="off" '
+    + 'spellcheck="false" maxlength="8" placeholder="ABC123" '
+    + 'onkeydown="if(event.key===\'Enter\')doCode()"></div>'
+    + '<button class="pri" onclick="doCode()">Sign Me In</button></div>'
+    + '<p class="note" style="margin-top:10px">Upper case or lower case both work, and a stray '
+    + 'space does not matter. No code contains the letter O or the number 1, so a character that '
+    + 'looks like one of those is the other.</p>'
+    + '<p class="note">A code does not expire, and using it does not use it up. The same six '
+    + 'characters sign you in on your phone and on a computer. It stops working only when a '
+    + 'commissioner retires it.</p></div>';
 
-  h += S.links.length ? '<div class="inbox"><h3>Inbox (Pretend)</h3>'
-      + S.links.map(function(l){
-          if (l.kind === 'notice'){
-            /* A REFUSAL IS A DIFFERENT MESSAGE, NOT A SMALLER ONE. It says what happened, whose
-               seat it was, and who to ask — because the person reading it may be a former owner,
-               or may be a current owner whose row was edited by mistake. */
-            return '<div style="margin:0 0 9px"><div class="note">To <b>' + esc(l.email)
-              + '</b> · sent ' + esc(pretty(l.issued))
-              + ' · <span class="pill bad">no link</span></div>'
-              + '<div class="note"><b>You asked to sign in to the Reality Football League, and '
-              + 'we could not sign you in.</b><br>' + esc(cap(l.why))
-              + (l.seat ? ' (' + esc(l.seat) + ').' : '.')
-              + '<br>If you think that is wrong, contact the commissioner — nothing is broken at '
-              + 'your end and there is nothing to try again.</div></div>';
-          }
-          return '<div style="margin:0 0 9px"><div class="note">To <b>' + esc(l.email)
-            + '</b> · sent ' + esc(pretty(l.issued)) + ' · expires in ' + l.expires + ' minutes'
-            + (l.used ? ' · <span class="pill bad">Already Used</span>' : '') + '</div>'
-            + '<div class="mono f">https://…/trades?c=' + esc(l.code) + '</div>'
-            + '<div class="row" style="margin-top:5px">'
-            + '<button ' + (l.used ? 'disabled' : '') + ' onclick="doUse(\'' + l.code
-            + '\')">Open This Link on Device ' + esc(S.device) + '</button></div></div>';
-        }).join('')
-      + '<p class="note">Two different things, side by side. The <b>link</b> works once and dies '
-      + 'in 30 minutes — its whole job is proving you can open that inbox. The <b>key</b> it '
-      + 'hands the browser is what lasts the season.</p></div>'
-    : '<div class="card"><div class="empty">No links yet. Ask for one above and it will appear '
-      + 'here.</div></div>';
+  /* THE PRACTICE STAND-IN FOR A COMMISSIONER READING A CODE OUT.
+     In the real league these live with the commissioner and nowhere else. There is nobody to
+     ring in here, so the list is on the screen. That is the ONLY thing on this tab that the real
+     page does not do, and it says so. */
+  h += '<div class="card"><h2>Codes the Commissioner Would Hand Out</h2>'
+    + '<p class="note">In the real league you never see this list. Your commissioner reads you '
+    + 'your own code and nobody else\'s. It is here so you have a code to practise with.</p>'
+    + '<table class="tight"><thead><tr><th>Seat</th><th>Division</th><th>Code</th><th></th>'
+    + '</tr></thead><tbody>'
+    + S.access.map(function(a, i){
+        var off = a.status === 'removed';
+        return '<tr><td><b>' + esc(a.seat) + '</b>'
+          + (a.role === 'commissioner' ? ' <span class="pill gold">commissioner</span>' : '')
+          + (off ? ' <span class="pill bad">Inactive</span>' : '') + '</td>'
+          + '<td>' + esc(DATA.div_names[a.div] || a.div) + '</td>'
+          + '<td class="mono f">' + esc(a.code || '') + '</td>'
+          + '<td><button onclick="doCode(\'' + esc(a.code || '') + '\')">Use This One</button>'
+          + '</td></tr>';
+      }).join('')
+    + '</tbody></table>'
+    + '<p class="note" style="margin-top:8px">Switching device at the top and signing in with a '
+    + 'different code is how you see that a trade lands on the seat the code belongs to, not on '
+    + 'whichever seat the screen was showing.</p></div>';
   return h + clockCard();
 }
-/* ---- SIGNING IN ON THE REAL PAGE ---------------------------------------------------------
- * The practice copy runs sign-in in this browser with a pretend inbox, which is the only way it
- * could work with no server behind it. The real page asks the league sheet, which sends a real
- * email and issues a real key.
- * THE TWO MUST NOT DRIFT IN WHAT THEY SAY. Both answer "a link is on its way" whether or not the
- * address is on the access list, because saying otherwise turns the sign-in box into a way of
- * finding out who is in the league.
- */
-function doRequestLive(){
-  var v = el('em').value.trim();
-  if (!v) return;
-  var btn = document.activeElement;
-  if (btn && btn.tagName === 'BUTTON'){ btn.disabled = true; btn.textContent = 'Sending…'; }
-  /* THE LINK COMES BACK TO THE PAGE THE PERSON WAS STANDING ON.
-     Casey, 13 Sep 2026: "it open a page that only has the trade tabs. This is dumb and makes
-     owners keep to apps. I thought the link would reopen the entire RFL dashboard and I would be
-     signed in." Right. When this is running inside the dashboard, the address to come back to is
-     the DASHBOARD'S, not this page's -- an owner should never learn that this page exists. */
-  Store.signin(v, backTo()).catch(function(err){
-    return {ok: false, note: String(err && err.message ? err.message : err)};
-  }).then(function(a){
-    if (a && a.why === 'group'){
-      showHelp('That Looks Like a Group Address',
-        '<p>A sign-in link sent to a group or an alias is delivered to everybody on it, so it '
-        + 'would be a key to that seat for the whole league. The access list takes personal '
-        + 'inboxes only.</p>');
-      render();
-      return;
-    }
-    if (a && a.why === 'nomail'){
-      showHelp('The League Cannot Send Email Yet',
-        '<p>No link went out, and it is nothing to do with your address. The league account has '
-        + 'not yet given its script permission to send email.</p>'
-        + '<p>Casey does this once: open the script on the RFL Trades spreadsheet, choose '
-        + '<b>authorizeEmail</b> from the list of functions at the top, and press <b>Run</b>. '
-        + 'Google asks for the permission, he approves it, and links go out from then on.</p>');
-      render();
-      return;
-    }
-    if (a && a.why === 'email'){
-      showHelp('That Is Not an Email Address',
-        '<p>Check it and try again. It needs an @ in it.</p>');
-      render();
-      return;
-    }
-    if (!a || !a.ok){
-      showHelp('The League Sheet Could Not Be Reached',
-        '<p>Nothing was sent, because the league sheet did not answer. Check that you are online '
-        + 'and try again.</p><p class="note">' + esc((a && a.note) || '') + '</p>');
-      render();
-      return;
-    }
-    /* WHAT THE READER NEEDS AND NOTHING ELSE. Casey, 13 Sep 2026, on the paragraph that used to
-       follow: "I think you should remove the following from the pop up because it will be
-       confusing to other users." He is right twice over. It explained why the page is careful
-       about what it reveals, which is a design decision the reader never knew was made; and it
-       repeated the line about nothing arriving, which is already printed on the sign-in card
-       where somebody who is still waiting will be looking. */
-    ASKED_FOR = v;
-    render();
-    showHelp('Check Your Email',
-      '<p>A six character code is on its way to <b>' + esc(v) + '</b>. Type it into the box on '
-      + 'this page and you are signed in.</p>'
-      + '<p>It works once and stops working after thirty minutes.</p>');
-    if (el('pin')) el('pin').focus();
-  });
+
+/* TYPING A CODE, OR PRESSING ONE IN THE PRACTICE LIST. */
+function doCode(given){
+  var v = given != null ? given : (el('pin') ? el('pin').value : '');
+  if (!tidyCode(v)) return;
+  var r = signInWithCode(v);
+  if (r.error){ render(); showHelp('That Code Did Not Work', '<p>' + esc(r.error) + '</p>'); return; }
+  setTab('trades');
+  showHelp('You Are Signed In',
+    '<p>Device ' + esc(S.device) + ' is now <b>' + esc(r.seat) + '</b> in '
+    + esc(DATA.div_names[r.div] || r.div) + '.</p>'
+    + '<p>It stays signed in on this device. The code is not used up, so the same one works on '
+    + 'your other devices too.</p>');
 }
 
-/* THE LINK IN THE EMAIL LANDS HERE. The code is exchanged for this device's key and then taken
-   off the address, so the link cannot be used again by going back in the browser, and so a
-   screenshot of the address bar carries nothing. */
-/* WHERE A SIGN-IN LINK SHOULD LAND. Inside the dashboard that is the dashboard; on its own it is
-   this page. Same site either way, so the parent's address can simply be read. */
+/* ---- SIGNING IN, ON BOTH COPIES ------------------------------------------------------------
+ * ONE WAY IN, AND THE SAME ONE ON BOTH PAGES. The practice copy checks the code against its own
+ * access list in this browser; the real page sends it to the back end. Everything the reader
+ * does is identical, which is the whole point of practising.
+ * THE ONE DIFFERENCE IS STATED ON THE PAGE: the practice copy shows the codes, because there is
+ * no commissioner to ring up.
+ */
 function backTo(){
   try {
     if (window.parent && window.parent !== window && window.parent.location
@@ -2014,40 +1955,10 @@ function doSignOutLive(){
   boot();
 }
 
-function doRequest(){
-  if (Store.live()) return doRequestLive();
-  var v = el('em').value.trim();
-  S.lastEmail = v; save();
-  var r = requestLink(v);
-  if (r.error === 'group'){
-    showHelp('That looks like a group address', '<p>A sign-in link sent to a group or alias is '
-      + 'delivered to everyone on it, so it would be a key to that seat for the whole league. '
-      + 'The access list takes personal inboxes only.</p>');
-    return;
-  }
-  render();
-  if (!r.real) showHelp('Link sent', '<p>The live app says exactly this whether or not the '
-    + 'address is on the list, so the sign-in box cannot be used to find out who is in the '
-    + 'league.</p>'
-    + '<p><b>In the sandbox, so you can see what happened:</b> no sign-in link was issued for '
-    + 'that address.</p>'
-    + (r.notice
-        ? '<p>Because the league has used that address before, it did get an <b>email saying '
-          + 'why</b> — look in the pretend inbox. A message to an inbox tells whoever typed the '
-          + 'address nothing, so answering a former owner honestly gives nothing away.</p>'
-        : '<p>That address is not on the access list <b>and the league has no record of ever '
-          + 'having used it</b>, so nothing was emailed at all. Mailing every string somebody '
-          + 'types would turn the sign-in box into a way to send mail to strangers.</p>'
-          + '<p class="d"><b>Expecting it to be recognised as a former owner?</b> An old address '
-          + 'is remembered at the moment it is <i>changed on the Access list tab</i>. An address '
-          + 'that was replaced before this page learned to do that is not on the record — change '
-          + 'a row now and try again, and it will be.</p>'));
-}
-function doUse(code){
-  var r = useLink(code);
-  if (r.error){ showHelp('That link did not work', '<p>' + esc(r.error) + '</p>'); render(); return; }
-  setTab('trades');
-}
+/* THE OLD EMAIL-AND-LINK SIGN-IN IS GONE, on both copies. It needed a server that could send
+   mail, and the one that sent it was the Google account that got disabled. Nothing replaced it,
+   because nothing had to: a code handed over by the commissioner is the same secret the email
+   would have carried, and it arrives in a way nobody has to wait for. */
 function showTokenTest(){
   showHelp('What stops someone submitting as another owner',
     '<p>A trade does not say who sent it. It carries the key this browser is holding, and the '
@@ -3751,8 +3662,10 @@ function seedAccess(){
        a role can be changed, is itself a commissioner tab. A LOCKOUT. Testing the commissioner's
        side is most of what the practice copy is for, so the seat he signs in on starts as one.
        In the real league the role is the Role column of the spreadsheet and nothing else. */
-    return {div: s.div, seat: s.owner, email: mine ? (DATA.me.email || '') : '',
-            status: 'active', validAfter: '',
+    /* EVERY SEAT HAS A CODE FROM THE START, because in the real league the commissioner issues
+       them all at once and hands them out. There is nothing to request. */
+    return {div: s.div, seat: s.owner, email: practiceEmail(s.owner),
+            code: code6(), status: 'active', validAfter: '',
             role: mine ? 'commissioner' : 'owner'};
   });
 }
@@ -3766,7 +3679,7 @@ function blank(){
           divCodes: divCodeTable(),
           access: seedAccess(), former: [], requests: {}, rosters: freshRosters(),
           acquiredAt: {}, log: [], accessLog: [],
-          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, autoEmail: true, ranWeeks: {}, claimQueue: [], lastEmail: (DATA.me || {}).email || ''};
+          results: null, seed: 'RFL-SANDBOX', actingAs: null, autoPeloton: true, autoEmail: true, ranWeeks: {}, claimQueue: [], lastEmail: ''};
 }
 /* THE SAVE LIGHT. On the real one this is the reader's only way of knowing their trade reached
    the league rather than their own browser, so it says which, in words, at all times. */
