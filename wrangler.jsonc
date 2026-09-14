@@ -1,0 +1,32 @@
+// THE BACK END, DESCRIBED SO CLOUDFLARE CAN DEPLOY IT ITSELF.
+//
+// Until now the Worker was uploaded by hand through the dashboard, which needed a signed-in
+// browser session and broke every time that session dropped. This file lets Cloudflare watch the
+// repository instead: Casey pushes, and the same push that updates the website updates the back
+// end and the Monday schedule.
+//
+// ONE ACTION INSTEAD OF THREE. He was already pushing. Nothing new to remember.
+//
+// THE BUNDLE IS GENERATED -- never edit backend/worker.bundle.js. Edit code/peloton.js,
+// code/board.js or code/worker/worker.js in the kit and run code/worker/build_worker.py.
+{
+  "name": "rfl",
+  "main": "backend/worker.bundle.js",
+  "compatibility_date": "2026-09-13",
+
+  // THE STORAGE. Seats, codes, rosters, trades and each person's own settings.
+  "kv_namespaces": [
+    { "binding": "RFL", "id": "7b5cda3f356b42e0b35951997e0f8e90" }
+  ],
+
+  // MONDAY, 4:00pm ARIZONA. 23:00 UTC, and Arizona keeps no daylight saving, so this is correct
+  // in January and in July. Do not "fix" it in March.
+  // IT IS STILL A SWITCH: the Run It tab's Automatically / I Do It Myself setting is read before
+  // anything is settled, so this firing does nothing when it is set to do-it-myself.
+  "triggers": {
+    "crons": ["0 23 * * 1"]
+  }
+
+  // THE SETUP WORD IS NOT IN HERE. `ADMIN` is a secret, set once in the dashboard, and secrets
+  // are not carried in this file for the same reason no key ever is: this file is public.
+}
