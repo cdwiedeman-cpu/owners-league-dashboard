@@ -1054,7 +1054,7 @@ var Store = (function () {
             if (opts.needKey) opts.needKey();
             return;
           }
-          if (!a || !a.ok) throw new Error((a && a.note) || 'the league sheet did not answer');
+          if (!a || !a.ok) throw new Error((a && a.note) || 'the league did not answer');
           rev = a.rev;
           if (a.me) { role = a.me.role || 'owner'; mine = {div: a.me.div, seat: a.me.seat}; }
           set(a.state || opts.blank());
@@ -1092,7 +1092,7 @@ var Store = (function () {
     setKey: setKey,
 
     /* ---- SIGNING IN ------------------------------------------------------------------------
-     * THERE IS NO signin() ANY MORE. It asked the league sheet to EMAIL a link, and the
+     * THERE IS NO signin() ANY MORE. It asked the league to EMAIL a link, and the
      * account that could send that mail was disabled on 13 Sep 2026. A code handed over by the
      * commissioner carries the same secret and needs no inbox, so redeem() below is the whole of
      * signing in now.
