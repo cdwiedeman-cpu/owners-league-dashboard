@@ -1250,6 +1250,7 @@ function weekOf(day, week1) {
   return n < 0 ? 0 : n;
 }
 
+const when0 = () => new Date().toISOString();
 async function settleWeek(env, opts) {
   const o = opts || {};
   const board = await fetch(BOARD_URL, {cf: {cacheTtl: 60}}).then((r) => r.json());
@@ -1282,6 +1283,18 @@ async function settleWeek(env, opts) {
     return {ok: true, week, settled: 0, note: 'nobody sent a list, so there was nothing to settle'};
   }
 
+  /* A WEEK THE SCHEDULE SETTLED MUST BE UNDOABLE TOO. Run It on the page took a snapshot before
+     it moved anything; this did not, so the first automatic Monday would have been the one week
+     of the season with no way back. The shape is exactly what `doUndo()` on the page reads --
+     two stores of one fact, written by one function each, so they have to agree on the shape. */
+  const snap = {
+    rosters: JSON.parse(JSON.stringify(s.rosters || {})),
+    requests: JSON.parse(JSON.stringify(s.requests || {})),
+    acquiredAt: JSON.parse(JSON.stringify(s.acquiredAt || {})),
+    logLen: (s.log || []).length,
+    week, at: when0(),
+  };
+
   const league = Board.build({
     teams: board.teams, rosters: s.rosters, acquiredAt: s.acquiredAt,
     today: day, divisions: board.divisions, rules: board.rules,
@@ -1299,6 +1312,10 @@ async function settleWeek(env, opts) {
     s.log.unshift(Object.assign({when}, e));
   });
   s.results = {week, at: when, results: res.results, log: res.log};
+  /* `since` IS THE LOG LENGTH AFTER THE RUN, which is what tells the page what arrived
+     afterwards -- a first come claim taken between the run and the undo. */
+  snap.since = (s.log || []).length;
+  s.undo = snap;
   s.requests = {};
   s.ranWeeks = s.ranWeeks || {};
   const prev = s.ranWeeks[week];
