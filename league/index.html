@@ -1719,19 +1719,35 @@ function renderChips(){
        31 Aug slate was missing. Nothing was played on 30 or 31 August -- the next kickoff is
        3 September. It was warning him about games that do not exist. What matters is whether a
        GAME has been played that we do not have, so that is what it counts now. */
+    /* NOTHING IS MISSING ON A PAGE THAT READS ESPN ITSELF.
+     *
+     * Casey, 15 Sep 2026: "two games played since are missing is confusing to everybody, because
+     * that makes it sound like this dashboard is missing something. But the dashboard is live.
+     * Technically no games are missing. The Sunday night game is already included and the Monday
+     * night game will be once it's played."
+     *
+     * He is right. That sentence was written for the BAKED file -- the fallback the page shows
+     * when it cannot reach ESPN -- and it counted games played since the file was made. On a page
+     * that has just read ESPN it is a warning about nothing, and on a page that has not finished
+     * reading yet it is a warning about a second's delay.
+     * THREE STATES, NOT TWO. Live, still asking, or it could not be reached. Only the last one is
+     * a warning, because only the last one is a page showing older scores than exist.
+     */
     const live = (typeof SEASON_LIVE !== 'undefined') && SEASON_LIVE === true
               && (typeof LAST_SEASON_MERGE !== 'undefined') && LAST_SEASON_MERGE;
+    const failed = (typeof SEASON_LIVE !== 'undefined') && SEASON_LIVE === false;
     const missing = ((DATA.games_since_results || {}).n) || 0;
     const label = live
       ? `Scores live from ESPN · ${azNow() || 'just now'}`
-      : missing
-        ? `Scores through ${pretty(DATA.results_through)} · ${missing} game${missing === 1 ? '' : 's'} played since are missing`
-        : `Scores complete through ${pretty(DATA.results_through)} · no games since`;
-    c.push(`<span class="chip ${live ? '' : missing ? 'warn' : ''}" title="${live
+      : failed
+        ? `ESPN could not be reached · showing scores through ${pretty(DATA.results_through)}`
+        : 'Reading scores from ESPN…';
+    c.push(`<span class="chip ${failed ? 'warn' : ''}" title="${live
       ? 'This page asked ESPN for scores and got them. These are up to the minute.'
-      : missing
-        ? 'These scores were checked by hand when the file was made. Games played since are not in the projections yet — ask for a refresh.'
-        : 'Every game played so far is in. Nothing has been played since this date, so nothing is missing. The page also asks ESPN for scores itself when it can reach it.'}">${label}</span>`);
+      : failed
+        ? 'This page could not reach ESPN, so it is showing the scores that were checked by hand when the file was made'
+          + (missing ? `. ${missing} game${missing === 1 ? '' : 's'} played since ${'that date'} are not in these numbers.` : '.')
+        : 'This page is asking ESPN for the scores now. It updates on its own every minute.'}">${label}</span>`);
   }
   /* Never silent. A model that quietly re-rates behind a number he is acting on would be worse
      than one that does not re-rate at all. */
@@ -1986,7 +2002,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 1:01 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 4:50 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
