@@ -2014,7 +2014,7 @@ function viewSignIn(){
      ring in here, so the list is on the screen. That is the ONLY thing on this tab that the real
      page does not do, and it says so. */
   h += '<div class="card"><h2>Codes the Commissioner Would Hand Out</h2>'
-    + '<p class="note">In the real league you never see this list. Your commissioner reads you '
+    + '<p class="note">In the real league you never see this list. Your commissioner sends you '
     + 'your own code and nobody else\'s. It is here so you have a code to practise with.</p>'
     + '<table class="tight"><thead><tr><th>Seat</th><th>Division</th><th>Code</th><th></th>'
     + '</tr></thead><tbody>'
@@ -2171,8 +2171,8 @@ function viewSignInLive(){
     + 'looks like one of those is the other.</p>'
     + '<p class="note">Your code does not expire, and using it does not use it up. Sign in on '
     + 'your phone and on a computer with the same code.</p>'
-    + '<p class="note"><b>The Code Was Not Accepted?</b> Ask your commissioner to read it back to '
-    + 'you, or to issue you a new one. It is not something you can fix by trying again.</p></div>';
+    + '<p class="note"><b>The Code Was Not Accepted?</b> Ask your commissioner to send it to you '
+    + 'again, or to issue you a new one. Trying the same code again will not fix it.</p></div>';
   return h + clockCard();
 }
 
@@ -3610,7 +3610,7 @@ function saveAdd(div, seat){
     var c = (a.added && a.added.code) || '';
     showHelp('Added. Here Is Their Code.',
       '<p><b>' + esc(v) + '</b> is on <b>' + esc(seat) + '</b>.</p>'
-      + '<p>Their code is <b class="mono">' + esc(c) + '</b>. Read it out to them.</p>');
+      + '<p>Their code is <b class="mono">' + esc(c) + '</b>. Email or text it to them.</p>');
   });
 }
 
@@ -3667,7 +3667,7 @@ function reallyRetire(div, seat, member, who){
                       : 'Nothing was signed in, so nothing was turned away.') + '</p>'
       + '<p>The new code for <b>' + esc(who) + '</b> is '
       + '<b class="mono">' + esc(code) + '</b>.</p>'
-      + '<p>Read it out to them. The old one no longer works.</p>');
+      + '<p>Email or text it to them. The old code no longer works.</p>');
     Store.reload(bootOpts());
   });
 }
@@ -3757,7 +3757,8 @@ function viewAccess(){
          they are on their own face. */
       ? '<p class="note">Every seat in the league and every person who can sign in to one. This '
         + 'page is where all of it is managed. There is no spreadsheet behind it any more.</p>'
-        + '<p class="note"><b>To give somebody their code, read it off their row.</b> They type '
+        + '<p class="note"><b>To give somebody their code, copy it off their row and send it to '
+        + 'them.</b> They type '
         + 'it into the dashboard once on each device they use. It does not expire and using it '
         + 'does not use it up.</p>'
         + '<p class="note"><b>A code is the sign-in.</b> Anyone holding it can enter trades for '
@@ -3836,7 +3837,8 @@ function columnRows(){
        ['Person', 'One row for each person on that seat. Six teams have two owners, so those '
                 + 'seats have two rows. <b>Change Address</b> corrects an email address. It does '
                 + 'not sign anybody out and it does not change their code.'],
-       ['Code', 'The six characters that person types to sign in. Read it out to them. It is '
+       ['Code', 'The six characters that person types to sign in. Email or text it to them, on its '
+                + 'own, to an address or number that reaches only them. It is '
                 + 'theirs alone, it never expires, and the same code works on every device they '
                 + 'own.'],
        ['Role', '<b>owner</b> for almost everybody. <b>commissioner</b> also lets that person '
@@ -3882,14 +3884,14 @@ var ACCESSNOTE =
 
   + '<p><b>Somebody loses their phone, or a code gets seen.</b></p>'
   + '<ol><li>Press <b>Retire and Issue a New Code</b> on their row.</li>'
-  + '<li>Read them the new code. It appears on screen straight away.</li></ol>'
+  + '<li>Email or text them the new code. It appears on screen straight away.</li></ol>'
   + '<p class="note">Every device that person was signed in on is turned away at once. Anybody '
   + 'else on the same seat stays signed in, because you retired their sign-in and not the '
   + 'team\u2019s.</p>'
 
   + '<p><b>A team gets a second owner.</b></p>'
   + '<ol><li>Press <b>Add a Second Owner</b> under that seat and enter their address.</li>'
-  + '<li>Read them the code it gives you.</li></ol>'
+  + '<li>Email or text them the code it gives you.</li></ol>'
   + '<p class="note">They get their own code and their own role. Both see the same roster and '
   + 'either can enter that team\u2019s trades. A trade is recorded against the team, not against '
   + 'whichever of them sent it.</p>'
