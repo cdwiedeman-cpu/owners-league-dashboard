@@ -1965,7 +1965,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 1:25 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:58 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8624,7 +8624,15 @@ if (PROJ_ON) computeRerate();
 function paintAll(){
   renderChips(); renderFilters(); renderScores(); renderStandings();
   if (PROJ_ON){ renderPick(); renderSlots(); renderRace(); }
-  else { renderWeekly(); renderSummary(); renderTx(); }
+  /* THE THREE SHARED TABS REPAINT TOO WHEN THEY ARE ON SCREEN.
+     On the all-owners page they always have. On Casey's page they were drawn only when their tab
+     was pressed, because they arrived there later -- so a trade settling while he sat on Season
+     Summary left the old owner on screen until he switched tabs and back. Every five minutes this
+     runs; whatever is visible gets the new ownership. */
+  const onScreen = (k) => { const n = el(k); return !!(n && !n.hidden); };
+  if (!PROJ_ON || onScreen('weekly')) renderWeekly();
+  if (!PROJ_ON || onScreen('summary')) renderSummary();
+  if (!PROJ_ON || onScreen('tx')) renderTx();
 }
 paintAll();
 /* THE TRADES ARRIVE AFTER THE FIRST PAINT, so a slow sheet never holds up the scores, and then
