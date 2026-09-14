@@ -139,6 +139,9 @@ async function whois(env, given) {
            role: me.role || 'owner', email: me.email || '' };
 }
 
+/* WHERE ONE PERSON'S OWN SETTINGS LIVE. Built from the sign-in and nothing else. */
+const prefsKey = (who) => 'prefs|' + who.div + '|' + who.seat + '|' + who.member;
+
 const isCommish = (who) => !!(who && !who.dead && who.role === 'commissioner');
 /* AT LEAST ONE COMMISSIONER MUST SURVIVE ANY CHANGE, anywhere in the league, on any seat. */
 const anyCommish = (access) =>
@@ -293,6 +296,32 @@ async function handle(request, env) {
 
   if (fn === 'me') return out({ ok: true, me: { div: who.div, seat: who.seat,
                                 email: who.email, role: who.role } });
+
+  /* ---- ONE PERSON'S OWN SETTINGS -------------------------------------------------------
+   * Casey's watch list, and anything like it later. It is PER PERSON, not per seat: he asked
+   * for it to follow HIM between his phone and his laptop, and a seat can hold two people who
+   * would not want each other's shortlist.
+   *
+   * ITS OWN KEY, NOT A ROW IN A SHARED MAP. Thirty-three people writing into one document is a
+   * lost update waiting for the week somebody notices their list is short. A key each cannot
+   * collide at all.
+   *
+   * THE SEAT AND PERSON COME FROM THE SIGN-IN, never from anything the page sends, so nobody
+   * can read or write somebody else's.
+   */
+  if (fn === 'prefs') {
+    const v = await getJSON(env, prefsKey(who), {});
+    return out({ ok: true, prefs: v });
+  }
+
+  if (fn === 'setprefs') {
+    const v = p('prefs');
+    if (v == null || typeof v !== 'object') {
+      return out({ ok: false, why: 'bad', note: 'there were no settings in that' });
+    }
+    await putJSON(env, prefsKey(who), v);
+    return out({ ok: true, at: new Date().toISOString() });
+  }
 
   if (fn === 'view') {
     const box = await readState(env);
