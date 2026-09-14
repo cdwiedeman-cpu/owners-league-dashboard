@@ -4164,7 +4164,7 @@ function practiceAccessTable(rows){
           + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px"'
           + (L.n ? '' : ' title="Nothing is signed in to this seat, so there is nothing for this '
                         + 'to turn away."')
-          + ' onclick="bump(' + i + ')">Retire Keys Now</button></div></td>'
+          + ' onclick="bump(' + i + ')">Retire and Issue a New Code</button></div></td>'
           + (Store.live() ? ''
               : '<td><button style="min-height:30px;padding:4px 8px" onclick="delAccess(' + i
                 + ')" title="Remove this address">✕</button></td>')
@@ -4324,9 +4324,10 @@ function columnRows(){
                 + 'still scores. Use it when an owner leaves and nobody has taken over.'],
        ['Signed in', 'How many devices can use the page as that seat right now, and the date the '
                 + 'oldest of them signed in. <b>nobody signed in</b> means none of them can.'],
-       ['Retire Keys Now', 'Signs that seat out on every device. <b>Press it when a seat changes '
-                + 'hands.</b> Changing the address on its own does not sign anybody out, so the '
-                + 'old owner stays signed in until you press this button.'],
+       ['Retire and Issue a New Code', 'Signs that seat out on every device and gives you a new '
+                + 'code for it straight away. <b>Press it when a seat changes hands</b>, and when '
+                + 'somebody loses a phone. Changing the address on its own signs nobody out, so '
+                + 'the old owner stays signed in until you press this.'],
        ['Role', '<b>owner</b> for everybody except a commissioner. A commissioner can also '
                 + 'submit for any seat and enter a correction.']];
   return rows;
@@ -4404,6 +4405,15 @@ function nextSeq(){ S.seq = (S.seq || 0) + 1; save(); return S.seq; }
    exists right now; the address on the row can still ask for a new link. Replacing an owner is
    TWO edits — change the address, then retire — and doing only the second one signs the same
    person out and lets them straight back in, which is exactly what Casey saw. */
+/* PRACTISING A RETIREMENT HAS TO PRACTISE THE REAL ONE.
+ *
+ * Casey, 14 Sep 2026: "shouldn't the access list be on the practice thing as well, so I can
+ * practice retiring an owner and issuing a new code, to ensure that works?" It was there. It did
+ * something else. The live button is <b>Retire and Issue a New Code</b> and hands the new code
+ * back on the spot; this one ended the sessions and left the old code working, under a panel
+ * telling him the owner could "ask for a new link" -- a flow that died with the Google account.
+ * PRACTISING ON DIFFERENT BUTTONS TEACHES THE WRONG THING, so it does what the real one does.
+ */
 function bump(i){
   var row = S.access[i];
   /* HOW MANY SESSIONS THIS ACTUALLY ENDED, counted at the moment it happens. A watermark with no
@@ -4416,26 +4426,25 @@ function bump(i){
   row.validAfter = now();
   row.retiredSeq = seq;
   row.retiredN = n;
-  note(row, n ? 'keys retired, ' + n + ' device' + (n === 1 ? '' : 's') + ' turned away'
-             : 'keys retired, nothing was signed in');
+  /* THE NEW CODE IS THE POINT OF THE BUTTON. The old one stops working the moment this is set. */
+  row.code = code6();
+  note(row, (n ? n + ' device' + (n === 1 ? '' : 's') + ' signed out' : 'nothing was signed in')
+            + ', new code issued');
   save();
-  var stillOurs = String(S.access[i].email || '').trim();
-  showHelp('Keys retired on that seat',
-    '<p>' + (n ? esc(String(n)) + ' device' + (n === 1 ? '' : 's') + ' signed in to <b>'
-                 + esc(S.access[i].seat) + '</b> ' + (n === 1 ? 'has' : 'have')
-                 + ' been turned away.'
-               : 'Nothing was signed in to <b>' + esc(S.access[i].seat) + '</b>, so nothing was '
-                 + 'turned away. The seat is now sealed against any key handed out before now, '
-                 + 'which is what you want if you are about to hand it over.') + '</p>'
-    + '<p class="d">The <b>Signed in</b> column reads <i>nobody signed in</i> now. That is the '
-    + 'whole of what changed on the row, and there is nothing left for you to clear. The '
-    + 'retirement is written into <b>Recent Changes</b> with its date.</p>'
-    + (stillOurs
-        ? '<p><b>' + esc(stillOurs) + ' is still the address on this seat</b>, so that person '
-          + 'can ask for a new link and sign back in. That is correct: retiring keys ends the '
-          + 'sessions that exist, it does not remove anybody.</p>'
-          + '<p>To hand the seat to somebody else, change the address first and then retire.</p>'
-        : '<p>The seat has no address, so nobody can sign in to it until one is added.</p>'));
+  showHelp('New Code Issued for ' + row.seat,
+    '<p>Their new code is <b class="mono">' + esc(row.code) + '</b>. Email or text it to them, on '
+    + 'its own.</p>'
+    + '<p>' + (n
+        ? esc(String(n)) + ' device' + (n === 1 ? '' : 's') + ' signed in to <b>'
+          + esc(row.seat) + '</b> ' + (n === 1 ? 'has' : 'have') + ' been signed out.'
+        : 'Nothing was signed in to <b>' + esc(row.seat) + '</b>, so nothing was signed out. The '
+          + 'old code has stopped working either way, which is what you want if you are about to '
+          + 'hand the seat over.') + '</p>'
+    + '<p class="note">The old code no longer signs anybody in. The <b>Signed in</b> column reads '
+    + '<i>nobody signed in</i> now, and the change is written into <b>Recent Changes</b> with its '
+    + 'date.</p>'
+    + '<p class="note">To hand the seat to somebody else, change the address first and then press '
+    + 'this. Changing the address on its own signs nobody out.</p>');
   render();
 }
 function delAccess(i){ S.access.splice(i, 1); save(); render(); }
