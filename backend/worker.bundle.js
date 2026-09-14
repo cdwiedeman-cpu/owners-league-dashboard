@@ -1185,18 +1185,36 @@ async function handle(request, env) {
     const box = await readState(env);
     const access = await getJSON(env, 'access', []);
     const keys = await getJSON(env, 'keys', {});
-    const counts = {}, perPerson = {};
+    /* WHEN EACH SIGN-IN WAS MADE, NOT ONLY HOW MANY THERE ARE.
+     *
+     * Casey, 15 Sep 2026: "it's showing that Tom Rush has two devices signed in. He has not been
+     * given the link. It shows 10 devices for me, which I'm only signed into my phone and my
+     * laptop."
+     *
+     * The number was honest but the word was not. This counts KEYS -- one is written every time
+     * somebody signs in, and nothing ever removes one. Casey has ten because a phone, a laptop, a
+     * home-screen icon and the old web address are four different browsers as far as a stored key
+     * is concerned, and every sign-in during a fortnight of testing left one behind. Calling that
+     * "devices signed in" reads as ten people holding his seat.
+     *
+     * A count with no dates cannot be judged. The dates come back with it now, so a leftover from
+     * testing looks like what it is, and Retire and Issue a New Code clears them.
+     */
+    const counts = {}, perPerson = {}, whenPerson = {};
     for (const k of Object.keys(keys)) {
       const r = keys[k];
       counts[r.div + '|' + r.seat] = (counts[r.div + '|' + r.seat] || 0) + 1;
       const pk = r.div + '|' + r.seat + '|' + r.member;
       perPerson[pk] = (perPerson[pk] || 0) + 1;
+      (whenPerson[pk] = whenPerson[pk] || []).push(r.issued || '');
     }
+    for (const pk of Object.keys(whenPerson)) whenPerson[pk].sort();
     return out({ ok: true, rev: box.rev, state: box.state,
                  access: access.map((a) => ({ div: a.div, seat: a.seat, status: a.status,
                    members: membersOf(a).map((m) => ({ member: m.id, email: m.email || '',
                      who: memberLabel(m), role: m.role || 'owner', code: m.code,
-                     signedIn: perPerson[a.div + '|' + a.seat + '|' + m.id] || 0 })) })),
+                     signedIn: perPerson[a.div + '|' + a.seat + '|' + m.id] || 0,
+                     signedWhen: whenPerson[a.div + '|' + a.seat + '|' + m.id] || [] })) })),
                  signedIn: counts,
                  accessLog: await getJSON(env, 'accesslog', []),
                  me: { div: who.div, seat: who.seat, email: who.email, role: who.role },
