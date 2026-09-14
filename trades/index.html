@@ -3490,6 +3490,91 @@ function logCard(){
    It existed to answer "where is this in the spreadsheet", and there is no spreadsheet. Kept as
    an empty function rather than chased through every caller. */
 function sheetCard(){ return ''; }
+
+/* ---- HANDING A CODE TO AN OWNER ---------------------------------------------------------------
+ * Casey, 14 Sep 2026: "we're not going to be reading their code to them ... it would be great to
+ * have a button that captures the owner's email address, the code itself, the link to the RFL
+ * website and instructions of what they need to do to get logged in, as well as instructions for
+ * how to add the dashboard to their home screen."
+ *
+ * AND THE CODE HAS TO PASTE READABLY. His words: "when I copy it manually, it pastes with a black
+ * background, so you can't really read the code." The page is dark, and a manual selection carries
+ * the page's colours into the mail. Two answers, both here: the buttons put PLAIN TEXT on the
+ * clipboard, which has no colours at all, and the code on the row is drawn on white with black
+ * text so that a manual selection pastes readably too.
+ */
+function copyPlain(text, title, lead){
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text);
+  showHelp(title,
+    '<p>' + lead + '</p>'
+    + '<pre class="mono" style="white-space:pre-wrap;background:#fff;color:#111;padding:10px;'
+    + 'border-radius:8px;max-height:340px;overflow:auto">' + esc(text) + '</pre>');
+}
+function copyCode(code){
+  copyPlain(String(code || ''), 'Code Copied',
+    'It is on your clipboard as plain text, so it pastes with no colours on it. '
+    + 'Send it to that one person on its own.');
+}
+/* THE ADDRESS THIS PAGE IS BEING READ FROM. Never typed in: the dashboard moves house, and a
+   typed address would still name the old one the next morning. */
+function siteURL(){
+  var u = '';
+  try { u = backTo() || ''; } catch (e) { u = ''; }
+  if (!u) u = String(location.href).split('?')[0].split('#')[0];
+  return u;
+}
+/* THE WHOLE MESSAGE, READY TO SEND. Plain text on purpose: it pastes into any mail app and into a
+   text message without carrying anything with it. */
+function welcomeText(seat, code, email){
+  var url = siteURL();
+  return ''
+  + 'To: ' + (email || '(no address on file for them)') + '\n'
+  + 'Subject: Your Reality Football League sign-in code\n'
+  + '\n'
+  + 'Here is your sign-in code for the league website.\n'
+  + '\n'
+  + 'Your team: ' + seat + '\n'
+  + 'Your code: ' + code + '\n'
+  + 'The website: ' + url + '\n'
+  + '\n'
+  + 'HOW TO SIGN IN\n'
+  + '1. Open the website link above.\n'
+  + '2. A box asks for your code. Type in the six characters.\n'
+  + '3. That is it. This device stays signed in for the rest of the season.\n'
+  + '\n'
+  + 'Upper case or lower case both work, and a stray space does not matter. No code has the\n'
+  + 'letter O or the number 1 in it, so a character that looks like one of those is the other.\n'
+  + '\n'
+  + 'Your code is yours alone. Anyone who has it can enter trades for your team, so please do\n'
+  + 'not pass it on and do not post it anywhere the league can see it.\n'
+  + '\n'
+  + 'PUT IT ON YOUR HOME SCREEN (iPhone and iPad)\n'
+  + '1. Open the website link in Safari. It has to be Safari for this step.\n'
+  + '2. Tap the Share button. It is the square with an arrow coming out of the top.\n'
+  + '3. Scroll down the list and tap Add to Home Screen.\n'
+  + '4. Tap Add. The icon appears with your other apps.\n'
+  + '5. Open it from the icon and type your code in once more. The icon keeps its own sign-in,\n'
+  + '   separate from Safari, so it asks you once.\n'
+  + '\n'
+  + 'PUT IT ON YOUR HOME SCREEN (Android)\n'
+  + '1. Open the website link in Chrome.\n'
+  + '2. Tap the three dots at the top right.\n'
+  + '3. Tap Add to Home screen, then tap Add or Install.\n'
+  + '4. Open it from the icon and type your code in once more.\n'
+  + '\n'
+  + 'ENTERING A TRADE\n'
+  + 'Go to the My Trades tab. Name the team you want to pick up and the teams you would be\n'
+  + 'willing to give up for it, then press Send My List. You can change your list as often as\n'
+  + 'you like until the window closes at 3:59pm Arizona time on Monday.\n'
+  + '\n'
+  + 'If the code will not work, reply to this message and I will send you a new one.\n';
+}
+function copyWelcome(seat, code, email){
+  copyPlain(welcomeText(seat, code, email), 'Message Copied',
+    'The whole message is on your clipboard as plain text. Paste it into an email or a text to '
+    + '<b>' + esc(email || 'that owner') + '</b> and send it.');
+}
+
 /* ONE ROW PER PERSON, BECAUSE A CODE BELONGS TO A PERSON AND NOT TO A SEAT.
    Seats with two owners print twice, with the seat named once so the pairing is visible. */
 function liveAccessTable(){
@@ -3509,7 +3594,18 @@ function liveAccessTable(){
         + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:3px" '
         + 'onclick="editPerson(' + jsq(a.div) + ',' + jsq(a.seat) + ',' + jsq(m.member) + ','
         + jsq(m.email || '') + ')">Change Address</button></div></td>'
-        + '<td class="mono f">' + esc(m.code || '') + '</td>'
+        + '<td><span class="mono" style="background:#fff;color:#111;padding:2px 6px;'
+        + 'border-radius:5px;letter-spacing:1px">' + esc(m.code || '') + '</span>'
+        + '<div style="margin-top:4px">'
+        + '<button style="font-size:11px;min-height:26px;padding:3px 7px" '
+        + 'onclick="copyCode(' + jsq(m.code || '') + ')" title="Puts just the six characters on '
+        + 'your clipboard, with no colours on them">Copy Code</button></div>'
+        + '<div style="margin-top:4px">'
+        + '<button style="font-size:11px;min-height:26px;padding:3px 7px" '
+        + 'onclick="copyWelcome(' + jsq(a.seat) + ',' + jsq(m.code || '') + ','
+        + jsq(m.email || '') + ')" title="Their address, their code, the website link, how to '
+        + 'sign in, and how to put it on a phone home screen">Copy Their Email</button></div>'
+        + '</td>'
         + '<td><select style="min-height:30px" onchange="setRole(' + jsq(a.div) + ','
         + jsq(a.seat) + ',' + jsq(m.member) + ',this.value)">'
         + '<option value="owner"' + (m.role === 'commissioner' ? '' : ' selected')
@@ -3535,8 +3631,8 @@ function liveAccessTable(){
       + (off ? 'Put This Seat Back' : 'Switch This Seat Off') + '</button></td></tr>';
   });
   return '<div class="card"><div class="scr"><table>'
-    + '<colgroup><col style="width:20%"><col style="width:28%"><col style="width:12%">'
-    + '<col style="width:18%"><col style="width:22%"></colgroup>'
+    + '<colgroup><col style="width:18%"><col style="width:24%"><col style="width:22%">'
+    + '<col style="width:16%"><col style="width:20%"></colgroup>'
     + '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
     + '<th title="How many devices this person can use the page from right now.">'
     + 'Signed In</th>'
@@ -3837,10 +3933,16 @@ function columnRows(){
        ['Person', 'One row for each person on that seat. Six teams have two owners, so those '
                 + 'seats have two rows. <b>Change Address</b> corrects an email address. It does '
                 + 'not sign anybody out and it does not change their code.'],
-       ['Code', 'The six characters that person types to sign in. Email or text it to them, on its '
-                + 'own, to an address or number that reaches only them. It is '
-                + 'theirs alone, it never expires, and the same code works on every device they '
-                + 'own.'],
+       ['Code', 'The six characters that person types to sign in. It is theirs alone, it never '
+                + 'expires, and the same code works on every device they own. <b>Copy Code</b> '
+                + 'puts just those six characters on your clipboard as plain text, so they paste '
+                + 'into an email readably instead of carrying this page&rsquo;s dark background '
+                + 'with them.'],
+       ['Copy Their Email', 'Puts a finished message on your clipboard: their address, their '
+                + 'code, the link to the website, how to sign in, how to put the page on an '
+                + 'iPhone or Android home screen, and how to enter a trade. Paste it into an '
+                + 'email or a text to that one person and send it. Send each code on its own, '
+                + 'never in a message that reaches more than one owner.'],
        ['Role', '<b>owner</b> for almost everybody. <b>commissioner</b> also lets that person '
                 + 'settle a week, enter a trade for any seat, and open this page. The last '
                 + 'commissioner cannot be stood down.'],
