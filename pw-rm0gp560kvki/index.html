@@ -1128,7 +1128,15 @@ function setupCodeGo(){
 }
 
 function openSetup(){
-  if (!LEAGUE) return;
+  /* THIS PANEL DOES TWO JOBS AND ONLY ONE OF THEM IS THE LEAGUE PAGE'S.
+   *
+   * It began as "which owner are you", which is a question only the all-owners page has to ask.
+   * So it was switched off everywhere else. Then it became the sign-in, and the switch stayed --
+   * which meant Casey's own dashboard never showed it, and he saw only the tab. His words:
+   * "I never got the panel asking me for the code. I only seen a sign in on the far left."
+   *
+   * SIGNING IN IS EVERY PAGE'S QUESTION. Owner-picking is still the league page's alone. */
+  if (!LEAGUE && !(TRADES_API && !SIGNED_IN)) return;
   const box = el('setup'); if (!box) return;
   const seats = DATA.seats || [];
   if (!seats.length) return;
@@ -1177,7 +1185,7 @@ function openSetup(){
      code and picked a name -- reopening this panel is them wanting to CHANGE something, not
      wanting to be challenged again. Demanding the code a second time would trap a reader who
      genuinely has not got one behind a door they already told us they cannot open. */
-  if (TRADES_API && !CODE_FALLBACK && !VIEWER){
+  if (TRADES_API && !CODE_FALLBACK && (!VIEWER || !LEAGUE) && !SIGNED_IN){
     box.innerHTML = `<div class="modalbox">
       <div class="modalhd"><div><h2>Sign In</h2></div></div>
       <div class="note"><b>Your commissioner gave you a six character code.</b> Type it in once
@@ -1194,7 +1202,8 @@ function openSetup(){
         work. No code has the letter O or the number 1 in it, so a character that looks like one
         of those is the other.</div>
       <div class="note" style="margin-top:14px"><a href="#" onclick="event.preventDefault();
-        CODE_FALLBACK=true;openSetup()">I do not have a code</a></div>
+        CODE_FALLBACK=true;${LEAGUE ? 'openSetup()' : 'closeSetup()'}">I do not have a
+        code</a></div>
     </div>`;
     document.body.style.overflow = 'hidden';
     const f = el('setupCode'); if (f) f.focus({preventScroll: true});
@@ -1825,7 +1834,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '13 Sep 2026, 8:12 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '13 Sep 2026, 10:30 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8548,6 +8557,8 @@ function addCommishTabs(yes){
 }
 /* ASK ONCE, ON FIRST OPEN. After the page has drawn, so a reader who skips is looking at a
    working dashboard and not a blank one, and so nothing here can stop the page rendering. */
-if (LEAGUE && !VIEWER) openSetup();
+/* ASK ON THE WAY IN, ON EITHER PAGE. The league page asks anybody it does not recognise. The
+   personal page asks only while nobody has signed in -- once Casey has, it never asks again. */
+if ((LEAGUE && !VIEWER) || (!LEAGUE && TRADES_API && !rememberedSignedIn())) openSetup();
 pollNow();
 </script></body></html>
