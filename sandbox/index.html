@@ -2,32 +2,21 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>RFL Trades — SANDBOX</title>
 <style>
-:root{--bg:#0b1119;--pan:#111a24;--pan2:#16212e;--line:#1e2a37;--ink:#e6edf5;--dim:#93a4b8;
- --faint:#5f7080;--good:#4ade80;--bad:#f87171;--gold:#fbbf24;--blue:#60a5fa;--mine:#a78bfa;
- --warn:#f59e0b}
-/* ---- LIGHT AND DARK, FOLLOWING THE READER'S OWN DEVICE -------------------------------------
- * Casey, 15 Sep 2026, asking whether black-on-white would be cleaner: "what would be the best
- * visual appeal?" The honest answer is that it depends on the reader and on the room, so the page
- * follows the setting they have already made -- iPhone Settings, Display and Brightness; a Mac's
- * Appearance -- and carries a switch for anybody who wants the other one here.
- *
- * EVERY COLOUR IS A VARIABLE AND THE TINTS ARE VARIABLES TOO. The state colours used to be typed
- * as dark hexes at the point of use (a green border here, a red panel there), which is how a page
- * ends up almost-converted: the text flips and the panel behind it does not. There are now six
- * tint pairs, and nothing states a colour of its own.
+/* ---- ONE LOOK: LIGHT --------------------------------------------------------------------
+ * Casey, 15 Sep 2026, reading it on the iPhone: "the light background looks way better than the
+ * dark background. Just make that the standard." One look on every device and no switch, and
+ * the same decision on the dashboards, so the two pages never disagree.
  */
+:root{--bg:#e9eef6;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+ --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
+ --tv:#0c6c81;--warn:#b07200;
+ --brand:#0f2f52;--brand2:#1f5d99;--brandink:#ffffff;--brandacc:#f6b73c;--brandhd:#14487d;
+ --brandrule:#d5e2f0;
+ --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%230f2f52' fill-opacity='0.038' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E")}
 :root{
-  --warnbg:#33290f;--warnline:#5d4a17;--warntx:#f2c85c;
-  --goodbg:#0d1a12;--goodline:#245c39;
-  --badbg:#3a1717;--badline:#5b2626;--badtx:#ff9a9a;
-  --goldline:#5c471a;--blueline:#274b6d;
-  --pribg:#12324f;--priline:#2b5f8f;--pritx:#cfe6ff;
-  --chipon:#1d3550;--shade:rgba(4,8,13,.78);--sandbg:#3b1d02;--sandtx:#ffd9a0;
-}
-:root[data-theme="light"], :root.light{
-  --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
-  --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
-  --tv:#0c6c81;
+  /* THE TINTS ARE VARIABLES TOO. The state colours used to be typed as hexes at the point of
+     use (a green border here, a red panel there), which is how a page ends up almost-converted:
+     the text changes and the panel behind it does not. Nothing states a colour of its own. */
   --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
   --goodbg:#e6f6ec;--goodline:#8fd3ad;
   --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
@@ -35,21 +24,8 @@
   --pribg:#1462b8;--priline:#1462b8;--pritx:#ffffff;
   --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;--sandtx:#6b4700;
 }
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]):not(.dark){
-    --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
-    --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
-    --tv:#0c6c81;
-    --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
-    --goodbg:#e6f6ec;--goodline:#8fd3ad;
-    --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
-    --goldline:#dcc58a;--blueline:#a9cbec;
-    --pribg:#1462b8;--priline:#1462b8;--pritx:#ffffff;
-    --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;--sandtx:#6b4700;
-  }
-}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+html,body{margin:0;padding:0;background-color:var(--bg);background-image:var(--wm);color:var(--ink);
  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
  overflow-x:hidden;-webkit-text-size-adjust:100%}
 body{padding-bottom:64px}
@@ -61,11 +37,14 @@ body{padding-bottom:64px}
 /* THE BANNER'S OWN TEXT, NOT THE PAGE'S WARNING COLOUR. Amber on a pale amber ground is the one
    pairing that looked fine dark and vanished light -- 1.19 to 1. */
 .sandbar b{color:var(--sandtx)}
-h1{font-size:19px;margin:14px 0 2px}
+/* THE LEAGUE'S NAVY, on the page title and on whichever tab is open. This page is read inside
+   the dashboard, so it takes the same colours without taking a second navy band of its own. */
+h1{font-size:19px;margin:14px 0 2px;color:var(--brandhd);font-weight:800}
 h2{font-size:15px;margin:0 0 8px}
 .sub{color:var(--dim);font-size:12px;margin:0 0 14px}
 .card{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:12px;
  margin:0 0 12px}
+.card>h2{color:var(--brandhd);border-bottom:2px solid var(--brandrule);padding-bottom:6px}
 .card.warn{border-color:var(--warn)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .grow{flex:1 1 160px;min-width:0}
@@ -110,7 +89,7 @@ button[disabled]:hover{border-color:var(--line);color:var(--ink)}
 .tabs{display:flex;gap:4px;overflow-x:auto;padding:10px 0 0;-webkit-overflow-scrolling:touch}
 .tabs button{white-space:nowrap;border-radius:8px 8px 0 0;border-bottom-color:transparent}
 .tabs button.on{background:var(--pan);border-color:var(--line);border-bottom-color:var(--pan);
- color:var(--blue)}
+ color:var(--brandhd);font-weight:700}
 /* A SETTING HAS TO LOOK LIKE A SETTING. Casey, 10 Sep 2026: "it took me a while to figure out
    that's actually a button I need to click." A lone button whose label describes the CURRENT
    state reads as a status line — there is nothing to say the other state exists, let alone that
@@ -331,40 +310,14 @@ button.pri.big{width:100%;min-height:56px;font-size:17px;font-weight:700}
 try { if (/[?&]only=/.test(location.search)) document.documentElement.className += ' embed'; }
 catch (e) {}
 </script><script>
-/* ---- LIGHT OR DARK, AND THE READER DECIDES ---------------------------------------------------
- * The page follows the device by default -- there is nothing to set and nothing to explain. The
- * switch is for the person whose phone is dark but who would rather read this one light, which is
- * a real preference and not worth arguing with. Kept per browser, because it is about this
- * screen in this room, not about the league.
- */
 (function(){
-  var K = 'rfl_theme';
-  var root = document.documentElement;
-  function apply(v){
-    if (v === 'light' || v === 'dark') root.setAttribute('data-theme', v);
-    else root.removeAttribute('data-theme');
-  }
-  try { apply(localStorage.getItem(K)); } catch (e) {}
-  window.rflTheme = function(v){
-    try { if (v) localStorage.setItem(K, v); else localStorage.removeItem(K); } catch (e) {}
-    apply(v);
-  };
-  window.rflThemeNow = function(){
-    try { return localStorage.getItem(K) || 'auto'; } catch (e) { return 'auto'; }
-  };
-  /* THE PHONE'S OWN BAR MATCHES THE PAGE. Without this the notch area stays black behind a white
+  /* THE PHONE'S OWN BAR MATCHES THE HEADER. Without this the notch area stays black above the
      page, which reads as the page having failed to load properly. */
-  function paintBar(){
-    try {
-      var bg = getComputedStyle(root).getPropertyValue('--bg').trim();
-      var m = document.querySelector('meta[name="theme-color"]');
-      if (m && bg) m.setAttribute('content', bg);
-    } catch (e) {}
-  }
-  paintBar();
-  var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
-  if (mq && mq.addEventListener) mq.addEventListener('change', paintBar);
-  window.rflPaintBar = paintBar;
+  try {
+    var bg = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim();
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m && bg) m.setAttribute('content', bg);
+  } catch (e) {}
 })();
 </script></head><body>
 <div class="sandbar" id="sandbar">SANDBOX — <b>nothing here touches the live league.</b>
@@ -2210,16 +2163,6 @@ function render(){
 }
 
 /* ---- the clock panel, on every tab that cares about it -------------------------------------- */
-/* LIGHT OR DARK ON THIS PAGE TOO, so the trades tab does not fight the dashboard around it. */
-function themeRow(){
-  var now = (typeof rflThemeNow === 'function') ? rflThemeNow() : 'auto';
-  var nextOf = {auto: 'light', light: 'dark', dark: ''};
-  var wordOf = {auto: 'Follows Your Device', light: 'Light', dark: 'Dark'};
-  return '<div class="card"><div class="row" style="align-items:center">'
-    + '<span class="note grow">Theme: <b>' + esc(wordOf[now] || wordOf.auto) + '</b></span>'
-    + '<button onclick="rflTheme(' + jq(nextOf[now] || '') + ');'
-    + 'if(window.rflPaintBar)rflPaintBar();render()">Change</button></div></div>';
-}
 function clockCard(){
   /* NOTHING ON THE REAL PAGE. No presets, no boxes, no explanation of a clock nobody can move.
      A commissioner who wants to try a week early does not need to move time: they enter the
@@ -3060,7 +3003,7 @@ function viewTrades(){
       + (rows.length === 1 ? '' : 's') + '.</span>'
       + '<button onclick="unsubmit()">Change My Trades</button></div>';
   }
-  return h + commishCard(s0) + themeRow() + clockCard();
+  return h + commishCard(s0) + clockCard();
 }
 
 /* THE SHAPE OF THE WEEK, WITHOUT THE WALL.
