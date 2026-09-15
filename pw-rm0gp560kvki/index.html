@@ -1050,9 +1050,7 @@ details>summary::marker{color:var(--faint)}
   <section id="summary" hidden>
     <div id="summaryBody"></div>
   </section>
-  <section id="tx" hidden>
-    <div id="txBody"></div>
-  </section>
+
   <!-- THE COMMISSIONER'S OWN TABS. Casey, 12 Sep 2026: "I want them inside the dashboard. I just
        don't want others to be able to see them." Each one holds the trades application showing a
        single view, so there is no tab strip inside a tab strip. They are only built when this
@@ -1073,7 +1071,14 @@ details>summary::marker{color:var(--faint)}
   <section id="rules" hidden><div id="rulesBody"></div></section>
   <section id="guide" hidden><div id="guideBody"></div></section>
   <section id="csignin" hidden></section>
-  <section id="ctrades" hidden><div id="ctradesBody"></div></section>
+  <!-- ONE PLACE FOR EVERYTHING ABOUT A TRADE. The frame holds the two views that come from the
+       trades application itself (making one, and the commissioner's corrections); the panel
+       holds the three tables this page works out for itself. -->
+  <section id="ctrades" hidden>
+    <div id="trSub"></div>
+    <div id="ctradesBody"></div>
+    <div id="trPanels"></div>
+  </section>
   <section id="crun" hidden></section>
   <section id="caccess" hidden></section>
 </main>
@@ -1118,11 +1123,12 @@ const TABSETS = {
      The three league tabs are the SAME code -- one template renders both pages -- so this is a
      list, not a port. What they need from the payload is `seats`, which build_season now writes
      for both. His page keeps its projections; the all-owners page still has none. */
+  /* NO TRANSACTIONS TAB. Its three tables are sub-tabs of Trades now -- see buildTx(). */
   personal: [['scores','Live Scores'],['stand','Standings'],['pick','Pickups'],
              ['slots','Slots'],['race','Race'],['weekly','Weekly / Quarterly'],
-             ['summary','Season Summary'],['tx','Transactions']],
+             ['summary','Season Summary']],
   league:   [['scores','Live Scores'],['stand','Standings'],['weekly','Weekly / Quarterly'],
-             ['summary','Season Summary'],['tx','Transactions']],
+             ['summary','Season Summary']],
 };
 /* THE TRADE TABS ON THIS PAGE.
  *
@@ -1220,7 +1226,7 @@ function composeTabs(){
     .concat(RULES_TAB);
 }
 let TABS = composeTabs();
-const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','tx','rules','guide']
+const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','rules','guide']
   .concat(COMMISH_SECTIONS);
 
 /* PUT THE TAB UP, OR TAKE IT DOWN, TO MATCH WHO THE LEAGUE SAYS THIS IS. */
@@ -1643,8 +1649,8 @@ function showTab(which){
   if (which === 'race') renderRace();
   if (which === 'weekly') renderWeekly();
   if (which === 'summary') renderSummary();
-  if (which === 'tx') renderTx();
-  if (COMMISH_PAGE[which]) openCommish(which);
+  if (which === 'ctrades') renderTrades();
+  else if (COMMISH_PAGE[which]) openCommish(which);
   if (which === 'rules') openRules();
   if (which === 'guide') openGuide();
   /* The header only folds on the scores tab, so leaving it has to unfold. */
@@ -1662,6 +1668,50 @@ function showTab(which){
  * dashboard opens no slower than before.
  */
 let COMMISH_LOADED = {};
+
+/* ---- THE FIVE THINGS A TRADE NEEDS, UNDER ONE TAB ------------------------------------------
+ * Casey, 15 Sep 2026: "within the Trades tab I wonder if there's a tab for Make a Trade, one for
+ * Trade Results and one for Trade Fees. And another for Trade Windows. And we get rid of
+ * Transactions altogether."
+ * Two of these come out of the trades application in the frame, three this page works out for
+ * itself, and the reader is not asked to know which is which.
+ * FIX A TRADE IS THE COMMISSIONER'S, and it was unreachable before this. Casey, same day: "I
+ * don't see any of the Fix buttons you're referring to ... I don't know what Rosters tab you're
+ * referring to because I don't see one." He was right: the Fix controls were built onto a view
+ * of the trades page that the dashboard never pulled in, so from the dashboard they did not
+ * exist. Naming it Fix a Trade also says what it is for, which Rosters did not.
+ */
+let TRTAB = 'make';
+const TRFRAME = {make: 'auto', fix: 'rosters'};
+function trTabs(){
+  const list = [['make', 'Make a Trade'], ['results', 'Trade Results'],
+                ['fees', 'Trade Fees'], ['windows', 'Trade Windows']];
+  if (IS_COMMISH) list.push(['fix', 'Fix a Trade']);
+  return list;
+}
+function setTrTab(k){
+  TRTAB = k;
+  renderTrades();
+  const bar = document.querySelector('#trSub .subtabs');
+  if (bar){
+    const gap = bar.getBoundingClientRect().top;
+    if (gap < 0) window.scrollBy({top: gap - 8});
+  }
+}
+function renderTrades(){
+  const sub = el('trSub');
+  if (!sub) return;
+  if (!trTabs().some(([k]) => k === TRTAB)) TRTAB = 'make';
+  sub.innerHTML = `<div class="tabs subtabs">${trTabs().map(([k, label]) =>
+    `<button class="tab pick-tab ${TRTAB === k ? 'on' : ''}" aria-pressed="${TRTAB === k}"
+       data-trtab="${k}" onclick="setTrTab('${k}')">${label}</button>`).join('')}</div>`;
+  const frame = el('ctradesBody'), panels = el('trPanels');
+  const inFrame = !!TRFRAME[TRTAB];
+  if (frame) frame.hidden = !inFrame;
+  if (panels) panels.hidden = inFrame;
+  if (inFrame) openCommish('ctrades', TRFRAME[TRTAB]);
+  else renderTx();
+}
 
 /* THE TRADES FRAME IS BUILT ONCE AND KEPT. That is right while nothing about the reader changes,
  * and wrong the moment somebody signs in.
@@ -1692,8 +1742,8 @@ const FRAME_HOST = 'ctrades';
  * so by the time the tab is pressed the page behind it is already there. The scores are painted
  * first, so nothing here slows down what the reader came for.
  */
-function openCommish(which){
-  const page = COMMISH_PAGE[which];
+function openCommish(which, view){
+  const page = view || COMMISH_PAGE[which];
   if (!page) return;
   /* THE FRAME IS ALREADY THERE: tell it which view and it draws, with nothing to fetch. */
   if (COMMISH_LOADED[FRAME_HOST]) {
@@ -2275,7 +2325,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:35 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:43 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3443,7 +3493,10 @@ function epOfMargin(pool, m, oppPool){
  * win by 3 more than the line is not a story; both would put a badge on half the board.
  */
 const UPSET_DOG = 2.5;          // points the line had them losing by, at least
-const UPSET_OVER = 14;          // points they beat the line by, at least, when favoured
+/* THREE TOUCHDOWNS, MEASURED. At fourteen this flagged 52 of the 192 available college teams,
+   which is a badge on a quarter of the board and therefore no signal at all. At twenty-one it is
+   40, and 32 of those are outright upsets -- the thing he actually asked to see. */
+const UPSET_OVER = 21;          // points they beat the line by, at least, when favoured
 function bigWins(t){
   const out = [];
   for (const g of (t.hist || [])){
@@ -3938,6 +3991,15 @@ function moreTeams(kind){
   window.scrollTo({top: y});
 }
 function setPUpset(v){ PUPSET = !!v; renderPick(); }
+/* ONE BUTTON, BOTH LISTS. Casey, 15 Sep 2026, wanted the unexpected results flagged "so I don't
+   have to go through every game and every live score". The badge on the row is the flag; this is
+   the way to see nothing else. */
+function upsetBtn(){
+  return `<button class="f" aria-pressed="${PUPSET}" onclick="setPUpset(${!PUPSET})"
+    title="Show only teams that have already won a game the pre-game line said they should lose,
+or beaten the line by two touchdowns. The badge on a row says which, and holding it names the
+game.">Unexpected Results Only</button>`;
+}
 function showAllTeams(kind, n){
   PMORE[kind] = n;
   const y = window.scrollY; renderPick(); window.scrollTo({top: y});
@@ -4202,7 +4264,14 @@ function watchPanel(){
       <td class="num c-sgain hide-s">${gr == null ? '<span class="d">—</span>'
         : `<span class="${gr > 0.5 ? 'g' : gr < 0 ? 'b' : 'd'}">${gr >= 0 ? '+' : ''}${gr.toFixed(2)}</span>`}</td>
       <td class="c-then">${rec ? `<span class="pill ${rec.cls}" title="${rec.tip}">${rec.label}</span>` : '—'}</td>
-      <td class="c-cmp">${watchBtn(t.n, true)}</td></tr>`
+      <td class="c-cmp"><button class="cbtn ${cmpSlotOf(t.n) ? 'on' : ''}" data-cmp="${t.n}"
+          onclick="event.stopPropagation();cmpPick('${q}')"
+          title="${cmpSlotOf(t.n) ? 'Remove ' + t.n + ' from Side by Side'
+            : 'Compare ' + t.n + ' against your ' + (t.pool === 'NFL' ? 'NFL' : 'college')
+              + ' slot, in Side by Side below'}"
+          aria-label="${cmpSlotOf(t.n) ? 'Remove' : 'Add'} ${t.n} ${
+            cmpSlotOf(t.n) ? 'from' : 'to'} the comparison">${cmpSlotOf(t.n) || '+'}</button>
+        ${watchBtn(t.n, true)}</td></tr>`
       + (OPEN_WATCH === t.n
           ? `<tr><td colspan="8">${teamPanel(t, slotFor(t.pool === 'NFL' ? 'NFL' : 'COL'),
               t.owner === ME ? 'mine' : 'scout')}</td></tr>`
@@ -4229,8 +4298,15 @@ function watchPanel(){
         <th class="num c-season hide-s">Season</th>
         <th class="num c-sgain hide-s">Season gain</th>
         <th class="c-then">Advice</th>
-        <th class="c-cmp"></th></tr></thead>
+        <th class="c-cmp" title="Add this team to Side by Side, below. Two at a time per pool; tap again to remove.">Cmp</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
+    <!-- TWO TRAYS, BECAUSE THIS LIST HOLDS BOTH POOLS. A college team can only be compared
+         against a college slot and an NFL team against an NFL slot, so one tray holding both
+         would be one tray telling two different stories. -->
+    <div class="bar"><label class="d" style="align-self:center;font-size:12px">College</label>
+      <span id="cmptray4" class="tray" data-pool="COL">${trayHTML('COL')}</span></div>
+    <div class="bar"><label class="d" style="align-self:center;font-size:12px">NFL</label>
+      <span id="cmptray5" class="tray" data-pool="NFL">${trayHTML('NFL')}</span></div>
     ${explain('How to read your watch list', `Every number here is measured exactly the way the
       College and NFL lists measure a candidate: against the team you would actually drop, over
       the same weeks, with points you have already scored left out of both sides.
@@ -4245,7 +4321,7 @@ function watchPanel(){
       <b>YOURS</b> is one of your own eleven.
       <br>A team keeps earning its place here whatever the badge says. That is the reason to have
       the list: the College and NFL tabs only show teams you can take <b>this week</b>.`)}
-  </div>`;
+  </div>` + compareCard('COL') + compareCard('NFL');
 }
 let OPEN_MINE = null;
 function toggleMine(n){ OPEN_MINE = (OPEN_MINE === n) ? null : n; renderPick(); }
@@ -4878,6 +4954,10 @@ function confidenceLine(){
    the sub-tab into a key, so the two cannot drift apart. */
 let CMP     = {COL: {a: null, b: null}, NFL: {a: null, b: null}};
 let PENDING = {COL: {a: null, b: null}, NFL: {a: null, b: null}};
+/* THE POOL OF THE TAB BEING READ. The Watch List holds both pools at once, so everything below
+   also accepts a pool outright -- `curPool()` is only the default. Casey, 15 Sep 2026: "on the
+   Watch List tab, as I added teams, you should allow me to compare them like you have the
+   compare tool on the college and NFL teams." */
 function curPool(){ return PICKTAB === 'NFL' ? 'NFL' : 'COL'; }
 
 function cmpPool(t){ return t.pool === 'NFL' ? 'NFL' : 'COL'; }
@@ -4945,17 +5025,21 @@ function cmpPick(name){
 }
 
 function paintPicks(){
-  const P = PENDING[curPool()];
+  /* BY THE TEAM'S OWN POOL, not by the tab's. On the Watch List a college team and an NFL team
+     sit in the same table, and a button read against one pool's selection showed the wrong
+     number on half the rows. */
   for (const b of document.querySelectorAll('#pickBody .cbtn[data-cmp]')){
     const nm = b.getAttribute('data-cmp');
+    const t = DATA.teams.find(x => x.n === nm);
+    const P = PENDING[t ? cmpPool(t) : curPool()];
     const slot = P.a === nm ? 1 : P.b === nm ? 2 : null;
     b.textContent = slot || '+';
     b.classList.toggle('on', !!slot);
   }
-  for (const id of ['cmptray', 'cmptray2', 'cmptray3']){
-    const tray = document.getElementById(id);
-    if (tray) tray.innerHTML = trayHTML();
-  }
+  /* EVERY TRAY ON THE PAGE, FOUND BY WHAT IT IS. A hard-coded list of three ids is a second
+     store of "where the trays are", and it went stale the moment a fourth was added. */
+  for (const tray of document.querySelectorAll('#pickBody .tray[data-pool]'))
+    tray.innerHTML = trayHTML(tray.getAttribute('data-pool'));
 }
 
 /* THE DEAD END. Casey, 31 Aug 2026: "even after I unchecked two teams I was comparing, they stay
@@ -4969,29 +5053,29 @@ function paintPicks(){
    still be applicable. "Nothing selected" is a selection, not the absence of one. */
 function cmpDrawn(k){ const C = CMP[k || curPool()]; return !!(C.a || C.b); }
 
-function trayHTML(){
-  const k = curPool(), P = PENDING[k], C = CMP[k];
+function trayHTML(kind){
+  const k = kind || curPool(), P = PENDING[k], C = CMP[k];
   const names = [P.a, P.b].filter(Boolean);
   const dirty = P.a !== C.a || P.b !== C.b;
-  const clear = cmpDrawn()
-    ? `<button class="cgo" onclick="cmpClear()" title="Remove the comparison and start again">Clear</button>`
+  const clear = cmpDrawn(k)
+    ? `<button class="cgo" onclick="cmpClear('${k}')" title="Remove the comparison and start again">Clear</button>`
     : '';
   if (!names.length)
-    return (cmpDrawn()
+    return (cmpDrawn(k)
         ? `<span class="d">Nothing selected.</span>
-           <button class="cgo hot" onclick="cmpClear()"
+           <button class="cgo hot" onclick="cmpClear('${k}')"
              title="Take the comparison off the page">Clear comparison</button>`
         : `<span class="d">Tap <b>+</b> beside up to two teams below, then press Compare.</span>`);
   return names.map(nm => `<span class="cchip">${nm}<button class="cx"
       onclick="cmpPick('${nm.replace(/'/g, "\\'")}')" title="Remove ${nm}"
       aria-label="Remove ${nm}">x</button></span>`).join('')
-    + `<button class="cgo${dirty ? ' hot' : ''}" onclick="cmpApply()"
+    + `<button class="cgo${dirty ? ' hot' : ''}" onclick="cmpApply('${k}')"
         title="Draw the comparison and jump to it">${dirty ? 'Compare' : 'Showing'} ${names.length === 1 ? '1 team' : '2 teams'}</button>`
     + clear;
 }
 
-function cmpClear(){
-  const k = curPool();
+function cmpClear(kind){
+  const k = kind || curPool();
   PENDING[k] = {a: null, b: null};
   CMP[k] = {a: null, b: null};
   renderPick();
@@ -5072,8 +5156,8 @@ function scrollCardIntoView(card){
   window.scrollTo({top: Math.max(0, y), behavior: 'smooth'});
 }
 
-function cmpApply(){
-  const k = curPool();
+function cmpApply(kind){
+  const k = kind || curPool();
   CMP[k] = {a: PENDING[k].a, b: PENDING[k].b};
   renderPick();
   /* Take him TO the answer he asked for, rather than leaving him to find it. */
@@ -5093,8 +5177,8 @@ function cmpSlotOf(name){
    against Nebraska while Side by side compared Penn State. There is now a single selector and
    `cmpMine()` reads it. `CMP.mine` is gone as a separate store, which also removes the
    possibility of the two disagreeing. Two stores of one fact, again. */
-function cmpMine(){
-  const want = PICKTAB === 'NFL' ? 'NFL' : 'COL';
+function cmpMine(kind){
+  const want = kind || (PICKTAB === 'NFL' ? 'NFL' : 'COL');
   const slot = slotFor(want);
   return slot ? (BY.get(slot.n) || null) : null;
 }
@@ -5108,7 +5192,7 @@ function cmpTeams(kind){
   let mineList = DATA.teams.filter(t => t.owner === ME);
   if (kind) mineList = mineList.filter(t => cmpPool(t) === kind);
   if (!mineList.length) return null;
-  const mine = cmpMine() || mineList[0];
+  const mine = cmpMine(kind) || mineList[0];
   const slot = (DATA.my_slots || []).find(x => x.n === mine.n);
   const from = swapFrom(slot);
   const avail = DATA.teams.filter(t => t.owner == null && canClaim(t)
@@ -5259,11 +5343,12 @@ function compareCard(kind){
     return `<tr><th class="c-team d">Wk ${gwLabel(wk)}</th>` + any.join('') + '</tr>';
   }).join('');
 
-  return `<div class="card"><h2>Side by side${cmpDrawn(kind)
-      ? ` <button class="cgo hd" onclick="cmpClear()" title="Remove this comparison">Clear</button>`
+  return `<div class="card"><h2>Side by Side${kind === 'NFL' ? ' — NFL' : ' — College'}${
+      cmpDrawn(kind)
+      ? ` <button class="cgo hd" onclick="cmpClear('${kind}')" title="Remove this comparison">Clear</button>`
       : ''}</h2>
     <div class="bar" data-role="cmpchips"><label class="d" style="align-self:center;font-size:12px">
-      Compared with</label><span id="cmptray" class="tray">${trayHTML()}</span></div>
+      Compared with</label><span id="cmptray" class="tray" data-pool="${kind}">${trayHTML(kind)}</span></div>
     ${c.cols.length < 2 ? `<div class="empty">Nothing to compare <b>${c.mine.n}</b> against yet.
       <b>Tap the + beside any team in the ranked list below</b> — the table is sorted best-first,
       which a dropdown of ${c.avail.length} names in alphabetical order is not. Two at a time.
@@ -5426,9 +5511,10 @@ function renderPick(){
       ${dropSelector('COL')}
       <!-- The SAME tray, rendered where the picking happens. Casey had to scroll back up past
            the whole comparison to press anything; now the button is beside the + buttons. -->
-      <div class="bar"><span id="cmptray2" class="tray">${trayHTML()}</span></div>
+      <div class="bar"><span id="cmptray2" class="tray" data-pool="COL">${trayHTML('COL')}</span></div>
       <div class="bar"><input class="search" type="search" placeholder="Search team…"
-        id="pq" value="${PQ}" oninput="pickSearch(this)" aria-label="Search available teams"></div>
+        id="pq" value="${PQ}" oninput="pickSearch(this)" aria-label="Search available teams">
+        ${upsetBtn()}</div>
       ${poolNote()}
       ${availTable('COL')}
       ${explain('Why FBS and FCS are one list', `They compete for the same eight college slots on
@@ -5521,7 +5607,8 @@ function renderPick(){
       ${dropSelector('NFL')}
       <!-- The SAME tray as the college card. It was missing here, so after choosing an NFL team
            to drop there was no Compare control anywhere near the NFL list. -->
-      <div class="bar"><span id="cmptray3" class="tray">${trayHTML()}</span></div>
+      <div class="bar"><span id="cmptray3" class="tray" data-pool="NFL">${trayHTML('NFL')}</span></div>
+      <div class="bar">${upsetBtn()}</div>
       ${availTable('NFL')}
       ${explain('Why the NFL list is separate', `An NFL team can only replace one of your three
       NFL teams, so it is a different slot and a different decision. Only
@@ -8741,7 +8828,13 @@ function setTxMine(v){
   renderTx();
 }
 function renderTx(){
-  const b = el('txBody'); if (!b) return;
+  const b = el('trPanels');
+  const parts = buildTx();
+  if (!b || !parts) return;
+  b.innerHTML = parts[TRTAB] || '';
+}
+/* Everything the old Transactions tab drew, as three named pieces rather than one page. */
+function buildTx(){
   const tx = DATA.transactions || {}, hist = DATA.owner_history || {};
   const trades = tx.trades || [], wins = tx.windows || [], changes = hist.changes || [];
   const und = tx.undated || [];
@@ -9013,7 +9106,7 @@ function renderTx(){
         <td class="g">${esc((c.to || []).map(x => x[1]).join(', ') || 'nobody')}</td></tr>`).join('')}
       </tbody></table></div></div>` : '';
 
-  b.innerHTML = empty + tradeTable + owedTable + moves + `<div class="card"><h2>Trade Windows</h2>
+  const windowTable = `<div class="card"><h2>Trade Windows</h2>
     <div class="scr"><table style="table-layout:fixed">
       <colgroup><col style="width:44%"><col style="width:13%">
         <col style="width:24%"><col style="width:19%"></colgroup>
@@ -9043,6 +9136,17 @@ function renderTx(){
       <tbody>${und.map(t => `<tr><td>${t.div} <b>${esc(t.owner)}</b></td>
         <td>${esc(t.old)} → ${esc(t.new)}</td><td class="d">${esc(t.window || '—')}</td>
         <td class="d">${esc(t.why || '')}</td></tr>`).join('')}</tbody></table></div></div></div>` : ''}`;
+
+  /* ---- THREE ANSWERS, THREE PLACES -------------------------------------------------------
+   * Casey, 15 Sep 2026: "this list is going to get very long over the season, which is going to
+   * push what each owner owes and the trade windows very far to the bottom ... within the Trades
+   * tab I wonder if there's a tab for Make a Trade, one for Trade Results and one for Trade
+   * Fees. And another for Trade Windows. And we get rid of Transactions altogether."
+   * He is right about the cause: three unrelated tables stacked in one tab means the two short
+   * ones are only reachable by scrolling past the one that grows every week. So the tab is gone
+   * and its three tables are three sub-tabs of Trades, beside the form that makes one.
+   */
+  return {results: empty + tradeTable, fees: owedTable + moves, windows: windowTable};
 }
 
 /* ---------- the team panel, league edition ------------------------------------------------
@@ -9383,7 +9487,7 @@ function paintAll(){
   const onScreen = (k) => { const n = el(k); return !!(n && !n.hidden); };
   if (!PROJ_ON || onScreen('weekly')) renderWeekly();
   if (!PROJ_ON || onScreen('summary')) renderSummary();
-  if (!PROJ_ON || onScreen('tx')) renderTx();
+  if (!PROJ_ON || onScreen('ctrades')) renderTx();
   try { foldFilters(); } catch (e) {}
 }
 paintAll();
@@ -9447,6 +9551,10 @@ function addCommishTabs(yes){
        three in a row, not faster. */
     /* NOTHING MORE TO LOAD: the one frame covers all three tabs. */
   }
+  /* THE FIX A TRADE SUB-TAB APPEARS WITH THEM. The answer arrives after the first paint, so a
+     commissioner who is already sitting on the Trades tab would otherwise not see it until they
+     left the tab and came back. */
+  { const n = el('ctrades'); if (n && !n.hidden) renderTrades(); }
 }
 /* ASK ONCE, ON FIRST OPEN. After the page has drawn, so a reader who skips is looking at a
    working dashboard and not a blank one, and so nothing here can stop the page rendering. */
