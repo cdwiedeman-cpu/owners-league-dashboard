@@ -2041,6 +2041,50 @@ function takePlan(rows){
       + 'it is. Sign in on this tab and press Send to Trades again.</p>');
     return;
   }
+  /* ---- THE WINDOW THAT IS OPEN DECIDES WHAT A PLAN CAN BECOME --------------------------------
+   * Casey, 15 Sep 2026: "if I click Send to Trades today, when we're in first come first served,
+   * what's that going to do? ... it should probably just send one team that's being dropped,
+   * because if it's first come first served you can't drop multiple teams."
+   * He is right, and without this it filled in the weekly LIST — a form that is not even on
+   * screen once the flips have run, so the plan would have gone somewhere he could not see and
+   * nothing would have happened on Monday. A plan that lands where nobody can act on it is worse
+   * than one that refuses.
+   * SO IT FILLS IN THE FORM THAT IS ACTUALLY OPEN, and says what it could not carry across. A
+   * first-come claim is ONE team in and ONE team out; the rest of the plan stays on the Plan tab
+   * exactly as he left it, because a claim being made now is not a reason to throw the rest away.
+   */
+  if (mode() === 'fcfs'){
+    var first = rows.find(function(r){ return r && r.pickup && (r.drops || []).some(Boolean); });
+    if (!first){
+      showHelp('Nothing to Claim', '<p>A claim needs a team to pick up and a team to give up. '
+        + 'Your plan has one side of that and not the other.</p>');
+      return;
+    }
+    var drop1 = (first.drops || []).filter(Boolean)[0];
+    var extraRows = rows.length - 1;
+    var extraDrops = (first.drops || []).filter(Boolean).length - 1;
+    S.fcp = first.pickup; S.fcd = drop1; save();
+    setTab('trades'); render();
+    showHelp('Filled In for a Claim',
+      '<p><b>' + esc(first.pickup) + '</b> to come in, <b>' + esc(drop1) + '</b> to go out. '
+      + 'That is on the claim form now.</p>'
+      + '<p><b>Nothing has been claimed yet.</b> Read it over and press <b>Claim It Now</b> '
+      + 'yourself.</p>'
+      + ((extraRows > 0 || extraDrops > 0)
+          ? '<p class="note b"><b>The rest of your plan could not come with it.</b> Right now the '
+            + 'coin flips have already run, so trades are first come, first served — one team '
+            + 'in and one team out, and no back-ups. '
+            + (extraRows > 0 ? extraRows + ' other team' + (extraRows === 1 ? '' : 's')
+                 + ' you meant to pick up ' : '')
+            + (extraRows > 0 && extraDrops > 0 ? 'and ' : '')
+            + (extraDrops > 0 ? extraDrops + ' other team' + (extraDrops === 1 ? '' : 's')
+                 + ' you meant to drop ' : '')
+            + (extraRows + extraDrops === 1 ? 'is' : 'are') + ' still on your Plan tab, '
+            + 'untouched.</p>'
+            + '<p class="note">Claim this one, then come back and send the next.</p>'
+          : ''));
+    return;
+  }
   /* Only teams this page still recognises, and never more rows than a list may hold. */
   var clean = rows.filter(function(r){ return r && r.pickup; })
     .slice(0, P.MAX_ROWS)
