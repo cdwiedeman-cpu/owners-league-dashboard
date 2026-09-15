@@ -5915,6 +5915,11 @@ function bootOpts(){
     needKey: askForKey,
     ready: function(stuck){
       if (!S) adopt(null);
+      /* A COMMISSIONER STARTS AS THEMSELVES, EVERY TIME. Entering for somebody else is something
+         you do for one trade, not a setting you leave on. Left on, it is invisible until a trade
+         has already been typed into the wrong owner's list. It is cleared HERE rather than in
+         boot(), because before the load there is no S to clear it on. */
+      if (S && S.actingAs){ S.actingAs = null; try { save(); } catch (e) {} }
       render();
       /* THE WEEK'S ANSWER, ONCE THE PAGE KNOWS WHO THIS IS. It has to be after the load, because
          before it there is no seat to look the answer up under. Not shown when the page could not
@@ -5939,11 +5944,6 @@ function boot(){
     refreshMe(function(){ boot(); });
     return;
   }
-  /* A COMMISSIONER STARTS AS THEMSELVES, EVERY TIME. Entering for somebody else is a thing you
-     do for one trade, not a setting you leave on -- and left on, it is invisible until you have
-     already typed a trade into the wrong owner's list. */
-  S.actingAs = null;
-  try { save(); } catch (e) {}
   Store.boot(bootOpts());
 }
 buildRulesNote();
