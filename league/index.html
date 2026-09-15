@@ -2229,7 +2229,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 10:38 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 10:40 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8283,6 +8283,15 @@ function renderSummary(){
 let OPEN_SLOT = null;                   // 'DIV|Owner|slot' of the one expanded slot
 function toggleSlotRow(k){ OPEN_SLOT = OPEN_SLOT === k ? null : k; renderStandings(); lRepaint(); }
 
+/* The row a team would have if the standings had built one: every figure zero, and null
+   while the results are still loading, because unknown is not zero. */
+function zeroTeamRow(name){
+  if (SEASON === null) return null;
+  const meta = BY.get(name) || {};
+  return {team: name, pool: meta.pool || 'FBS', pts: 0, q: emptyQ(), w: 0, l: 0, t: 0,
+          bl: 0, so: 0, games: 0, held: false, wk: {}, post: 0, postN: 0,
+          weeks: null, partial: false};
+}
 function slotGroups(o){
   const byTeam = new Map((o.teams || []).map(t => [t.team, t]));
   const used = new Set();
@@ -8292,7 +8301,12 @@ function slotGroups(o){
   for (const sl of ((lin || {}).lineage || [])){
     const spells = [];
     for (const sp of sl.spells){
-      const t = sp.team ? byTeam.get(sp.team) : null;
+      /* A TEAM THAT EARNED NOTHING WHILE IT WAS HELD IS STILL PART OF THE SLOT'S HISTORY.
+         The standings only build a row for a team that scored or that is held right now, so a
+         team traded away before it ever scored had no row -- and dropping the spell rewrote the
+         lineage to leave it out. It gets a row of its own zeros instead, and only once the
+         results are in: before that, nothing here is zero, it is unknown. */
+      const t = sp.team ? (byTeam.get(sp.team) || zeroTeamRow(sp.team)) : null;
       if (!t) continue;
       used.add(t.team);
       spells.push({...t, from_week: sp.from_week, to_week: sp.to_week});
@@ -8791,7 +8805,7 @@ function openLeagueScout(n){
  * IT REBUILDS FROM THE BAKED SNAPSHOT EVERY TIME rather than adding to what is already there.
  * Applying a move twice would move a team twice, and this runs again every few minutes.
  */
-let BAKED_SNAPS = null, BAKED_TRADES = null, BAKED_SLOTS = null,
+let BAKED_SNAPS = null, BAKED_TRADES = null, BAKED_SLOTS = null, BAKED_LABELS = null,
     LIVE_TX_AT = null, LIVE_TX_N = 0, LIVE_TX_ERR = null;
 
 function _copyLabels(o){
@@ -8867,7 +8881,20 @@ function applyLiveTrades(list){
      * baked copy each time, exactly as the snapshots are. */
     BAKED_SLOTS = (DATA.slots && DATA.slots.lineage)
       ? JSON.parse(JSON.stringify(DATA.slots.lineage)) : null;
+    /* WHO HOLDS A TEAM NOW IS A THIRD STORE OF THE SAME FACT, AND IT WAS NOT BEING MOVED.
+     * Casey, 15 Sep 2026: Michael Spielman traded UNLV away for Virginia, and his UNLV slot
+     * showed UNLV with nothing under it -- Virginia was nowhere on the page.
+     * `owner_history.snapshots` were rebuilt from the live trades and `DATA.teams[].labels`
+     * were not, so every part of the page that asks "who holds this team RIGHT NOW" still
+     * answered from the draft board. The standings give a currently-held team a row even on
+     * zero points, and Virginia had earned nothing yet, so with no label it got no row; with
+     * no row the slot could not find it and fell back to the team before it.
+     * Two stores of one fact are written together or one of them lies. */
+    BAKED_LABELS = new Map(DATA.teams.map(t => [t.n, (t.labels || []).slice()]));
   }
+  if (BAKED_LABELS) DATA.teams.forEach(t => {
+    const b = BAKED_LABELS.get(t.n); if (b) t.labels = b.slice();
+  });
   hist.snapshots = BAKED_SNAPS.slice();
   txs.trades = BAKED_TRADES.slice();
   if (BAKED_SLOTS) DATA.slots.lineage = JSON.parse(JSON.stringify(BAKED_SLOTS));
@@ -8913,6 +8940,15 @@ function applyLiveTrades(list){
     for (const t of byWeek.get(w)) applyLiveSlot(t, ew);
   }
   hist.snapshots.sort((a, b) => a.week - b.week);
+  /* ONLY THE TEAMS A TRADE ACTUALLY TOUCHED. Rewriting every team's holders from the snapshot
+     would hand the snapshot authority over teams no trade has been near, and a team missing
+     from it would silently lose its owners. */
+  const touched = new Set();
+  list.forEach(t => { if (t && t['in']) touched.add(t['in']); if (t && t.out) touched.add(t.out); });
+  DATA.teams.forEach(t => {
+    if (!touched.has(t.n)) return;
+    t.labels = (labels[t.n] || []).map(pr => ({div: pr[0], owner: pr[1]}));
+  });
 }
 
 function fetchLiveTrades(){
