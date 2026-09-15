@@ -1816,8 +1816,28 @@ function openCommish(which, view){
      on the dashboard signed in, not on a page they have never heard of. Redeeming it is the
      trades page's job and stays there, in one place, so the code is passed to it rather than
      handled twice. */
-  f.src = TRADES_HOME + '?only=' + page + (SIGNIN_CODE
+  /* ---- THE FRAMED PAGE HAS TO BE ASKED FOR BY A NEW NAME ---------------------------------
+   * Casey, 15 Sep 2026: "none of your changes for Run It are in the Run It tab. I don't see any
+   * of those changes you've described." They were built, committed and pushed. He was reading a
+   * copy of the trades page his browser had cached weeks ago.
+   * THE DASHBOARD'S OWN VERSION CHECK DOES NOT COVER THIS. It compares version.txt and reloads
+   * ITSELF under `?v=<hash>`, which is a URL the phone has never seen. The frame's address never
+   * changed, so the browser went on serving the copy it already had -- and on an iOS home-screen
+   * app that copy can survive for a very long time. Every change to the trades page since the
+   * frame was first cached was invisible, which is most of today's work.
+   * A CACHE IS BEATEN BY A DIFFERENT URL, NOT BY ASKING NICELY. The trades page publishes its own
+   * version.txt beside it (a hash of the file), so the frame is asked for BY that hash. Same
+   * file, new name, every time it changes.
+   * IF THE HASH CANNOT BE FETCHED the frame is still opened, with the day as the buster: a page
+   * that is at worst one day stale beats a page that never loads.
+   */
+  const base = TRADES_HOME + '?only=' + page + (SIGNIN_CODE
             ? '&t=' + encodeURIComponent(SIGNIN_CODE) : '');
+  const openAt = (v) => { f.src = base + '&v=' + encodeURIComponent(v); };
+  fetch(TRADES_HOME + 'version.txt', {cache: 'no-store'})
+    .then(r => r.ok ? r.text() : Promise.reject(new Error('no version')))
+    .then(v => openAt((v || '').trim() || String(DATA.asof || '')))
+    .catch(() => openAt(String(DATA.asof || new Date().toISOString().slice(0, 10))));
   f.title = 'Trades';
   /* THE FRAME NEEDS PERMISSION TO USE THE CLIPBOARD. Casey, 14 Sep 2026: "the copy email does not
      actually copy it to the clipboard. I had to go highlight all the text in the pop-up." A page
@@ -2379,7 +2399,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 7:37 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 7:43 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
