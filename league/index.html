@@ -2352,7 +2352,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:57 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 12:06 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3659,6 +3659,9 @@ function setRerate(on){
    than answering from memory).
    So it sits at the right of the strip, applies to all three, and the explanation lives behind
    the same ? disclosure as everything else rather than taking a block of the page. */
+/* "14 Sep 2026", from "14 Sep 2026, 7:12 PM AZ". The button has to fit beside three sub-tabs on
+   a phone; the full stamp with its clock is in the hover text and in the note under the table. */
+function dayOnly(t){ return String(t || '').split(',')[0].trim() || String(t || ''); }
 function rerateControl(){
   if (!DATA.curve) return '';
   const n = RERATE.size;
@@ -3667,12 +3670,22 @@ function rerateControl(){
   const opt = (on, label, tip) => `<button class="tab rrbtn${RERATE_ON === on ? ' on' : ''}"
       data-rerate="${on}" onclick="setRerate(${on})" aria-pressed="${RERATE_ON === on}"
       title="${tip}">${label}</button>`;
+  /* ---- WHAT THIS CONTROL IS, IN WORDS SOMEBODY CAN READ ---------------------------------
+   * Casey, 15 Sep 2026: "you have a thing on the far right that says Ratings, plus live scores,
+   * as built, same today. I have no idea what that represents. We already have the Live at the
+   * top right corner, so we know that. And As Built -- is that supposed to be for the
+   * projections? I would just call it Projections built as of, and then the date and time."
+   * Two faults. "+ live scores" reads as the live-score light at the top of the page, which it
+   * has nothing to do with; and "as built" named a moment without naming what was built at it.
+   * The control decides ONE thing: whether the projections on this tab move when a result comes
+   * in. So it says that, and the second option carries the date it is frozen at.
+   */
   return `<span class="rrgroup">
-    <span class="rrlab" title="Which ratings every projected number on these three tabs is built from. No effect on Live scores, Standings or Slots — those are made of results that happened, not projections.">Ratings</span>
-    ${opt(true, '+ live scores',
-          `The ratings from your last refresh (${DATA._built}), plus an automatic adjustment for every game finished since. ${since === 0 ? 'Nothing has finished since, so this is currently identical to the other option.' : since + ' game(s) have finished since.'} Applies to all three tabs here.`)}
-    ${opt(false, 'as last built',
-          `The ratings exactly as they were at your last refresh (${DATA._built}) — including the results it already knew about. ${since === 0 ? 'Currently identical to the other option.' : ''}`)}
+    <span class="rrlab" title="This changes only the PROJECTED numbers on the Pickups tab — Bank 3, Gain 3, Season pts, Season gain and the Advice column. It changes nothing on Live Scores, Standings or Slots: those are made of results that happened.">Projections</span>
+    ${opt(true, 'Updated by results',
+          `The projections move as games finish. They start from the model built on ${DATA._built} and adjust it for every result since. ${since === 0 ? 'Nothing has finished since that build, so today this gives exactly the same numbers as the other option.' : since + ' game(s) have finished since that build.'}`)}
+    ${opt(false, `Frozen at ${dayOnly(DATA._built)}`,
+          `The projections exactly as the model made them on ${DATA._built}, ignoring everything played since. ${since === 0 ? 'Nothing has been played since, so today this is identical to the other option.' : ''}`)}
     ${since === 0 ? '<span class="rrsame" title="Nothing has been played since your last refresh, so both options give the same numbers.">same today</span>' : ''}
   </span>`;
 }
@@ -8903,16 +8916,33 @@ function buildTx(){
      trade, so the two join on that date. Where a derived value exists, show the derived one. */
   const calWinsAll = (cal('trade_windows') || []).slice()
     .sort((a, c) => String(a.start || '').localeCompare(String(c.start || '')));
+  /* THE WEEK IS THE JOIN, BECAUSE THE DATE IS OFTEN NOT THERE.
+   * Casey, 15 Sep 2026, three times: "the window and the dates columns are still empty."
+   * The first fix passed the trade's effective DATE through from the back end, and the date was
+   * null — the resolver stamps `window` and `effective` from whatever its caller hands it, and
+   * neither the page nor the Worker hands it a calendar. So every settled trade carries two
+   * empty fields and always has.
+   * A DERIVED VALUE BEATS A MISSING TYPED ONE. Every trade carries the league week it takes
+   * effect in, and every calendar window carries the date its trades take effect; run that date
+   * through the same week function and the two join with nothing to type and nothing to go
+   * stale. The date is still used first where there is one. */
+  const weekOfWin = new Map();
+  for (const w of calWinsAll){
+    const wk = w.effective ? lWeekOfDate(w.effective) : null;
+    if (wk != null && !weekOfWin.has(wk)) weekOfWin.set(wk, w);
+  }
   const winOfTrade = t => {
     if (t.window && winByLabel.get(t.window)) return winByLabel.get(t.window);
     const d = t.effective || null;
-    if (!d) return null;
-    const exact = calWinsAll.find(w => w.effective === d);
-    if (exact) return exact;
-    /* Otherwise the last window that had already closed when this took effect. */
-    let best = null;
-    for (const w of calWinsAll) if (String(w.end || '') <= String(d)) best = w;
-    return best;
+    if (d){
+      const exact = calWinsAll.find(w => w.effective === d);
+      if (exact) return exact;
+      let best = null;
+      for (const w of calWinsAll) if (String(w.end || '') <= String(d)) best = w;
+      if (best) return best;
+    }
+    if (t.week != null && weekOfWin.has(+t.week)) return weekOfWin.get(+t.week);
+    return null;
   };
   const winLabel = t => {
     const x = winOfTrade(t);
