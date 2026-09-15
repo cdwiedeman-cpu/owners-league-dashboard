@@ -2973,12 +2973,17 @@ function viewTrades(){
         + '<button class="dang" onclick="askClearAll()">Remove All Trades</button></div></div>';
     }
     if (rows.length){
-      /* THE STATUS SITS WITH THE BUTTON THAT CHANGES IT. Nowhere else on the page needs to
-         carry it while the list is still being built. */
+      /* THE STATUS, NOT A THIRD BUTTON. Casey, 15 Sep 2026: "you have a big box for Save My
+         Trades and then underneath it Remove All Trades, then another Save My Trades at the
+         bottom. That seems duplicative."
+         It was. There is the big one at the end of the list and the one on the bar that follows
+         the screen, and this was a third copy of the same action four inches from the first.
+         What this block is actually for is the SENTENCE -- that nothing counts until it is
+         saved -- so that is all it is now. */
       h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
-        + 'padding-top:12px"><button class="pri" onclick="submitList()">Save My Trades</button>'
+        + 'padding-top:12px">'
         + '<span class="pill bad">Not Saved Yet</span>'
-        + '<span class="note">This list is <b>not</b> in Monday&rsquo;s coin flips until you '
+        + '<span class="note grow">This list is <b>not</b> in Monday&rsquo;s coin flips until you '
         + 'press <b>Save My Trades</b>. You can change them and save again as often as you like, '
         + 'up to Monday at 3:59pm AZ.</span></div>';
     }
