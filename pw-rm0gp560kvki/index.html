@@ -824,7 +824,10 @@ details>summary::marker{color:var(--faint)}
   header .chip{flex:0 0 auto;white-space:nowrap}
   /* THE TABS STAY WITH YOU. Scrolling a long scoreboard used to mean scrolling all the way back
      to change tab. */
-  header{position:sticky;top:0;z-index:30;background:var(--bg)}
+  /* NO BACKGROUND HERE. This rule exists for the z-index, and restating the background repainted
+     the navy header page-coloured on a phone -- the one screen every owner reads it on. The
+     colour is stated once, in the base rule. */
+  header{position:sticky;top:0;z-index:30}
   main{padding-top:8px}
   /* THE FILTER ROW IS 175px OF A PHONE SCREEN AND IT IS TOUCHED ONCE A WEEK.
      It collapses behind one button that says what it is currently set to. Nothing is removed and
@@ -2141,7 +2144,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 10:30 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 10:32 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];

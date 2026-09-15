@@ -1,10 +1,20 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><!-- THE HOME-SCREEN TILE. Both dashboards used to come out as the same black square, because neither carried an icon and iOS drew its own from the title -- and both titles start "Owners League". These three are filled per page by page_chrome.py. --><link rel="apple-touch-icon" href="data:image/png;base64,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"><link rel="icon" type="image/png" href="data:image/png;base64,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"><meta name="apple-mobile-web-app-title" content="RFL"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#1e102e"><script>/* Casey, 31 Aug 2026: iOS home-screen apps often don't reload the page when tapped -- they wake a FROZEN, already-running copy from memory, so a script that only runs on initial load never runs again and never notices anything changed. Fixed same day: the check runs on load AND every time iOS wakes the page back up (pageshow, and the page becoming visible again), which is the actual moment a resumed home-screen app needs it. version.txt is a hash of the file's own content (computed at staging, not baked into this HTML), compared against what THIS BROWSER last saw in localStorage; a mismatch reloads once under a URL the phone has never cached (the '?v=' guard makes this a one-shot, never a loop). */(function(){function checkVersion(){if(location.search.indexOf('v=')!==-1){return;}fetch('version.txt',{cache:'no-store'}).then(function(r){return r.text();}).then(function(v){v=v.trim();if(!v){return;}var seen=null;try{seen=localStorage.getItem('dashboard_version');}catch(e){}if(seen&&seen!==v){try{localStorage.setItem('dashboard_version',v);}catch(e){}location.replace(location.pathname+'?v='+encodeURIComponent(v));return;}try{localStorage.setItem('dashboard_version',v);}catch(e){}}).catch(function(){});}checkVersion();window.addEventListener('pageshow',checkVersion);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){checkVersion();}});})();if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function(){}); }</script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><!-- THE HOME-SCREEN TILE. Both dashboards used to come out as the same black square, because neither carried an icon and iOS drew its own from the title -- and both titles start "Owners League". These three are filled per page by page_chrome.py. --><link rel="apple-touch-icon" href="data:image/png;base64,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"><link rel="icon" type="image/png" href="data:image/png;base64,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"><meta name="apple-mobile-web-app-title" content="RFL"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#0f2f52"><script>/* Casey, 31 Aug 2026: iOS home-screen apps often don't reload the page when tapped -- they wake a FROZEN, already-running copy from memory, so a script that only runs on initial load never runs again and never notices anything changed. Fixed same day: the check runs on load AND every time iOS wakes the page back up (pageshow, and the page becoming visible again), which is the actual moment a resumed home-screen app needs it. version.txt is a hash of the file's own content (computed at staging, not baked into this HTML), compared against what THIS BROWSER last saw in localStorage; a mismatch reloads once under a URL the phone has never cached (the '?v=' guard makes this a one-shot, never a loop). */(function(){function checkVersion(){if(location.search.indexOf('v=')!==-1){return;}fetch('version.txt',{cache:'no-store'}).then(function(r){return r.text();}).then(function(v){v=v.trim();if(!v){return;}var seen=null;try{seen=localStorage.getItem('dashboard_version');}catch(e){}if(seen&&seen!==v){try{localStorage.setItem('dashboard_version',v);}catch(e){}location.replace(location.pathname+'?v='+encodeURIComponent(v));return;}try{localStorage.setItem('dashboard_version',v);}catch(e){}}).catch(function(){});}checkVersion();window.addEventListener('pageshow',checkVersion);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){checkVersion();}});})();if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function(){}); }</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Reality Football League</title>
 <style>
-:root{--bg:#0b1119;--pan:#111a24;--pan2:#16212e;--line:#1e2a37;--ink:#e6edf5;--dim:#93a4b8;
- --faint:#7a8da1;--good:#4ade80;--bad:#f87171;--gold:#fbbf24;--blue:#60a5fa;--mine:#a78bfa;
- --tv:#22d3ee}
+/* ---- ONE LOOK: LIGHT --------------------------------------------------------------------
+ * Casey, 15 Sep 2026, reading it on the iPhone: "the light background looks way better than the
+ * dark background. Just make that the standard. I don't know why we'd even give them the theme
+ * of light versus dark ... it doesn't matter what their phone says."
+ * So the page is light on every device, and there is no switch. A page read by twenty-seven
+ * people in stadium parking lots and living rooms is easier to support when everyone who
+ * describes it is describing the same thing.
+ * THE VARIABLES STAYED. Every colour on this page is still named here and used by name, which
+ * is what made this change one block instead of a search through 570KB.
+ */
+:root{--bg:#e9eef6;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+ --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
+ --tv:#0c6c81}
 /* ---- LIGHT AND DARK, FOLLOWING THE READER'S OWN DEVICE -------------------------------------
  * Casey, 15 Sep 2026: "would it be cleaner to use a white background with black text?" It depends
  * on the reader and the room, so the page follows the setting they have already made on the
@@ -17,52 +27,24 @@
   /* A VARIABLE CANNOT BE DEFINED AS ITSELF. A blanket find-and-replace of the old hexes rewrote
      these DEFINITIONS into `--sunk:var(--sunk)`, which is a cycle: the browser drops it, the
      value comes out empty, and `color:var(--sunk)` silently inherits instead. That is how the
-     Sign Me In button ended up near-white on blue. The dark values are literals here, always. */
-  --warnbg:#33290f;--warnline:#4a3a10;--warntx:#fbbf24;
-  --goodbg:#0d1a12;--goodline:#14532d;
-  --badbg:#3a1717;--badline:#4a1f1f;--badtx:#f87171;
-  --minebg:#1b1533;--mineline:#3d3163;
-  --tvline:#1e4a63;--shade:rgba(4,8,13,.78);--sunk:#06121f;
-  /* ---- THE LEAGUE'S OWN COLOURS -----------------------------------------------------------
-   * Casey, 15 Sep 2026: "can the header where we have the Reality Football League be a different
-   * colour? The tabs could be a different colour ... the background behind the live scoring
-   * could be a better colour ... get creative and make this thing look good."
-   * Navy for the header and the tab strip, amber for the one line that has to catch the eye.
-   * The cards stay the panel colour so nothing a reader has to READ sits on a strong colour. */
-  --brand:#0a1a2a;--brand2:#12395c;--brandink:#e9f1fa;--brandacc:#f5a524;
-  --brandhd:#74aee6;--brandrule:#1d3550;--brandsoft:#13202e;
-  --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%23ffffff' fill-opacity='0.030' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E");
-}
-:root[data-theme="light"]{
-  --bg:#e9eef6;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
-  --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
-  --tv:#0c6c81;
+     Sign Me In button ended up near-white on blue. The values are literals here, always. */
   --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
   --goodbg:#e6f6ec;--goodline:#8fd3ad;
   --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
   --minebg:#f0ebfb;--mineline:#c4b2ef;
   --tvline:#a6d4e0;--shade:rgba(20,28,38,.45);--sunk:#eef2f7;
-    --pnfl:#0b6a8a;--pfbs:#8a4b00;--pfbsline:#e3c39a;--pfcs:#5b34b5;
-      --brand:#0f2f52;--brand2:#1f5d99;--brandink:#ffffff;--brandacc:#f6b73c;
-    --brandhd:#14487d;--brandrule:#d5e2f0;--brandsoft:#eef3fa;
-    --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%230f2f52' fill-opacity='0.038' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E");
+  --pnfl:#0b6a8a;--pfbs:#8a4b00;--pfbsline:#e3c39a;--pfcs:#5b34b5;
+  /* ---- THE LEAGUE'S OWN COLOURS -----------------------------------------------------------
+   * Casey, 15 Sep 2026: "can the header where we have the Reality Football League be a different
+   * colour? The tabs could be a different colour ... the background behind the live scoring
+   * could be a better colour ... get creative and make this thing look good."
+   * Navy for the header and the tab strip, amber for the one line that has to catch the eye.
+   * The cards stay white so nothing a reader has to READ sits on a strong colour. */
+  --brand:#0f2f52;--brand2:#1f5d99;--brandink:#ffffff;--brandacc:#f6b73c;
+  --brandhd:#14487d;--brandrule:#d5e2f0;--brandsoft:#eef3fa;
+  --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%230f2f52' fill-opacity='0.038' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E");
 }
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]){
-    --bg:#e9eef6;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
-    --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
-    --tv:#0c6c81;
-    --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
-    --goodbg:#e6f6ec;--goodline:#8fd3ad;
-    --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
-    --minebg:#f0ebfb;--mineline:#c4b2ef;
-    --tvline:#a6d4e0;--shade:rgba(20,28,38,.45);--sunk:#eef2f7;
-    --pnfl:#0b6a8a;--pfbs:#8a4b00;--pfbsline:#e3c39a;--pfcs:#5b34b5;
-      --brand:#0f2f52;--brand2:#1f5d99;--brandink:#ffffff;--brandacc:#f6b73c;
-    --brandhd:#14487d;--brandrule:#d5e2f0;--brandsoft:#eef3fa;
-    --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%230f2f52' fill-opacity='0.038' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E");
-  }
-}
+
 *{box-sizing:border-box}
 a{color:var(--blue)}
 body{margin:0;background-color:var(--bg);background-image:var(--wm);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -842,7 +824,10 @@ details>summary::marker{color:var(--faint)}
   header .chip{flex:0 0 auto;white-space:nowrap}
   /* THE TABS STAY WITH YOU. Scrolling a long scoreboard used to mean scrolling all the way back
      to change tab. */
-  header{position:sticky;top:0;z-index:30;background:var(--bg)}
+  /* NO BACKGROUND HERE. This rule exists for the z-index, and restating the background repainted
+     the navy header page-coloured on a phone -- the one screen every owner reads it on. The
+     colour is stated once, in the base rule. */
+  header{position:sticky;top:0;z-index:30}
   main{padding-top:8px}
   /* THE FILTER ROW IS 175px OF A PHONE SCREEN AND IT IS TOUCHED ONCE A WEEK.
      It collapses behind one button that says what it is currently set to. Nothing is removed and
@@ -908,40 +893,15 @@ details>summary::marker{color:var(--faint)}
 }
 
 </style><script>
-/* ---- LIGHT OR DARK, AND THE READER DECIDES ---------------------------------------------------
- * The page follows the device by default -- there is nothing to set and nothing to explain. The
- * switch is for the person whose phone is dark but who would rather read this one light, which is
- * a real preference and not worth arguing with. Kept per browser, because it is about this
- * screen in this room, not about the league.
- */
+/* THE PHONE'S OWN BAR MATCHES THE HEADER. Without this the notch area stays black above a navy
+ * header, which reads as the page having failed to load properly. It takes the BRAND navy, not
+ * the page ground, because the header is what is actually under the notch. */
 (function(){
-  var K = 'rfl_theme';
-  var root = document.documentElement;
-  function apply(v){
-    if (v === 'light' || v === 'dark') root.setAttribute('data-theme', v);
-    else root.removeAttribute('data-theme');
-  }
-  try { apply(localStorage.getItem(K)); } catch (e) {}
-  window.rflTheme = function(v){
-    try { if (v) localStorage.setItem(K, v); else localStorage.removeItem(K); } catch (e) {}
-    apply(v);
-  };
-  window.rflThemeNow = function(){
-    try { return localStorage.getItem(K) || 'auto'; } catch (e) { return 'auto'; }
-  };
-  /* THE PHONE'S OWN BAR MATCHES THE PAGE. Without this the notch area stays black behind a white
-     page, which reads as the page having failed to load properly. */
-  function paintBar(){
-    try {
-      var bg = getComputedStyle(root).getPropertyValue('--bg').trim();
-      var m = document.querySelector('meta[name="theme-color"]');
-      if (m && bg) m.setAttribute('content', bg);
-    } catch (e) {}
-  }
-  paintBar();
-  var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
-  if (mq && mq.addEventListener) mq.addEventListener('change', paintBar);
-  window.rflPaintBar = paintBar;
+  try {
+    var bg = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim();
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m && bg) m.setAttribute('content', bg);
+  } catch (e) {}
 })();
 </script></head><body>
 <header>
@@ -1841,18 +1801,6 @@ function renderChips(){
   c.push(`<span class="chip" title="${esc(lines.join('\n\n'))}">Web page updated ${PAGE_BUILT}${
     second ? ` <span class="d">· ${second}</span>` : ''}</span>`);
   // Casey, 31 Aug 2026: "it makes it sound like I need to press refresh to get live scores." Right call -- live scores already update on their own (see the LIVE chip). This button is only for pulling down a NEWER BUILD of the page itself (new rosters, features, fixes), so it sits right next to the Built time, not implying anything about scores.
-  /* LIGHT OR DARK. Three states and the middle one is the default: follow the device. Casey,
-     15 Sep 2026, asked whether white-on-black was the right choice; the honest answer is that it
-     is the reader's to make, and most of them have already made it once, on the phone. */
-  {
-    const now = (typeof rflThemeNow === 'function') ? rflThemeNow() : 'auto';
-    const nextOf = {auto: 'light', light: 'dark', dark: 'auto'};
-    const wordOf = {auto: 'Theme: Follows Your Device', light: 'Theme: Light', dark: 'Theme: Dark'};
-    c.push(`<button type="button" class="chip chip-action" title="Light, dark, or whatever this
-      device is set to. Press to change." onclick="rflTheme('${nextOf[now] === 'auto' ? ''
-        : nextOf[now]}');if(window.rflPaintBar)rflPaintBar();renderChips();">${
-      esc(wordOf[now] || wordOf.auto)}</button>`);
-  }
   c.push(`<button type="button" class="chip chip-action" title="Checks for a newer BUILD of this page (rosters, features, fixes) and loads it if one exists. Live scores already update on their own every minute -- this has nothing to do with those." onclick="location.href=location.pathname+'?v='+Date.now();">&#8635; Check for update</button>`);
   if (DATA.owner_source === 'draft')
     c.push(`<span class="chip warn" title="${esc(DATA.owner_note || '')}">Rosters: draft day</span>`);
@@ -2196,7 +2144,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 10:28 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 10:32 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
