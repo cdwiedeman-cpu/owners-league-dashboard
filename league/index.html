@@ -5,6 +5,43 @@
 :root{--bg:#0b1119;--pan:#111a24;--pan2:#16212e;--line:#1e2a37;--ink:#e6edf5;--dim:#93a4b8;
  --faint:#5f7080;--good:#4ade80;--bad:#f87171;--gold:#fbbf24;--blue:#60a5fa;--mine:#a78bfa;
  --tv:#22d3ee}
+/* ---- LIGHT AND DARK, FOLLOWING THE READER'S OWN DEVICE -------------------------------------
+ * Casey, 15 Sep 2026: "would it be cleaner to use a white background with black text?" It depends
+ * on the reader and the room, so the page follows the setting they have already made on the
+ * device -- Display and Brightness on an iPhone, Appearance on a Mac -- and carries a switch for
+ * anybody who wants the other one here.
+ * EVERY TINT IS A VARIABLE TOO. The state colours were typed as dark hexes at the point of use,
+ * which is how a page ends up half converted: the text flips and the panel behind it does not.
+ */
+:root{
+  --warnbg:#33290f;--warnline:var(--warnline);--warntx:#fbbf24;
+  --goodbg:#0d1a12;--goodline:var(--goodline);
+  --badbg:#3a1717;--badline:var(--badline);--badtx:#f87171;
+  --minebg:#1b1533;--mineline:var(--mineline);
+  --tvline:var(--tvline);--shade:var(--shade);--sunk:var(--sunk);
+}
+:root[data-theme="light"]{
+  --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+  --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
+  --tv:#0c6c81;
+  --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
+  --goodbg:#e6f6ec;--goodline:#8fd3ad;
+  --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
+  --minebg:#f0ebfb;--mineline:#c4b2ef;
+  --tvline:#a6d4e0;--shade:rgba(20,28,38,.45);--sunk:#eef2f7;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+    --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
+    --tv:#0c6c81;
+    --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
+    --goodbg:#e6f6ec;--goodline:#8fd3ad;
+    --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
+    --minebg:#f0ebfb;--mineline:#c4b2ef;
+    --tvline:#a6d4e0;--shade:rgba(20,28,38,.45);--sunk:#eef2f7;
+  }
+}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
  -webkit-text-size-adjust:100%}
@@ -29,8 +66,8 @@ h1{font-size:16px;margin:0 0 6px;letter-spacing:.02em}
 .chip{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .chip-action{font:inherit;font-size:11px;font-weight:600;color:var(--bg);background:var(--blue);border:none;cursor:pointer;min-height:24px}
 .chip-action:active{opacity:.8}
-.chip.warn{color:var(--gold);border-color:#4a3a10}
-.chip.bad{color:var(--bad);border-color:#4a1f1f}
+.chip.warn{color:var(--gold);border-color:var(--warnline)}
+.chip.bad{color:var(--bad);border-color:var(--badline)}
 .tabs{display:flex;gap:4px;flex-wrap:wrap}
 /* WRAPPING IS NOT A PHONE RULE. It used to live inside the 430px media query, with a comment
    promising that "a sixth tab can never overflow it at any font size". Three commissioner tabs
@@ -384,13 +421,13 @@ details.how>summary:hover::before{border-color:var(--blue);color:var(--blue)}
 td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
 .f{appearance:none;background:var(--pan);border:1px solid var(--line);color:var(--dim);border-radius:8px;
  padding:7px 13px;font:600 12px inherit;cursor:pointer;min-height:34px}
-.f[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#06121f}
+.f[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:var(--sunk)}
 .f.me[aria-pressed=true]{background:var(--mine);border-color:var(--mine)}
 /* THE ONE BUTTON ON A PANEL THAT IS THE POINT OF THE PANEL. `.f` is a quiet filter chip and it
    reads as a label rather than a control -- Casey pressed "That's me" and said it did not look
    like something you could press. A primary action is filled, not outlined, and it moves when
    you press it. */
-.f.primary{background:var(--blue);border-color:var(--blue);color:#06121f;font-weight:700;
+.f.primary{background:var(--blue);border-color:var(--blue);color:var(--sunk);font-weight:700;
   padding:9px 18px;min-height:40px;box-shadow:0 1px 0 rgba(0,0,0,.35)}
 .f.primary:hover{filter:brightness(1.08)}
 .f.primary:active{transform:translateY(1px);box-shadow:none}
@@ -438,8 +475,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    which one is running, permanently and in the same place every time. */
 .status{display:inline-flex;align-items:center;gap:6px;font:700 11px inherit;letter-spacing:.04em;
   border:1px solid;border-radius:999px;padding:4px 11px;min-height:26px;white-space:nowrap}
-.st-live{color:var(--good);border-color:#14532d;background:rgba(74,222,128,.07)}
-.st-off{color:var(--gold);border-color:#4a3a10;background:rgba(251,191,36,.07)}
+.st-live{color:var(--good);border-color:var(--goodline);background:rgba(74,222,128,.07)}
+.st-off{color:var(--gold);border-color:var(--warnline);background:rgba(251,191,36,.07)}
 .st-wait{color:var(--dim);border-color:var(--line)}
 .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
 .st-live .dot{animation:pulse 2s ease-in-out infinite}
@@ -550,9 +587,9 @@ tr.g-before td{opacity:.72}
 .gtag{display:inline-block;font:700 9px inherit;letter-spacing:.05em;padding:0 4px;
   border-radius:3px;border:1px solid;margin-left:5px;vertical-align:1px}
 .t-past{color:var(--dim);border-color:var(--line)}
-.t-before{color:var(--bad);border-color:#4a1f1f}
-.t-yours{color:var(--good);border-color:#14532d}
-.t-hold{color:var(--gold);border-color:#4a3a10}
+.t-before{color:var(--bad);border-color:var(--badline)}
+.t-yours{color:var(--good);border-color:var(--goodline)}
+.t-hold{color:var(--gold);border-color:var(--warnline)}
 .fin{font-variant-numeric:tabular-nums;font-weight:700}
 tr.slot-head td{border-bottom:none}
 .caret{color:var(--faint);font-size:10px;margin-right:3px}
@@ -566,12 +603,12 @@ tr.clickable{cursor:pointer}
 tr.clickable:hover td{background:rgba(96,165,250,.07)}
 .g{color:var(--good)}.b{color:var(--bad)}.y{color:var(--gold)}.d{color:var(--dim)}
 .pill{display:inline-block;font:700 10px inherit;letter-spacing:.06em;padding:1px 6px;border-radius:4px;border:1px solid}
-.p-nfl{color:#7dd3fc;border-color:#1e4a63}.p-fbs{color:#fdba74;border-color:#5c3a1a}.p-fcs{color:#c4b5fd;border-color:#3d3163}
+.p-nfl{color:#7dd3fc;border-color:var(--tvline)}.p-fbs{color:#fdba74;border-color:#5c3a1a}.p-fcs{color:#c4b5fd;border-color:var(--mineline)}
 .v-stream{color:var(--blue);border-color:#1e3a5f}
-.v-hold{color:var(--gold);border-color:#4a3a10}
-.v-keep{color:var(--good);border-color:#14532d}
+.v-hold{color:var(--gold);border-color:var(--warnline)}
+.v-keep{color:var(--good);border-color:var(--goodline)}
 .v-no{color:var(--faint);border-color:var(--line)}
-.v-avoid{color:var(--bad);border-color:#4a1f1f;background:rgba(248,113,113,.08)}
+.v-avoid{color:var(--bad);border-color:var(--badline);background:rgba(248,113,113,.08)}
 .recg{display:block;font-size:10px;font-variant-numeric:tabular-nums;margin-top:2px}
 .empty{color:var(--dim);font-size:13px;line-height:1.55;padding:6px 0}
 /* Each team is a FULL-WIDTH row of the game block. Without grid-column:1/-1 the two .t
@@ -810,7 +847,43 @@ details>summary::marker{color:var(--faint)}
   textarea.rbta{ font-size:16px }
 }
 
-</style></head><body>
+</style><script>
+/* ---- LIGHT OR DARK, AND THE READER DECIDES ---------------------------------------------------
+ * The page follows the device by default -- there is nothing to set and nothing to explain. The
+ * switch is for the person whose phone is dark but who would rather read this one light, which is
+ * a real preference and not worth arguing with. Kept per browser, because it is about this
+ * screen in this room, not about the league.
+ */
+(function(){
+  var K = 'rfl_theme';
+  var root = document.documentElement;
+  function apply(v){
+    if (v === 'light' || v === 'dark') root.setAttribute('data-theme', v);
+    else root.removeAttribute('data-theme');
+  }
+  try { apply(localStorage.getItem(K)); } catch (e) {}
+  window.rflTheme = function(v){
+    try { if (v) localStorage.setItem(K, v); else localStorage.removeItem(K); } catch (e) {}
+    apply(v);
+  };
+  window.rflThemeNow = function(){
+    try { return localStorage.getItem(K) || 'auto'; } catch (e) { return 'auto'; }
+  };
+  /* THE PHONE'S OWN BAR MATCHES THE PAGE. Without this the notch area stays black behind a white
+     page, which reads as the page having failed to load properly. */
+  function paintBar(){
+    try {
+      var bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m && bg) m.setAttribute('content', bg);
+    } catch (e) {}
+  }
+  paintBar();
+  var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
+  if (mq && mq.addEventListener) mq.addEventListener('change', paintBar);
+  window.rflPaintBar = paintBar;
+})();
+</script></head><body>
 <header>
   <h1>Reality Football League</h1>
   <!-- `scroller` DECLARES THAT THESE TWO OWN THEIR OVERFLOW. On a phone they scroll sideways
@@ -1708,6 +1781,18 @@ function renderChips(){
   c.push(`<span class="chip" title="${esc(lines.join('\n\n'))}">Web page updated ${PAGE_BUILT}${
     second ? ` <span class="d">· ${second}</span>` : ''}</span>`);
   // Casey, 31 Aug 2026: "it makes it sound like I need to press refresh to get live scores." Right call -- live scores already update on their own (see the LIVE chip). This button is only for pulling down a NEWER BUILD of the page itself (new rosters, features, fixes), so it sits right next to the Built time, not implying anything about scores.
+  /* LIGHT OR DARK. Three states and the middle one is the default: follow the device. Casey,
+     15 Sep 2026, asked whether white-on-black was the right choice; the honest answer is that it
+     is the reader's to make, and most of them have already made it once, on the phone. */
+  {
+    const now = (typeof rflThemeNow === 'function') ? rflThemeNow() : 'auto';
+    const nextOf = {auto: 'light', light: 'dark', dark: 'auto'};
+    const wordOf = {auto: 'Theme: Follows Your Device', light: 'Theme: Light', dark: 'Theme: Dark'};
+    c.push(`<button type="button" class="chip chip-action" title="Light, dark, or whatever this
+      device is set to. Press to change." onclick="rflTheme('${nextOf[now] === 'auto' ? ''
+        : nextOf[now]}');if(window.rflPaintBar)rflPaintBar();renderChips();">${
+      esc(wordOf[now] || wordOf.auto)}</button>`);
+  }
   c.push(`<button type="button" class="chip chip-action" title="Checks for a newer BUILD of this page (rosters, features, fixes) and loads it if one exists. Live scores already update on their own every minute -- this has nothing to do with those." onclick="location.href=location.pathname+'?v='+Date.now();">&#8635; Check for update</button>`);
   if (DATA.owner_source === 'draft')
     c.push(`<span class="chip warn" title="${esc(DATA.owner_note || '')}">Rosters: draft day</span>`);
@@ -2051,7 +2136,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 7:36 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 8:23 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
