@@ -2752,11 +2752,11 @@ function submitList(){
   var a = actingSeat();
   S.requests[key(a.div, a.seat)].submitted = now();
   save();
-  showHelp('You Are Entered for Monday',
-    '<p>Your list is in for <b>week ' + playWeek() + '</b>, the games that start on '
-    + esc(playWeekStarts()) + '. Nothing happens until Monday at 4:00pm AZ.</p>'
-    + '<p>You can change it any time before then — press <b>Change My List</b>, make the change, '
-    + 'and send it again.</p>');
+  /* NO PANEL. Casey, 15 Sep 2026: "the pop-up that comes out of that seems just like an extra
+     step ... can we just not? On the screen it looks like you've saved something."
+     He is right, and the page was already saying it twice: the card turns green and names the
+     week, and the bar along the bottom changes. A panel on top of two answers is a third answer
+     and a tap to get rid of. A CONFIRMATION THAT REPEATS WHAT THE SCREEN ALREADY SHOWS IS NOISE. */
   render();
 }
 function unsubmit(){
@@ -2912,7 +2912,7 @@ function viewTrades(){
       + 'only if you do win an earlier trade. That is how you say &ldquo;if I miss out on Navy, '
       + 'try Alabama instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as '
       + 'well&rdquo;.</li>'
-      + '<li>Press <b>Send My List</b>. Until you press it, your list is only saved on this '
+      + '<li>Press <b>Save My Trades</b>. Until you press it, your trades are only on this '
       + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
       + '<p class="note">Up to ' + P.MAX_ROWS + ' trades. You can change and re-send as often as '
       + 'you like, right up to Monday at 3:59pm AZ.</p>';
@@ -2950,12 +2950,14 @@ function viewTrades(){
      question they arrived with, so then it goes at the top. Until then it belongs beside the
      button that changes it, and nowhere else. */
   if (sent){
-    h += '<div class="card ok"><h2 class="g">You Are Entered for '
-      + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. This list is for '
+    /* "SAVE" IS THE WORD HE ASKED FOR AND IT LOSES SOMETHING, so the state text carries it:
+       saved here means IN for Monday, not merely kept on this phone. */
+    h += '<div class="card ok"><h2 class="g">Your Trades Are In for '
+      + 'Monday</h2><p class="note">Saved ' + esc(pretty(req.submitted)) + '. They are for '
       + '<b>week ' + playWeek() + '</b>, the games that start on ' + esc(playWeekStarts())
       + '. Nothing happens until Monday at 4:00pm AZ, and you can change it any time before '
       + 'then.</p>'
-      + '<div class="row"><button onclick="unsubmit()">Change My List</button></div></div>';
+      + '<div class="row"><button onclick="unsubmit()">Change My Trades</button></div></div>';
   }
 
   h += '<div class="card">';
@@ -3005,7 +3007,7 @@ function viewTrades(){
       /* SEND IS THE END OF THE JOB, so it is the biggest thing on the page and it is on its own.
          Clear Them All is not a step in the job and no longer sits beside the step that is. */
       h += '<div class="sendwrap">'
-        + '<button class="pri big" onclick="submitList()">Send My List</button>'
+        + '<button class="pri big" onclick="submitList()">Save My Trades</button>'
         + '<div class="row" style="margin-top:8px;justify-content:center">'
         + '<button class="f" onclick="askClearAll()">Start Over</button></div></div>';
     }
@@ -3013,10 +3015,10 @@ function viewTrades(){
       /* THE STATUS SITS WITH THE BUTTON THAT CHANGES IT. Nowhere else on the page needs to
          carry it while the list is still being built. */
       h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
-        + 'padding-top:12px"><button class="pri" onclick="submitList()">Send My List</button>'
-        + '<span class="pill bad">Not Sent Yet</span>'
+        + 'padding-top:12px"><button class="pri" onclick="submitList()">Save My Trades</button>'
+        + '<span class="pill bad">Not Saved Yet</span>'
         + '<span class="note">This list is <b>not</b> in Monday&rsquo;s coin flips until you '
-        + 'press <b>Send My List</b>. You can change it and send it again as often as you like, '
+        + 'press <b>Save My Trades</b>. You can change them and save again as often as you like, '
         + 'up to Monday at 3:59pm AZ.</span></div>';
     }
   }
@@ -3030,15 +3032,15 @@ function viewTrades(){
     h += '<div class="stickybar" id="actbar">'
       + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
       + '+ Add Another Trade</button>'
-      + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades · not sent yet'
+      + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades &middot; not saved yet'
       + '</span>'
       + '<button class="pri" ' + (rows.length ? '' : 'disabled')
-      + ' onclick="submitList()">Send My List</button></div>';
+      + ' onclick="submitList()">Save My Trades</button></div>';
   } else {
     h += '<div class="stickybar" id="actbar">'
-      + '<span class="grow"><b class="g">Your list is in.</b> ' + rows.length + ' trade'
-      + (rows.length === 1 ? '' : 's') + ' entered for Monday.</span>'
-      + '<button onclick="unsubmit()">Change My List</button></div>';
+      + '<span class="grow"><b class="g">Saved and in for Monday.</b> ' + rows.length + ' trade'
+      + (rows.length === 1 ? '' : 's') + '.</span>'
+      + '<button onclick="unsubmit()">Change My Trades</button></div>';
   }
   return h + commishCard(s0) + themeRow() + clockCard();
 }
@@ -3659,7 +3661,7 @@ function viewRun(){
     + (drafts.length ? '<span class="pill bad">' + drafts.length + ' typed but not sent</span>'
                      : '') + '</div>'
     + (drafts.length
-        ? '<p class="note b">Typed a list but never pressed <b>Send My List</b>, so they are NOT '
+        ? '<p class="note b">Typed a list but never pressed <b>Save My Trades</b>, so they are NOT '
           + 'in this week: ' + esc(drafts.join(', ')) + '.</p>' : '')
     + '<div class="row">'
     + '<button class="pri" ' + (reqs.length ? '' : 'disabled')
@@ -3678,7 +3680,7 @@ function viewRun(){
           + 'running a coin flip wherever more than one owner asked for the same team.'
           + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm AZ.' : '')
         : 'Nothing has been sent for week ' + playWeek() + ' yet. Enter a list on <b>My trades</b> '
-          + 'and press <b>Send My List</b>.')
+          + 'and press <b>Save My Trades</b>.')
     + '</p></div>';
 
   h += claimQueueCard();
@@ -4245,7 +4247,7 @@ function welcomeText(seat, code, email){
   + '5. Open it from the icon and type your code in once more.\n'
   + '\n'
   + 'ENTERING A TRADE\n'
-  + 'Go to the My Trades tab. Name the team you want to pick up and the teams you would be willing to give up for it, then press Send My List.\n'
+  + 'Go to the My Trades tab. Name the team you want to pick up and the teams you would be willing to give up for it, then press Save My Trades.\n'
   + 'You can change your list as often as you like until the window closes at 3:59pm AZ on Monday. AZ is Arizona time, which the league runs on all year.\n'
   + '\n'
   + 'If the code will not work, reply to this message and I will send you a new one.\n';
