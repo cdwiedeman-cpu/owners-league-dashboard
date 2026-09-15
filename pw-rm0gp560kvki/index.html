@@ -450,6 +450,10 @@ tr.txmine>td{background:var(--minebg)}
 th.c-q{cursor:pointer;user-select:none;white-space:nowrap}
 th.c-q:hover{color:var(--blue)}
 th.sorted{color:var(--blue)}
+/* A HEAD THAT SORTS SAYS SO BEFORE IT IS PRESSED. */
+th.c-q{cursor:pointer;user-select:none}
+th.c-q:hover{color:var(--blue)}
+.sarr{margin-left:3px;font-size:10px;color:var(--blue)}
 td.sorted{color:var(--ink);background:rgba(96,165,250,.06)}
 /* Both standings tables carry five numeric columns now, which does not fit a phone. Same rule as
    every other wide table here: keep every column and scroll the box sideways. */
@@ -2271,7 +2275,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:20 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:35 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3424,6 +3428,55 @@ function epOfMargin(pool, m, oppPool){
 
 /* Every finished game we can price, optionally stopping at a date. `through` = the build's own
    cut-off gives what the last refresh knew; no cut-off gives everything the page can see. */
+/* ---- A RESULT THE LINE DID NOT SEE COMING --------------------------------------------------
+ * Casey, 15 Sep 2026: "flag any team that had a big win where they beat a team it was unexpected
+ * for them to win, because I would like to see that so I don't have to go through every game and
+ * every live score ... that maybe tells me they're much better than what we expected."
+ * Two different things, and they are named separately because they say different things:
+ *   UPSET   — they were the underdog and they won. The market was wrong about who was better.
+ *   BIG WIN — they were favoured and beat the number by two touchdowns. The market had the right
+ *             side and the wrong size.
+ * BOTH ARE MEASURED AGAINST THE PRE-GAME LINE, not against a rating, because the line is what
+ * every reader can check. `pre_m` is this team's expected margin before kickoff, so a negative
+ * one means they were expected to lose by that much.
+ * THE GATES ARE MATERIAL, NOT NOMINAL. A team favoured by 0.4 that wins is not an upset and a
+ * win by 3 more than the line is not a story; both would put a badge on half the board.
+ */
+const UPSET_DOG = 2.5;          // points the line had them losing by, at least
+const UPSET_OVER = 14;          // points they beat the line by, at least, when favoured
+function bigWins(t){
+  const out = [];
+  for (const g of (t.hist || [])){
+    if (g.nc || g.pre_m == null) continue;
+    let pf = g.pf, pa = g.pa;
+    if (pf == null || pa == null){
+      const lv = liveScore(t.n, g.d);
+      if (!lv) continue;                       // unknown is not a loss and not a win
+      pf = lv.pf; pa = lv.pa;
+    }
+    if (pf <= pa) continue;
+    const over = (pf - pa) - g.pre_m;
+    if (g.pre_m <= -UPSET_DOG)
+      out.push({kind: 'UPSET', opp: g.opp, d: g.d, pf: pf, pa: pa, line: g.pre_m, over: over});
+    else if (over >= UPSET_OVER)
+      out.push({kind: 'BIG WIN', opp: g.opp, d: g.d, pf: pf, pa: pa, line: g.pre_m, over: over});
+  }
+  return out;
+}
+function bigWinTag(t){
+  const w = bigWins(t);
+  if (!w.length) return '';
+  const best = w.slice().sort((a, b) => (a.kind === b.kind ? b.over - a.over
+    : a.kind === 'UPSET' ? -1 : 1))[0];
+  const say = x => `${x.kind === 'UPSET' ? 'Beat' : 'Beat'} ${x.opp} ${x.pf}–${x.pa} on ${
+    pretty(x.d)}. ${x.line < 0 ? `They were ${Math.abs(x.line).toFixed(1)} point underdogs.`
+      : `They were favoured by ${x.line.toFixed(1)} and won by ${(x.pf - x.pa)}.`}`;
+  const more = w.length > 1 ? `\n\n${w.length} such results this season:\n`
+    + w.map(say).join('\n') : '';
+  return ` <span class="recg ${best.kind === 'UPSET' ? 'g' : 'y'}" title="${esc(say(best) + more
+    + '\n\nMeasured against the pre-game line, which is in the team panel game by game.')}">${
+    best.kind}</span>`;
+}
 function playedResiduals(t, through){
   const out = [];
   for (const g of (t.hist || [])){
@@ -3864,6 +3917,31 @@ function dropOrderNote(list){
     ? `<div class="note" style="flex-basis:100%">${bits.join(' ')}</div>` : '';
 }
 
+/* Per POOL, because the two tables are read for different reasons and a sort chosen on the
+   college board has no business reordering the eight NFL rows. */
+let PSORT = {COL: {key: 'gain3', dir: -1}, NFL: {key: 'gain3', dir: -1}};
+let PMORE = {COL: 25, NFL: 8};
+let PUPSET = false;
+const PSTEP = {COL: 25, NFL: 8};
+function setPSort(kind, key){
+  const cur = PSORT[kind] || {key: 'gain3', dir: -1};
+  /* A SECOND TAP TURNS IT ROUND. A first tap on a new column opens on the useful end: biggest
+     first for every number, A to Z for the name. */
+  PSORT[kind] = (cur.key === key) ? {key: key, dir: -cur.dir}
+                                  : {key: key, dir: key === 'team' ? 1 : -1};
+  renderPick();
+}
+function moreTeams(kind){
+  PMORE[kind] = (PMORE[kind] || PSTEP[kind]) + PSTEP[kind];
+  const y = window.scrollY;
+  renderPick();
+  window.scrollTo({top: y});
+}
+function setPUpset(v){ PUPSET = !!v; renderPick(); }
+function showAllTeams(kind, n){
+  PMORE[kind] = n;
+  const y = window.scrollY; renderPick(); window.scrollTo({top: y});
+}
 function availTable(kind){
   const want = kind === 'NFL' ? (t => t.pool === 'NFL') : (t => t.pool !== 'NFL');
   const inc = slotFor(kind);
@@ -3898,10 +3976,41 @@ function availTable(kind){
               gainR: r.games >= DATA.hold_games ? r.pts - incRest.pts : null,
               skipped: (t.sched || []).filter(g => !g.bye && g.ep != null && g.d <= from).length};
     })
-    .filter(x => x.gain3 != null)
-    .sort((a, b) => b.gain3 - a.gain3);
+    .filter(x => x.gain3 != null);
   if (PQ){ const q = PQ.toLowerCase(); list = list.filter(x => x.t.n.toLowerCase().includes(q)); }
-  const shown = list.slice(0, kind === 'NFL' ? 8 : 25);
+  /* ONLY THE TEAMS THAT HAVE ALREADY DONE SOMETHING UNEXPECTED. */
+  if (PUPSET) list = list.filter(x => bigWins(x.t).length);
+  /* SORTED ON THE RAW FIGURES, never on what the cell prints. Two teams 0.004 apart print the
+     same number and are not tied, and an ordering taken from the rounded value puts them in
+     whichever order the filter happened to leave them in. */
+  const ps = PSORT[kind] || {key: 'gain3', dir: -1};
+  const val = {
+    team:   x => x.t.n,
+    p30:    x => (x.b.byes ? 0 : (x.p30 == null ? -1 : x.p30)),
+    bank:   x => x.b.pts,
+    gain3:  x => x.gain3,
+    season: x => x.r.pts,
+    sgain:  x => (x.gainR == null ? -Infinity : x.gainR),
+  }[ps.key] || (x => x.gain3);
+  list = list.slice().sort((a, b) => {
+    const va = val(a), vb = val(b);
+    const c = (typeof va === 'string') ? String(va).localeCompare(String(vb))
+                                       : (va === vb ? 0 : (va < vb ? -1 : 1));
+    return c * ps.dir || String(a.t.n).localeCompare(String(b.t.n));
+  });
+  /* HOW MANY ROWS, AND A WAY TO ASK FOR MORE. Casey, 15 Sep 2026: "you only show the first
+     twenty or forty teams and clearly there are more available ... there should be something at
+     the bottom where you can do More Teams, and it'll show more and you can keep clicking more."
+     The cap is still there, because a hundred and eighteen rows on a phone is not a board
+     anybody reads. What was missing was the door out of it, and the count that says there is
+     one. */
+  const total = list.length;
+  const cap = PMORE[kind] || (kind === 'NFL' ? 8 : 25);
+  const shown = list.slice(0, cap);
+  /* A COLUMN THAT CAN BE SORTED HAS TO LOOK LIKE ONE, and the one in use has to say which way it
+     is pointing. The page already marks a sorted column on the Standings table; same mark. */
+  const SH = k => (ps.key === k ? 'sorted ' : '') + 'c-q';
+  const AR = k => ps.key === k ? `<span class="sarr">${ps.dir < 0 ? '\u25be' : '\u25b4'}</span>` : '';
   if (!shown.length) return `<div class="empty">${PQ
     ? `No available ${kind === 'NFL' ? 'NFL' : 'college'} team matches “${PQ}”.`
     : `No ${kind === 'NFL' ? 'NFL' : 'college'} team can finish a ${DATA.hold_games}-game hold
@@ -3928,12 +4037,13 @@ function availTable(kind){
     <colgroup><col class="cg1"><col class="cg2"><col class="cg3"><col class="cg4">
       <col class="cg5"><col class="cg6"><col class="cg7"><col class="cg8"></colgroup>
     <thead><tr><th class="c-cmp" title="Add this team to Side by side, above. Two at a time; tap again to remove.">Cmp</th>
-      <th class="c-team">Team</th>
-      <th class="num c-p30" title="Probability it wins EVERY game in the three weeks the hold occupies your roster slot, starting from ${from} — the day ${inc.n}'s slot frees up. Those are the same three weeks Bank 3 adds up. A BYE inside them is a week that banks nothing and cannot be won, so it makes a sweep impossible and the figure reads 0% with BYE beside it. Changing the team above changes this.">3-0</th>
-      <th class="num c-bank" title="Expected league points over the THREE WEEKS from ${from} that the hold occupies your roster slot. A bye inside them contributes nothing, so a team with one banks only the games it actually plays — that is the cost of the bye. Games it plays before ${from} belong to its current owner and are not counted.">Bank 3</th>
-      <th class="num c-gain" title="Bank 3 minus what ${inc.n} earns over THE SAME THREE WEEKS. Both sides start on ${from} and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.">Gain 3</th>
-      <th class="num c-season hide-s" title="Expected points from ${from} to the end of the regular season.">Season<br>pts</th>
-      <th class="num c-sgain hide-s" title="Season points minus what ${inc.n} earns over the same stretch. Casey, 31 Aug 2026: a column called just Gain beside one called Gain 3 says nothing about which is which.">Season<br>gain</th>
+      <th class="c-team ${SH('team')}" onclick="setPSort('${kind}','team')"
+        title="Sort by team name. Tap again to turn it round.">Team${AR('team')}</th>
+      <th class="num c-p30 ${SH('p30')}" onclick="setPSort('${kind}','p30')" title="Probability it wins EVERY game in the three weeks the hold occupies your roster slot, starting from ${from} — the day ${inc.n}'s slot frees up. Those are the same three weeks Bank 3 adds up. A BYE inside them is a week that banks nothing and cannot be won, so it makes a sweep impossible and the figure reads 0% with BYE beside it. Changing the team above changes this.">3-0${AR('p30')}</th>
+      <th class="num c-bank ${SH('bank')}" onclick="setPSort('${kind}','bank')" title="Expected league points over the THREE WEEKS from ${from} that the hold occupies your roster slot. A bye inside them contributes nothing, so a team with one banks only the games it actually plays — that is the cost of the bye. Games it plays before ${from} belong to its current owner and are not counted.">Bank 3${AR('bank')}</th>
+      <th class="num c-gain ${SH('gain3')}" onclick="setPSort('${kind}','gain3')" title="Bank 3 minus what ${inc.n} earns over THE SAME THREE WEEKS. Both sides start on ${from} and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.">Gain 3${AR('gain3')}</th>
+      <th class="num c-season hide-s ${SH('season')}" onclick="setPSort('${kind}','season')" title="Expected points from ${from} to the end of the regular season.">Season<br>pts${AR('season')}</th>
+      <th class="num c-sgain hide-s ${SH('sgain')}" onclick="setPSort('${kind}','sgain')" title="Season points minus what ${inc.n} earns over the same stretch. Casey, 31 Aug 2026: a column called just Gain beside one called Gain 3 says nothing about which is which.">Season<br>gain${AR('sgain')}</th>
       <th class="c-then" title="How long to hold this team. AVOID means every length loses points against ${inc.n}. Otherwise it is the number of WEEKS where the gain over ${inc.n} peaks — the same weeks Gain 3 measures, so the shortest recommendation and Gain 3 are the same number. A team with a bye in its opening stretch needs 4 weeks to play its 3 games, so its minimum reads 4w. Recomputed when you change the team above.">Advice</th></tr></thead><tbody>` +
     shown.map(x => {
       const t = x.t, rec = recommend(t, inc);
@@ -3957,7 +4067,7 @@ function availTable(kind){
                       : 'Compare ' + t.n + ' against ' + cmpMine().n + ', in Side by side above'}"
             aria-label="${cs ? 'Remove' : 'Add'} ${t.n} ${cs ? 'from' : 'to'} the comparison">${cs || '+'}</button></td>
         <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
-          <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}
+          <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}${bigWinTag(t)}
           ${watchBtn(t.n, true)}</td>
         <td class="num c-p30 ${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
             title="${x.p30==null ? 'No games left in this window.' : p30Why(t, from, x)}">${
@@ -3980,6 +4090,20 @@ function availTable(kind){
             : ''}</td></tr>`
         + (OPEN === t.n ? `<tr><td colspan="8">${teamPanel(t, inc)}</td></tr>` : '');
     }).join('') + '</tbody></table></div>'
+    /* THE COUNT IS ALWAYS THERE, AND SO IS THE WAY PAST IT. A table that simply stops at
+       twenty-five rows reads as a table with twenty-five teams in it. */
+    + `<div class="row" style="margin-top:8px;align-items:center;gap:10px">
+        <span class="note">Showing <b>${shown.length}</b> of <b>${total}</b> available ${
+          kind === 'NFL' ? 'NFL' : 'college'} team${total === 1 ? '' : 's'}${
+          PUPSET ? ', counting only the ones with an unexpected result' : ''}.</span>
+        ${total > shown.length
+          ? `<button class="f" onclick="moreTeams('${kind}')">Show ${
+              Math.min(PSTEP[kind], total - shown.length)} More Teams</button>`
+          : ''}
+        ${(total - shown.length) > PSTEP[kind]
+          ? `<button class="f" onclick="showAllTeams('${kind}', ${total})">Show All ${
+              total}</button>`
+          : ''}</div>`
     + explain('How to read this table', `Every number in it is
         <b>league points</b> — wins 1.0, ties 0.5, a 40+ NFL or 50+ college win 0.5, a shutout
         0.5 — except <b>3-0</b>, which is a probability.
