@@ -2271,7 +2271,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:10 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:19 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -2323,6 +2323,43 @@ function ingestEvents(pool, j, out, unmatched){
    costs four calls per pool instead of eighteen. If the payload knows nothing, it falls back to
    the seven calendar days rather than showing an empty week. */
 let WEEK_VIEW = null;                 // null = what is on now. A number = that league week.
+/* ---- LEAGUE WEEK 0 IS TWO AND A HALF WEEKS OF FOOTBALL ------------------------------------
+ * Casey, 15 Sep 2026: "you're grouping multiple weeks into week zero ... I would like to see
+ * what happened the real first week of the season. That weekend ended, that is one week. Then
+ * the next week is another set of games."
+ * The LEAGUE week is not changing and must not: week 0 is every college game played before the
+ * NFL opens, and the rulebook scores it as one bucket. What changes is what the scoreboard
+ * OFFERS to show. A week whose games run over more than one weekend is offered a piece at a
+ * time, each piece named by its dates, and the whole week is still there above them.
+ * WEEK_SEG holds the days of the piece being read, or null for the whole week. It only ever
+ * narrows what is FETCHED and SHOWN; nothing about scoring reads it.
+ */
+let WEEK_SEG = null;
+function weekKey(w){ return String(w) + (WEEK_SEG ? '|' + WEEK_SEG.join(',') : ''); }
+/* The pieces of a league week, as runs of match days that fall in the same Monday-to-Sunday
+   calendar week. One piece means there is nothing to split and the picker says so by offering
+   the week on its own. */
+function weekPieces(w){
+  const days = weekDayPools(w).map(x => x[0]);
+  if (!days.length) return [];
+  const mondayOf = d => {
+    const t = new Date(d + 'T00:00:00Z');
+    t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7));
+    return t.toISOString().slice(0, 10);
+  };
+  const by = new Map();
+  for (const d of days){
+    const m = mondayOf(d);
+    if (!by.has(m)) by.set(m, []);
+    by.get(m).push(d);
+  }
+  return [...by.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([, ds]) => ds.sort());
+}
+function segLabel(ds){
+  const short = d => pretty(d).replace(/,.*$/, '').replace(/^\w+,?\s*/, '');
+  return ds.length === 1 ? short(ds[0]) : short(ds[0]) + ' – ' + short(ds[ds.length - 1]);
+}
 let WEEK_BUSY = false, WEEK_ERR = null;
 const WEEK_CACHE = new Map();         // league week -> games[], fetched once
 
@@ -2375,10 +2412,13 @@ function espnDayURL(pool, iso){
 }
 
 async function loadWeek(w){
-  if (WEEK_CACHE.has(w)) return WEEK_CACHE.get(w);
-  const dayPools = weekDayPools(w).length
+  const ck = weekKey(w);
+  if (WEEK_CACHE.has(ck)) return WEEK_CACHE.get(ck);
+  let dayPools = weekDayPools(w).length
     ? weekDayPools(w)
     : weekDates(w).map(d => [d, Object.keys(EP)]);
+  /* READING ONE PIECE OF A LONG WEEK ASKS ESPN FOR THAT PIECE'S DAYS AND NO OTHERS. */
+  if (WEEK_SEG) dayPools = dayPools.filter(x => WEEK_SEG.indexOf(x[0]) >= 0);
   const out = [], errs = [], unmatched = new Set();
   const jobs = [];
   for (const [d, pools] of dayPools)
@@ -2392,13 +2432,17 @@ async function loadWeek(w){
   const games = dedupeGames(out);
   /* A DAY THAT FAILED IS NOT A DAY WITH NO GAMES. Cache only a clean fetch, so a dropped
      connection does not freeze a half-empty week into the session. */
-  if (!errs.length) WEEK_CACHE.set(w, games);
+  if (!errs.length) WEEK_CACHE.set(ck, games);
   WEEK_ERR = errs.length ? errs : null;
   return games;
 }
 
 async function setWeekView(v){
-  const w = v === '' || v === null ? null : Number(v);
+  /* A VALUE IS EITHER A WEEK OR A WEEK AND A PIECE OF IT: "0" or "0@2026-08-29,2026-08-30". */
+  const raw = (v === '' || v === null) ? '' : String(v);
+  const at = raw.indexOf('@');
+  const w = raw === '' ? null : Number(at < 0 ? raw : raw.slice(0, at));
+  WEEK_SEG = at < 0 ? null : raw.slice(at + 1).split(',');
   WEEK_VIEW = w;
   WEEK_ERR = null;
   if (w === null){                       // back to live: resume polling
@@ -2420,7 +2464,7 @@ async function setWeekView(v){
 /* WHAT THE SCOREBOARD IS SHOWING RIGHT NOW. */
 function shownGames(){
   if (WEEK_VIEW === null) return GAMES;
-  return WEEK_CACHE.get(WEEK_VIEW) || [];
+  return WEEK_CACHE.get(weekKey(WEEK_VIEW)) || [];
 }
 
 /* EVERY GAME THIS SESSION HAS FETCHED, live week and any week browsed, deduped. The season
@@ -3024,8 +3068,9 @@ function setFilter(k){ FILTER = k; renderFilters(); renderScores(); }
    before. The label says it once, in the option itself. */
 function weekLabel(w){
   if (w === null) return 'this week';
-  if (w === 0) return 'Week 0 — before the NFL started';
-  return 'Week ' + w;
+  const seg = WEEK_SEG ? ', ' + segLabel(WEEK_SEG) : '';
+  if (w === 0) return 'Week 0 — before the NFL started' + seg;
+  return 'Week ' + w + seg;
 }
 /* The SHORT form, for the closed select. A control that has to fit beside five filter buttons on
    a 390px phone cannot carry the long label, and the long one is in the banner anyway. */
@@ -3040,8 +3085,28 @@ function weekPicker(){
      week and week one and week zero in the dropdown. Week one is coming up ... isn't that the
      same as this week?" It was. Two names for one week, and only one of them live.
      NEWEST FIRST after that: the week most likely to be wanted is the one just gone, not week 0. */
-  for (let w = last - 1; w >= 0; w--)
-    opts.push(`<option value="${w}" ${WEEK_VIEW === w ? 'selected' : ''}>${esc(weekShort(w))}</option>`);
+  /* EVERY OPTION CARRIES ITS DATES. Casey, 15 Sep 2026: "I almost feel like that dropdown needs
+     to be the dates or something." A bare "Wk 3" asks the reader to hold the league calendar in
+     their head; the dates answer the question they actually have.
+     AND A WEEK THAT RAN OVER MORE THAN ONE WEEKEND IS OFFERED A WEEKEND AT A TIME. That is only
+     ever league week 0, which is every college game before the NFL opens -- two and a half weeks
+     of football under one number. The whole week stays on the list above its pieces, because the
+     whole week is what the league scores. */
+  for (let w = last - 1; w >= 0; w--){
+    const ds = weekDates(w);
+    const span = ds.length ? ' · ' + segLabel(ds) : '';
+    const whole = WEEK_VIEW === w && !WEEK_SEG;
+    opts.push(`<option value="${w}" ${whole ? 'selected' : ''}>${
+      esc(weekShort(w) + span)}</option>`);
+    const pieces = weekPieces(w);
+    if (pieces.length < 2) continue;
+    for (const piece of pieces){
+      const val = w + '@' + piece.join(',');
+      const on = WEEK_VIEW === w && WEEK_SEG && WEEK_SEG.join(',') === piece.join(',');
+      opts.push(`<option value="${esc(val)}" ${on ? 'selected' : ''}>${
+        esc('\u2003' + weekShort(w) + ' · ' + segLabel(piece) + ' only')}</option>`);
+    }
+  }
   return `<select class="wksel" id="wksel" onchange="setWeekView(this.value)"
       aria-label="Show a past week's scores"
       title="Live scores are this week. Pick an earlier week and the page asks ESPN for that week's finals — they are fetched once and then kept, and any of them the standings did not already have get added.">${
