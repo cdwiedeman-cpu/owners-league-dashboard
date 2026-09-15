@@ -12,7 +12,13 @@
  * THE VARIABLES STAYED. Every colour on this page is still named here and used by name, which
  * is what made this change one block instead of a search through 570KB.
  */
-:root{--bg:#e9eef6;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+/* Casey, 15 Sep 2026: "that grey background feels like it needs to be another colour, because
+ * you have the same grey in different places within various forms and tables on the screen."
+ * He is right and it was one fault, not two: the page GROUND and the grey used INSIDE a card
+ * were within four points of each other, so a white card had nothing to stand on and a shaded
+ * table row read as a hole in the page. The ground is a real blue now and the inside grey is
+ * pale enough to read as part of the card it sits in. */
+:root{--bg:#d7e3f1;--pan:#ffffff;--pan2:#f1f5fa;--line:#c3d2e2;--ink:#0d1622;--dim:#41566b;
  --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
  --tv:#0c6c81}
 /* ---- LIGHT AND DARK, FOLLOWING THE READER'S OWN DEVICE -------------------------------------
@@ -285,6 +291,12 @@ html.scrolled #sfilters .status{min-height:28px;padding:3px 8px}
 .pick-tab{border-radius:8px;border-bottom:1px solid var(--line);min-height:38px;padding:0 14px;
   font-size:13px}
 .pick-tab.on{color:var(--blue);border-color:var(--blue);background:rgba(96,165,250,.08)}
+/* PURPLE MEANS YOURS, ON EVERY TAB. Casey, 15 Sep 2026: "on Live Scores you have my-team-only
+   pre-filtered on purple. On all the other pages where there's a my-team-only, you should have
+   that same purple." Purple already means "your team" in the scoreboard, the standings and the
+   grids, so a My-Teams filter that lit up blue was using the page's link colour for the page's
+   ownership idea. One colour, one meaning. */
+.pick-tab.me.on{color:var(--mine);border-color:var(--mine);background:rgba(167,139,250,.12)}
 /* ---- the Race tab's owner picker ------------------------------------------------------
    A row of toggles, not a <select>: he is choosing up to three of twenty-seven and needs to see
    who is near him while he chooses. Grouped by division because a name alone does not say which
@@ -2253,7 +2265,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:01 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:09 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5174,7 +5186,8 @@ function renderPick(){
      other two were just scrolling. The compare card is drawn INSIDE the college and NFL panels
      and scoped to that pool, which removes the cross-pool switch on these tabs entirely -- the
      tab already says which slot he is filling. */
-  const subTab = (k, label) => `<button class="tab pick-tab${PICKTAB === k ? ' on' : ''}"
+  const subTab = (k, label) => `<button class="tab pick-tab${k === 'roster' ? ' me' : ''}${
+      PICKTAB === k ? ' on' : ''}"
       data-picktab="${k}" onclick="setPickTab('${k}')"
       aria-pressed="${PICKTAB === k}">${label}</button>`;
   /* THE COUNT IS ON THE TAB. A watch list you have to open to find out whether it has anything
@@ -7544,7 +7557,7 @@ function raceOwnerTabs(shown, me){
   return `<div class="tabs subtabs rbtabs">${shown.map(r => {
     const isMe = me && r.seat === me.seat;
     const on = RACE_TAB === r.seat;
-    return `<button class="tab pick-tab ${on ? 'on' : ''}" aria-pressed="${on}"
+    return `<button class="tab pick-tab ${isMe ? 'me ' : ''}${on ? 'on' : ''}" aria-pressed="${on}"
       title="Show ${isMe ? 'your' : esc(r.owner) + '&#39;s'} eleven teams"
       onclick="rbSetTab('${r.seat.replace(/'/g, "\\'")}')">${isMe ? 'You' : esc(r.owner)}</button>`;
   }).join('')}</div>`;
@@ -7972,7 +7985,8 @@ function lScopeBar(which){
   const divs = DIVORDER.filter(d => seats.some(x => x.div === d));
   const n = d => seats.filter(x => x.div === d).length;
   const cur = lScope();
-  const btn = (k, label, title) => `<button class="tab pick-tab ${cur === k ? 'on' : ''}"
+  const btn = (k, label, title) => `<button class="tab pick-tab ${k === 'ME' ? 'me ' : ''}${
+      cur === k ? 'on' : ''}"
       aria-pressed="${cur === k}" onclick="lSetScope('${k}', '${which}')"
       title="${title}">${label}</button>`;
   /* ON HIS OWN PAGE THERE IS NO "VIEWER" TO PICK -- he is the only reader and the payload says
@@ -8541,17 +8555,36 @@ function renderTx(){
   const money = n => (n < 0 ? '−$' : '$') + Math.abs(n).toFixed(0);
 
   const winByLabel = new Map(wins.map(w => [w.label, w]));
-  const dateOf = w => {
-    const x = winByLabel.get(w);
-    return x && x.start ? `${pretty(x.start)} – ${pretty(x.end)}` : '<span class="d">—</span>';
-  };
   /* A TRADE NAMES ITS WINDOW BY THE CALENDAR'S LABEL, not by the text typed in the workbook.
      Otherwise the Window column here reads 11/27-11/28 while the Trade Windows table below reads
      11/30-12/1 for the very same window -- which is what Casey was looking at on 8 Sep 2026. */
   const calByRange = new Map((cal('trade_windows') || []).map(w => [w.start + '|' + w.end, w.label]));
-  const winLabel = w => {
-    const x = winByLabel.get(w);
-    return (x && calByRange.get((x.start || '') + '|' + (x.end || ''))) || w || '—';
+  /* A TRADE SETTLED ON THIS PAGE CARRIES NO WINDOW, BECAUSE NOBODY TYPED ONE. Casey, 15 Sep
+     2026: "the window column is empty and the dates column is empty. Shouldn't that be
+     populated?" Yes -- and it is not something to type, it is something to work out. Every
+     window on the league calendar carries the date its trades take effect, and so does every
+     trade, so the two join on that date. Where a derived value exists, show the derived one. */
+  const calWinsAll = (cal('trade_windows') || []).slice()
+    .sort((a, c) => String(a.start || '').localeCompare(String(c.start || '')));
+  const winOfTrade = t => {
+    if (t.window && winByLabel.get(t.window)) return winByLabel.get(t.window);
+    const d = t.effective || null;
+    if (!d) return null;
+    const exact = calWinsAll.find(w => w.effective === d);
+    if (exact) return exact;
+    /* Otherwise the last window that had already closed when this took effect. */
+    let best = null;
+    for (const w of calWinsAll) if (String(w.end || '') <= String(d)) best = w;
+    return best;
+  };
+  const winLabel = t => {
+    const x = winOfTrade(t);
+    if (!x) return t.window || '—';
+    return calByRange.get((x.start || '') + '|' + (x.end || '')) || x.label || t.window || '—';
+  };
+  const dateOfT = t => {
+    const x = winOfTrade(t);
+    return x && x.start ? `${pretty(x.start)} – ${pretty(x.end)}` : '<span class="d">—</span>';
   };
 
   const tradeTable = trades.length ? `<div class="card"><h2>Every Trade, In Order</h2>
@@ -8560,8 +8593,8 @@ function renderTx(){
       <thead><tr><th>Window</th><th>Dates</th><th>Div</th><th>Owner</th>
         <th>Out</th><th>In</th><th class="num">Cost</th></tr></thead>
       <tbody>${trades.slice().sort((a, c) => String(a.effective || '~').localeCompare(String(c.effective || '~')))
-        .map(t => `<tr><td class="d">${esc(winLabel(t.window))}</td>
-          <td class="d">${dateOf(t.window)}</td>
+        .map(t => `<tr><td class="d">${esc(winLabel(t))}</td>
+          <td class="d">${dateOfT(t)}</td>
           <td class="d">${esc(t.div || '')}</td>
           <td>${esc(t.owner || '')}</td>
           <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}</td>
