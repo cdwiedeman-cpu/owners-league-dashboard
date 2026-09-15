@@ -2403,7 +2403,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 10:54 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 10:59 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4549,7 +4549,7 @@ function planSendCard(pairs){
     ${rows.length ? `<p>This fills in <b>${rows.length}</b> row${rows.length === 1 ? '' : 's'} on
       the <b>Trades</b> tab: one for each team you mean to pick up, with the teams you flagged to
       drop as its drop choices. <b>Nothing is entered into a week.</b> You read it over there and
-      press <b>Save My Trades</b> yourself.</p>
+      press <b>Submit My Trades</b> yourself.</p>
       ${blocked.length ? `<p class="note y"><b>${blocked.length} of them cannot be claimed this
         week</b> — ${esc(blocked.join(', '))}. They are still filled in, and the Trades tab will
         say why beside each one.</p>` : ''}
@@ -4571,7 +4571,7 @@ function planSend(){
   }
   try { f.contentWindow.postMessage({rfl: 'plan', rows: rows}, '*'); } catch (e) {}
   if (say) say.innerHTML = '<b class="g">Sent.</b> Open the <b>Trades</b> tab to read it over '
-    + 'and save it. Nothing is in this week until you press Save My Trades there.';
+    + 'and save it. Nothing is in this week until you press Submit My Trades there.';
 }
 
 function watchPanel(){
