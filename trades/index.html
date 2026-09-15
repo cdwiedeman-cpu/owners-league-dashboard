@@ -210,7 +210,15 @@ td.num,th.num{text-align:right}
  border-top:1px solid var(--line);padding:9px 12px;display:flex;flex-wrap:wrap;gap:8px;
  align-items:center;box-shadow:0 -10px 24px rgba(0,0,0,.45)}
 .stickybar .grow{flex:1 1 120px;min-width:0;font-size:12px;color:var(--dim)}
-body.hasbar{padding-bottom:76px}
+body.hasbar{padding-bottom:88px}
+/* THE NEXT STEP, DIRECTLY UNDER THE ONE JUST FINISHED. Bright enough to find without reading. */
+.addrow{margin:0 0 14px;align-items:center;gap:10px}
+button.add{background:var(--blue);color:#08121c;border-color:var(--blue);font-weight:700;
+ min-height:46px;padding:0 18px;font-size:15px}
+button.add:disabled{opacity:.45}
+/* SEND IS THE END OF THE JOB. Full width, and nothing sits beside it competing for the press. */
+.sendwrap{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+button.pri.big{width:100%;min-height:56px;font-size:17px;font-weight:700}
 /* THE SAVE LIGHT. On the real page this is the only way a reader can tell that a trade reached
    the league rather than stopping in their own browser, so it is words and not a coloured dot. */
 .chip{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;font-size:12px;
@@ -2591,6 +2599,15 @@ function listProblems(rows){
   if (!(rows || []).length) out.push('There is nothing on your list yet.');
   return out;
 }
+/* THROWING AWAY EVERYTHING TYPED IS NOT A ONE-TAP ACTION. It used to be a red button beside
+   Add Another Trade, which is the worst place for it. */
+function askClearAll(){
+  showHelp('Start Over?',
+    '<p>This removes every trade on your list and leaves you with an empty one.</p>'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="dang" onclick="setRows([]);closeHelp();render()">Yes, Clear It All</button>'
+    + '<button class="pri" onclick="closeHelp()">Keep What I Have</button></div>');
+}
 function submitList(){
   var rows = myRows(), bad = listProblems(rows);
   if (bad.length){
@@ -2829,11 +2846,33 @@ function viewTrades(){
         + '<div class="row" style="justify-content:center;margin-bottom:6px">'
         + '<button class="pri" onclick="addRow()">Add a Trade</button></div>';
     } else {
-      h += rows.map(function(r, i){ return rowForm(r, i, free, mine, k); }).join('');
-      h += '<div class="row" style="margin-top:6px">'
-        + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
-        + 'Add Another Trade (' + rows.length + ' of ' + P.MAX_ROWS + ')</button>'
-        + '<button class="dang" onclick="setRows([]);render()">Clear Them All</button></div>';
+      /* THE NEXT BUTTON IS WHERE THE EYE ALREADY IS.
+       *
+       * Casey, 15 Sep 2026: "Bob kept scrolling back up to the top to try to add another trade."
+       * A bar at the bottom of the screen did not fix it and neither would a bigger label. The
+       * reason is simpler: he finished a trade and looked for the next step DIRECTLY UNDER THE
+       * THING HE HAD JUST FINISHED. There was nothing there, because the only Add button sat
+       * after all four of them.
+       * So there is one after EVERY trade. It costs a line of screen and it means the next step
+       * is never somewhere else. "We're dealing with a bunch of old people that don't know how to
+       * use computers very well" -- that is not a reason to explain harder, it is a reason to put
+       * the button where the hand already is.
+       */
+      h += rows.map(function(r, i){
+        var last = (i === rows.length - 1);
+        return rowForm(r, i, free, mine, k)
+          + (rows.length < P.MAX_ROWS
+              ? '<div class="row addrow"><button class="add" onclick="addRow()">'
+                + '+ Add ' + (last ? 'Another Trade' : 'a Trade Here') + '</button>'
+                + '<span class="note">' + (i + 1) + ' of ' + rows.length + ' so far</span></div>'
+              : '');
+      }).join('');
+      /* SEND IS THE END OF THE JOB, so it is the biggest thing on the page and it is on its own.
+         Clear Them All is not a step in the job and no longer sits beside the step that is. */
+      h += '<div class="sendwrap">'
+        + '<button class="pri big" onclick="submitList()">Send My List</button>'
+        + '<div class="row" style="margin-top:8px;justify-content:center">'
+        + '<button class="f" onclick="askClearAll()">Start Over</button></div></div>';
     }
     if (rows.length){
       /* THE STATUS SITS WITH THE BUTTON THAT CHANGES IT. Nowhere else on the page needs to
