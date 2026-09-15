@@ -2399,7 +2399,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 7:52 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 10:25 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -2664,6 +2664,32 @@ const LIVE_SCORES = new Map();          // "Team|YYYY-MM-DD" -> {pf, pa, won}
 function liveScore(team, iso){
   return LIVE_SCORES.get(team + '|' + iso) || null;
 }
+/* ---- FILING ONE FINAL SCORE, UNDER BOTH SPELLINGS OF ITS DAY --------------------------------
+ * Casey, 15 Sep 2026: "North Dakota has its schedule, but the results say it has played and no
+ * final scores have reached this page. Nebraska has its results. I thought everything updates
+ * live." And: "UTSA has results, but only one game and there should be two."
+ *
+ * TWO FAULTS, AND THE FIRST IS THE ONE THAT MATTERS. `loadSeason()` already fetches every
+ * finished game of the season from ESPN, week by week and pool by pool -- that is where the
+ * standings come from. It built the STANDINGS out of those events and never filed the scores
+ * where a schedule panel looks for them. `LIVE_SCORES` was written only by the scoreboard, which
+ * covers this week and any week the reader opens by hand. So a team whose result the build never
+ * baked showed "result not in this build" on a page that was, at that moment, holding the score.
+ * TWO STORES OF THE SAME FACT AND ONLY ONE OF THEM WAS WRITTEN.
+ *
+ * THE SECOND IS A DAY BOUNDARY. ESPN stamps a Saturday-night kickoff 00:xx Sunday UTC, and the
+ * payload files that game under its LOCAL Saturday. An index keyed on the UTC day would miss it
+ * by one -- which is exactly the shape of "one of UTSA's two games is here and the other is not".
+ * So a score is filed under both spellings of its day. That is not two stores of a fact: it is
+ * one fact under the two names the two sides of the join happen to use.
+ */
+function fileScore(name, iso, pf, pa){
+  if (!name || iso == null || pf == null || pa == null) return;
+  const v = {pf: pf, pa: pa, won: pf > pa, tied: pf === pa};
+  LIVE_SCORES.set(name + '|' + String(iso).slice(0, 10), v);
+  const az = azDay(iso);
+  if (az) LIVE_SCORES.set(name + '|' + az, v);
+}
 /* One renderer for "the file did not have this score": show ESPN's if the page fetched it, and
    otherwise say so plainly. An absence is never an answer, and a blank cell beside a game marked
    PLAYED reads as nil-nil. */
@@ -2679,14 +2705,12 @@ function indexLiveScores(){
      week whose finals the schedule panels and the compare table can now show. */
   for (const g of allFetchedGames()){
     if (!g.done || !g.date) continue;
-    const iso = String(g.date).slice(0, 10);
     for (const [a, b] of [[g.home, g.away], [g.away, g.home]]){
       if (!a.name || a.score == null || b.score == null) continue;
       /* `name` is already the BOARD name here -- the scoreboard resolves ESPN's naming when it
          builds GAMES, and the standings look SEASON up by exactly this key. Resolving twice
          would be a second place for the two namespaces to disagree. */
-      LIVE_SCORES.set(a.name + '|' + iso,
-        {pf: a.score, pa: b.score, won: a.score > b.score, tied: a.score === b.score});
+      fileScore(a.name, g.date, a.score, b.score);
     }
   }
 }
@@ -6267,6 +6291,9 @@ async function loadSeason(){
              could quietly start changing one. */
           const mePool = (BY.get(me_.name) || {}).pool || pool;
           const margin = me_.score - other.score;
+          /* THE SCHEDULE PANELS GET IT TOO. This loop is the only place most of the season's
+             results ever reach the page, and until 15 Sep 2026 it kept them to itself. */
+          fileScore(me_.name, ev.date, me_.score, other.score);
 
           const p = pointsFor(mePool, me_.score, other.score);
           const cur = pts.get(me_.name)
