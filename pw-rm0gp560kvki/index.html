@@ -14,11 +14,15 @@
  * which is how a page ends up half converted: the text flips and the panel behind it does not.
  */
 :root{
-  --warnbg:#33290f;--warnline:var(--warnline);--warntx:#fbbf24;
-  --goodbg:#0d1a12;--goodline:var(--goodline);
-  --badbg:#3a1717;--badline:var(--badline);--badtx:#f87171;
-  --minebg:#1b1533;--mineline:var(--mineline);
-  --tvline:var(--tvline);--shade:var(--shade);--sunk:var(--sunk);
+  /* A VARIABLE CANNOT BE DEFINED AS ITSELF. A blanket find-and-replace of the old hexes rewrote
+     these DEFINITIONS into `--sunk:var(--sunk)`, which is a cycle: the browser drops it, the
+     value comes out empty, and `color:var(--sunk)` silently inherits instead. That is how the
+     Sign Me In button ended up near-white on blue. The dark values are literals here, always. */
+  --warnbg:#33290f;--warnline:#4a3a10;--warntx:#fbbf24;
+  --goodbg:#0d1a12;--goodline:#14532d;
+  --badbg:#3a1717;--badline:#4a1f1f;--badtx:#f87171;
+  --minebg:#1b1533;--mineline:#3d3163;
+  --tvline:#1e4a63;--shade:rgba(4,8,13,.78);--sunk:#06121f;
 }
 :root[data-theme="light"]{
   --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
@@ -2142,7 +2146,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 8:25 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 8:27 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
