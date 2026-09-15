@@ -2217,6 +2217,10 @@ function placeBar(){
     return;
   }
   bar.style.display = '';
+  /* THE ROOM AT THE FOOT OF THE PAGE IS MEASURED, NOT GUESSED. The bar is one line of buttons on
+     a wide screen and two on a narrow one, so a fixed figure in the stylesheet hides the last
+     trade on exactly one of them. */
+  try { document.body.style.paddingBottom = (bar.offsetHeight + 12) + 'px'; } catch (e) {}
   if (!FRAME_VIEW || !(FRAME_VIEW.height > 0)){
     bar.style.position = ''; bar.style.top = ''; bar.style.bottom = '';
     bar.style.transform = ''; bar.style.willChange = '';
@@ -2305,7 +2309,10 @@ document.addEventListener('pointercancel', releasePointer, true);
    worse than the tap it was protecting. If no pointerup arrives, flush anyway. */
 /* THE BAR IS OVER THE PAGE, so the page has to end above it. */
 function barRoom(on){
-  try { document.body.classList[on ? 'add' : 'remove']('hasbar'); } catch (e) {}
+  try {
+    document.body.classList[on ? 'add' : 'remove']('hasbar');
+    if (!on) document.body.style.paddingBottom = '';
+  } catch (e) {}
 }
 /* THE BAR GOES UP AGAIN EVERY TIME THE PAGE IS REDRAWN. It is rebuilt by every render, so a
    count, a label or a greyed-out button would otherwise be stale in the dashboard's copy. */
