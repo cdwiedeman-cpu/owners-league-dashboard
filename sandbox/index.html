@@ -2318,6 +2318,12 @@ function barRoom(on){
    sending it up, because a count, a label or a greyed-out button would otherwise be stale in the
    copy being drawn there. Standing alone it means measuring the room to leave underneath it. */
 function afterRender(){ placeBar(); }
+/* TURNING A PHONE SIDEWAYS CHANGES HOW TALL THE BAR IS. Two buttons that shared a line now fit
+   on one, or stop fitting, and the room left underneath has to change with it. */
+try {
+  window.addEventListener('resize', function(){ placeBar(); });
+  window.addEventListener('orientationchange', function(){ setTimeout(placeBar, 120); });
+} catch (e) {}
 function render(){
   if (PTR_DOWN){
     if (!RENDER_HELD){ RENDER_HELD = true; setTimeout(releasePointer, 400); }
