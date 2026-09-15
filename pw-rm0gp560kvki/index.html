@@ -298,15 +298,29 @@ html.scrolled #sfilters .status{min-height:28px;padding:3px 8px}
 .scrhint{display:none}
 @media (max-width:760px){ .scrhint{display:block;font-size:13px;color:var(--dim);
   margin:11px 0 7px;line-height:1.4} }
-.pick-tab{border-radius:8px;border-bottom:1px solid var(--line);min-height:38px;padding:0 14px;
-  font-size:13px}
-.pick-tab.on{color:var(--blue);border-color:var(--blue);background:rgba(96,165,250,.08)}
+/* ---- A FILTER HAS TO LOOK LIKE A BUTTON -----------------------------------------------------
+ * Casey, 15 Sep 2026: "it's just words up there that doesn't look like it's buttons to easily
+ * filter on, and they're very small text. It's more clear under Live Scores where you have All,
+ * NFL, FBS, FCS in white and they're bigger. I wonder if we shouldn't be doing that across all
+ * of these other tabs."
+ * So every sub-tab on the page -- Standings, Pickups, Weekly, Season Summary, Race, Trades --
+ * takes the shape the Live Scores filters already have: a white pill you can see the edge of,
+ * filled solid when it is the one you are on. Bigger text, because these are the controls people
+ * press most and they were the smallest type on the page.
+ */
+.pick-tab{background:var(--pan);border:1px solid var(--line);border-bottom:1px solid var(--line);
+  border-radius:9px;min-height:38px;padding:0 15px;font:700 13.5px inherit;color:var(--dim)}
+.pick-tab:hover{border-color:var(--blue);color:var(--blue)}
+.pick-tab.on{color:#ffffff;border-color:var(--blue);background:var(--blue);
+  box-shadow:0 1px 2px rgba(15,47,82,.18)}
+/* The strip needs room between pills now that each one has an edge of its own. */
+.subtabs{gap:6px}
 /* PURPLE MEANS YOURS, ON EVERY TAB. Casey, 15 Sep 2026: "on Live Scores you have my-team-only
    pre-filtered on purple. On all the other pages where there's a my-team-only, you should have
    that same purple." Purple already means "your team" in the scoreboard, the standings and the
    grids, so a My-Teams filter that lit up blue was using the page's link colour for the page's
    ownership idea. One colour, one meaning. */
-.pick-tab.me.on{color:var(--mine);border-color:var(--mine);background:rgba(167,139,250,.12)}
+.pick-tab.me.on{color:#ffffff;border-color:var(--mine);background:var(--mine)}
 /* A WEEK HEADING INSIDE THE TRANSACTIONS CARD. Smaller than the card's own title, because it
    divides the card rather than competing with it. */
 h3.txwk{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);
@@ -535,9 +549,10 @@ details.how>summary:hover::before{border-color:var(--blue);color:var(--blue)}
 .cmptbl tr.cmpsec th{padding-top:16px;border-top:1px solid var(--line)}
 .cmptbl tr.cmpsec td{border-top:1px solid var(--line)}
 td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
-.f{appearance:none;background:var(--pan);border:1px solid var(--line);color:var(--dim);border-radius:8px;
- padding:7px 13px;font:600 12px inherit;cursor:pointer;min-height:34px}
-.f[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:var(--sunk)}
+.f{appearance:none;background:var(--pan);border:1px solid var(--line);color:var(--dim);border-radius:9px;
+ padding:7px 14px;font:700 13px inherit;cursor:pointer;min-height:36px}
+.f[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#ffffff;
+ box-shadow:0 1px 2px rgba(15,47,82,.18)}
 .f.me[aria-pressed=true]{background:var(--mine);border-color:var(--mine)}
 /* THE ONE BUTTON ON A PANEL THAT IS THE POINT OF THE PANEL. `.f` is a quiet filter chip and it
    reads as a label rather than a control -- Casey pressed "That's me" and said it did not look
@@ -2337,7 +2352,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:44 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:48 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
