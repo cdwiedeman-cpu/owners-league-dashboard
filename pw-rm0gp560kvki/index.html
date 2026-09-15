@@ -2403,7 +2403,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 11:31 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 11:32 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3280,12 +3280,26 @@ function weekPicker(){
    * A league week is the seven days from its Tuesday, whether or not anything is played on each
    * of them, and from October there are Tuesday and Wednesday games every week. Week 0 is the
    * exception: it is not a seven-day block at all, so its pieces keep their match-day ranges. */
+  /* THE SEVEN DAYS A BLOCK COVERS, whichever block a date falls in -- forwards for the real
+   * league weeks, backwards through week 0. Casey, 15 Sep 2026: "both week zeros should follow
+   * that same seven-day logic, even though there weren't games played. The first should be
+   * August 25th through August 31st, the second September 1st through September 7th."
+   * Right: a week is a length of time, not a list of the days something happened on. Week 0 is
+   * several of those blocks rather than one, which is the only reason it is shown in pieces. */
+  const blockSpan = (anyDayInIt) => {
+    const w1 = cal('league_week1_start');
+    if (!w1 || !anyDayInIt) return '';
+    const base = Date.parse(w1 + 'T00:00:00Z');
+    const k = Math.floor((Date.parse(anyDayInIt + 'T00:00:00Z') - base) / 6048e5);
+    const a = new Date(base + k * 6048e5);
+    const b = new Date(a.getTime() + 6 * 864e5);
+    return ' · ' + segLabel([a.toISOString().slice(0, 10), b.toISOString().slice(0, 10)]);
+  };
   const weekSpan = (w) => {
     const w1 = cal('league_week1_start');
     if (!w1 || w < 1) return '';
-    const a = new Date(Date.parse(w1 + 'T00:00:00Z') + (w - 1) * 6048e5);
-    const b = new Date(a.getTime() + 6 * 864e5);
-    return ' · ' + segLabel([a.toISOString().slice(0, 10), b.toISOString().slice(0, 10)]);
+    return blockSpan(new Date(Date.parse(w1 + 'T00:00:00Z') + (w - 1) * 6048e5)
+                       .toISOString().slice(0, 10));
   };
   for (let w = last - 1; w >= 0; w--){
     const ds = weekDates(w);
@@ -3312,7 +3326,7 @@ function weekPicker(){
       const val = w + '@' + piece.join(',');
       const on = WEEK_VIEW === w && WEEK_SEG && WEEK_SEG.join(',') === piece.join(',');
       opts.push(`<option value="${esc(val)}" ${on ? 'selected' : ''}>${
-        esc(weekShort(w) + ' · ' + segLabel(piece))}</option>`);
+        esc(weekShort(w) + (blockSpan(piece[0]) || ' · ' + segLabel(piece)))}</option>`);
     }
   }
   return `<select class="wksel" id="wksel" onchange="setWeekView(this.value)"
@@ -9684,7 +9698,13 @@ function buildTx(){
 function openLeagueScout(n){
   const t = BY.get(n); const box = el('scout');
   if (!t || !box) return;
-  needSeason(() => { if (SCOUT) openLeagueScout(n); });
+  /* SAY WHAT IS OPEN. `openScout` hands straight over to this function on the league page and
+     returns before it sets SCOUT, so SCOUT stayed null the whole time this panel was on screen.
+     Everything that asks "is a panel open" therefore answered no: the redraw when the season
+     landed never fired, which is why the scores were in `LIVE_SCORES` and not on the page, and
+     Escape had nothing to close either. */
+  SCOUT = n; 
+  needSeason(() => { if (SCOUT === n) openLeagueScout(n); });
   const got = SEASON ? SEASON.get(n) : null;
   /* A DATE IS NOT ALWAYS IN THE SAME FIELD. For a college team `when` IS the date; for an NFL
      team `when` is the week number and the date is in `d`. Filtering on `when >= today` compared
