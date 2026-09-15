@@ -300,11 +300,21 @@ td.num,th.num{text-align:right}
 /* ---- THE TWO BUTTONS THAT MATTER ARE ALWAYS ON SCREEN ---------------------------------------
    He kept scrolling up and down hunting for Add Another Trade and Send My List. On a page this
    tall that is not a labelling problem, it is a position problem. */
+/* ROOM FOR THE STRIP AT THE FOOT OF AN iPHONE. Without this the bar sits in the band iOS keeps
+   for the home indicator, and the curved corner takes a bite out of whatever is nearest it.
+   `env()` is zero everywhere that has no such strip, so it costs nothing on a laptop. */
 .stickybar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--pan);
- border-top:1px solid var(--line);padding:9px 12px;display:flex;flex-wrap:wrap;gap:8px;
- align-items:center;box-shadow:0 -10px 24px rgba(0,0,0,.45)}
-.stickybar .grow{flex:1 1 120px;min-width:0;font-size:12px;color:var(--dim)}
-body.hasbar{padding-bottom:88px}
+ border-top:1px solid var(--line);display:block;
+ padding:10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+ box-shadow:0 -10px 24px rgba(0,0,0,.45)}
+/* ONE LINE, ONE BUTTON AT EACH END. The count used to sit between them, which is what pushed
+   Submit onto its own line at the very bottom of a phone. */
+.stickybar .barrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.stickybar .barrow button{min-width:0;white-space:normal;flex:0 1 auto}
+.stickybar .barrow button.pri{margin-left:auto}
+.stickybar .barrow button:only-child{margin-left:auto}
+.stickybar .grow{display:block;margin-top:7px;font-size:12px;color:var(--dim);text-align:center}
+body.hasbar{padding-bottom:104px}
 /* ---- ONE FILLED BUTTON PER SCREEN, AND IT IS THE ONE THAT FINISHES THE JOB -------------------
  * Casey, 15 Sep 2026: "in the middle section both Add Another Trade and Submit My Trades are a
  * blue box. On the floating bar, Add Another Trade is grey and Submit is blue. If they're all
@@ -3094,23 +3104,40 @@ function viewTrades(){
   HOWNOTE = howNote;
   WAYSNOTE = waysBlocks(fcfs);
 
-  var h = clockBanner() + myResultCard() + waysStrip(fcfs)
-    + '<div class="card"><h2>' + (fcfs ? 'Claim a Team' : 'Your List for Monday') + '</h2>'
-    + (fcfs
-        ? '<p class="note">The coin flips have been run. Anything still unowned is yours if you '
-          + 'ask first, until <b>Tuesday at 5:00pm AZ</b>.</p>'
-        : '<p class="note">Entry closes at <b>Monday at 3:59pm AZ</b>. First come, first served '
-          + 'opens straight afterwards and runs until Tuesday at 5:00pm AZ.</p>')
-    + '<div class="row">'
+  /* ---- THE CARD THAT SAYS YOUR LIST HOLDS YOUR LIST, AND NOTHING ELSE -----------------------
+   *
+   * Casey, 15 Sep 2026: "the next section says Your List for Monday, and it has all those
+   * buttons of really instructions. They kind of are confusing, because you get there and you're
+   * like, oh, okay, this is where I'm building my list for Monday, but you're not. You're
+   * building your list underneath all of that."
+   *
+   * He is right, and it is a plain ordering mistake. A HEADING NAMES WHAT IS UNDER IT. Three
+   * buttons, a deadline and a roster count sat between the words Your List for Monday and the
+   * list itself, so the heading named the wrong thing and the list looked like it was somewhere
+   * else.
+   *
+   * The three help buttons are not gone and they are not buried. They move UP, into the card at
+   * the top of the tab that already carries which window is open and when it closes. That card
+   * is about where you are in the week, which is exactly what those three buttons explain. They
+   * are the first thing on the screen and they are out of the way of the job.
+   */
+  var helpRow = '<div class="row" style="margin-top:10px">'
     + '<button onclick="showHelp(' + jq(howTitle) + ',HOWNOTE)">' + esc(howTitle) + '</button>'
     + '<button onclick="showHelp(\'What You Are Allowed to Trade\',RULESNOTE)">What Am I '
     + 'Allowed to Trade?</button>'
     + '<button onclick="showHelp(\'How the Week Works\',WAYSNOTE)">How the Week Works</button>'
     + '</div>'
     + '<p class="note" style="border-top:1px solid var(--line);padding-top:9px;margin-top:10px">'
+    + (fcfs
+        ? 'The coin flips have been run. Anything still unowned is yours if you ask first, until '
+          + '<b>Tuesday at 5:00pm AZ</b>.<br>'
+        : 'Entry closes at <b>Monday at 3:59pm AZ</b>. First come, first served opens straight '
+          + 'afterwards and runs until Tuesday at 5:00pm AZ.<br>')
     + 'You are <b>' + esc(a.seat) + '</b> in ' + esc(DATA.div_names[a.div] || a.div) + ' · '
     + free.length + ' team' + (free.length === 1 ? '' : 's') + ' nobody in your division owns · '
-    + mine.length + ' on your roster</p></div>';
+    + mine.length + ' on your roster</p>';
+
+  var h = clockBanner() + myResultCard() + waysStrip(fcfs, helpRow);
   if (fcfs) return h + fcfsForm(a, free, mine, k) + commishCard(s) + clockCard();
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
@@ -3135,7 +3162,7 @@ function viewTrades(){
       + '<div class="row"><button onclick="unsubmit()">Change My Trades</button></div></div>';
   }
 
-  h += '<div class="card">';
+  h += '<div class="card"><h2>Your List for Monday</h2>';
   if (sent){
     /* SUBMITTED MEANS SUBMITTED. The rows go read-only rather than staying editable behind a
        green banner -- a form you can still type into is a form you can leave half-changed
@@ -3216,19 +3243,29 @@ function viewTrades(){
      drawn by the dashboard, where `onclick="addRow()"` means nothing, so a press is carried back
      here by name. The wording, the counts and what is greyed out are still decided HERE and
      nowhere else -- the dashboard is handed the finished bar and never builds one. */
+  /* ---- THE BUTTONS SIT ABOVE THE WORDS, AND THEY SIT AT OPPOSITE ENDS ------------------------
+   * Casey, 15 Sep 2026: "on the iPhone, the Submit My Trades button is kind of hidden by the
+   * bottom rounded corner. I'm wondering if Submit My Trades should be over on the right and Add
+   * Another Trade on the left, so the full button is visible."
+   * Two things were wrong. The status text sat BETWEEN the two buttons, so on a phone the row
+   * wrapped and pushed Submit onto the bottom line, hard against the curved corner. And the bar
+   * had no room reserved for the strip iOS keeps at the foot of the screen. So the buttons share
+   * one line now, one at each end, with the count underneath them where a clipped pixel costs
+   * nothing.
+   */
   if (!sent){
-    h += '<div class="stickybar" id="actbar">'
+    h += '<div class="stickybar" id="actbar"><div class="barrow">'
       + '<button class="add" data-act="add" ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '')
       + ' onclick="addRow()">+ Add Another Trade</button>'
-      + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades &middot; not saved yet'
-      + '</span>'
       + '<button class="pri" data-act="submit" ' + (rows.length ? '' : 'disabled')
-      + ' onclick="submitList()">Submit My Trades</button></div>';
+      + ' onclick="submitList()">Submit My Trades</button></div>'
+      + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades &middot; not saved yet'
+      + '</span></div>';
   } else {
-    h += '<div class="stickybar" id="actbar">'
+    h += '<div class="stickybar" id="actbar"><div class="barrow">'
+      + '<button data-act="unsubmit" onclick="unsubmit()">Change My Trades</button></div>'
       + '<span class="grow"><b class="g">Saved and in for Monday.</b> ' + rows.length + ' trade'
-      + (rows.length === 1 ? '' : 's') + '.</span>'
-      + '<button data-act="unsubmit" onclick="unsubmit()">Change My Trades</button></div>';
+      + (rows.length === 1 ? '' : 's') + '.</span></div>';
   }
   return h + commishCard(s0) + clockCard();
 }
@@ -3267,7 +3304,7 @@ function waysBlocks(fcfs){
         + 'if two of you want the same team it goes to whoever asks first.')
     + '</div>';
 }
-function waysStrip(fcfs){
+function waysStrip(fcfs, extra){
   return '<div class="card"><div class="statline">'
     + '<span class="pill good">Open Now</span>'
     + '<span class="big">' + (fcfs ? 'First Come, First Served' : 'Build Your List for Monday')
@@ -3282,6 +3319,7 @@ function waysStrip(fcfs){
         ? '<p class="note">It is past 4:00pm AZ and this week has not been settled yet, so lists '
           + 'are still open. First come, first served starts the moment the coin flips are run.</p>'
         : '')
+    + (extra || '')
     + '</div>';
 }
 /* ---- CHOOSING A TEAM ---------------------------------------------------------------------
