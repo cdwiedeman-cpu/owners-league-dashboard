@@ -18,7 +18,17 @@
  * were within four points of each other, so a white card had nothing to stand on and a shaded
  * table row read as a hole in the page. The ground is a real blue now and the inside grey is
  * pale enough to read as part of the card it sits in. */
-:root{--bg:#d7e3f1;--pan:#ffffff;--pan2:#f1f5fa;--line:#c3d2e2;--ink:#0d1622;--dim:#41566b;
+/* WHY THE CARDS NOW SIT ON THE PAGE RATHER THAN IN IT. Casey, 15 Sep 2026: "the background blue
+ * is the same colour as the tables inside the white boxes, so it doesn't make the centre of the
+ * screen stand out. Is that going to be most visually appealing, or is it better to have two
+ * colours much more distinguishable?"
+ * Two colours, and one more thing he did not ask for but is the real answer: SHADOW. What makes
+ * a card read as a card is not the hue behind it, it is the edge -- a white panel lifted off a
+ * darker ground. So the ground is deeper and properly blue, the card is pure white with a soft
+ * shadow under it, and every shade used INSIDE a card is neutral grey with no blue in it at all.
+ * That way nothing inside a card can be mistaken for the page behind it.
+ */
+:root{--bg:#ccdaeb;--pan:#ffffff;--pan2:#f2f4f7;--line:#d3dde7;--ink:#0d1622;--dim:#41566b;
  --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
  --tv:#0c6c81}
 /* ---- LIGHT AND DARK, FOLLOWING THE READER'S OWN DEVICE -------------------------------------
@@ -47,7 +57,7 @@
    * Navy for the header and the tab strip, amber for the one line that has to catch the eye.
    * The cards stay white so nothing a reader has to READ sits on a strong colour. */
   --brand:#0f2f52;--brand2:#1f5d99;--brandink:#ffffff;--brandacc:#f6b73c;
-  --brandhd:#14487d;--brandrule:#d5e2f0;--brandsoft:#eef3fa;
+  --brandhd:#14487d;--brandrule:#dde4ec;--brandsoft:#eef1f5;
   --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%230f2f52' fill-opacity='0.038' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E");
 }
 
@@ -538,7 +548,9 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
   padding:9px 18px;min-height:40px;box-shadow:0 1px 0 rgba(0,0,0,.35)}
 .f.primary:hover{filter:brightness(1.08)}
 .f.primary:active{transform:translateY(1px);box-shadow:none}
-.card{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.card{background:var(--pan);border:1px solid var(--line);border-radius:12px;
+ padding:12px 14px;margin-bottom:14px;
+ box-shadow:0 1px 2px rgba(15,47,82,.07), 0 6px 18px rgba(15,47,82,.08)}
 .card h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brandhd);
  margin:0 0 10px;font-weight:800;border-bottom:2px solid var(--brandrule);padding-bottom:7px}
 /* A heading that carries a warning keeps the warning colour. `.card h2` outranks `.y` on its
@@ -2325,7 +2337,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:43 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:44 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
