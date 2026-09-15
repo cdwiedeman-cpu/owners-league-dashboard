@@ -2079,16 +2079,28 @@ function placeModal(){
      button reads as an answer to the press. */
   b.style.alignItems = 'center';
 }
-function showHelp(title, html){
+/* A QUESTION IS NOT A NOTICE, AND IT GETS DIFFERENT FURNITURE.
+ *
+ * Casey, 15 Sep 2026: "when you click Start Over there's two buttons, Yes Clear All or Keep What
+ * I Have. Then you also have an X and a Close. The X and the Close are essentially the same thing
+ * as Keep What I Have. Shouldn't we just get rid of them?"
+ *
+ * Yes. FOUR WAYS TO SAY NO IS NOT FOUR TIMES AS SAFE -- it is a reader counting buttons and
+ * wondering which of them is the real one. A notice has a way out because that is all it needs.
+ * A question has exactly its two answers and nothing else.
+ */
+function showHelp(title, html, ask){
   OPEN = title; var b = el('help'); b.hidden = false;
   /* THE CONTENT GETS ITS OWN SCROLLER so the header, and the only way out, stays put. */
   b.innerHTML = '<div class="modalbox"><div class="modalhd"><h2>' + esc(title) + '</h2>'
-    + '<button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button></div>'
+    + (ask ? '' : '<button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button>')
+    + '</div>'
     + '<div class="note modalbody">' + html
-    + '<div class="row" style="margin-top:12px;justify-content:flex-end">'
-    + '<button onclick="closeHelp()">Close</button></div></div></div>';
-  /* TAPPING THE SHADED PART CLOSES IT. Only the shade itself -- a tap inside the box must not. */
-  b.onclick = function(e){ if (e.target === b) closeHelp(); };
+    + (ask ? '' : '<div class="row" style="margin-top:12px;justify-content:flex-end">'
+                  + '<button onclick="closeHelp()">Close</button></div>')
+    + '</div></div>';
+  /* TAPPING THE SHADED PART CLOSES A NOTICE. A QUESTION HAS TO BE ANSWERED, so it does not. */
+  b.onclick = ask ? null : function(e){ if (e.target === b) closeHelp(); };
   /* ONLY WHEN THIS PAGE IS THE ONE SCROLLING. Inside the frame this does nothing to the
      dashboard, and locking a scroll the reader can still move would be a lie either way. */
   if (!FRAME_VIEW) document.body.style.overflow = 'hidden';
@@ -2737,11 +2749,13 @@ function listProblems(rows){
 /* THROWING AWAY EVERYTHING TYPED IS NOT A ONE-TAP ACTION. It used to be a red button beside
    Add Another Trade, which is the worst place for it. */
 function askClearAll(){
-  showHelp('Start Over?',
-    '<p>This removes every trade on your list and leaves you with an empty one.</p>'
-    + '<div class="row" style="margin-top:10px">'
-    + '<button class="dang" onclick="setRows([]);closeHelp();render()">Yes, Clear It All</button>'
-    + '<button class="pri" onclick="closeHelp()">Keep What I Have</button></div>');
+  var n = myRows().length;
+  showHelp('Remove All ' + n + ' Trade' + (n === 1 ? '' : 's') + '?',
+    '<p>This removes every trade you have typed and leaves you with an empty list. Each trade '
+    + 'also has its own <b>Remove</b> button if you only want to take one off.</p>'
+    + '<div class="row" style="margin-top:12px">'
+    + '<button class="dang" onclick="setRows([]);closeHelp();render()">Yes, Remove All</button>'
+    + '<button class="pri" onclick="closeHelp()">Keep What I Have</button></div>', true);
 }
 function submitList(){
   var rows = myRows(), bad = listProblems(rows);
@@ -3009,7 +3023,11 @@ function viewTrades(){
       h += '<div class="sendwrap">'
         + '<button class="pri big" onclick="submitList()">Save My Trades</button>'
         + '<div class="row" style="margin-top:8px;justify-content:center">'
-        + '<button class="f" onclick="askClearAll()">Start Over</button></div></div>';
+        /* NOT class="f". On this page `f` means FAINT TEXT, so the button read as greyed out --
+           Casey, 15 Sep 2026: "it looks like it's grayed out, so it doesn't look like it's ever a
+           button you can push." And the name says what it does: it is the bulk version of the
+           Remove on each trade, not a mysterious fresh start. */
+        + '<button class="dang" onclick="askClearAll()">Remove All Trades</button></div></div>';
     }
     if (rows.length){
       /* THE STATUS SITS WITH THE BUTTON THAT CHANGES IT. Nowhere else on the page needs to
