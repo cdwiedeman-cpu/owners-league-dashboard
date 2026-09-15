@@ -3,7 +3,7 @@
 <title>P/W Reality Football League — Season Dashboard</title>
 <style>
 :root{--bg:#0b1119;--pan:#111a24;--pan2:#16212e;--line:#1e2a37;--ink:#e6edf5;--dim:#93a4b8;
- --faint:#5f7080;--good:#4ade80;--bad:#f87171;--gold:#fbbf24;--blue:#60a5fa;--mine:#a78bfa;
+ --faint:#7a8da1;--good:#4ade80;--bad:#f87171;--gold:#fbbf24;--blue:#60a5fa;--mine:#a78bfa;
  --tv:#22d3ee}
 /* ---- LIGHT AND DARK, FOLLOWING THE READER'S OWN DEVICE -------------------------------------
  * Casey, 15 Sep 2026: "would it be cleaner to use a white background with black text?" It depends
@@ -29,6 +29,7 @@
   --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
   --minebg:#f0ebfb;--mineline:#c4b2ef;
   --tvline:#a6d4e0;--shade:rgba(20,28,38,.45);--sunk:#eef2f7;
+    --pnfl:#0b6a8a;--pfbs:#8a4b00;--pfbsline:#e3c39a;--pfcs:#5b34b5;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
@@ -40,9 +41,11 @@
     --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
     --minebg:#f0ebfb;--mineline:#c4b2ef;
     --tvline:#a6d4e0;--shade:rgba(20,28,38,.45);--sunk:#eef2f7;
+    --pnfl:#0b6a8a;--pfbs:#8a4b00;--pfbsline:#e3c39a;--pfcs:#5b34b5;
   }
 }
 *{box-sizing:border-box}
+a{color:var(--blue)}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
  -webkit-text-size-adjust:100%}
 header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px 0}
@@ -427,7 +430,8 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
    reads as a label rather than a control -- Casey pressed "That's me" and said it did not look
    like something you could press. A primary action is filled, not outlined, and it moves when
    you press it. */
-.f.primary{background:var(--blue);border-color:var(--blue);color:var(--sunk);font-weight:700;
+#setup .f.primary, .modalbox .f.primary, .f.primary{background:var(--blue);
+ border-color:var(--blue);color:var(--sunk);font-weight:700;
   padding:9px 18px;min-height:40px;box-shadow:0 1px 0 rgba(0,0,0,.35)}
 .f.primary:hover{filter:brightness(1.08)}
 .f.primary:active{transform:translateY(1px);box-shadow:none}
@@ -603,7 +607,9 @@ tr.clickable{cursor:pointer}
 tr.clickable:hover td{background:rgba(96,165,250,.07)}
 .g{color:var(--good)}.b{color:var(--bad)}.y{color:var(--gold)}.d{color:var(--dim)}
 .pill{display:inline-block;font:700 10px inherit;letter-spacing:.06em;padding:1px 6px;border-radius:4px;border:1px solid}
-.p-nfl{color:#7dd3fc;border-color:var(--tvline)}.p-fbs{color:#fdba74;border-color:#5c3a1a}.p-fcs{color:#c4b5fd;border-color:var(--mineline)}
+.p-nfl{color:var(--pnfl);border-color:var(--tvline)}
+.p-fbs{color:var(--pfbs);border-color:var(--pfbsline)}
+.p-fcs{color:var(--pfcs);border-color:var(--mineline)}
 .v-stream{color:var(--blue);border-color:#1e3a5f}
 .v-hold{color:var(--gold);border-color:var(--warnline)}
 .v-keep{color:var(--good);border-color:var(--goodline)}
@@ -2136,7 +2142,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 8:23 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 8:25 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
