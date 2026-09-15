@@ -22,6 +22,7 @@
   --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
   --goldline:#dcc58a;--blueline:#a9cbec;
   --pribg:#1462b8;--priline:#1462b8;--pritx:#ffffff;
+  --pick:#e7f0fa;
   --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;--sandtx:#6b4700;
 }
 *{box-sizing:border-box}
@@ -266,18 +267,36 @@ td.num,th.num{text-align:right}
   .tgrid{grid-template-columns:1fr 1fr}
   .tgrid > .half{min-width:0}
 }
-/* ---- WHEN TO TRY THIS TRADE IS A ROW OF CHOICES, NOT A DROPDOWN ------------------------------
+/* ---- WHEN TO PROCESS THIS TRADE IS A ROW OF CHOICES, NOT A DROPDOWN --------------------------
    A dropdown hides its options behind a tap, which is exactly wrong for the control he says
-   nobody understands. These are on screen, and the one that is on is filled. */
+   nobody understands.
+
+   THE SHAPE HAS TO SAY "PICK ONE" BEFORE THE WORDS DO. Casey, 15 Sep 2026: "with the coloring
+   of these, it's not totally intuitive that the other two are actually options that you can
+   choose. And making it the same color blue as Submit My Trades, I don't know if that's the
+   right way to do it." Both halves were real. A filled choice beside two plain ones reads as a
+   label with some grey text next to it, and solid blue belongs to Submit and nothing else.
+   So each choice carries a radio circle, which is the one control everybody already knows means
+   one of these. The chosen one is tinted and bordered, never solid. */
 .opts{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 0}
-.opts button{flex:1 1 210px;min-height:48px;font-size:14px;text-align:left;padding:0 14px;
- border:1px solid var(--line);background:var(--pan);color:var(--dim);border-radius:9px}
-.opts button.on{background:var(--pribg);border-color:var(--priline);color:var(--pritx);
- font-weight:700}
+.opts button{flex:1 1 210px;min-height:52px;font-size:14px;text-align:left;
+ padding:9px 12px 9px 40px;position:relative;white-space:normal;line-height:1.28;
+ border:1px solid var(--line);background:var(--pan2);color:var(--ink);border-radius:9px}
+.opts button::before{content:'';position:absolute;left:13px;top:50%;margin-top:-9px;
+ width:18px;height:18px;border-radius:50%;border:2px solid var(--faint);background:var(--pan)}
+.opts button.on{background:var(--pick);border-color:var(--brandhd);color:var(--brandhd);
+ font-weight:700;box-shadow:inset 3px 0 0 var(--brandhd)}
+.opts button.on::before{border-color:var(--brandhd);
+ background:radial-gradient(circle at 50% 50%,var(--brandhd) 0 4.5px,var(--pan) 5px)}
 .whichrow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
-.whichrow button{min-height:44px;font-size:14px;padding:0 14px}
-.whichrow button.on{background:var(--pribg);border-color:var(--priline);color:var(--pritx);
+.whichrow button{min-height:44px;font-size:14px;padding:0 12px 0 34px;position:relative;
+ background:var(--pan2);color:var(--ink)}
+.whichrow button::before{content:'';position:absolute;left:11px;top:50%;margin-top:-8px;
+ width:16px;height:16px;border-radius:50%;border:2px solid var(--faint);background:var(--pan)}
+.whichrow button.on{background:var(--pick);border-color:var(--brandhd);color:var(--brandhd);
  font-weight:700}
+.whichrow button.on::before{border-color:var(--brandhd);
+ background:radial-gradient(circle at 50% 50%,var(--brandhd) 0 4px,var(--pan) 4.5px)}
 /* ---- THE TWO BUTTONS THAT MATTER ARE ALWAYS ON SCREEN ---------------------------------------
    He kept scrolling up and down hunting for Add Another Trade and Send My List. On a page this
    tall that is not a labelling problem, it is a position problem. */
@@ -2020,8 +2039,17 @@ window.addEventListener('message', function(e){
   if (typeof d.top !== 'number' || typeof d.height !== 'number') return;
   FRAME_VIEW = d;
   placeModal();
-  placeBar();
+  /* THE BAR IS MOVED WHEN THE BROWSER IS ABOUT TO PAINT, not the instant the message lands.
+     Placing it on message arrival meant a write to layout in the middle of a scroll, which is
+     what made it trail the page and settle late. */
+  if (!BAR_PEND){
+    BAR_PEND = true;
+    (window.requestAnimationFrame || function(fn){ setTimeout(fn, 16); })(function(){
+      BAR_PEND = false; placeBar();
+    });
+  }
 });
+var BAR_PEND = false;
 
 /* ---- A PLAN ARRIVING FROM THE PICKUPS TAB ---------------------------------------------------
  * Casey, 15 Sep 2026: "if it's already recorded, it would be great to send it to the Trades tab
@@ -2132,11 +2160,18 @@ function placeBar(){
   if (!bar) return;
   if (!FRAME_VIEW || !(FRAME_VIEW.height > 0)){
     bar.style.position = ''; bar.style.top = ''; bar.style.bottom = '';
+    bar.style.transform = ''; bar.style.willChange = '';
     return;
   }
+  /* MOVED WITH A TRANSFORM, NOT WITH `top`. Changing `top` on every message asks the browser to
+     lay the page out again before it can draw, so the bar lands a beat behind the scroll and
+     you can see it catch up. A transform is drawn without laying anything out. */
+  var y = Math.max(0, FRAME_VIEW.top + FRAME_VIEW.height - bar.offsetHeight);
   bar.style.position = 'absolute';
   bar.style.bottom = 'auto';
-  bar.style.top = Math.max(0, FRAME_VIEW.top + FRAME_VIEW.height - bar.offsetHeight) + 'px';
+  bar.style.top = '0';
+  bar.style.willChange = 'transform';
+  bar.style.transform = 'translate3d(0,' + Math.round(y) + 'px,0)';
 }
 function placeModal(){
   var b = el('help');
@@ -2852,7 +2887,12 @@ function addRow(){
 }
 function delRow(i){ var r = myRows().slice(); r.splice(i, 1); setRows(r); render(); }
 function editRow(i, field, v, j){
-  var rows = myRows().slice(), row = Object.assign({}, rows[i]);
+  var rows = myRows().slice();
+  /* A ROW THAT IS NOT THERE IS NOT A ROW TO EDIT. Object.assign({}, undefined) is {}, so an
+     edit aimed at a row that had already been removed used to CREATE a blank trade at that
+     index and leave it on the list. */
+  if (!rows[i]) return;
+  var row = Object.assign({}, rows[i]);
   if (field === 'pickup') row.pickup = v;
   else if (field === 'drop'){ row.drops = row.drops.slice(); row.drops[j] = v;
     row.drops = row.drops.filter(function(x, k){ return x || k === 0; });
@@ -2987,11 +3027,11 @@ function viewTrades(){
       + 'case an earlier trade on your list has already dropped one.</li>'
       + '<li>Your trades are taken <b>in order, top to bottom</b>, so put what you want most at '
       + 'the top.</li>'
-      + '<li>From row 2 on, a trade can depend on an earlier one. <b>When to Try This Trade</b> '
-      + 'gives you three choices: always try it, only if you do not win an earlier trade, or '
-      + 'only if you do win an earlier trade. That is how you say &ldquo;if I miss out on Navy, '
-      + 'try Alabama instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as '
-      + 'well&rdquo;.</li>'
+      + '<li>From row 2 on, a trade can depend on an earlier one. <b>When to Process This '
+      + 'Trade</b> gives you three choices. Process it no matter what, only if you win an '
+      + 'earlier trade, or only if you do not win an earlier trade. That is how you say '
+      + '&ldquo;if I do get Navy, go after Alabama as well&rdquo;, or &ldquo;if I miss out on '
+      + 'Navy, try Alabama instead&rdquo;.</li>'
       + '<li>Press <b>Submit My Trades</b>. Until you press it, your trades are only on this '
       + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
       + '<p class="note">Up to ' + P.MAX_ROWS + ' trades. You can change and re-send as often as '
@@ -3600,15 +3640,23 @@ function rowForm(r, i, free, mine, k){
         + 'onclick="editRow(' + i + ',\'condtype\',' + jq(val) + ')">' + label + '</button>';
     };
     h += '<label class="lb step done" style="margin-top:14px"><span class="num">3</span>'
-      + 'When to Try This Trade</label>'
+      + 'When to Process This Trade</label>'
+      + '<p class="note" style="margin:2px 0 7px">Pick one of these three.</p>'
       + '<div class="opts">'
-      + opt('always', 'Always try it')
-      + opt('lost', 'Only if I don\u2019t win an earlier trade')
-      + opt('won', 'Only if I win an earlier trade')
+      + opt('always', 'Process It No Matter What')
+      + opt('won', 'Only if I Win an Earlier Trade')
+      + opt('lost', 'Only if I Don\u2019t Win an Earlier Trade')
       + '</div>';
     if (c.type === 'always'){
-      h += '<p class="note" style="margin:8px 0 0">This trade is always tried on Monday. It does '
-        + 'not matter whether you got the trades above it.</p>';
+      /* SAY WHAT IS NOT THERE. Casey, 15 Sep 2026: "on my third trade, when I say always try
+         it, I don't get that box again to say which earlier trade. It's missing." It was never
+         missing. It is hidden on purpose, because this choice does not depend on an earlier
+         trade -- and an absence is never an answer, so the page says so now instead of leaving
+         a gap where the other two choices put a question. */
+      h += '<p class="note" style="margin:8px 0 0">This trade is processed on Monday no matter '
+        + 'what. It does not matter whether you won the trades above it.</p>'
+        + '<p class="note" style="margin:6px 0 0">There is no earlier trade to name here. '
+        + 'Which earlier trade? only appears on the other two choices.</p>';
     } else {
       h += '<label class="lb" style="margin-top:10px">Which earlier trade?</label>'
         + '<div class="whichrow">'
