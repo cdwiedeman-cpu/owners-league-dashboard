@@ -4235,10 +4235,93 @@ function whenList(arr){
   if (a.length > 3) out.push('+' + (a.length - 3) + ' older');
   return out.join(', ');
 }
+/* ---- FINDING ONE NAME IN TWENTY-SEVEN ----------------------------------------------------
+ * Casey, 15 Sep 2026: "it is kind of hard to find a specific name because it's such a long
+ * list. Maybe by division you can expand the division and it would show you the owners
+ * underneath ... it feels like we could organise this a little bit better."
+ * Two ways in, because two different jobs bring somebody here. Looking for ONE person is a
+ * search box: type three letters of a name or an address and everything else goes away. Working
+ * through a division is a section you open, and your own opens first.
+ *
+ * THE SEARCH DOES NOT REDRAW THE PAGE. It hides and shows rows that are already there. A filter
+ * that re-renders on every keystroke takes the cursor out of the box it just put a letter in,
+ * which is the one thing a search box may never do.
+ */
+function accSecId(d){ return 'accsec-' + String(d).replace(/[^A-Za-z0-9]/g, ''); }
+function accToggle(d){
+  var body = el(accSecId(d)), cap = el(accSecId(d) + '-c');
+  if (!body) return;
+  body.hidden = !body.hidden;
+  if (cap) cap.innerHTML = body.hidden ? '&#9656;' : '&#9662;';
+}
+function accFind(v){
+  var q = String(v == null ? '' : v).toLowerCase().trim();
+  var hits = {};
+  var all = document.querySelectorAll('[data-accseat]');
+  for (var i = 0; i < all.length; i++){
+    var tb = all[i];
+    var hit = !q || tb.getAttribute('data-accseat').indexOf(q) >= 0;
+    tb.hidden = !hit;
+    if (hit) hits[tb.getAttribute('data-accdiv')] = (hits[tb.getAttribute('data-accdiv')] || 0) + 1;
+  }
+  /* A SEARCH OPENS WHATEVER IT FOUND. A section left closed over a match is a search that says
+     nothing was found when something was. */
+  (DATA.divisions || []).forEach(function(d){
+    var body = el(accSecId(d)), cap = el(accSecId(d) + '-c'), n = el(accSecId(d) + '-n');
+    if (!body) return;
+    if (q){ body.hidden = !hits[d]; }
+    if (cap) cap.innerHTML = body.hidden ? '&#9656;' : '&#9662;';
+    if (n) n.textContent = q ? ((hits[d] || 0) + ' match' + ((hits[d] || 0) === 1 ? '' : 'es'))
+                             : n.getAttribute('data-all');
+  });
+  var none = el('accNone');
+  if (none) none.hidden = !(q && !Object.keys(hits).length);
+}
+/* One card per division, each holding its own table. `seatRows` is given a seat and returns the
+   <tr>s for it; this wraps each seat's rows in their own <tbody> so a search can hide a seat
+   whole rather than hiding some of its buttons. */
+function accSections(rows, headHTML, cols, seatRows){
+  var me = whoIsThis();
+  var divs = (DATA.divisions || []).filter(function(d){
+    return rows.some(function(r){ return r.div === d; });
+  });
+  var total = rows.length;
+  var box = '<div class="card"><label class="lb" for="accQ">Find a Seat or a Person</label>'
+    + '<input class="search" id="accQ" type="text" style="max-width:100%" '
+    + 'autocapitalize="off" autocorrect="off" spellcheck="false" '
+    + 'placeholder="Type a name, a team or an email address" oninput="accFind(this.value)">'
+    + '<p class="note">' + total + ' seats in three divisions. Leave the box empty to browse by '
+    + 'division instead; your own division opens first.</p>'
+    + '<p class="note b" id="accNone" hidden><b>Nothing matches that.</b> Clear the box to see '
+    + 'every seat again.</p></div>';
+  return box + divs.map(function(d){
+    var mine = !!(me && me.div === d);
+    var list = rows.filter(function(r){ return r.div === d; });
+    var label = (DATA.div_names[d] || d);
+    var count = list.length + ' seat' + (list.length === 1 ? '' : 's');
+    return '<div class="card"><h2 style="cursor:pointer;display:flex;gap:8px;align-items:center" '
+      + 'onclick="accToggle(' + jq(d) + ')" title="Open or close this division">'
+      + '<span id="' + accSecId(d) + '-c">' + (mine ? '&#9662;' : '&#9656;') + '</span>'
+      + esc(label) + (mine ? ' <span class="pill">Yours</span>' : '')
+      + ' <span class="f" style="font-weight:400;text-transform:none;letter-spacing:0" id="'
+      + accSecId(d) + '-n" data-all="' + esc(count) + '">' + esc(count) + '</span></h2>'
+      + '<div id="' + accSecId(d) + '"' + (mine ? '' : ' hidden') + '>'
+      + '<div class="scr"><table>' + cols + headHTML
+      + list.map(function(r){
+          var hay = [r.seat, r.div, DATA.div_names[r.div] || '', r.email || '',
+                     (r.members || []).map(function(m){ return m.email || ''; }).join(' ')]
+                    .join(' ').toLowerCase();
+          return '<tbody data-accseat="' + esc(hay) + '" data-accdiv="' + esc(d) + '">'
+            + seatRows(r) + '</tbody>';
+        }).join('')
+      + '</table></div></div></div>';
+  }).join('');
+}
+
 function liveAccessTable(){
   var rows = S.access || [];
-  var out = '';
-  rows.forEach(function(a, ai){
+  var seatRows = function(a){
+    var out = '';
     var people = (a.members && a.members.length) ? a.members
                : [{member: 'm1', email: a.email || '', code: '', role: a.role || 'owner',
                    signedIn: 0}];
@@ -4291,15 +4374,16 @@ function liveAccessTable(){
       + 'onclick="setSeatStatus(' + jsq(a.div) + ',' + jsq(a.seat) + ','
       + jsq(off ? 'active' : 'inactive') + ')">'
       + (off ? 'Put This Seat Back' : 'Switch This Seat Off') + '</button></td></tr>';
-  });
-  return '<div class="card"><div class="scr"><table>'
-    + '<colgroup><col style="width:18%"><col style="width:24%"><col style="width:22%">'
-    + '<col style="width:16%"><col style="width:20%"></colgroup>'
-    + '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
+    return out;
+  };
+  return accSections(rows,
+    '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
     + '<th title="How many sign-ins this person has stored. One is written every time '
     + 'they type their code in a browser, and nothing removes one on its own.">'
-    + 'Sign-Ins</th>'
-    + '</tr></thead><tbody>' + out + '</tbody></table></div></div>';
+    + 'Sign-Ins</th></tr></thead>',
+    '<colgroup><col style="width:18%"><col style="width:24%"><col style="width:22%">'
+    + '<col style="width:16%"><col style="width:20%"></colgroup>',
+    seatRows);
 }
 
 /* ONE ANSWER FOR EVERY CHANGE MADE ON THIS PAGE. Each of them is a round trip to the league, and
@@ -4449,7 +4533,8 @@ function reallyRetire(div, seat, member, who){
  * is never an answer, so it says so rather than leaving him hunting for a button.
  */
 function practiceAccessTable(rows){
-  var out = rows.map(function(r, i){
+  var seatRows = function(r){
+    var i = S.access.indexOf(r);
     var L = liveSessions(r);
     var off = r.status === 'removed';
     return '<tr><td><b>' + esc(r.seat) + '</b><div class="f" style="font-size:11px">'
@@ -4479,16 +4564,17 @@ function practiceAccessTable(rows){
       + '<div><button style="font-size:11px;min-height:26px;padding:3px 7px;margin-top:4px" '
       + 'onclick="setSeatStatusP(' + i + ',' + jq(off ? 'active' : 'removed') + ')">'
       + (off ? 'Put This Seat Back' : 'Switch This Seat Off') + '</button></div></td></tr>';
-  }).join('');
+  };
   return '<div class="card"><p class="note">This is the same list, with the same buttons, as the '
     + 'real page. <b>One difference:</b> the practice copy carries one person per seat, so there '
-    + 'is no <b>Add a Second Owner</b> here. Everything else does what it does for real.</p>'
-    + '<div class="scr"><table>'
-    + '<colgroup><col style="width:18%"><col style="width:24%"><col style="width:22%">'
-    + '<col style="width:16%"><col style="width:20%"></colgroup>'
-    + '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
-    + '<th title="How many devices can use the page as this seat right now.">Signed In</th>'
-    + '</tr></thead><tbody>' + out + '</tbody></table></div></div>';
+    + 'is no <b>Add a Second Owner</b> here. Everything else does what it does for real.</p></div>'
+    + accSections(rows,
+        '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
+        + '<th title="How many devices can use the page as this seat right now.">Signed In</th>'
+        + '</tr></thead>',
+        '<colgroup><col style="width:18%"><col style="width:24%"><col style="width:22%">'
+        + '<col style="width:16%"><col style="width:20%"></colgroup>',
+        seatRows);
 }
 /* THE PRACTICE COPY'S OWN VERSIONS OF THE LIVE ACTIONS. Same panels, same words, same result --
    written into this browser instead of sent to the league. */
