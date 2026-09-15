@@ -2399,7 +2399,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 10:28 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 10:29 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -2470,20 +2470,31 @@ function weekKey(w){ return String(w) + (WEEK_SEG ? '|' + WEEK_SEG.join(',') : '
 function weekPieces(w){
   const days = weekDayPools(w).map(x => x[0]);
   if (!days.length) return [];
-  const mondayOf = d => {
-    const t = new Date(d + 'T00:00:00Z');
-    t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7));
-    return t.toISOString().slice(0, 10);
+  /* GROUPED ON THE LEAGUE'S OWN WEEK BOUNDARY, NOT ON MONDAY-TO-SUNDAY.
+   * Casey, 15 Sep 2026: "week one is really Tuesday at 5pm through the next Tuesday at 5pm ...
+   * it needs to go September 10th to September 14th because of Monday Night Football."
+   * A league week is one seven-day block counted from `league_week1_start`, which is a TUESDAY.
+   * Bucketing by calendar week put Monday night in a piece of its own and cut week 1 in half.
+   * Counted this way every ordinary week is a single block and never splits at all — only
+   * league week 0 does, because it is everything BEFORE the first block and so spans several of
+   * them. That is the only week the reader ever sees offered a weekend at a time, which is what
+   * he asked for and nothing more.
+   */
+  const w1 = cal('league_week1_start');
+  const blockOf = (d) => {
+    if (!w1) return d;                         // no calendar: every day its own piece
+    return Math.floor((Date.parse(d + 'T00:00:00Z') - Date.parse(w1 + 'T00:00:00Z')) / 6048e5);
   };
   const by = new Map();
   for (const d of days){
-    const m = mondayOf(d);
-    if (!by.has(m)) by.set(m, []);
-    by.get(m).push(d);
+    const k = blockOf(d);
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(d);
   }
-  return [...by.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  return [...by.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
     .map(([, ds]) => ds.sort());
 }
+
 /* "Aug 29 - Sep 6", from a list of match days. The weekday that `pretty` puts on the front is
    dropped: this names a RANGE, and "Sat, Aug 29 - Sun, Sep 6" is twice the width for nothing. */
 function segLabel(ds){
