@@ -2399,7 +2399,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 10:29 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 10:42 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4415,7 +4415,14 @@ function planPanel(){
           ? ' <span class="gtag t-hold" title="Another owner in your division holds this team, so you cannot claim it until they let it go.">TAKEN</span>'
           : ''}${side === 'get' && t.owner == null && !canClaim(t)
           ? ` <span class="gtag t-before" title="It cannot finish a ${DATA.hold_games}-game hold from the day your slot frees up, so it is not legal to claim this week.">TOO LATE</span>` : ''}</td>
-      <td class="c-cmp">${planBtn(n, true)}${watchBtn(n, true)}</td></tr>`;
+      <td class="c-cmp"><button class="cbtn ${cmpSlotOf(n) ? 'on' : ''}" data-cmp="${n}"
+          onclick="event.stopPropagation();cmpPick('${q}')"
+          title="${cmpSlotOf(n) ? 'Remove ' + n + ' from Side by Side'
+            : 'Compare ' + n + ' against your ' + (t.pool === 'NFL' ? 'NFL' : 'college')
+              + ' slot, in Side by Side below'}"
+          aria-label="${cmpSlotOf(n) ? 'Remove' : 'Add'} ${n} ${
+            cmpSlotOf(n) ? 'from' : 'to'} the comparison">${cmpSlotOf(n) || '+'}</button>
+        ${planBtn(n, true)}${side === 'get' ? watchBtn(n, true) : ''}</td></tr>`;
   };
   const lists = `<div class="card"><h2>What You Mean to Do</h2>
     <div class="row" style="align-items:flex-start;gap:14px">
@@ -4435,6 +4442,14 @@ function planPanel(){
     </div>
     ${planCount() ? `<div class="row" style="margin-top:10px">
       <button class="f" onclick="askPlanClear()" title="Take every team off the plan and start again">Clear the Plan</button></div>` : ''}
+    <!-- THE SAME COMPARE TOOL THE COLLEGE AND NFL LISTS CARRY. Casey, 15 Sep 2026: "the Plan is
+         where I want to be able to compare my team to a team I might pick up." How Each Swap
+         Looks prices every pairing; this is for reading one of them game by game. Two trays,
+         because this list holds both pools and a slot only takes its own kind. -->
+    <div class="bar"><label class="d" style="align-self:center;font-size:12px">College</label>
+      <span id="cmptray6" class="tray" data-pool="COL">${trayHTML('COL')}</span></div>
+    <div class="bar"><label class="d" style="align-self:center;font-size:12px">NFL</label>
+      <span id="cmptray7" class="tray" data-pool="NFL">${trayHTML('NFL')}</span></div>
     <div class="note">Flagging a team here does nothing to your roster and tells nobody. It is a
       note to yourself until you press <b>Send to Trades</b>.</div></div>`;
 
@@ -4481,7 +4496,7 @@ function planPanel(){
       are making today cannot change them.</div></div>`
     : `<div class="card"><h2>How Each Swap Looks</h2><div class="empty">${why()}</div></div>`;
 
-  return lists + table + planSendCard(pairs);
+  return lists + table + compareCard('COL') + compareCard('NFL') + planSendCard(pairs);
 }
 
 /* ---- HANDING IT TO THE TRADES TAB ----------------------------------------------------------
@@ -4787,8 +4802,19 @@ function askPlanClear(){
   const x = box.querySelector('.modalx'); if (x) x.focus({preventScroll: true});
 }
 function planCount(){ return (PLAN.drop || []).length + (PLAN.get || []).length; }
-/* The flag, beside the star, wherever a team is listed. Two controls with two jobs: the star
-   keeps an eye on a team, this one says what you mean to do about it. */
+/* ---- ONE ICON FOR THE PLAN, EVERYWHERE, AND IT IS NOT A PLUS AND NOT A STAR -----------------
+ * Casey, 15 Sep 2026: "on College and Pro you now have a plus sign next to the team to do a
+ * compare, then another plus sign which adds it to the plan. That is a little confusing. The star
+ * makes sense for the watch list. We need a different icon for adding it to the plan ... and
+ * whatever you use should be the same button that's over on My Roster instead of it being a
+ * star."
+ * Three jobs sat within an inch of each other and two of them wore the same mark:
+ *   +  compare this team           (already taken, and it is the older of the two)
+ *   -  add it to the plan          (a minus on your own teams, a plus on everyone else's)
+ *   S  keep an eye on it           (the watch list)
+ * The plan is a flag now — one glyph, on every list, whichever side of the trade the team is on.
+ * A control that means one thing has one mark.
+ */
 function planBtn(n, small){
   const side = planSide(n);
   const on = planHas(side, n);
@@ -4796,11 +4822,10 @@ function planBtn(n, small){
   return `<button type="button" class="wstar plan${on ? ' on' : ''}${small ? ' sm' : ''}"
     onclick="event.preventDefault();event.stopPropagation();planToggle('${q}')"
     title="${on ? 'On your plan. Press to take it off.'
-      : side === 'drop' ? 'Flag ' + n + ' as a team you mean to DROP. It goes on the Plan tab.'
-                        : 'Flag ' + n + ' as a team you mean to PICK UP. It goes on the Plan tab.'}"
+      : side === 'drop' ? 'Add ' + n + ' to your plan as a team you mean to DROP.'
+                        : 'Add ' + n + ' to your plan as a team you mean to PICK UP.'}"
     aria-pressed="${on}"
-    aria-label="${on ? 'Remove' : 'Add'} ${n} ${on ? 'from' : 'to'} your plan">${
-    side === 'drop' ? '−' : '+'}</button>`;
+    aria-label="${on ? 'Remove' : 'Add'} ${n} ${on ? 'from' : 'to'} your plan">\u2691</button>`;
 }
 
 function watchSave(){ watchPush(); }
@@ -5829,7 +5854,12 @@ function renderPick(){
       <td><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
         <span class="d" style="font-size:11px">▸</span>${
         isWorst ? ' <span class="gtag t-before">DROP FIRST</span>' : ''}${upsetTag(t)}
-        ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td>
+        <!-- NO WATCH STAR HERE. Casey, 15 Sep 2026: "the star you created on My Roster puts it in
+             my watch list. I don't want my own roster in the watch list -- that is a different
+             purpose, to watch teams I'm interested in." A team you already hold is not a team you
+             are watching for. The plan flag stays, because meaning to DROP one of your own is
+             half of every trade. -->
+        ${planBtn(t.n, true)}</td>
       <td class="d">${sl ? sl.third_game.slice(5) : '—'}${
         t.played >= DATA.hold_games ? ' <span class="pill v-keep">NOW</span>' : ''}</td>
       <td class="num">${w3 == null ? '—' : w3.toFixed(2)}</td>
