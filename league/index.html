@@ -89,7 +89,11 @@ header .chips{flex-wrap:wrap;overflow:visible;margin-bottom:8px}
 header .chips:empty{display:none;margin:0}
 header .chip{color:#eff5fd;border-color:rgba(255,255,255,.30);
  background:rgba(255,255,255,.08)}
-header .chip .d, header .chip .f{color:#c6d7ea}
+/* A DIM RUN INSIDE A HEADER CHIP IS DIM AGAINST NAVY, not against the page. `.f` is left out
+   of this on purpose: it is a BUTTON with its own white ground, so lightening its text put
+   near-white words on white. Only the text runs are recoloured. */
+header .chip .d{color:#c6d7ea}
+header .chip .f{background:rgba(255,255,255,.92);color:#123a63;border-color:rgba(255,255,255,.5)}
 header .chip.warn{color:#ffd98a;border-color:rgba(255,217,138,.55)}
 header .chip.bad{color:#ffb8b2;border-color:rgba(255,184,178,.55)}
 header .chip-action{color:#1d1305;background:var(--brandacc);border:none}
@@ -2225,7 +2229,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 10:35 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 10:38 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
