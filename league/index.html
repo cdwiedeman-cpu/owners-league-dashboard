@@ -748,11 +748,16 @@ details>summary::marker{color:var(--faint)}
      It collapses behind one button that says what it is currently set to. Nothing is removed and
      nothing is decided for the reader -- it is one tap away and the tap is labelled. */
   .bar.folded{display:none}
-  .filtoggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;
+  .filtoggle{display:flex;width:100%;max-width:100%;align-items:center;
+   justify-content:space-between;gap:8px;overflow:hidden;
    background:var(--pan);border:1px solid var(--line);border-radius:9px;color:var(--ink);
    font:600 13px inherit;min-height:42px;padding:0 12px;margin:0 0 10px;text-align:left}
-  .filtoggle .sum{font-weight:400;font-size:12px;color:var(--dim);overflow:hidden;
-   text-overflow:ellipsis;white-space:nowrap}
+  /* min-width:0 is what lets the summary ellipsis instead of pushing the button past the screen.
+     Without it this row overflowed its section by 10px and the page gained a sideways scroll --
+     the one thing this file is never allowed to do. */
+  .filtoggle > span:first-child{flex:0 0 auto}
+  .filtoggle .sum{flex:1 1 auto;min-width:0;font-weight:400;font-size:12px;color:var(--dim);
+   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
   /* FIVE TABS DO NOT FIT A PHONE AT THE DESKTOP PADDING. Adding the Race tab took the strip to
      392px inside a 370px column and the whole PAGE gained 12px of sideways scroll -- the one
      thing this file is never allowed to do. Two changes, because one of them is a number that
@@ -2039,7 +2044,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 6:58 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 7:01 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
