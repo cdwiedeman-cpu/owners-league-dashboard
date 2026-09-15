@@ -9075,6 +9075,12 @@ function applyLiveTrades(list){
                        fee: (typeof t.fee === 'number') ? t.fee
                             : (DATA.trade_cost != null ? DATA.trade_cost : 3),
                        fee_note: t.fee_note || '', week: ew, live: true,
+                       /* THE DATE IT TOOK EFFECT RIDES ALONG. The Transactions tab works out
+                          which trade window a trade fell in by joining on this date, and it is
+                          also what orders the rows inside a week. Without it a settled trade
+                          showed an empty Window and an empty Dates, which is what Casey was
+                          looking at on 15 Sep 2026. */
+                       effective: t.effective || null,
                        how: t.how || '', contested: !!t.contested});
       LIVE_TX_N++;
     }
