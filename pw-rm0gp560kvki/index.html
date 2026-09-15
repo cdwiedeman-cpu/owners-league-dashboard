@@ -2399,7 +2399,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 7:45 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 7:52 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4380,7 +4380,7 @@ function planPanel(){
       </div>
     </div>
     ${planCount() ? `<div class="row" style="margin-top:10px">
-      <button class="f" onclick="planClear()" title="Take everything off the plan and start again">Clear the Plan</button></div>` : ''}
+      <button class="f" onclick="askPlanClear()" title="Take every team off the plan and start again">Clear the Plan</button></div>` : ''}
     <div class="note">Flagging a team here does nothing to your roster and tells nobody. It is a
       note to yourself until you press <b>Send to Trades</b>.</div></div>`;
 
@@ -4709,7 +4709,29 @@ function planToggle(n){
   if (SCOUT) renderScout();
   if (PROJ_ON && el('pick') && !el('pick').hidden) renderPick();
 }
-function planClear(){ PLAN = {drop: [], get: []}; watchSave(); renderPick(); }
+function planClear(){ PLAN = {drop: [], get: []}; watchSave(); closeScout(); renderPick(); }
+/* IT ASKS, AND IT NAMES WHAT IT WOULD THROW AWAY. There is no undo on this page and there should
+   not need to be one: a question answered is better than a mistake reversed. */
+function askPlanClear(){
+  const d = (PLAN.drop || []).slice(), g = (PLAN.get || []).slice();
+  const box = el('scout');
+  box.innerHTML = `<div class="modalbox"><div class="modalhd"><h2>Clear the Whole Plan?</h2>
+    <button class="modalx" onclick="closeScout()" title="Close">&times;</button></div>
+    <div class="modalbody">
+    <p>This takes <b>${d.length + g.length}</b> team${d.length + g.length === 1 ? '' : 's'} off
+      your plan. <b>It cannot be undone</b>, and nothing on this page will remember them.</p>
+    ${d.length ? `<p class="f"><b>Drop:</b> ${esc(d.join(', '))}</p>` : ''}
+    ${g.length ? `<p class="f"><b>Pick up:</b> ${esc(g.join(', '))}</p>` : ''}
+    <p class="note">To take one team off instead, press its flag on this tab and leave the rest
+      alone.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="f" style="background:var(--bad);border-color:var(--bad);color:#fff"
+        onclick="planClear()">Yes, Clear It</button>
+      <button class="f primary" onclick="closeScout()">Keep My Plan</button></div>
+    </div></div>`;
+  box.hidden = false;
+  const x = box.querySelector('.modalx'); if (x) x.focus({preventScroll: true});
+}
 function planCount(){ return (PLAN.drop || []).length + (PLAN.get || []).length; }
 /* The flag, beside the star, wherever a team is listed. Two controls with two jobs: the star
    keeps an eye on a team, this one says what you mean to do about it. */
@@ -5752,7 +5774,8 @@ function renderPick(){
         title="Click for this team's full season — games played with their scores, games to come with a win probability for each.">
       <td><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
         <span class="d" style="font-size:11px">▸</span>${
-        isWorst ? ' <span class="gtag t-before">DROP FIRST</span>' : ''}</td>
+        isWorst ? ' <span class="gtag t-before">DROP FIRST</span>' : ''}${upsetTag(t)}
+        ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td>
       <td class="d">${sl ? sl.third_game.slice(5) : '—'}${
         t.played >= DATA.hold_games ? ' <span class="pill v-keep">NOW</span>' : ''}</td>
       <td class="num">${w3 == null ? '—' : w3.toFixed(2)}</td>
@@ -5810,7 +5833,7 @@ function renderPick(){
     roster: `<div class="card"><h2>Your roster — what each slot earns from the week you could drop it</h2>
       <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
       <div class="scr"><table class="rostertbl">
-        <colgroup><col style="width:40%"><col style="width:22%"><col style="width:19%"><col style="width:19%"></colgroup>
+        <colgroup><col style="width:46%"><col style="width:20%"><col style="width:17%"><col style="width:17%"></colgroup>
         <thead><tr><th class="c-team">Team</th>
           <th title="Keep this team THROUGH this date. It is the day of its third game and you must let it play that game; you can drop it afterwards, and a replacement first plays for you in the game after it.">Hold Through</th>
           <th class="num" title="Expected points over this team's next three games after it becomes droppable — what you would give up in the near term.">Next 3</th>

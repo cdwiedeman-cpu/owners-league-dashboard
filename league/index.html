@@ -819,8 +819,8 @@ details>summary::marker{color:var(--faint)}
 .cmphr{border:0;border-top:1px solid var(--line);margin:4px 0}
 /* The available-teams table at laptop width, where all eight cells render, so position N is
    column N: Cmp, Team, 3-0, Bank 3, Gain 3, Season, Gain, Do. */
-.cg1{width:46px} .cg2{width:23%} .cg3{width:10%} .cg4{width:11%}
-.cg5{width:11%} .cg6{width:12%} .cg7{width:11%} .cg8{width:15%}
+.cg1{width:46px} .cg2{width:20%} .cg3{width:10%} .cg4{width:11%}
+.cg5{width:11%} .cg6{width:12%} .cg7{width:11%} .cg8{width:8%} .cg9{width:15%}
 @media (max-width:560px){
   .hide-s{display:none}
   /* NO COLUMN-HIDING IN THE OWNER DRAWER. Casey, 31 Aug 2026, asked that this panel keep every
@@ -2399,7 +2399,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 7:43 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 7:58 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3554,27 +3554,27 @@ function epOfMargin(pool, m, oppPool){
    cut-off gives what the last refresh knew; no cut-off gives everything the page can see. */
 /* ---- A RESULT THE LINE DID NOT SEE COMING --------------------------------------------------
  * Casey, 15 Sep 2026: "flag any team that had a big win where they beat a team it was unexpected
- * for them to win, because I would like to see that so I don't have to go through every game and
- * every live score ... that maybe tells me they're much better than what we expected."
- * Two different things, and they are named separately because they say different things:
- *   UPSET   — they were the underdog and they won. The market was wrong about who was better.
- *   BIG WIN — they were favoured and beat the number by two touchdowns. The market had the right
- *             side and the wrong size.
- * BOTH ARE MEASURED AGAINST THE PRE-GAME LINE, not against a rating, because the line is what
- * every reader can check. `pre_m` is this team's expected margin before kickoff, so a negative
- * one means they were expected to lose by that much.
- * THE GATES ARE MATERIAL, NOT NOMINAL. A team favoured by 0.4 that wins is not an upset and a
- * win by 3 more than the line is not a story; both would put a badge on half the board.
+ * for them to win, so I don't have to go through every game and every live score ... that maybe
+ * tells me they're much better than what we expected."
+ * AND THEN, THE SAME DAY, ON WHAT "BIG WIN" TURNED OUT TO MEAN: "I'm not sure what BIG WIN means.
+ * Looking at Alcorn State, are you saying they won by a lot of points? I don't care about a big
+ * win. When I said big win before I meant more of an upset ... it's really just showing blowouts,
+ * which doesn't matter to me."
+ * He is right, and the second badge was mine, not his. A team beating the number by three
+ * touchdowns is a blowout, and a blowout is already priced into every column on this table. What
+ * is NOT priced in is the market being wrong about WHO IS BETTER, and that is one thing:
+ * an UPSET — they were the underdog, and they won.
+ * MEASURED AGAINST THE PRE-GAME LINE, not against a rating, because the line is what any reader
+ * can check. `pre_m` is this team's expected margin before kickoff, so a negative one means they
+ * were expected to lose by that much.
+ * THE GATE IS MATERIAL, NOT NOMINAL. A team favoured by 0.4 that wins is not an upset.
  */
 const UPSET_DOG = 2.5;          // points the line had them losing by, at least
-/* THREE TOUCHDOWNS, MEASURED. At fourteen this flagged 52 of the 192 available college teams,
-   which is a badge on a quarter of the board and therefore no signal at all. At twenty-one it is
-   40, and 32 of those are outright upsets -- the thing he actually asked to see. */
-const UPSET_OVER = 21;          // points they beat the line by, at least, when favoured
-function bigWins(t){
+function upsetWins(t){
   const out = [];
   for (const g of (t.hist || [])){
     if (g.nc || g.pre_m == null) continue;
+    if (g.pre_m > -UPSET_DOG) continue;        // they were not the underdog
     let pf = g.pf, pa = g.pa;
     if (pf == null || pa == null){
       const lv = liveScore(t.n, g.d);
@@ -3582,27 +3582,21 @@ function bigWins(t){
       pf = lv.pf; pa = lv.pa;
     }
     if (pf <= pa) continue;
-    const over = (pf - pa) - g.pre_m;
-    if (g.pre_m <= -UPSET_DOG)
-      out.push({kind: 'UPSET', opp: g.opp, d: g.d, pf: pf, pa: pa, line: g.pre_m, over: over});
-    else if (over >= UPSET_OVER)
-      out.push({kind: 'BIG WIN', opp: g.opp, d: g.d, pf: pf, pa: pa, line: g.pre_m, over: over});
+    out.push({opp: g.opp, d: g.d, pf: pf, pa: pa, line: g.pre_m});
   }
   return out;
 }
-function bigWinTag(t){
-  const w = bigWins(t);
+function upsetSay(x){
+  return `Beat ${x.opp} ${x.pf}\u2013${x.pa} on ${pretty(x.d)}, as ${Math.abs(x.line).toFixed(1)} point underdogs.`;
+}
+function upsetTag(t){
+  const w = upsetWins(t);
   if (!w.length) return '';
-  const best = w.slice().sort((a, b) => (a.kind === b.kind ? b.over - a.over
-    : a.kind === 'UPSET' ? -1 : 1))[0];
-  const say = x => `${x.kind === 'UPSET' ? 'Beat' : 'Beat'} ${x.opp} ${x.pf}–${x.pa} on ${
-    pretty(x.d)}. ${x.line < 0 ? `They were ${Math.abs(x.line).toFixed(1)} point underdogs.`
-      : `They were favoured by ${x.line.toFixed(1)} and won by ${(x.pf - x.pa)}.`}`;
-  const more = w.length > 1 ? `\n\n${w.length} such results this season:\n`
-    + w.map(say).join('\n') : '';
-  return ` <span class="recg ${best.kind === 'UPSET' ? 'g' : 'y'}" title="${esc(say(best) + more
-    + '\n\nMeasured against the pre-game line, which is in the team panel game by game.')}">${
-    best.kind}</span>`;
+  const worst = w.slice().sort((a, b) => a.line - b.line)[0];
+  const more = w.length > 1 ? `\n\n${w.length} upsets this season:\n` + w.map(upsetSay).join('\n') : '';
+  return ` <span class="recg g" title="${esc(upsetSay(worst) + more
+    + '\n\nThe line is the pre-game spread, and it is in the team panel game by game.')}">UPSET${
+    w.length > 1 ? ' \u00d7' + w.length : ''}</span>`;
 }
 function playedResiduals(t, through){
   const out = [];
@@ -4086,9 +4080,8 @@ function setPUpset(v){ PUPSET = !!v; renderPick(); }
    the way to see nothing else. */
 function upsetBtn(){
   return `<button class="f" aria-pressed="${PUPSET}" onclick="setPUpset(${!PUPSET})"
-    title="Show only teams that have already won a game the pre-game line said they should lose,
-or beaten the line by two touchdowns. The badge on a row says which, and holding it names the
-game.">Unexpected Results Only</button>`;
+    title="Show only teams that have already won a game the pre-game line said they should lose.
+Hold the UPSET badge on a row to see which game.">Upsets Only</button>`;
 }
 function showAllTeams(kind, n){
   PMORE[kind] = n;
@@ -4131,7 +4124,7 @@ function availTable(kind){
     .filter(x => x.gain3 != null);
   if (PQ){ const q = PQ.toLowerCase(); list = list.filter(x => x.t.n.toLowerCase().includes(q)); }
   /* ONLY THE TEAMS THAT HAVE ALREADY DONE SOMETHING UNEXPECTED. */
-  if (PUPSET) list = list.filter(x => bigWins(x.t).length);
+  if (PUPSET) list = list.filter(x => upsetWins(x.t).length);
   /* SORTED ON THE RAW FIGURES, never on what the cell prints. Two teams 0.004 apart print the
      same number and are not tied, and an ordering taken from the rounded value puts them in
      whichever order the filter happened to leave them in. */
@@ -4143,6 +4136,10 @@ function availTable(kind){
     gain3:  x => x.gain3,
     season: x => x.r.pts,
     sgain:  x => (x.gainR == null ? -Infinity : x.gainR),
+    /* Sorted on the COUNT, and ties broken by how big the biggest one was -- two teams with one
+       upset each are not equal if one of them was a three-touchdown underdog. */
+    ups:    x => { const w = upsetWins(x.t);
+                   return w.length * 1000 - (w.length ? Math.min(...w.map(u => u.line)) : 0); },
   }[ps.key] || (x => x.gain3);
   list = list.slice().sort((a, b) => {
     const va = val(a), vb = val(b);
@@ -4172,7 +4169,7 @@ function availTable(kind){
      of a long table is only found by the reader who has already scrolled past the thing
      it was meant to explain. It sits ahead of the scroll container so it does not scroll
      sideways with the table it is describing. */
-  return `${FROZEN_NOTE}<div class="scrhint"><b>Swipe</b> the table sideways to see Bank 3, Season pts and Season gain.</div>
+  return `${FROZEN_NOTE}<div class="scrhint"><b>Swipe</b> the table sideways to see Bank 3, Season pts, Season gain and Upsets.</div>
     <div class="scr" data-avail="${kind}"><table>
     <!-- The Cmp column is a FIXED pixel width, not a percentage: it holds a 26px control and a
          percentage of a narrow phone table is smaller than the button inside it. -->
@@ -4187,7 +4184,8 @@ function availTable(kind){
          (cg-bank, cg-gain) made the small-screen rules read as if they sized Bank 3 and Gain 3
          when they were really sizing whatever landed in slots 4 and 5. -->
     <colgroup><col class="cg1"><col class="cg2"><col class="cg3"><col class="cg4">
-      <col class="cg5"><col class="cg6"><col class="cg7"><col class="cg8"></colgroup>
+      <col class="cg5"><col class="cg6"><col class="cg7"><col class="cg8">
+      <col class="cg9"></colgroup>
     <thead><tr><th class="c-cmp" title="Add this team to Side by side, above. Two at a time; tap again to remove.">Cmp</th>
       <th class="c-team ${SH('team')}" onclick="setPSort('${kind}','team')"
         title="Sort by team name. Tap again to turn it round.">Team${AR('team')}</th>
@@ -4196,6 +4194,7 @@ function availTable(kind){
       <th class="num c-gain ${SH('gain3')}" onclick="setPSort('${kind}','gain3')" title="Bank 3 minus what ${inc.n} earns over THE SAME THREE WEEKS. Both sides start on ${from} and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.">Gain 3${AR('gain3')}</th>
       <th class="num c-season hide-s ${SH('season')}" onclick="setPSort('${kind}','season')" title="Expected points from ${from} to the end of the regular season.">Season<br>pts${AR('season')}</th>
       <th class="num c-sgain hide-s ${SH('sgain')}" onclick="setPSort('${kind}','sgain')" title="Season points minus what ${inc.n} earns over the same stretch. Casey, 31 Aug 2026: a column called just Gain beside one called Gain 3 says nothing about which is which.">Season<br>gain${AR('sgain')}</th>
+      <th class="num c-ups hide-s ${SH('ups')}" onclick="setPSort('${kind}','ups')" title="How many games this team has won as an underdog, measured against the pre-game line. A team the market keeps getting wrong is a team that may be better than every projection on this page thinks. Tap to sort by it.">Upsets${AR('ups')}</th>
       <th class="c-then" title="How long to hold this team. AVOID means every length loses points against ${inc.n}. Otherwise it is the number of WEEKS where the gain over ${inc.n} peaks — the same weeks Gain 3 measures, so the shortest recommendation and Gain 3 are the same number. A team with a bye in its opening stretch needs 4 weeks to play its 3 games, so its minimum reads 4w. Recomputed when you change the team above.">Advice</th></tr></thead><tbody>` +
     shown.map(x => {
       const t = x.t, rec = recommend(t, inc);
@@ -4219,7 +4218,7 @@ function availTable(kind){
                       : 'Compare ' + t.n + ' against ' + cmpMine().n + ', in Side by side above'}"
             aria-label="${cs ? 'Remove' : 'Add'} ${t.n} ${cs ? 'from' : 'to'} the comparison">${cs || '+'}</button></td>
         <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
-          <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}${bigWinTag(t)}
+          <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}${upsetTag(t)}
           ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td>
         <td class="num c-p30 ${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
             title="${x.p30==null ? 'No games left in this window.' : p30Why(t, from, x)}">${
@@ -4236,18 +4235,21 @@ function availTable(kind){
         <td class="num c-gain"><b class="${g3 > 0.3 ? 'g' : g3 < 0 ? 'b' : 'y'}">${g3 >= 0 ? '+' : ''}${g3.toFixed(2)}</b></td>
         <td class="num d c-season hide-s">${x.r.pts.toFixed(2)}</td>
         <td class="num c-sgain hide-s"><span class="${gr > 0.5 ? 'g' : gr < 0 ? 'b' : 'd'}">${gr == null ? '—' : (gr >= 0 ? '+' : '') + gr.toFixed(2)}</span></td>
+        <td class="num c-ups hide-s">${(() => { const w = upsetWins(t);
+          return w.length ? `<b class="g" title="${esc(w.map(upsetSay).join('\n'))}">${w.length}</b>`
+                          : '<span class="d">0</span>'; })()}</td>
         <td class="c-then"><span class="pill ${rec.cls}" title="${rec.tip}">${rec.label}</span>${
           rec.gain != null && rec.label !== 'AVOID' && rec.label !== '—'
             ? `<span class="recg ${rec.gain > 0 ? 'g' : 'b'}" title="LEAGUE POINTS — what the swap is worth over ${inc.n} across the weeks named above, counting both teams over the SAME weeks. Not a percentage and not a rating. When the advice is the minimum hold and there is no bye, this is Gain 3 exactly.">${rec.gain >= 0 ? '+' : ''}${rec.gain.toFixed(2)}</span>`
             : ''}</td></tr>`
-        + (OPEN === t.n ? `<tr><td colspan="8">${teamPanel(t, inc)}</td></tr>` : '');
+        + (OPEN === t.n ? `<tr><td colspan="9">${teamPanel(t, inc)}</td></tr>` : '');
     }).join('') + '</tbody></table></div>'
     /* THE COUNT IS ALWAYS THERE, AND SO IS THE WAY PAST IT. A table that simply stops at
        twenty-five rows reads as a table with twenty-five teams in it. */
     + `<div class="row" style="margin-top:8px;align-items:center;gap:10px">
         <span class="note">Showing <b>${shown.length}</b> of <b>${total}</b> available ${
           kind === 'NFL' ? 'NFL' : 'college'} team${total === 1 ? '' : 's'}${
-          PUPSET ? ', counting only the ones with an unexpected result' : ''}.</span>
+          PUPSET ? ', counting only the ones that have won as an underdog' : ''}.</span>
         ${total > shown.length
           ? `<button class="f" onclick="moreTeams('${kind}')">Show ${
               Math.min(PSTEP[kind], total - shown.length)} More Teams</button>`
@@ -4378,7 +4380,7 @@ function planPanel(){
       </div>
     </div>
     ${planCount() ? `<div class="row" style="margin-top:10px">
-      <button class="f" onclick="planClear()" title="Take everything off the plan and start again">Clear the Plan</button></div>` : ''}
+      <button class="f" onclick="askPlanClear()" title="Take every team off the plan and start again">Clear the Plan</button></div>` : ''}
     <div class="note">Flagging a team here does nothing to your roster and tells nobody. It is a
       note to yourself until you press <b>Send to Trades</b>.</div></div>`;
 
@@ -4707,7 +4709,29 @@ function planToggle(n){
   if (SCOUT) renderScout();
   if (PROJ_ON && el('pick') && !el('pick').hidden) renderPick();
 }
-function planClear(){ PLAN = {drop: [], get: []}; watchSave(); renderPick(); }
+function planClear(){ PLAN = {drop: [], get: []}; watchSave(); closeScout(); renderPick(); }
+/* IT ASKS, AND IT NAMES WHAT IT WOULD THROW AWAY. There is no undo on this page and there should
+   not need to be one: a question answered is better than a mistake reversed. */
+function askPlanClear(){
+  const d = (PLAN.drop || []).slice(), g = (PLAN.get || []).slice();
+  const box = el('scout');
+  box.innerHTML = `<div class="modalbox"><div class="modalhd"><h2>Clear the Whole Plan?</h2>
+    <button class="modalx" onclick="closeScout()" title="Close">&times;</button></div>
+    <div class="modalbody">
+    <p>This takes <b>${d.length + g.length}</b> team${d.length + g.length === 1 ? '' : 's'} off
+      your plan. <b>It cannot be undone</b>, and nothing on this page will remember them.</p>
+    ${d.length ? `<p class="f"><b>Drop:</b> ${esc(d.join(', '))}</p>` : ''}
+    ${g.length ? `<p class="f"><b>Pick up:</b> ${esc(g.join(', '))}</p>` : ''}
+    <p class="note">To take one team off instead, press its flag on this tab and leave the rest
+      alone.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="f" style="background:var(--bad);border-color:var(--bad);color:#fff"
+        onclick="planClear()">Yes, Clear It</button>
+      <button class="f primary" onclick="closeScout()">Keep My Plan</button></div>
+    </div></div>`;
+  box.hidden = false;
+  const x = box.querySelector('.modalx'); if (x) x.focus({preventScroll: true});
+}
 function planCount(){ return (PLAN.drop || []).length + (PLAN.get || []).length; }
 /* The flag, beside the star, wherever a team is listed. Two controls with two jobs: the star
    keeps an eye on a team, this one says what you mean to do about it. */
@@ -5750,7 +5774,8 @@ function renderPick(){
         title="Click for this team's full season — games played with their scores, games to come with a win probability for each.">
       <td><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
         <span class="d" style="font-size:11px">▸</span>${
-        isWorst ? ' <span class="gtag t-before">DROP FIRST</span>' : ''}</td>
+        isWorst ? ' <span class="gtag t-before">DROP FIRST</span>' : ''}${upsetTag(t)}
+        ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td>
       <td class="d">${sl ? sl.third_game.slice(5) : '—'}${
         t.played >= DATA.hold_games ? ' <span class="pill v-keep">NOW</span>' : ''}</td>
       <td class="num">${w3 == null ? '—' : w3.toFixed(2)}</td>
@@ -5808,7 +5833,7 @@ function renderPick(){
     roster: `<div class="card"><h2>Your roster — what each slot earns from the week you could drop it</h2>
       <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
       <div class="scr"><table class="rostertbl">
-        <colgroup><col style="width:40%"><col style="width:22%"><col style="width:19%"><col style="width:19%"></colgroup>
+        <colgroup><col style="width:46%"><col style="width:20%"><col style="width:17%"><col style="width:17%"></colgroup>
         <thead><tr><th class="c-team">Team</th>
           <th title="Keep this team THROUGH this date. It is the day of its third game and you must let it play that game; you can drop it afterwards, and a replacement first plays for you in the game after it.">Hold Through</th>
           <th class="num" title="Expected points over this team's next three games after it becomes droppable — what you would give up in the near term.">Next 3</th>
