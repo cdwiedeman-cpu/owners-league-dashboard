@@ -2271,7 +2271,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:19 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:20 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -2356,10 +2356,14 @@ function weekPieces(w){
   return [...by.entries()].sort((a, b) => a[0].localeCompare(b[0]))
     .map(([, ds]) => ds.sort());
 }
+/* "Aug 29 - Sep 6", from a list of match days. The weekday that `pretty` puts on the front is
+   dropped: this names a RANGE, and "Sat, Aug 29 - Sun, Sep 6" is twice the width for nothing. */
 function segLabel(ds){
-  const short = d => pretty(d).replace(/,.*$/, '').replace(/^\w+,?\s*/, '');
+  const short = d => pretty(d).replace(/^[A-Za-z]{3},\s*/, '');
+  if (!ds || !ds.length) return '';
   return ds.length === 1 ? short(ds[0]) : short(ds[0]) + ' – ' + short(ds[ds.length - 1]);
 }
+
 let WEEK_BUSY = false, WEEK_ERR = null;
 const WEEK_CACHE = new Map();         // league week -> games[], fetched once
 
