@@ -273,8 +273,12 @@ html.scrolled #sfilters .status{min-height:28px;padding:3px 8px}
 .rrgroup{display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding-left:8px}
 .rrlab{font-size:11px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase;
   cursor:help;white-space:nowrap}
+/* THEY WRAP. These two carry real sentences now rather than two words each, and `nowrap` on a
+   360px phone pushed the PAGE sideways -- which is the one thing this page may never do. A
+   two-line button costs a few pixels of height; a page that scrolls sideways costs every tab. */
 .rrbtn{border-radius:7px;border:1px solid var(--line);border-bottom:1px solid var(--line);
-  min-height:30px;padding:0 9px;font-size:12px;white-space:nowrap}
+  min-height:30px;padding:4px 9px;font-size:12px;white-space:normal;text-align:left;
+  min-width:0;overflow-wrap:anywhere}
 .rrbtn.on{color:var(--blue);border-color:var(--blue);background:rgba(96,165,250,.08)}
 /* Says outright when the two options cannot differ. A choice that makes no difference should say
    so rather than leaving him to wonder which one he is looking at. */
@@ -2352,7 +2356,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 12:06 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 12:11 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3661,7 +3665,10 @@ function setRerate(on){
    the same ? disclosure as everything else rather than taking a block of the page. */
 /* "14 Sep 2026", from "14 Sep 2026, 7:12 PM AZ". The button has to fit beside three sub-tabs on
    a phone; the full stamp with its clock is in the hover text and in the note under the table. */
-function dayOnly(t){ return String(t || '').split(',')[0].trim() || String(t || ''); }
+function dayOnly(t){
+  const d = String(t || '').split(',')[0].trim() || String(t || '');
+  return d.replace(/\s+20\d\d$/, '');        // "14 Sep", not "14 Sep 2026" -- the year is not the question
+}
 function rerateControl(){
   if (!DATA.curve) return '';
   const n = RERATE.size;
