@@ -297,6 +297,12 @@ html.scrolled #sfilters .status{min-height:28px;padding:3px 8px}
    grids, so a My-Teams filter that lit up blue was using the page's link colour for the page's
    ownership idea. One colour, one meaning. */
 .pick-tab.me.on{color:var(--mine);border-color:var(--mine);background:rgba(167,139,250,.12)}
+/* A WEEK HEADING INSIDE THE TRANSACTIONS CARD. Smaller than the card's own title, because it
+   divides the card rather than competing with it. */
+h3.txwk{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);
+ font-weight:800;margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+h3.txwk:first-of-type{margin-top:0}
+tr.txmine>td{background:var(--minebg)}
 /* ---- the Race tab's owner picker ------------------------------------------------------
    A row of toggles, not a <select>: he is choosing up to three of twenty-seven and needs to see
    who is near him while he chooses. Grouped by division because a name alone does not say which
@@ -2265,7 +2271,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:09 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:10 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8523,6 +8529,24 @@ function summaryCard(o){
 }
 
 /* ---------- Transactions ------------------------------------------------------------------ */
+/* WHOSE TRADES THE TAB IS SHOWING. Kept in this browser so it is still set on Tuesday, and only
+   ever a filter -- the whole league is one press away and the button says so. */
+let TXMINE = (function(){
+  try { return localStorage.getItem('rfl_tx_mine') === '1'; } catch (e) { return false; }
+})();
+function txWho(){
+  const who = meName();
+  return who ? {owner: who, div: MY_DIV} : null;
+}
+function txMine(t){
+  const me = txWho();
+  return !!(me && t && t.owner === me.owner && (!t.div || !me.div || t.div === me.div));
+}
+function setTxMine(v){
+  TXMINE = !!v;
+  try { localStorage.setItem('rfl_tx_mine', TXMINE ? '1' : '0'); } catch (e) {}
+  renderTx();
+}
 function renderTx(){
   const b = el('txBody'); if (!b) return;
   const tx = DATA.transactions || {}, hist = DATA.owner_history || {};
@@ -8587,23 +8611,62 @@ function renderTx(){
     return x && x.start ? `${pretty(x.start)} – ${pretty(x.end)}` : '<span class="d">—</span>';
   };
 
-  const tradeTable = trades.length ? `<div class="card"><h2>Every Trade, In Order</h2>
-    <div class="scr"><table>
-      <colgroup><col style="width:14%"><col style="width:20%"><col style="width:8%"><col style="width:18%"><col style="width:18%"><col style="width:14%"><col style="width:8%"></colgroup>
-      <thead><tr><th>Window</th><th>Dates</th><th>Div</th><th>Owner</th>
-        <th>Out</th><th>In</th><th class="num">Cost</th></tr></thead>
-      <tbody>${trades.slice().sort((a, c) => String(a.effective || '~').localeCompare(String(c.effective || '~')))
-        .map(t => `<tr><td class="d">${esc(winLabel(t))}</td>
+  /* ---- ONE WEEK AT A TIME, NEWEST FIRST -------------------------------------------------
+   * Casey, 15 Sep 2026: "is that just going to be one long continuous list? If that's the place
+   * where people have to go to find out what their trades are, that's not good."
+   * By November one list is two hundred rows and the week an owner is asking about is somewhere
+   * in the middle of it. So it is a block per week with the most recent at the top, and a
+   * button that narrows it to the reader's own seat. What they are looking for is the first
+   * thing on the tab.
+   */
+  const rowOfTrade = t => `<tr${txMine(t) ? ' class="txmine"' : ''}>
+          <td class="d">${esc(winLabel(t))}</td>
           <td class="d">${dateOfT(t)}</td>
           <td class="d">${esc(t.div || '')}</td>
-          <td>${esc(t.owner || '')}</td>
+          <td>${esc(t.owner || '')}${txMine(t) ? ' <span class="mytag">YOU</span>' : ''}</td>
           <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}</td>
           <td class="num${feeOf(t) === FEE ? '' : ' gold'}" title="${esc(feeOf(t) === FEE
               ? `The standard ${money(FEE)} transaction fee.`
               : `Set to ${money(feeOf(t))} rather than the standard ${money(FEE)}${
                   t.fee_note ? ': ' + t.fee_note : '. No reason was recorded.'}`)}">${
-            money(feeOf(t))}</td></tr>`).join('')}
-      </tbody></table></div>
+            money(feeOf(t))}</td></tr>`;
+  const shown = TXMINE ? trades.filter(txMine) : trades;
+  const byWeek = new Map();
+  for (const t of shown){
+    const w = (t.week == null || t.week === '') ? null : +t.week;
+    if (!byWeek.has(w)) byWeek.set(w, []);
+    byWeek.get(w).push(t);
+  }
+  /* A week with no number goes last rather than first: `null` sorts anywhere, and a block of
+     undated rows at the top of the tab is the opposite of what this change is for. */
+  const weekOrder = [...byWeek.keys()].sort((a, c) =>
+    (a == null) - (c == null) || (c - a));
+  const weekBlock = w => {
+    const rows = byWeek.get(w).slice()
+      .sort((a, c) => String(a.effective || '~').localeCompare(String(c.effective || '~')));
+    const head = w == null ? 'No week recorded' : 'Week ' + w;
+    return `<h3 class="txwk">${head} <span class="d">· ${rows.length} trade${
+      rows.length === 1 ? '' : 's'}</span></h3>
+      <div class="scr"><table>
+      <colgroup><col style="width:14%"><col style="width:20%"><col style="width:8%"><col style="width:18%"><col style="width:18%"><col style="width:14%"><col style="width:8%"></colgroup>
+      <thead><tr><th>Window</th><th>Dates</th><th>Div</th><th>Owner</th>
+        <th>Out</th><th>In</th><th class="num">Cost</th></tr></thead>
+      <tbody>${rows.map(rowOfTrade).join('')}</tbody></table></div>`;
+  };
+  /* AN ABSENCE IS NEVER AN ANSWER. Narrowed to one seat that has not traded, the tab has to say
+     that rather than show an empty table. */
+  const nothingMine = `<div class="empty">You have not traded yet this season. Every trade in
+      the league is here with <b>Everybody</b> pressed.</div>`;
+  const tradeTable = trades.length ? `<div class="card">
+    <h2>Every Trade, Newest Week First</h2>
+    <div class="tabs subtabs" style="margin-bottom:10px">
+      <button class="tab pick-tab me${TXMINE ? ' on' : ''}" aria-pressed="${TXMINE}"
+        onclick="setTxMine(true)" title="Only the trades on your own seat."${
+        txWho() ? '' : ' disabled'}>Just Mine</button>
+      <button class="tab pick-tab${TXMINE ? '' : ' on'}" aria-pressed="${!TXMINE}"
+        onclick="setTxMine(false)" title="Every trade in the league, week by week.">Everybody</button>
+    </div>
+    ${weekOrder.length ? weekOrder.map(weekBlock).join('') : nothingMine}
     <div class="note">A trade takes effect the day after its window closes, and points follow
       ownership <b>week by week</b> from there — the team an owner sends away keeps the points it
       already earned for them, and the team they receive starts scoring for them from that week.
