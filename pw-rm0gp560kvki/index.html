@@ -1107,7 +1107,7 @@ const TABSETS = {
  * MY TRADES IS FOR EVERYBODY AND IT IS ALWAYS THERE. Casey, 13 Sep 2026: "There is no sign in tab
  * because I had previously signed in." There never was one -- the commissioner tabs were added
  * and Sign In was not, so an owner handed this page had no way in at all. That would have blocked
- * the whole rollout. The My Trades tab shows the sign-in box until the reader has signed in, and
+ * the whole rollout. The Trades tab shows the sign-in box until the reader has signed in, and
  * their own trades afterwards, so one tab covers both and nobody has to be given a second
  * address.
  *
@@ -1131,14 +1131,14 @@ const COMMISH_PAGE = {csignin: 'signin', ctrades: 'auto', crun: 'run', caccess: 
  * Trades is the only tab they need and the sign-in lives inside it, where it was.
  */
 const SIGNIN_TAB = [['csignin','Sign In']];
-const OWNER_TAB = [['ctrades','My Trades']];
+const OWNER_TAB = [['ctrades','Trades']];
 const COMMISH_ONLY_TABS = [['crun','Run It'],['caccess','Access List']];
 /* THE TWO DOCUMENT TABS, AND THEY GO ON THE END. Casey, 14 Sep 2026: "the league rules tab
    doesn't make sense to be in between transactions and my page. It should be the last tab on the
    list to the far right." So League Rules is appended last, after everything, for everybody.
    AND A GUIDE FOR THE TWO OF THEM. Same day: "for Bob and myself, I think it would be good to
    have the trades and signing in document available as another tab. But calling it Trades and
-   Signing In on the dashboard is going to be confusing, because that conflicts with My Trades and
+   Signing In on the dashboard is going to be confusing, because that conflicts with Trades and
    the sign in. We need a name that represents instructions." It is called Commissioner Guide: it
    says who it is for and that it is something to read, and it cannot be mistaken for a thing to
    do. */
@@ -1211,7 +1211,7 @@ function setSignInTab(signedIn){
     TABS = composeTabs();
     buildTabs();
     /* THE TAB THAT WAS SHOWING STAYS SHOWING -- unless it was the one just removed, and then the
-       obvious place to land is My Trades, which is what they signed in for. */
+       obvious place to land is Trades, which is what they signed in for. */
     showTab(open === 'csignin' ? 'ctrades' : (open || TABS[0][0]));
   }
 }
@@ -1417,7 +1417,7 @@ function openSetup(auto){
   /* A SIGNED-IN READER IS NOT ASKED WHO THEY ARE. The sheet has already said, and it said it
      with a key behind it. Offering the list here would let somebody set the rest of the page to
      a different owner than the one their own trades tab is working as, which is the exact
-     disagreement this dialog used to create. Signing out on My Trades hands the choice back. */
+     disagreement this dialog used to create. Signing out on Trades hands the choice back. */
   if (SIGNED_IN){
     box.innerHTML = `<div class="modalbox">
       <div class="modalhd"><div><h2>You Are Signed In</h2></div>
@@ -1426,7 +1426,7 @@ function openSetup(auto){
         signed in to, so the scoreboard highlights those eleven teams and the Weekly and Season
         Summary grids open on that row.</div>
       <div class="note" style="margin-top:10px">To read the page as somebody else, sign out on the
-        <b>My Trades</b> tab first. Your name comes from your sign-in here, not from a list.</div>
+        <b>Trades</b> tab first. Your name comes from your sign-in here, not from a list.</div>
       <div class="bar" style="margin-top:10px">
         <button class="f primary" onclick="closeSetup()">Close</button></div>
     </div>`;
@@ -1644,7 +1644,7 @@ let COMMISH_LOADED = {};
 /* THE TRADES FRAME IS BUILT ONCE AND KEPT. That is right while nothing about the reader changes,
  * and wrong the moment somebody signs in.
  *
- * Casey, 14 Sep 2026, having just typed his code into the dashboard: "when I click on My Trades
+ * Casey, 14 Sep 2026, having just typed his code into the dashboard: "when I click on Trades
  * it says sign in first." The frame had already loaded, found no key, and settled into being
  * signed out. Writing the key into this browser afterwards does not reach a page that has
  * finished asking. It holds its own answer and nothing told it to ask again.
@@ -1887,7 +1887,7 @@ function renderChips(){
         VIEWER_SAVED === false ? '\n\nIt could NOT be saved (a private window, or storage is blocked), so you will be asked again next time.' : ''
         }">You are <b>${esc(VIEWER.owner)}</b>${VIEWER_SAVED === false ? ' (not saved)' : ''}</span>`);
       /* NO CHANGE-OWNER BUTTON. Casey, 15 Sep 2026: "I can change to somebody else, it says a
-         pop-up, and then it tells you to read the page as somebody else sign out in My Trades --
+         pop-up, and then it tells you to read the page as somebody else sign out in Trades --
          but you can't sign out. That whole button just needs to go away."
          He is right twice. Who you are comes from the seat you signed in as, so a control that
          offers to make the page say somebody else is offering something it cannot do; and it
@@ -2253,7 +2253,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 10:51 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:01 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4001,12 +4001,12 @@ function watchPanel(){
   const colInc = slotFor('COL'), nflInc = slotFor('NFL');
   const syncNote = WATCH_ERR
     ? `<div class="note"><b class="y">Saved in this browser only.</b> ${WATCH_ERR}
-       Sign in on the <b>My Trades</b> tab and it will follow you to your other devices.</div>`
+       Sign in on the <b>Trades</b> tab and it will follow you to your other devices.</div>`
     : (WATCH_SYNCED
         ? `<div class="note g">Saved to the league, so this list follows you to any device you
            sign in on.</div>`
         : `<div class="note">This list is saved in this browser. Sign in on the
-           <b>My Trades</b> tab and it will follow you to your other devices instead.</div>`);
+           <b>Trades</b> tab and it will follow you to your other devices instead.</div>`);
   return `<div class="card"><h2>Watch List</h2>
     ${syncNote}
     <div class="scrhint"><b>Swipe</b> the table sideways to see Season pts and Season gain.</div>
@@ -8948,7 +8948,11 @@ function applyLiveTrades(list){
   let labels = _copyLabels(last.labels || {});
   const byWeek = new Map();
   list.forEach(t => {
-    if (!t || !t['in']) return;
+    /* A MOVE CAN TAKE A TEAM OFF A ROSTER AND PUT NOTHING ON. The commissioner's by-hand
+       correction does exactly that, and a filter that required an arriving team dropped those
+       rows on the floor -- the roster on the trades page and the roster here would then say
+       different things, with nothing on either to show why. */
+    if (!t || (!t['in'] && !t.out)) return;
     const w = t.week == null ? 0 : +t.week;
     if (!byWeek.has(w)) byWeek.set(w, []);
     byWeek.get(w).push(t);
@@ -8962,9 +8966,11 @@ function applyLiveTrades(list){
       const div = t.div, owner = t.owner;
       if (t.out && labels[t.out])
         labels[t.out] = labels[t.out].filter(p => !(p[0] === div && p[1] === owner));
-      if (!labels[t['in']]) labels[t['in']] = [];
-      if (!labels[t['in']].some(p => p[0] === div && p[1] === owner))
-        labels[t['in']].push([div, owner]);
+      if (t['in']){
+        if (!labels[t['in']]) labels[t['in']] = [];
+        if (!labels[t['in']].some(p => p[0] === div && p[1] === owner))
+          labels[t['in']].push([div, owner]);
+      }
       txs.trades.push({window: null, div: div, owner: owner,
                        old: t.out || '', new: t['in'],
                        /* WHAT THE SHEET SAYS, NOT WHAT THE RATE IS. This used to write the
