@@ -5139,7 +5139,7 @@ function openFix(k){
     + '<p class="note" id="fixErr" style="margin:6px 0 0"></p>'
     + '<div class="row" style="margin-top:12px">'
     + '<button class="dang" onclick="doTakeBack(' + jq(k) + ')">Take the Trade Back</button>'
-    + '<button onclick="closeHelp()">Leave It Alone</button></div>'
+    + '</div>'
     + '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">'
     + '<p><b>Or keep the trade and correct it.</b> Change either side, or both. It stays on week '
     + e.week + ' at the same charge, so nobody pays twice for one correction.</p>'
@@ -5152,7 +5152,7 @@ function openFix(k){
       + opt(outOpts, e.out) + '</select>'
     + '<div class="row" style="margin-top:10px">'
     + '<button class="pri" onclick="doFixSwap(' + jq(k) + ')">Save the Correction</button>'
-    + '</div>', true);
+    + '</div>');
 }
 
 /* The whole of a take-back, so the replacement path cannot do it differently. */
@@ -5312,8 +5312,7 @@ function openHandMove(){
     + '<div id="hmRest"></div>'
     + '<p class="note" id="hmErr" style="margin:6px 0 0"></p>'
     + '<div class="row" style="margin-top:12px">'
-    + '<button class="pri" onclick="doHandMove()">Save the Change</button>'
-    + '<button onclick="closeHelp()">Leave It Alone</button></div>', true);
+    + '<button class="pri" onclick="doHandMove()">Save the Change</button></div>');
 }
 function handPick(){
   var sel = el('hmSeat'), host = el('hmRest');
