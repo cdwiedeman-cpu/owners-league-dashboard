@@ -2314,9 +2314,10 @@ function barRoom(on){
     if (!on) document.body.style.paddingBottom = '';
   } catch (e) {}
 }
-/* THE BAR GOES UP AGAIN EVERY TIME THE PAGE IS REDRAWN. It is rebuilt by every render, so a
-   count, a label or a greyed-out button would otherwise be stale in the dashboard's copy. */
-function afterRender(){ if (BAR_HOST) placeBar(); }
+/* THE BAR IS SETTLED AGAIN EVERY TIME THE PAGE IS REDRAWN. Inside the dashboard that means
+   sending it up, because a count, a label or a greyed-out button would otherwise be stale in the
+   copy being drawn there. Standing alone it means measuring the room to leave underneath it. */
+function afterRender(){ placeBar(); }
 function render(){
   if (PTR_DOWN){
     if (!RENDER_HELD){ RENDER_HELD = true; setTimeout(releasePointer, 400); }
