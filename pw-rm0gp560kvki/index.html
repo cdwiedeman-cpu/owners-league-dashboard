@@ -1686,7 +1686,24 @@ function showTab(which){
   if (which === 'weekly') renderWeekly();
   if (which === 'summary') renderSummary();
   if (which === 'ctrades') renderTrades();
-  else if (COMMISH_PAGE[which]) openCommish(which);
+  else if (COMMISH_PAGE[which]){
+    /* ---- RUN IT AND THE ACCESS LIST LIVE IN THE TRADES SECTION TOO ------------------------
+     * Casey, 15 Sep 2026: "I click on Trades, then Trade Windows or Fix a Trade, then I try to
+     * click Run It and it doesn't switch. I have to refresh the screen."
+     * Four tabs share one section, because they share one copy of the trades application. The
+     * new sub-tabs put TWO more things inside that section -- the sub-tab strip and the panel
+     * the three tables draw into -- and Trade Windows leaves the frame HIDDEN and the panel
+     * showing. Pressing Run It then did everything it was supposed to: it showed the section,
+     * and told the frame to draw the Run view. The frame was still hidden underneath a panel
+     * nobody had put away, so the screen did not change and the tab looked dead.
+     * A SECTION SHARED BY FOUR TABS HAS TO BE RESET BY WHICHEVER TAB TAKES IT. Showing the
+     * section is not the same as showing the right thing inside it. */
+    const sub = el('trSub'), pan = el('trPanels'), fr = el('ctradesBody');
+    if (sub) sub.hidden = true;                 // the Trades sub-tabs belong to Trades
+    if (pan) pan.hidden = true;
+    if (fr) fr.hidden = false;
+    openCommish(which);
+  }
   if (which === 'rules') openRules();
   if (which === 'guide') openGuide();
   /* The header only folds on the scores tab, so leaving it has to unfold. */
@@ -1743,6 +1760,7 @@ function renderTrades(){
        data-trtab="${k}" onclick="setTrTab('${k}')">${label}</button>`).join('')}</div>`;
   const frame = el('ctradesBody'), panels = el('trPanels');
   const inFrame = !!TRFRAME[TRTAB];
+  sub.hidden = false;        // Run It or the Access List may have put it away
   if (frame) frame.hidden = !inFrame;
   if (panels) panels.hidden = inFrame;
   if (inFrame) openCommish('ctrades', TRFRAME[TRTAB]);
@@ -2361,7 +2379,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 12:22 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 7:37 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
