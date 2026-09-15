@@ -5,6 +5,49 @@
 :root{--bg:#0b1119;--pan:#111a24;--pan2:#16212e;--line:#1e2a37;--ink:#e6edf5;--dim:#93a4b8;
  --faint:#5f7080;--good:#4ade80;--bad:#f87171;--gold:#fbbf24;--blue:#60a5fa;--mine:#a78bfa;
  --warn:#f59e0b}
+/* ---- LIGHT AND DARK, FOLLOWING THE READER'S OWN DEVICE -------------------------------------
+ * Casey, 15 Sep 2026, asking whether black-on-white would be cleaner: "what would be the best
+ * visual appeal?" The honest answer is that it depends on the reader and on the room, so the page
+ * follows the setting they have already made -- iPhone Settings, Display and Brightness; a Mac's
+ * Appearance -- and carries a switch for anybody who wants the other one here.
+ *
+ * EVERY COLOUR IS A VARIABLE AND THE TINTS ARE VARIABLES TOO. The state colours used to be typed
+ * as dark hexes at the point of use (a green border here, a red panel there), which is how a page
+ * ends up almost-converted: the text flips and the panel behind it does not. There are now six
+ * tint pairs, and nothing states a colour of its own.
+ */
+:root{
+  --warnbg:#33290f;--warnline:#5d4a17;--warntx:#f2c85c;
+  --goodbg:#0d1a12;--goodline:#245c39;
+  --badbg:#3a1717;--badline:#5b2626;--badtx:#ff9a9a;
+  --goldline:#5c471a;--blueline:#274b6d;
+  --pribg:#12324f;--priline:#2b5f8f;--pritx:#cfe6ff;
+  --chipon:#1d3550;--shade:rgba(4,8,13,.78);--sandbg:#3b1d02;
+}
+:root[data-theme="light"], :root.light{
+  --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+  --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
+  --tv:#0c6c81;
+  --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
+  --goodbg:#e6f6ec;--goodline:#8fd3ad;
+  --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
+  --goldline:#dcc58a;--blueline:#a9cbec;
+  --pribg:#1462b8;--priline:#1462b8;--pritx:#ffffff;
+  --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]):not(.dark){
+    --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+    --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
+    --tv:#0c6c81;
+    --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
+    --goodbg:#e6f6ec;--goodline:#8fd3ad;
+    --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
+    --goldline:#dcc58a;--blueline:#a9cbec;
+    --pribg:#1462b8;--priline:#1462b8;--pritx:#ffffff;
+    --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;
+  }
+}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -13,7 +56,7 @@ body{padding-bottom:64px}
 .wrap{max-width:1040px;margin:0 auto;padding:0 12px}
 /* THE BANNER IS NOT DECORATION. Casey has to be able to tell at a glance, on any screen and
    after any number of tabs, that what he is looking at cannot touch the live league. */
-.sandbar{position:sticky;top:0;z-index:40;background:#3b1d02;border-bottom:2px solid var(--warn);
+.sandbar{position:sticky;top:0;z-index:40;background:var(--sandbg);border-bottom:2px solid var(--warn);
  color:#ffd9a0;padding:8px 12px;font-size:12px;font-weight:600;letter-spacing:.02em}
 .sandbar b{color:var(--warn)}
 h1{font-size:19px;margin:14px 0 2px}
@@ -57,9 +100,9 @@ button,select,input,.popt,.kchip,.pickbtn{touch-action:manipulation}
 button{background:var(--pan2);color:var(--ink);border:1px solid var(--line);border-radius:7px;
  padding:8px 13px;min-height:36px;cursor:pointer}
 button:hover{border-color:var(--blue);color:var(--blue)}
-button.pri{background:#12324f;border-color:#2b5f8f;color:#cfe6ff}
+button.pri{background:var(--pribg);border-color:var(--priline);color:var(--pritx)}
 button.pri:hover{background:#17406a}
-button.dang{border-color:#5b2626;color:#ffb4b4}
+button.dang{border-color:var(--badline);color:var(--bad)}
 button[disabled]{opacity:.42;cursor:not-allowed}
 button[disabled]:hover{border-color:var(--line);color:var(--ink)}
 .tabs{display:flex;gap:4px;overflow-x:auto;padding:10px 0 0;-webkit-overflow-scrolling:touch}
@@ -80,7 +123,7 @@ button[disabled]:hover{border-color:var(--line);color:var(--ink)}
 .seg button{border:0;border-radius:0;background:transparent;color:var(--dim);padding:8px 13px;
  min-height:38px;font-size:13px;white-space:nowrap}
 .seg button+button{border-left:1px solid var(--line)}
-.seg button.on{background:#12324f;color:#cfe6ff;font-weight:600}
+.seg button.on{background:var(--pribg);color:var(--pritx);font-weight:600}
 .seg button:hover:not(.on){color:var(--ink);background:var(--pan2)}
 .setwhy{flex:1 1 210px;font-size:12px;color:var(--dim);line-height:1.5;padding-top:7px;
  min-width:0}
@@ -94,7 +137,7 @@ button[disabled]:hover{border-color:var(--line);color:var(--ink)}
 @media (max-width:640px){.ways{grid-template-columns:1fr}}
 .wway{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--pan2);
   opacity:.62}
-.wway.on{opacity:1;border-color:#245c39;background:#0d1a12}
+.wway.on{opacity:1;border-color:var(--goodline);background:var(--goodbg)}
 .wwhen{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;
   margin:0 0 5px}
 .wtit{font-weight:700;font-size:14px;color:var(--ink);margin:0 0 5px}
@@ -103,10 +146,10 @@ button[disabled]:hover{border-color:var(--line);color:var(--ink)}
 .big{font-size:15px;font-weight:600;color:var(--ink)}
 .pill{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:999px;
  padding:2px 9px;color:var(--dim);white-space:nowrap}
-.pill.good{color:var(--good);border-color:#245c39}
-.pill.bad{color:var(--bad);border-color:#5b2626}
-.pill.gold{color:var(--gold);border-color:#5c471a}
-.pill.blue{color:var(--blue);border-color:#274b6d}
+.pill.good{color:var(--good);border-color:var(--goodline)}
+.pill.bad{color:var(--bad);border-color:var(--badline)}
+.pill.gold{color:var(--gold);border-color:var(--goldline)}
+.pill.blue{color:var(--blue);border-color:var(--blueline)}
 .d{color:var(--dim)}.f{color:var(--faint)}.g{color:var(--good)}.b{color:var(--bad)}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
  word-break:break-all}
@@ -136,7 +179,7 @@ td.num,th.num{text-align:right}
 .pickbtn.empty .pval{color:var(--faint)}
 .pickbtn .pchg{flex:0 0 auto;font-size:11px;color:var(--dim);text-transform:uppercase;
  letter-spacing:.06em}
-.pickbtn.warnbtn{border-color:#5b2626}
+.pickbtn.warnbtn{border-color:var(--badline)}
 .pick{border:1px solid var(--line);border-radius:9px;padding:8px;background:var(--bg)}
 .psearch{width:100%;font-size:16px;min-height:42px}
 .plist{max-height:44vh;overflow-y:auto;overflow-x:hidden;border-top:1px solid var(--line);
@@ -155,14 +198,14 @@ td.num,th.num{text-align:right}
 .kchips{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 0}
 .kchip{border-radius:999px;min-height:30px;padding:4px 12px;font-size:12px;background:var(--pan2);
  color:var(--dim);border:1px solid var(--line)}
-.kchip.on{background:#1d3550;color:var(--ink);border-color:#274b6d;font-weight:600}
+.kchip.on{background:var(--chipon);color:var(--ink);border-color:var(--blueline);font-weight:600}
 /* WHICH MOMENT THE PAGE IS WORKING FROM, at the top of every tab that depends on it. */
 .asof{font-size:12px;color:var(--dim);margin:0 0 10px}
 .asofbox{border-color:var(--warn)}
 .card.warn{border-color:var(--warn)}
 .dropslot{margin:0 0 8px}
 .sandonly{border-left:3px solid var(--warn);padding-left:9px}
-.inbox{background:#0d1a12;border:1px solid #245c39;border-radius:9px;padding:10px;margin:8px 0}
+.inbox{background:var(--goodbg);border:1px solid var(--goodline);border-radius:9px;padding:10px;margin:8px 0}
 .inbox h3{margin:0 0 5px;font-size:13px;color:var(--good)}
 .res{border-left:3px solid var(--line);padding:7px 0 7px 10px;margin:0 0 9px}
 .res.won{border-left-color:var(--good)}
@@ -179,7 +222,7 @@ td.num,th.num{text-align:right}
    rather than to the box, which is why it fought back. And 660px on a laptop made a wide table
    into a tall column for no reason. Now: the box is capped at the height available, the HEADER
    STAYS PUT and only the content under it scrolls, and it is allowed to be wide. */
-.modal{position:fixed;inset:0;background:rgba(4,8,13,.78);z-index:60;display:flex;
+.modal{position:fixed;inset:0;background:var(--shade);z-index:60;display:flex;
  align-items:flex-start;justify-content:center;padding:18px 12px;overflow:hidden}
 .modalbox{background:var(--pan);border:1px solid var(--line);border-radius:12px;max-width:980px;
  width:100%;padding:14px;display:flex;flex-direction:column;max-height:100%;overflow:hidden}
@@ -191,6 +234,8 @@ td.num,th.num{text-align:right}
 .modalbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
  padding-right:2px}
 .modalx{width:34px;min-width:34px;height:34px;padding:0;border-radius:8px}
+/* A CARD THAT IS ANNOUNCING GOOD NEWS. Was an inline hex, which is how half a page converts. */
+.card.ok{border-color:var(--goodline)}
 /* ---- ONE TRADE IS ONE CARD, AND ITS DROP CHOICES LIVE INSIDE IT -----------------------------
    Casey, 15 Sep 2026, watching Bob: "sometimes he was going into the second choice to drop
    thinking it was row two, and putting the team in there thinking he was going to add [another
@@ -213,7 +258,7 @@ td.num,th.num{text-align:right}
 body.hasbar{padding-bottom:88px}
 /* THE NEXT STEP, DIRECTLY UNDER THE ONE JUST FINISHED. Bright enough to find without reading. */
 .addrow{margin:0 0 14px;align-items:center;gap:10px}
-button.add{background:var(--blue);color:#08121c;border-color:var(--blue);font-weight:700;
+button.add{background:var(--blue);color:var(--pan);border-color:var(--blue);font-weight:700;
  min-height:46px;padding:0 18px;font-size:15px}
 button.add:disabled{opacity:.45}
 /* SEND IS THE END OF THE JOB. Full width, and nothing sits beside it competing for the press. */
@@ -224,8 +269,8 @@ button.pri.big{width:100%;min-height:56px;font-size:17px;font-weight:700}
 .chip{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;font-size:12px;
  font-weight:600;background:var(--pan2);border:1px solid var(--line)}
 .chip.g{background:#123324;border-color:#1f5a3a;color:#7ee2a8}
-.chip.w{background:#33290f;border-color:#5d4a17;color:#f2c85c}
-.chip.b{background:#3a1717;border-color:#6b2626;color:#ff9a9a}
+.chip.w{background:var(--warnbg);border-color:var(--warnline);color:var(--warntx)}
+.chip.b{background:var(--badbg);border-color:var(--badline);color:var(--badtx)}
 /* INSIDE ANOTHER PAGE, THIS PAGE HAS NO CHROME OF ITS OWN.
    The league dashboard shows one view of this page in a frame. Its banner, heading and tab strip
    used to be hidden by JavaScript on the first draw, which meant they PAINTED FIRST and vanished.
@@ -241,6 +286,42 @@ button.pri.big{width:100%;min-height:56px;font-size:17px;font-weight:700}
 /* BEFORE THE BODY EXISTS. A query in the address decides it, and CSS cannot read one. */
 try { if (/[?&]only=/.test(location.search)) document.documentElement.className += ' embed'; }
 catch (e) {}
+</script><script>
+/* ---- LIGHT OR DARK, AND THE READER DECIDES ---------------------------------------------------
+ * The page follows the device by default -- there is nothing to set and nothing to explain. The
+ * switch is for the person whose phone is dark but who would rather read this one light, which is
+ * a real preference and not worth arguing with. Kept per browser, because it is about this
+ * screen in this room, not about the league.
+ */
+(function(){
+  var K = 'rfl_theme';
+  var root = document.documentElement;
+  function apply(v){
+    if (v === 'light' || v === 'dark') root.setAttribute('data-theme', v);
+    else root.removeAttribute('data-theme');
+  }
+  try { apply(localStorage.getItem(K)); } catch (e) {}
+  window.rflTheme = function(v){
+    try { if (v) localStorage.setItem(K, v); else localStorage.removeItem(K); } catch (e) {}
+    apply(v);
+  };
+  window.rflThemeNow = function(){
+    try { return localStorage.getItem(K) || 'auto'; } catch (e) { return 'auto'; }
+  };
+  /* THE PHONE'S OWN BAR MATCHES THE PAGE. Without this the notch area stays black behind a white
+     page, which reads as the page having failed to load properly. */
+  function paintBar(){
+    try {
+      var bg = getComputedStyle(root).getPropertyValue('--bg').trim();
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m && bg) m.setAttribute('content', bg);
+    } catch (e) {}
+  }
+  paintBar();
+  var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
+  if (mq && mq.addEventListener) mq.addEventListener('change', paintBar);
+  window.rflPaintBar = paintBar;
+})();
 </script></head><body>
 <div class="sandbar" id="sandbar"><b>Reality Football League</b>
   <span id="clockchip"></span><span id="savechip" class="chip" hidden></span></div>
@@ -2073,6 +2154,16 @@ function render(){
 }
 
 /* ---- the clock panel, on every tab that cares about it -------------------------------------- */
+/* LIGHT OR DARK ON THIS PAGE TOO, so the trades tab does not fight the dashboard around it. */
+function themeRow(){
+  var now = (typeof rflThemeNow === 'function') ? rflThemeNow() : 'auto';
+  var nextOf = {auto: 'light', light: 'dark', dark: ''};
+  var wordOf = {auto: 'Follows Your Device', light: 'Light', dark: 'Dark'};
+  return '<div class="card"><div class="row" style="align-items:center">'
+    + '<span class="note grow">Theme: <b>' + esc(wordOf[now] || wordOf.auto) + '</b></span>'
+    + '<button onclick="rflTheme(' + jq(nextOf[now] || '') + ');'
+    + 'if(window.rflPaintBar)rflPaintBar();render()">Change</button></div></div>';
+}
 function clockCard(){
   /* NOTHING ON THE REAL PAGE. No presets, no boxes, no explanation of a clock nobody can move.
      A commissioner who wants to try a week early does not need to move time: they enter the
@@ -2815,7 +2906,7 @@ function viewTrades(){
      question they arrived with, so then it goes at the top. Until then it belongs beside the
      button that changes it, and nowhere else. */
   if (sent){
-    h += '<div class="card" style="border-color:#245c39"><h2 class="g">You Are Entered for '
+    h += '<div class="card ok"><h2 class="g">You Are Entered for '
       + 'Monday</h2><p class="note">Sent ' + esc(pretty(req.submitted)) + '. This list is for '
       + '<b>week ' + playWeek() + '</b>, the games that start on ' + esc(playWeekStarts())
       + '. Nothing happens until Monday at 4:00pm AZ, and you can change it any time before '
@@ -2905,7 +2996,7 @@ function viewTrades(){
       + (rows.length === 1 ? '' : 's') + ' entered for Monday.</span>'
       + '<button onclick="unsubmit()">Change My List</button></div>';
   }
-  return h + commishCard(s0) + clockCard();
+  return h + commishCard(s0) + themeRow() + clockCard();
 }
 
 /* THE SHAPE OF THE WEEK, WITHOUT THE WALL.
@@ -3201,7 +3292,7 @@ var HOWNOTE = '', WAYSNOTE = '';
 function commishCard(s){
   if (!s || s.role !== 'commissioner') return '';
   var on = !!S.actingAs;
-  return '<div class="card"' + (on ? ' style="border-color:#5b4a12"' : '') + '>'
+  return '<div class="card' + (on ? ' warn' : '') + '">'
     + '<h2>Entering for Someone Else</h2>'
     + (on
         ? '<p class="note b">You are entering for <b>' + esc(String(S.actingAs).split('|')[1])
