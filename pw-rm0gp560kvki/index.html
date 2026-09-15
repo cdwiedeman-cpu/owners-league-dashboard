@@ -220,8 +220,12 @@ main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
 /* THE PLAN FLAG. Deliberately NOT a star: the star means "keep an eye on this" and this means
    "I mean to do something about it", and two controls an inch apart that look alike are two
    controls nobody can tell apart. A minus on your own team, a plus on anybody else's. */
-.wstar.plan{font-weight:800}
-.wstar.plan.on{color:#0b7a3e;border-color:#0b7a3e;background:rgba(11,122,62,.10)}
+/* THE PLAN FLAG. One glyph on every list, and deliberately neither of its neighbours: the + is
+   the compare control and the star is the watch list, and three jobs within an inch of each other
+   need three marks. Green when it is on, because a plan is a thing you have decided to do. */
+.wstar.plan{font-weight:700;font-size:15px}
+.wstar.plan.on{color:#0b7a3e;border-color:#0b7a3e;background:rgba(11,122,62,.12)}
+.wstar.plan.sm{font-size:14px}
 /* THE SUB-TABS STICK BELOW THE PAGE HEADER. Casey, 31 Aug 2026: "the tabs under pickups for my
    roster college and NFL should lock at the top when scrolling, so that it's easy to filter on
    those three if desired without having to scroll back to the top."
@@ -1680,7 +1684,7 @@ function showTab(which){
   for (const [k] of TABS){
     const t = el(tabId(k)); if (t) t.setAttribute('aria-selected', String(which === k));
   }
-  if (['stand','slots','race','weekly','summary'].includes(which) && SEASON === null) loadSeason();
+  if (['stand','slots','race','weekly','summary'].includes(which)) needSeason(() => {});
   if (which === 'slots') renderSlots();
   if (which === 'race') renderRace();
   if (which === 'weekly') renderWeekly();
@@ -2399,7 +2403,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 10:42 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 10:54 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3269,9 +3273,23 @@ function weekPicker(){
      ever league week 0, which is every college game before the NFL opens -- two and a half weeks
      of football under one number. The whole week stays on the list above its pieces, because the
      whole week is what the league scores. */
+  /* A WEEK IS NAMED BY THE WEEK, NOT BY THE DAYS THAT HAPPEN TO HAVE GAMES ON THEM.
+   * Casey, 15 Sep 2026: "shouldn't week one really go from September 8th through the 14th?"
+   * Yes, and it always did — the label was listing MATCH DAYS, and nothing was played on Tuesday
+   * the 8th, so it read "Sep 9 - Sep 14" and looked like a week that started on a Wednesday.
+   * A league week is the seven days from its Tuesday, whether or not anything is played on each
+   * of them, and from October there are Tuesday and Wednesday games every week. Week 0 is the
+   * exception: it is not a seven-day block at all, so its pieces keep their match-day ranges. */
+  const weekSpan = (w) => {
+    const w1 = cal('league_week1_start');
+    if (!w1 || w < 1) return '';
+    const a = new Date(Date.parse(w1 + 'T00:00:00Z') + (w - 1) * 6048e5);
+    const b = new Date(a.getTime() + 6 * 864e5);
+    return ' · ' + segLabel([a.toISOString().slice(0, 10), b.toISOString().slice(0, 10)]);
+  };
   for (let w = last - 1; w >= 0; w--){
     const ds = weekDates(w);
-    const span = ds.length ? ' · ' + segLabel(ds) : '';
+    const span = weekSpan(w) || (ds.length ? ' · ' + segLabel(ds) : '');
     const pieces = weekPieces(w);
     /* A WEEK THAT RAN OVER MORE THAN ONE WEEKEND IS OFFERED ONLY AS ITS WEEKENDS. Casey, 15 Sep
        2026: "I like how you did week zero, but we don't need week zero August 27th to September
@@ -3286,7 +3304,11 @@ function weekPicker(){
         esc(weekShort(w) + span)}</option>`);
       continue;
     }
-    for (const piece of pieces){
+    /* NEWEST FIRST INSIDE A WEEK TOO. Casey, 15 Sep 2026: "your week zero of August 27th should
+       be at the bottom. The oldest week should be on the bottom, the newest on the top."
+       The weeks themselves already counted down and the pieces inside one counted up, so week 0's
+       first weekend sat above its second and read like the later of the two. One direction. */
+    for (const piece of pieces.slice().reverse()){
       const val = w + '@' + piece.join(',');
       const on = WEEK_VIEW === w && WEEK_SEG && WEEK_SEG.join(',') === piece.join(',');
       opts.push(`<option value="${esc(val)}" ${on ? 'selected' : ''}>${
@@ -4342,10 +4364,12 @@ function availTable(kind){
         Change the team above and every number here changes with it.`);
 }
 
-function toggleTeam(n){ OPEN = (OPEN === n) ? null : n; renderPick(); }
+function toggleTeam(n){ OPEN = (OPEN === n) ? null : n; renderPick();
+  needSeason(() => renderPick()); }
 
 let OPEN_WATCH = null;
-function toggleWatch(n){ OPEN_WATCH = (OPEN_WATCH === n) ? null : n; renderPick(); }
+function toggleWatch(n){ OPEN_WATCH = (OPEN_WATCH === n) ? null : n; renderPick();
+  needSeason(() => renderPick()); }
 
 /* WHERE A WATCHED TEAM ACTUALLY STANDS. Four situations, and they are not the same situation.
    Ranking a team you cannot have, beside one you can, with no word about the difference, is the
@@ -4650,7 +4674,8 @@ function watchPanel(){
   </div>` + compareCard('COL') + compareCard('NFL');
 }
 let OPEN_MINE = null;
-function toggleMine(n){ OPEN_MINE = (OPEN_MINE === n) ? null : n; renderPick(); }
+function toggleMine(n){ OPEN_MINE = (OPEN_MINE === n) ? null : n; renderPick();
+  needSeason(() => renderPick()); }
 
 /* ---- THE WATCH LIST ---------------------------------------------------------------------
  * Casey, 14 Sep 2026: "as I'm looking at the live scores and I see teams that win that I like,
@@ -5080,11 +5105,33 @@ function boardGuess(name){
                .slice(0, 3).map(x => x.n);
 }
 
+/* ---- THE PANEL THAT NEEDS THE SEASON HAS TO ASK FOR IT ---------------------------------------
+ * Casey, 15 Sep 2026, after pushing the fix: "doesn't seem like your fix for North Dakota is
+ * flowing through. Going into Live Scores, clicking North Dakota, it still says it has played but
+ * no final scores have reached this page."
+ * The fix was right and nothing ever ran it. `loadSeason()` — the fetch that goes and gets every
+ * result of the season — is kicked off by opening Standings, Slots, Race, Weekly or Season
+ * Summary, and by nothing else. Open Live Scores, tap a team, and the page had never asked ESPN
+ * for anything older than this week's scoreboard.
+ * SO THE THING THAT NEEDS THE DATA ASKS FOR IT. One fetch per page, the first time a panel is
+ * opened that shows a played game, and the panel redraws itself when the answer lands.
+ * A FIX NOBODY TRIGGERS IS NOT A FIX. This is the same shape as "a check that is never run is not
+ * a check" — the code was correct and unreachable, which from the reader's seat is identical to
+ * being wrong.
+ */
+let SEASON_ASKED = false;
+function needSeason(redraw){
+  if (SEASON !== null || SEASON_ASKED) return;
+  SEASON_ASKED = true;
+  Promise.resolve(loadSeason()).then(() => { try { redraw && redraw(); } catch (e) {} })
+    .catch(() => {});
+}
 function openScout(n){
   if (LEAGUE) return openLeagueScout(n);
   if (!n) return;
   SCOUT = n; WHY = null;
   renderScout();
+  needSeason(() => { if (SCOUT) renderScout(); });
   /* Focus moves into the panel so the keyboard and a screen reader follow the eye, and so
      Escape has somewhere to land. */
   const x = document.querySelector('#scout .modalx');
@@ -9637,6 +9684,7 @@ function buildTx(){
 function openLeagueScout(n){
   const t = BY.get(n); const box = el('scout');
   if (!t || !box) return;
+  needSeason(() => { if (SCOUT) openLeagueScout(n); });
   const got = SEASON ? SEASON.get(n) : null;
   /* A DATE IS NOT ALWAYS IN THE SAME FIELD. For a college team `when` IS the date; for an NFL
      team `when` is the week number and the date is in `d`. Filtering on `when >= today` compared
