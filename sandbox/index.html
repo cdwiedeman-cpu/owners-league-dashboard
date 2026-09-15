@@ -3655,8 +3655,8 @@ function rowForm(r, i, free, mine, k){
          a gap where the other two choices put a question. */
       h += '<p class="note" style="margin:8px 0 0">This trade is processed on Monday no matter '
         + 'what. It does not matter whether you won the trades above it.</p>'
-        + '<p class="note" style="margin:6px 0 0">There is no earlier trade to name here. '
-        + 'Which earlier trade? only appears on the other two choices.</p>';
+        + '<p class="note" style="margin:6px 0 0">There is no earlier trade to name here. The '
+        + 'other two choices are the ones that ask you which earlier trade to follow.</p>';
     } else {
       h += '<label class="lb" style="margin-top:10px">Which earlier trade?</label>'
         + '<div class="whichrow">'
@@ -3669,10 +3669,10 @@ function rowForm(r, i, free, mine, k){
         + '</div>'
         + '<p class="note" style="margin:8px 0 0">'
         + (c.type === 'lost'
-            ? 'This trade is only tried if you do <b>not</b> win the trade in row ' + above
-              + '. If you do win it, this trade is skipped.'
-            : 'This trade is only tried if you <b>do</b> win the trade in row ' + above
-              + '. If you do not win it, this trade is skipped.')
+            ? 'This trade is only processed if you do <b>not</b> win the trade in row ' + above
+              + '. If you do win that one, this trade is skipped.'
+            : 'This trade is only processed if you <b>do</b> win the trade in row ' + above
+              + '. If you do not win that one, this trade is skipped.')
         + '</p>';
     }
   }
