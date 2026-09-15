@@ -583,10 +583,18 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
 /* BELOW THIS PAGE'S OWN PANELS, which sit at 60. A panel covers the whole screen, so at 55
    the bar goes behind the shade with everything else, which is where it belongs. */
 #rflbar{position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--pan);
- border-top:1px solid var(--line);padding:9px 12px;display:flex;flex-wrap:wrap;gap:8px;
- align-items:center;box-shadow:0 -4px 14px rgba(15,47,82,.12)}
+ border-top:1px solid var(--line);display:block;
+ padding:10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+ box-shadow:0 -4px 14px rgba(15,47,82,.12)}
 #rflbar[hidden]{display:none}
-#rflbar .grow{flex:1 1 120px;min-width:0;font-size:12px;color:var(--dim)}
+/* THE SAME SHAPE THE TRADES PAGE USES STANDING ALONE: both buttons on one line, one at each end,
+   and the count underneath. On a phone the count used to sit between them and push Submit down
+   onto the curved bottom corner. */
+#rflbar .barrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#rflbar .barrow button{min-width:0;white-space:normal;flex:0 1 auto}
+#rflbar .barrow button.pri{margin-left:auto}
+#rflbar .barrow button:only-child{margin-left:auto}
+#rflbar .grow{display:block;margin-top:7px;font-size:12px;color:var(--dim);text-align:center}
 #rflbar button{font:inherit;font-size:14px;min-height:42px;padding:0 14px;border-radius:9px;
  border:1px solid var(--line);background:var(--pan);color:var(--ink);cursor:pointer}
 #rflbar button.add{border-color:var(--blue);color:var(--blue);font-weight:700;
@@ -594,8 +602,9 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
 #rflbar button.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
 #rflbar button[disabled]{opacity:.45;cursor:default}
 #rflbar .g{color:var(--good)}
-/* THE PAGE KEEPS ROOM FOR IT, or the last trade sits underneath it. */
-body.rflbarroom{padding-bottom:64px}
+/* THE PAGE KEEPS ROOM FOR IT, or the last trade sits underneath it. The figure is MEASURED in
+   barFit() rather than written here, because the bar is one line on a laptop and two on a phone
+   and a guess is wrong on one of them. */
 .card{background:var(--pan);border:1px solid var(--line);border-radius:12px;
  padding:12px 14px;margin-bottom:14px;
  box-shadow:0 1px 2px rgba(15,47,82,.07), 0 6px 18px rgba(15,47,82,.08)}
@@ -1986,7 +1995,7 @@ function openCommish(which, view){
       const b = barShell();
       b.dataset.html = d.html || '';
       b.innerHTML = d.html || '';
-      document.body.classList[d.html ? 'add' : 'remove']('rflbarroom');
+      document.body.style.paddingBottom = d.html ? (b.offsetHeight + 10) + 'px' : '';
       barFit();
       if (!d.html) b.hidden = true;
     });
@@ -2514,7 +2523,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 12:23 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 12:41 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
