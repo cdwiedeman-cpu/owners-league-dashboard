@@ -2403,7 +2403,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 10:59 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 11:31 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9693,10 +9693,28 @@ function openLeagueScout(n){
   const gd = g => String(g.d || (typeof g.when === 'string' ? g.when : '') || '');
   const gwhen = g => gd(g) ? pretty(gd(g))
                  : (typeof g.when === 'number' ? `Week ${g.when}` : '<span class="d">—</span>');
-  const rows = (t.hist || []).filter(g => g.pf != null).map(g => `<tr>
+  /* ---- THE SCORE IS BAKED OR FETCHED, AND THIS PANEL ONLY EVER LOOKED AT BAKED --------------
+   * Casey, 15 Sep 2026, three times: "North Dakota has played, but no final scores have reached
+   * this page." The scores were on the page. `SEASON` had them, `LIVE_SCORES` had them under both
+   * spellings of the day, and the same panel on his own dashboard showed all three — because that
+   * one goes through `scoreOrNot()`, which asks what the page has FETCHED.
+   * This one filtered on `g.pf != null` — the score BAKED INTO THE FILE — and nothing else. So
+   * every game the build had not verified was dropped from the table, and with the table empty
+   * the panel printed the sentence for a team with no results at all.
+   * TWO PANELS SHOWING THE SAME THING FROM TWO SOURCES, and only one of them had been taught
+   * about the second. They both take the baked score first and the fetched one otherwise now.
+   */
+  const scoreOf = (g) => {
+    if (g.pf != null && g.pa != null) return {pf: g.pf, pa: g.pa};
+    const lv = liveScore(n, gd(g));
+    return lv ? {pf: lv.pf, pa: lv.pa} : null;
+  };
+  const played = (t.hist || []).filter(g => !g.nc).map(g => ({g: g, s: scoreOf(g)}));
+  const stillUnknown = played.filter(x => !x.s).length;
+  const rows = played.filter(x => x.s).map(({g, s}) => `<tr>
     <td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
-    <td class="num ${g.pf > g.pa ? 'g' : 'b'}">${g.pf}–${g.pa}</td>
-    <td class="num">${pointsFor(t.pool, g.pf, g.pa).toFixed(1)}</td></tr>`).join('');
+    <td class="num ${s.pf > s.pa ? 'g' : 'b'}">${s.pf}–${s.pa}</td>
+    <td class="num">${pointsFor(t.pool, s.pf, s.pa).toFixed(1)}</td></tr>`).join('');
   /* A row with no date at all is kept rather than dropped: unknown is not "already played". */
   const upcoming = (t.sched || []).filter(g => !gd(g) || gd(g) >= azToday());
   /* ALL OF THEM. This was capped at eight with a line saying "showing the next 8 of 18" and no
@@ -9733,7 +9751,10 @@ function openLeagueScout(n){
       ${rows ? `<h2>Results</h2><div class="scr"><table>
         <colgroup><col style="width:26%"><col style="width:38%"><col style="width:20%"><col style="width:16%"></colgroup>
         <thead><tr><th>Date</th><th>Opponent</th><th class="num">Score</th><th class="num">Pts</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>`
+        <tbody>${rows}</tbody></table></div>${stillUnknown
+          ? `<div class="note y"><b>${stillUnknown} more game${stillUnknown === 1 ? ' has' : 's have'}
+             been played and ${stillUnknown === 1 ? 'its score is' : 'their scores are'} not here
+             yet.</b> They are missing, not nil. Reload somewhere ESPN is reachable.</div>` : ''}`
         : `<h2>Results</h2><div class="empty">${
             (t.hist || []).length
               ? `<b>${esc(n)} has played, but no final scores have reached this page.</b>
