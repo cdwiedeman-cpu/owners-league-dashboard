@@ -286,11 +286,23 @@ td.num,th.num{text-align:right}
  align-items:center;box-shadow:0 -10px 24px rgba(0,0,0,.45)}
 .stickybar .grow{flex:1 1 120px;min-width:0;font-size:12px;color:var(--dim)}
 body.hasbar{padding-bottom:88px}
-/* THE NEXT STEP, DIRECTLY UNDER THE ONE JUST FINISHED. Bright enough to find without reading. */
+/* ---- ONE FILLED BUTTON PER SCREEN, AND IT IS THE ONE THAT FINISHES THE JOB -------------------
+ * Casey, 15 Sep 2026: "in the middle section both Add Another Trade and Submit My Trades are a
+ * blue box. On the floating bar, Add Another Trade is grey and Submit is blue. If they're all
+ * blue that's too much blue on the screen, but if they're grey at the bottom they're not
+ * noticeable. I'll leave it to you."
+ * The rule that settles it, and it now holds in both places: SUBMIT IS FILLED, EVERYTHING ELSE IS
+ * OUTLINED. Add Another Trade keeps the blue — same size, same weight, blue text on a blue
+ * outline — so it is impossible to miss and impossible to mistake for the button that ends the
+ * job. Two filled buttons side by side is a fork in the road, and adding a row is not a fork.
+ */
 .addrow{margin:0 0 14px;align-items:center;gap:10px}
-button.add{background:var(--blue);color:var(--pan);border-color:var(--blue);font-weight:700;
- min-height:46px;padding:0 18px;font-size:15px}
+button.add{background:var(--pan);color:var(--blue);border-color:var(--blue);border-width:2px;
+ font-weight:700;min-height:46px;padding:0 18px;font-size:15px}
+button.add:hover{background:var(--chipon);color:var(--blue);border-color:var(--blue)}
 button.add:disabled{opacity:.45}
+/* The floating bar carries the same pair, so the two rows cannot teach different things. */
+.stickybar button.add{min-height:42px;font-size:14px;padding:0 14px}
 /* SEND IS THE END OF THE JOB. Full width, and nothing sits beside it competing for the press. */
 .sendwrap{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
 button.pri.big{width:100%;min-height:56px;font-size:17px;font-weight:700}
@@ -2014,7 +2026,7 @@ window.addEventListener('message', function(e){
 /* ---- A PLAN ARRIVING FROM THE PICKUPS TAB ---------------------------------------------------
  * Casey, 15 Sep 2026: "if it's already recorded, it would be great to send it to the Trades tab
  * ... and I go to the Trades tab and then can review it and then save the trade."
- * It FILLS THE FORM IN AND STOPS. Nothing is entered into a week that has not had Save My Trades
+ * It FILLS THE FORM IN AND STOPS. Nothing is entered into a week that has not had Submit My Trades
  * pressed on it -- a planning screen is the last place on this site where something binding
  * should happen without that word.
  * IT NEVER OVERWRITES A LIST THAT IS ALREADY SENT. A list sitting in Monday's flips is a
@@ -2051,7 +2063,7 @@ function takePlan(rows){
       '<p><b>' + clean.length + ' trade' + (clean.length === 1 ? '' : 's') + '</b> from your '
       + 'Pickups plan ' + (clean.length === 1 ? 'is' : 'are') + ' on this tab now.</p>'
       + '<p><b>Nothing is in Monday\u2019s coin flips yet.</b> Read it over, change anything you '
-      + 'want, and press <b>Save My Trades</b>.</p>');
+      + 'want, and press <b>Submit My Trades</b>.</p>');
   };
   if (!had) return put();
   showHelp('Replace the List You Have?',
@@ -2936,7 +2948,7 @@ function viewTrades(){
       + 'only if you do win an earlier trade. That is how you say &ldquo;if I miss out on Navy, '
       + 'try Alabama instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as '
       + 'well&rdquo;.</li>'
-      + '<li>Press <b>Save My Trades</b>. Until you press it, your trades are only on this '
+      + '<li>Press <b>Submit My Trades</b>. Until you press it, your trades are only on this '
       + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
       + '<p class="note">Up to ' + P.MAX_ROWS + ' trades. You can change and re-send as often as '
       + 'you like, right up to Monday at 3:59pm AZ.</p>';
@@ -3031,7 +3043,7 @@ function viewTrades(){
       /* SEND IS THE END OF THE JOB, so it is the biggest thing on the page and it is on its own.
          Clear Them All is not a step in the job and no longer sits beside the step that is. */
       h += '<div class="sendwrap">'
-        + '<button class="pri big" onclick="submitList()">Save My Trades</button>'
+        + '<button class="pri big" onclick="submitList()">Submit My Trades</button>'
         + '<div class="row" style="margin-top:8px;justify-content:center">'
         /* NOT class="f". On this page `f` means FAINT TEXT, so the button read as greyed out --
            Casey, 15 Sep 2026: "it looks like it's grayed out, so it doesn't look like it's ever a
@@ -3041,7 +3053,7 @@ function viewTrades(){
     }
     if (rows.length){
       /* THE STATUS, NOT A THIRD BUTTON. Casey, 15 Sep 2026: "you have a big box for Save My
-         Trades and then underneath it Remove All Trades, then another Save My Trades at the
+         Trades and then underneath it Remove All Trades, then another Submit My Trades at the
          bottom. That seems duplicative."
          It was. There is the big one at the end of the list and the one on the bar that follows
          the screen, and this was a third copy of the same action four inches from the first.
@@ -3051,7 +3063,7 @@ function viewTrades(){
         + 'padding-top:12px">'
         + '<span class="pill bad">Not Saved Yet</span>'
         + '<span class="note grow">This list is <b>not</b> in Monday&rsquo;s coin flips until you '
-        + 'press <b>Save My Trades</b>. You can change them and save again as often as you like, '
+        + 'press <b>Submit My Trades</b>. You can change them and save again as often as you like, '
         + 'up to Monday at 3:59pm AZ.</span></div>';
     }
   }
@@ -3063,12 +3075,12 @@ function viewTrades(){
      are where the eye lands after the last trade -- and this bar means he never has to hunt. */
   if (!sent){
     h += '<div class="stickybar" id="actbar">'
-      + '<button ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '') + ' onclick="addRow()">'
-      + '+ Add Another Trade</button>'
+      + '<button class="add" ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '')
+      + ' onclick="addRow()">+ Add Another Trade</button>'
       + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades &middot; not saved yet'
       + '</span>'
       + '<button class="pri" ' + (rows.length ? '' : 'disabled')
-      + ' onclick="submitList()">Save My Trades</button></div>';
+      + ' onclick="submitList()">Submit My Trades</button></div>';
   } else {
     h += '<div class="stickybar" id="actbar">'
       + '<span class="grow"><b class="g">Saved and in for Monday.</b> ' + rows.length + ' trade'
@@ -3687,10 +3699,10 @@ function viewRun(){
           + 'running a coin flip wherever more than one owner asked for the same team.'
           + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm AZ.' : '')
         : 'Nothing has been sent for week ' + playWeek() + ' yet. Enter a list on <b>Trades</b> '
-          + 'and press <b>Save My Trades</b>.')
+          + 'and press <b>Submit My Trades</b>.')
     + '</p>'
     + (drafts.length
-        ? '<p class="note b">Typed a list but never pressed <b>Save My Trades</b>, so they are NOT '
+        ? '<p class="note b">Typed a list but never pressed <b>Submit My Trades</b>, so they are NOT '
           + 'in this week: ' + esc(drafts.join(', ')) + '.</p>' : '')
     + '<p class="note">These are the lists sent for the games that start on '
     + esc(playWeekStarts()) + '. A list is entered during the week BEFORE the games it is for, '
@@ -4314,7 +4326,7 @@ function welcomeText(seat, code, email){
   + '5. Open it from the icon and type your code in once more.\n'
   + '\n'
   + 'ENTERING A TRADE\n'
-  + 'Go to the Trades tab. Name the team you want to pick up and the teams you would be willing to give up for it, then press Save My Trades.\n'
+  + 'Go to the Trades tab. Name the team you want to pick up and the teams you would be willing to give up for it, then press Submit My Trades.\n'
   + 'You can change your list as often as you like until the window closes at 3:59pm AZ on Monday. AZ is Arizona time, which the league runs on all year.\n'
   + '\n'
   + 'If the code will not work, reply to this message and I will send you a new one.\n';
