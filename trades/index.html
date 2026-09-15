@@ -254,6 +254,44 @@ td.num,th.num{text-align:right}
 .tradehd .tno{font-weight:700;font-size:15px;color:var(--ink);letter-spacing:.01em}
 .tradehd .tsub{font-size:11px;color:var(--dim)}
 .dropbox{border-left:3px solid var(--line);padding:2px 0 2px 11px;margin:0 0 2px}
+/* ---- THE TRADE CARD, READ BY SOMEBODY WHO IS NOT LOOKING FOR IT ------------------------------
+ * Casey, 15 Sep 2026: "even the text under What Would You Give Up, it's this tiny text -- are
+ * they really going to read that? ... nothing chosen yet is this little teeny tiny text. Nobody's
+ * going to read this. You've got older people and it's such small text ... can we not put things
+ * side by side? You've got an entire screen here."
+ *
+ * Three things, and none of them is more words:
+ *   1. NOTHING ON THIS CARD IS UNDER 13px. The 11px note under step 2 was the page telling itself
+ *      a rule. The rule is in How to Enter a Trade, where somebody who wants it will look.
+ *   2. THE HEADER SAYS WHAT THE TRADE IS, at a size you can read across a room.
+ *   3. ON A WIDE SCREEN THE TWO HALVES SIT SIDE BY SIDE. A search box stretched over 1,100px is
+ *      not easier to use than one over 500px; it is just longer to read.
+ */
+.tradehd .tno{font-size:17px}
+.tradehd .tsub{font-size:14px;color:var(--ink);font-weight:600}
+.tradehd .tsub.none{color:var(--dim);font-weight:400;font-style:italic}
+.trow label.lb.step{font-size:14px}
+.trow label.lb.step .num{min-width:21px;height:21px;line-height:21px;font-size:12px}
+.trow .note{font-size:13px}
+.trow label.lb{font-size:12px}
+/* The two halves of a trade, beside each other where there is room for them. */
+.tgrid{display:grid;grid-template-columns:1fr;gap:0 22px}
+@media (min-width:760px){
+  .tgrid{grid-template-columns:1fr 1fr}
+  .tgrid > .half{min-width:0}
+}
+/* ---- WHEN TO TRY THIS TRADE IS A ROW OF CHOICES, NOT A DROPDOWN ------------------------------
+   A dropdown hides its options behind a tap, which is exactly wrong for the control he says
+   nobody understands. These are on screen, and the one that is on is filled. */
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 0}
+.opts button{flex:1 1 210px;min-height:48px;font-size:14px;text-align:left;padding:0 14px;
+ border:1px solid var(--line);background:var(--pan);color:var(--dim);border-radius:9px}
+.opts button.on{background:var(--pribg);border-color:var(--priline);color:var(--pritx);
+ font-weight:700}
+.whichrow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+.whichrow button{min-height:44px;font-size:14px;padding:0 14px}
+.whichrow button.on{background:var(--pribg);border-color:var(--priline);color:var(--pritx);
+ font-weight:700}
 /* ---- THE TWO BUTTONS THAT MATTER ARE ALWAYS ON SCREEN ---------------------------------------
    He kept scrolling up and down hunting for Add Another Trade and Send My List. On a page this
    tall that is not a labelling problem, it is a position problem. */
@@ -3419,78 +3457,74 @@ function rowForm(r, i, free, mine, k){
   var h = '<div class="trow"><div class="tradehd">'
     + '<span class="tno">Trade ' + (i + 1) + '</span>'
     + (r.pickup ? '<span class="pill">' + (kind === 'NFL' ? 'NFL' : 'college') + '</span>' : '')
-    + '<span class="tsub">' + (r.pickup ? esc(r.pickup) : 'nothing chosen yet') + '</span>'
+    /* THE HEADER SAYS WHAT THIS TRADE IS, at a size that can be read without leaning in. */
+    + '<span class="tsub' + (r.pickup ? '' : ' none') + '">'
+    + (r.pickup ? esc(r.pickup) : 'no team chosen yet') + '</span>'
     + '<button onclick="delRow(' + i + ')" title="Remove trade ' + (i + 1)
     + '">Remove</button></div>'
+    /* THE TWO HALVES SIT BESIDE EACH OTHER WHERE THERE IS ROOM. */
+    + '<div class="tgrid"><div class="half">'
     + pickField('p' + i, 'The Team You Want', r.pickup, ups, null, '1')
+    + '</div><div class="half">'
     + '<label class="lb step' + ((r.drops || []).filter(Boolean).length ? ' done' : '')
-    + '" style="margin-top:11px"><span class="num">2</span>What You Would Give Up</label>'
-    /* ONE IDEA PER SENTENCE. Casey, 14 Sep 2026: "only one of them goes does, but the way
-       you're trying to describe the first on the list and then the rest are backups ... can you
-       fix that sentence?" It was one sentence carrying three rules with a colon in the middle,
-       and the last clause left the reader to work out why backups exist at all. His own wording
-       for the first line was better than mine and is used here. */
-    + '<p class="note" style="margin:0 0 6px">Put them in the order you would prefer to drop '
-    + 'them. <b>Only one team gets dropped.</b> It is the first team on your list that you still '
-    + 'hold and are still allowed to drop. The teams below it are your backups, in case an '
-    + 'earlier trade on your list has already dropped one.'
+    + '"><span class="num">2</span>What You Would Give Up</label>'
+    /* ONE SENTENCE, AT A READABLE SIZE. The three-rule paragraph that used to sit here was 11px
+       and Casey is right that nobody reads it -- the rules live in How to Enter a Trade, which is
+       a button at the top of this tab, and repeating them in small print under the boxes taught
+       nobody anything. */
+    + '<p class="note" style="margin:0 0 8px">Only <b>one</b> of these is dropped. Put them in the '
+    + 'order you would prefer to lose them.'
     + (kind
-        ? ' Showing your <b>' + (kind === 'NFL' ? 'NFL' : 'college') + '</b> teams, because '
-          + esc(r.pickup) + ' is ' + (kind === 'NFL' ? 'an NFL team' : 'a college team') + '.'
-        : ' Choose the team you want first. This list then narrows to the teams you are allowed '
-          + 'to trade for it.')
+        ? ' Showing your ' + (kind === 'NFL' ? 'NFL' : 'college') + ' teams.'
+        : ' Choose the team you want first.')
     + '</p>';
   /* NUMBERED, AND ONE PER LINE. Casey, 11 Sep 2026: "are we reading it left to right or top to
-     bottom? That could confuse teams. I think we need to label it 1, 2, 3, 4." A two-column grid
-     of identical boxes has no reading order at all, and the ORDER IS THE WHOLE RULE here. */
-  /* INDENTED BEHIND A RULE, so a second box under the first cannot read as a second trade. */
+     bottom? I think we need to label it 1, 2, 3, 4." The ORDER IS THE WHOLE RULE here. */
   h += '<div class="dropbox">' + drops.map(function(d, j){
     var opts = dropList.map(function(n){ return {n: n, why: whyNotDrop(k, n, r.pickup)}; });
     return '<div class="dropslot">'
-      + pickField('d' + i + '_' + j,
-          (ORD[j] || (j + 1) + 'th') + ' choice to drop for trade ' + (i + 1), d, opts)
+      + pickField('d' + i + '_' + j, (ORD[j] || (j + 1) + 'th') + ' choice to drop', d, opts)
       + '</div>';
-  }).join('') + '</div>';
+  }).join('') + '</div></div></div>';
 
-  /* STEP 3 DOES NOT EXIST ON THE FIRST ROW, AND IT USED TO.
+  /* ---- STEP 3 IS A ROW OF CHOICES YOU CAN SEE, NOT A DROPDOWN ------------------------------
    *
-   * Casey, 14 Sep 2026: "I switch it to only if I did not get row, then on the side it says no
-   * earlier row, and it's a drop down that can't be used." Of course it was: row 1 has no row
-   * above it, so there was nothing for the control to point at. A control with one option that
-   * means "there are no options" is a control that should not be on screen.
+   * Casey, 15 Sep 2026: "when to try this trade, and then which earlier trade -- those aren't
+   * really clear or easy to see. I don't think it's obvious for them to know what that is."
    *
-   * AND THE LABEL SAID NOTHING. "Go for this team" was his second complaint and a fair one -- it
-   * is a heading over a rule about WHEN, not a thing you do. The options are written as the
-   * sentence the owner would say out loud, and the explanation under them names the row.
+   * A dropdown hides every option but one behind a tap, which is the worst possible shape for
+   * the control nobody understands. All three are on screen now, written as the sentence an owner
+   * would say, and the one in force is filled in. Which earlier trade is a row of buttons naming
+   * the team, for the same reason.
+   * IT STILL DOES NOT EXIST ON THE FIRST TRADE. Trade 1 has nothing above it to depend on.
    */
   if (i > 0){
     var above = c.row || 1;
-    h += '<label class="lb step done" style="margin-top:11px"><span class="num">3</span>'
+    var opt = function(val, label){
+      return '<button class="' + (c.type === val ? 'on' : '') + '" '
+        + 'onclick="editRow(' + i + ',\'condtype\',' + jq(val) + ')">' + label + '</button>';
+    };
+    h += '<label class="lb step done" style="margin-top:14px"><span class="num">3</span>'
       + 'When to Try This Trade</label>'
-      + '<select onchange="editRow(' + i + ',\'condtype\',this.value)">'
-      + '<option value="always"' + (c.type === 'always' ? ' selected' : '')
-      + '>Always try it</option>'
-      + '<option value="lost"' + (c.type === 'lost' ? ' selected' : '')
-      + '>Only if I don\u2019t win an earlier trade</option>'
-      + '<option value="won"' + (c.type === 'won' ? ' selected' : '')
-      + '>Only if I win an earlier trade</option></select>';
+      + '<div class="opts">'
+      + opt('always', 'Always try it')
+      + opt('lost', 'Only if I don\u2019t win an earlier trade')
+      + opt('won', 'Only if I win an earlier trade')
+      + '</div>';
     if (c.type === 'always'){
-      /* NOT "EVERY WEEK". Casey, 14 Sep 2026: "that makes it sound like we're gonna try to make
-         that trade every single week once they enter it. That's not the case." Right -- a list is
-         for ONE Monday and is cleared when the week settles. "Always" here means "wherever the
-         rows above it land", not "for ever". */
-      h += '<p class="note" style="margin:6px 0 0">This trade is always tried on Monday. It does '
+      h += '<p class="note" style="margin:8px 0 0">This trade is always tried on Monday. It does '
         + 'not matter whether you got the trades above it.</p>';
     } else {
-      h += '<label class="lb" style="margin-top:7px">Which earlier trade?</label>'
-        + '<select onchange="editRow(' + i + ',\'condrow\',this.value)">'
+      h += '<label class="lb" style="margin-top:10px">Which earlier trade?</label>'
+        + '<div class="whichrow">'
         + Array.apply(null, {length: i}).map(function(_, n){
-            return '<option value="' + (n + 1) + '"' + (above === n + 1 ? ' selected' : '')
-              + '>Row ' + (n + 1) + (rows0(i, n) ? ' \u2014 ' + esc(rows0(i, n)) : '')
-              + '</option>';
+            var team = rows0(i, n);
+            return '<button class="' + (above === n + 1 ? 'on' : '') + '" '
+              + 'onclick="editRow(' + i + ',\'condrow\',' + (n + 1) + ')">Trade ' + (n + 1)
+              + (team ? ' \u2014 ' + esc(team) : '') + '</button>';
           }).join('')
-        + '</select>'
-        + '<p class="note" style="margin:6px 0 0">'
+        + '</div>'
+        + '<p class="note" style="margin:8px 0 0">'
         + (c.type === 'lost'
             ? 'This trade is only tried if you do <b>not</b> win the trade in row ' + above
               + '. If you do win it, this trade is skipped.'
