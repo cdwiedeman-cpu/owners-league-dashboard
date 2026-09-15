@@ -2011,7 +2011,7 @@ function setTab(t){
   TAB = t; render(); window.scrollTo(0, 0);
 }
 function closeHelp(){ OPEN = null; var b = el('help'); b.hidden = true; b.innerHTML = '';
-  document.body.style.overflow = ''; }
+  document.body.style.overflow = ''; sendBar(); }
 /* ---- A PANEL HAS TO OPEN WHERE THE READER IS LOOKING ------------------------------------------
  *
  * Casey, 14 Sep 2026: "when you send in the list, the pop-up comes up and says you are entered
@@ -2035,8 +2035,12 @@ window.addEventListener('message', function(e){
   var d = e && e.data;
   if (!d) return;
   if (d.rfl === 'plan') return takePlan(d.rows);
-  if (d.rfl !== 'view') return;
-  if (typeof d.top !== 'number' || typeof d.height !== 'number') return;
+  if (d.rfl !== 'view' && d.rfl !== 'barhost' && d.rfl !== 'baract') return;
+  if (d.rfl === 'view'){
+    if (typeof d.top !== 'number' || typeof d.height !== 'number') return;
+  }
+  if (d.rfl === 'barhost'){ BAR_HOST = true; sendBar(); return; }
+  if (d.rfl === 'baract'){ return barAct(d.act); }
   FRAME_VIEW = d;
   placeModal();
   /* THE BAR IS MOVED WHEN THE BROWSER IS ABOUT TO PAINT, not the instant the message lands.
@@ -2155,17 +2159,62 @@ function _planPut(){ if (_PLAN_PUT) _PLAN_PUT(); }
 /* THE ACTION BAR SITS ON THE BOTTOM EDGE OF WHATEVER IS ON SCREEN. Same problem as the panel,
    same answer: inside the dashboard the frame does not scroll, so `position: fixed` would pin it
    to the bottom of a page two screens tall. Standing alone the CSS default is already right. */
+/* ---- INSIDE THE DASHBOARD, THE DASHBOARD HOLDS THE BAR ---------------------------------------
+ *
+ * Casey, 15 Sep 2026, twice: "as you scroll, it kind of bounces, versus just kind of holding
+ * tight to the scroll." The first answer -- fewer messages, and a transform instead of a top
+ * edge -- did not fix it, and measuring said why. Driven at 45 pixels a frame, the bar sat
+ * EXACTLY 45 PIXELS BEHIND on every single frame, and snapped back the moment the scrolling
+ * stopped. Scroll the other way and it trails the other way. That is the bounce.
+ *
+ * ONE FRAME OF LAG IS THE FLOOR FOR ANYTHING PLACED FROM OUTSIDE. The dashboard cannot measure
+ * where the reader is until the scroll has already been drawn, and the message carrying that
+ * measurement cannot arrive before the next frame. No amount of throttling reaches zero, because
+ * the round trip is the delay.
+ *
+ * So the bar is not placed from outside any more. Inside the dashboard this page hands the
+ * finished bar UP, and the dashboard draws it in its own window, where `position: fixed` holds
+ * it to the bottom edge with no messages and no arithmetic at all. A press comes back down by
+ * name. THIS PAGE IS STILL THE ONLY PLACE THE BAR IS DECIDED -- its wording, its counts and
+ * what is greyed out are worked out here and handed over whole.
+ * Standing alone, nothing changes: the bar is this page's own and `position: fixed` was always
+ * right for it.
+ */
+var BAR_HOST = false;
+function barAct(act){
+  if (act === 'add') return addRow();
+  if (act === 'submit') return submitList();
+  if (act === 'unsubmit') return unsubmit();
+}
+function sendBar(){
+  if (!BAR_HOST) return;
+  var bar = el('actbar');
+  /* A PANEL IS OPEN OVER THIS PAGE, so the bar comes off. The dashboard draws in its own window
+     and would otherwise float the bar on top of a panel it cannot see. */
+  var html = (bar && !OPEN)
+    ? String(bar.innerHTML).replace(/ on[a-z]+="[^"]*"/g, '')
+    : '';
+  try { window.parent.postMessage({rfl: 'bar', html: html}, '*'); } catch (e) {}
+}
 function placeBar(){
   var bar = el('actbar');
   if (!bar) return;
+  if (BAR_HOST){
+    /* HIDDEN HERE, DRAWN THERE. `hasbar` keeps the room at the foot of the page either way, so
+       the last trade is never underneath it. */
+    bar.style.display = 'none';
+    sendBar();
+    return;
+  }
+  bar.style.display = '';
   if (!FRAME_VIEW || !(FRAME_VIEW.height > 0)){
     bar.style.position = ''; bar.style.top = ''; bar.style.bottom = '';
     bar.style.transform = ''; bar.style.willChange = '';
     return;
   }
-  /* MOVED WITH A TRANSFORM, NOT WITH `top`. Changing `top` on every message asks the browser to
-     lay the page out again before it can draw, so the bar lands a beat behind the scroll and
-     you can see it catch up. A transform is drawn without laying anything out. */
+  /* AN OLD DASHBOARD IS STILL OUT THERE. A copy that has not learned to hold the bar sends the
+     band and nothing else, so this page goes on placing its own -- a beat behind, which is what
+     it always was, rather than no bar at all. */
   var y = Math.max(0, FRAME_VIEW.top + FRAME_VIEW.height - bar.offsetHeight);
   bar.style.position = 'absolute';
   bar.style.bottom = 'auto';
@@ -2216,6 +2265,7 @@ function showHelp(title, html, ask){
      dashboard, and locking a scroll the reader can still move would be a lie either way. */
   if (!FRAME_VIEW) document.body.style.overflow = 'hidden';
   placeModal();
+  sendBar();
 }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && OPEN) closeHelp(); });
 
@@ -2247,6 +2297,9 @@ document.addEventListener('pointercancel', releasePointer, true);
 function barRoom(on){
   try { document.body.classList[on ? 'add' : 'remove']('hasbar'); } catch (e) {}
 }
+/* THE BAR GOES UP AGAIN EVERY TIME THE PAGE IS REDRAWN. It is rebuilt by every render, so a
+   count, a label or a greyed-out button would otherwise be stale in the dashboard's copy. */
+function afterRender(){ if (BAR_HOST) placeBar(); }
 function render(){
   if (PTR_DOWN){
     if (!RENDER_HELD){ RENDER_HELD = true; setTimeout(releasePointer, 400); }
@@ -2300,6 +2353,7 @@ function render(){
     el('body').innerHTML = accessWarning() + ((COMMISH_TABS[want] && !isCommish())
       ? commishOnly(want === 'run' ? 'Run It' : 'The Access List')
       : only());
+    afterRender();
     return;
   }
   var shown = allowedTabs();
@@ -2318,6 +2372,7 @@ function render(){
   } else {
     el('body').innerHTML = accessWarning() + view();
   }
+  afterRender();
 }
 
 /* ---- the clock panel, on every tab that cares about it -------------------------------------- */
@@ -3157,19 +3212,23 @@ function viewTrades(){
      kept scrolling up and down to try to find it. And the Send My List, he was struggling to
      find that because this page is pretty busy." The inline buttons stay where they are -- they
      are where the eye lands after the last trade -- and this bar means he never has to hunt. */
+  /* EVERY BUTTON ON THIS BAR NAMES ITS ACTION IN `data-act`. Inside the dashboard the bar is
+     drawn by the dashboard, where `onclick="addRow()"` means nothing, so a press is carried back
+     here by name. The wording, the counts and what is greyed out are still decided HERE and
+     nowhere else -- the dashboard is handed the finished bar and never builds one. */
   if (!sent){
     h += '<div class="stickybar" id="actbar">'
-      + '<button class="add" ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '')
+      + '<button class="add" data-act="add" ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '')
       + ' onclick="addRow()">+ Add Another Trade</button>'
       + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades &middot; not saved yet'
       + '</span>'
-      + '<button class="pri" ' + (rows.length ? '' : 'disabled')
+      + '<button class="pri" data-act="submit" ' + (rows.length ? '' : 'disabled')
       + ' onclick="submitList()">Submit My Trades</button></div>';
   } else {
     h += '<div class="stickybar" id="actbar">'
       + '<span class="grow"><b class="g">Saved and in for Monday.</b> ' + rows.length + ' trade'
       + (rows.length === 1 ? '' : 's') + '.</span>'
-      + '<button onclick="unsubmit()">Change My Trades</button></div>';
+      + '<button data-act="unsubmit" onclick="unsubmit()">Change My Trades</button></div>';
   }
   return h + commishCard(s0) + clockCard();
 }
@@ -5806,5 +5865,13 @@ buildRulesNote();
 /* A LINK FROM AN EMAIL IS HANDLED BEFORE THE PAGE ASKS WHO IT IS, because redeeming the link is
    what makes there be an answer. */
 if (!redeemFromUrl()) boot();
+/* SAY HELLO TO WHATEVER IS HOLDING THIS PAGE. The dashboard answers with `barhost` and then owns
+   the action bar. Nothing answers when this page is opened on its own, or when the dashboard is
+   an older copy, and the bar stays here. */
+try {
+  if (window.parent && window.parent !== window){
+    window.parent.postMessage({rfl: 'hello'}, '*');
+  }
+} catch (e) {}
 </script>
 </body></html>
