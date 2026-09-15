@@ -576,6 +576,24 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
   padding:9px 18px;min-height:40px;box-shadow:0 1px 0 rgba(0,0,0,.35)}
 .f.primary:hover{filter:brightness(1.08)}
 .f.primary:active{transform:translateY(1px);box-shadow:none}
+/* ---- THE TRADES PAGE'S ACTION BAR, DRAWN IN THIS WINDOW --------------------------------------
+   It is `position: fixed` here, which is the whole point: it holds the bottom edge with no
+   messages and no arithmetic, so it cannot trail the scroll. The trades page decides everything
+   the bar SAYS and hands it over finished; this is only where it is drawn. */
+#rflbar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--pan);
+ border-top:1px solid var(--line);padding:9px 12px;display:flex;flex-wrap:wrap;gap:8px;
+ align-items:center;box-shadow:0 -4px 14px rgba(15,47,82,.12)}
+#rflbar[hidden]{display:none}
+#rflbar .grow{flex:1 1 120px;min-width:0;font-size:12px;color:var(--dim)}
+#rflbar button{font:inherit;font-size:14px;min-height:42px;padding:0 14px;border-radius:9px;
+ border:1px solid var(--line);background:var(--pan);color:var(--ink);cursor:pointer}
+#rflbar button.add{border-color:var(--blue);color:var(--blue);font-weight:700;
+ background:var(--pan)}
+#rflbar button.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+#rflbar button[disabled]{opacity:.45;cursor:default}
+#rflbar .g{color:var(--good)}
+/* THE PAGE KEEPS ROOM FOR IT, or the last trade sits underneath it. */
+body.rflbarroom{padding-bottom:64px}
 .card{background:var(--pan);border:1px solid var(--line);border-radius:12px;
  padding:12px 14px;margin-bottom:14px;
  box-shadow:0 1px 2px rgba(15,47,82,.07), 0 6px 18px rgba(15,47,82,.08)}
@@ -1904,6 +1922,78 @@ function openCommish(which, view){
   window.addEventListener('resize', tellSoon, {passive: true});
   f.addEventListener('load', () => { fit(); tellView(); setInterval(fit, 700);
                                      setInterval(tellSoon, 400); });
+
+  /* ---- THE TRADES PAGE'S ACTION BAR IS DRAWN HERE, IN THIS WINDOW ---------------------------
+   *
+   * Casey, 15 Sep 2026, twice: "as you scroll, it kind of bounces, versus just kind of holding
+   * tight to the scroll."
+   *
+   * The first answer was to send the band less often and move the bar with a transform. It did
+   * not fix it, and measuring said why. Driven at 45 pixels a frame, the bar sat EXACTLY 45
+   * PIXELS BEHIND on every frame, and snapped into place the moment the scrolling stopped.
+   *
+   * ONE FRAME OF LAG IS THE FLOOR FOR ANYTHING PLACED FROM OUTSIDE ITS OWN WINDOW. This page
+   * cannot measure where the reader is until the scroll has already been drawn, and the message
+   * carrying that measurement cannot arrive in the frame before the next frame. Throttling
+   * changes how often it is wrong, never whether it is.
+   *
+   * So the bar is not placed from outside any more. The trades page hands the finished bar up
+   * and this page draws it, where `position: fixed` holds it to the bottom edge with no messages
+   * and no arithmetic. A press goes back down by name.
+   * THE TRADES PAGE IS STILL THE ONLY PLACE THE BAR IS DECIDED. Nothing here builds one, or
+   * knows what it says: this is a shell and a click that is carried. */
+  const barShell = () => {
+    let b = el('rflbar');
+    if (!b){
+      b = document.createElement('div');
+      b.id = 'rflbar';
+      b.hidden = true;
+      b.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest && e.target.closest('[data-act]');
+        if (!btn || btn.disabled) return;
+        try { f.contentWindow.postMessage({rfl: 'baract', act: btn.getAttribute('data-act')}, '*'); }
+        catch (err) {}
+      });
+      document.body.appendChild(b);
+    }
+    return b;
+  };
+  /* THE BAR BELONGS TO THE TRADES TAB AND TO THE PART OF IT THAT IS ON SCREEN. Scroll the frame
+     out of view, or open another tab, and it comes off -- a floating Submit button over the
+     standings would be a button belonging to nothing the reader can see. */
+  const barFit = () => {
+    const b = el('rflbar');
+    if (!b || !b.dataset.html) return;
+    const r = f.getBoundingClientRect();
+    const onScreen = r.bottom > 40 && r.top < window.innerHeight - 20;
+    const onTab = !!(host && host.offsetParent !== null);
+    b.hidden = !(onScreen && onTab);
+  };
+  window.addEventListener('scroll', barFit, {passive: true});
+  window.addEventListener('resize', barFit, {passive: true});
+  setInterval(barFit, 400);
+  if (!window.__rflBarWired){
+    window.__rflBarWired = true;
+    window.addEventListener('message', (e) => {
+      const d = e && e.data;
+      if (!d || d.rfl !== 'bar' && d.rfl !== 'hello') return;
+      if (d.rfl === 'hello'){
+        try { f.contentWindow.postMessage({rfl: 'barhost'}, '*'); } catch (err) {}
+        return;
+      }
+      const b = barShell();
+      b.dataset.html = d.html || '';
+      b.innerHTML = d.html || '';
+      document.body.classList[d.html ? 'add' : 'remove']('rflbarroom');
+      barFit();
+      if (!d.html) b.hidden = true;
+    });
+  }
+  /* SAID FROM BOTH ENDS, because either one can be ready first. */
+  f.addEventListener('load', () => {
+    barShell();
+    try { f.contentWindow.postMessage({rfl: 'barhost'}, '*'); } catch (err) {}
+  });
 }
 
 /* THE RULES DOCUMENT, LOADED ONCE, THE FIRST TIME THE TAB IS PRESSED.
@@ -2422,7 +2512,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 11:57 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 12:22 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4454,6 +4544,14 @@ function planPairs(){
                 gain3: b.weeks ? b.pts - incB.pts : null,
                 gainR: r.games >= DATA.hold_games ? r.pts - incR.pts : null,
                 bank: b.pts, season: r.pts, incBank: incB.pts, incSeason: incR.pts,
+                /* THE TEAM BEING DROPPED HAS A 3-0 FIGURE TOO, and it is the figure the
+                   candidates have to beat. Casey, 15 Sep 2026: "the team that's on my roster
+                   that I flag has 3-0 blank ... they still have a projected schedule. So you
+                   should be putting in their 3-0 projection." The gain columns are rightly
+                   blank on that row, because a team you already hold is not a gain over
+                   itself. 3-0 is not a gain. It is the same question asked of both teams over
+                   the same three weeks, so leaving it out took away the comparison. */
+                incP30: incB.byes ? 0 : incB.p,
                 p30: b.byes ? 0 : b.p,
                 legal: canClaim(t), free: t.owner == null});
     }
@@ -4539,7 +4637,7 @@ function planPanel(){
   const byDrop = new Map();
   for (const x of pairs){
     if (!byDrop.has(x.drop.n)) byDrop.set(x.drop.n, {drop: x.drop, from: x.from,
-      bank: x.incBank, season: x.incSeason, gets: []});
+      bank: x.incBank, season: x.incSeason, p30: x.incP30, gets: []});
     byDrop.get(x.drop.n).gets.push(x);
   }
   const num = (v, cls) => v == null ? '<span class="d">—</span>'
@@ -4548,7 +4646,8 @@ function planPanel(){
       <tr class="rbtot"><td class="c-team"><b>Drop</b>
         <span class="pill p-${b.drop.pool.toLowerCase()}">${b.drop.pool}</span>
         <b>${esc(b.drop.n)}</b></td>
-        <td class="num c-p30"><span class="d">—</span></td>
+        <td class="num c-p30 ${b.p30 == null ? 'd' : b.p30 >= 0.5 ? 'g' : b.p30 >= 0.25 ? 'y' : 'b'}">${
+          b.p30 == null ? '<span class="d">—</span>' : `<b>${pctP(b.p30)}</b>`}</td>
         <td class="num c-bank"><b>${b.bank.toFixed(2)}</b></td>
         <td class="num c-season hide-s"><b>${b.season.toFixed(2)}</b></td>
         <td class="num c-gain"><span class="d">—</span></td>
@@ -4575,7 +4674,7 @@ function planPanel(){
     <div class="scrhint"><b>Swipe</b> the table sideways to see the season figures.</div>
     <div class="scr"><table>
       <thead><tr><th class="c-team">Team</th>
-        <th class="num c-p30" title="The chance the team you pick up wins all three games of the mandatory hold. The team you are dropping has no figure here — it is not starting a hold.">3-0</th>
+        <th class="num c-p30" title="The chance the team wins all three of its games over those three weeks. The team you are dropping is measured over the same three weeks, so the two figures can be read against each other.">3-0</th>
         <th class="num c-bank" title="Expected league points over the three weeks of the hold, starting the day this slot frees up. The same three weeks for every row in the block.">Bank 3</th>
         <th class="num c-season hide-s" title="Expected points from the day the slot frees up to the end of the regular season.">Season<br>pts</th>
         <th class="num c-gain" title="Bank 3 minus what the team you are dropping earns over those same three weeks.">Gain 3</th>
