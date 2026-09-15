@@ -80,6 +80,21 @@ header h1{color:var(--brandink);font-weight:800;flex:1 1 auto;min-width:0;margin
 .statusbtn:hover{background:rgba(255,255,255,.22)}
 .statusbtn .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
  background:var(--brandacc);margin-right:6px;vertical-align:middle}
+/* THE LIGHT, ON NAVY. Green while the scores are arriving, RED when they are not -- and red
+   against navy has to be a filled pill, not coloured text, or it reads as decoration. */
+.livelight{flex:0 0 auto;display:inline-flex}
+.livelight .status{border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;
+ letter-spacing:.04em;border:1px solid;white-space:nowrap;display:inline-flex;align-items:center}
+.livelight .st-live{background:rgba(255,255,255,.14);border-color:rgba(150,235,185,.55);color:#b6f2ce}
+.livelight .st-live .dot{background:#4ade80}
+.livelight .st-wait{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.32);color:#dfe9f6}
+.livelight .st-wait .dot{background:#dfe9f6}
+.livelight .st-off{background:#c2261d;border-color:#ef6b62;color:#ffffff}
+.livelight .st-off .dot{background:#ffffff}
+.livelight .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
+/* On the narrowest phones the title gives way before the light or the button does: the title is
+   on the browser tab as well, and these two are not anywhere else. */
+@media (max-width:360px){ .mast h1{font-size:14px} .statusbtn{padding:0 10px} }
 /* THE CHIP ROW NO LONGER SCROLLS SIDEWAYS INSIDE THE STICKY HEADER. Casey, 15 Sep 2026, on the
    iPhone: "your NFL Vegas win total red chip overlaps with the reading from ESPN chip. We can't
    read them." A row that scrolls horizontally inside a sticky element leaves stale pixels behind
@@ -952,6 +967,7 @@ details>summary::marker{color:var(--faint)}
   <div class="mast">
     <span class="mark" aria-hidden="true">RFL</span>
     <h1>P/W Reality Football League</h1>
+    <span id="livelight" class="livelight"></span>
     <button type="button" class="statusbtn" onclick="openInfo()"
       title="Every date on this page: when it was updated, when the rosters were set, how far the results run, and where each figure came from."><span
       class="dot"></span>Status</button>
@@ -1866,9 +1882,14 @@ function renderChips(){
     if (VIEWER)
       c.unshift(`<span class="chip" data-keep="1" title="This page is showing YOUR teams highlighted, and the My-teams filter lists them. It is remembered in this browser only — nothing is sent anywhere and nothing is verified.${
         VIEWER_SAVED === false ? '\n\nIt could NOT be saved (a private window, or storage is blocked), so you will be asked again next time.' : ''
-        }">You are <b>${esc(VIEWER.owner)}</b>${VIEWER_SAVED === false ? ' (not saved)' : ''}
-        <button class="f" style="margin-left:8px;padding:4px 10px;font-size:11px;min-height:26px"
-          onclick="openSetup()" title="Pick a different owner — this page will highlight their teams instead">Change owner</button></span>`);
+        }">You are <b>${esc(VIEWER.owner)}</b>${VIEWER_SAVED === false ? ' (not saved)' : ''}</span>`);
+      /* NO CHANGE-OWNER BUTTON. Casey, 15 Sep 2026: "I can change to somebody else, it says a
+         pop-up, and then it tells you to read the page as somebody else sign out in My Trades --
+         but you can't sign out. That whole button just needs to go away."
+         He is right twice. Who you are comes from the seat you signed in as, so a control that
+         offers to make the page say somebody else is offering something it cannot do; and it
+         sent the reader to a sign-out that does not exist. Saying who you are is still worth a
+         line, and that line stays. */
     else
       c.unshift(`<span class="chip warn" data-keep="1" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are.">No owner picked
         <button class="f" style="margin-left:8px;padding:4px 10px;font-size:11px;min-height:26px"
@@ -2229,7 +2250,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 10:40 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 10:44 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -2900,15 +2921,31 @@ let Q = '', OWNQ = '';
    SCHEDULE ONLY means ESPN could not be reached and these are the fixtures built into the file
    -- which is what you get on a hosted link and on a phone, and is not a failure so much as a
    different mode. Never both, never neither, and never silent. */
-function statusChip(){
+function statusChip(short){
   if (GAMES === null)
-    return `<span class="status st-wait"><span class="dot"></span>CHECKING…</span>`;
+    return `<span class="status st-wait" title="This page is asking ESPN for the scores now."><span class="dot"></span>CHECKING…</span>`;
   if (FETCH_ERR)
     return `<span class="status st-off" title="This page asks ESPN for scores directly and could not reach it. What you see below is the fixture list built into this file on ${DATA._built}, with verified final scores where the build had them — not live.">
-      <span class="dot"></span>SCHEDULE ONLY</span>`;
+      <span class="dot"></span>${short ? 'NOT LIVE' : 'SCHEDULE ONLY'}</span>`;
   return `<span class="status st-live" title="Scores came straight from ESPN and refresh on their own — every minute while a game is in progress, every five otherwise. No need to reload.">
-    <span class="dot"></span>LIVE${LAST_FETCH ? ' · ' + LAST_FETCH.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</span>`;
+    <span class="dot"></span>LIVE${(!short && LAST_FETCH) ? ' · ' + LAST_FETCH.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</span>`;
 }
+/* ---- THE LIGHT AT THE TOP OF EVERY TAB ------------------------------------------------------
+ * Casey, 15 Sep 2026: "maybe that chip at the top, if ever there's a problem, needs to go red so
+ * that if it's not reading it ... maybe it's even next to the Reality Football League name,
+ * because if it's not reading, that's important and it lets people know."
+ * So the one fact that changes what every number on the page means sits beside the league's
+ * name, on every tab, and turns red the moment the scores stop arriving. The same words used to
+ * be a chip in the filter row of one tab, where nobody on another tab could see them.
+ */
+let LIVE_LIGHT = '';
+function paintLive(){
+  const n = el('livelight');
+  if (!n) return;
+  const h = statusChip(true);
+  if (h !== LIVE_LIGHT){ LIVE_LIGHT = h; n.innerHTML = h; }
+}
+setInterval(paintLive, 4000);
 /* The owner line is three rows deep, so it needs a key. Casey plays in PFD only; VFD and SFD
    are labels on the same team, because all three divisions draft the same pool separately. */
 function ownerKey(){
@@ -2945,7 +2982,10 @@ function renderFilters(){
   const owners = [];
   for (const [dv, list] of Object.entries(DATA.division_owners || {}))
     for (const o of list) owners.push(dv + ' · ' + o);
-  el('sfilters').innerHTML = statusChip() + weekPicker() +
+  /* THE LIVE-OR-NOT LIGHT IS NOT HERE ANY MORE. Casey, 15 Sep 2026: "do you even need that,
+     since you have the chip at the top?" It is in the masthead now, on every tab. */
+  paintLive();
+  el('sfilters').innerHTML = weekPicker() +
     fs.map(([k,l]) => `<button class="f ${k==='ME'?'me':''}" aria-pressed="${FILTER===k}"
       onclick="setFilter('${k}')">${l}</button>`).join('')
     + (LEAGUE ? viewerPicker() : '')
