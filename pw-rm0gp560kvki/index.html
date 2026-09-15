@@ -217,6 +217,11 @@ main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
 .wstar:hover{border-color:var(--ink,#222);color:var(--ink,#222)}
 .wstar.on{color:#c9971a;border-color:#c9971a;background:rgba(201,151,26,.10)}
 .wstar.sm{min-width:26px;min-height:26px;font-size:13px}
+/* THE PLAN FLAG. Deliberately NOT a star: the star means "keep an eye on this" and this means
+   "I mean to do something about it", and two controls an inch apart that look alike are two
+   controls nobody can tell apart. A minus on your own team, a plus on anybody else's. */
+.wstar.plan{font-weight:800}
+.wstar.plan.on{color:#0b7a3e;border-color:#0b7a3e;background:rgba(11,122,62,.10)}
 /* THE SUB-TABS STICK BELOW THE PAGE HEADER. Casey, 31 Aug 2026: "the tabs under pickups for my
    roster college and NFL should lock at the top when scrolling, so that it's easy to filter on
    those three if desired without having to scroll back to the top."
@@ -2356,7 +2361,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 12:11 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 12:21 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4177,7 +4182,7 @@ function availTable(kind){
             aria-label="${cs ? 'Remove' : 'Add'} ${t.n} ${cs ? 'from' : 'to'} the comparison">${cs || '+'}</button></td>
         <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
           <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}${bigWinTag(t)}
-          ${watchBtn(t.n, true)}</td>
+          ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td>
         <td class="num c-p30 ${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
             title="${x.p30==null ? 'No games left in this window.' : p30Why(t, from, x)}">${
           /* A NUMBER, ALWAYS -- AND THE REASON BESIDE IT, NEVER INSTEAD OF IT.
@@ -4271,6 +4276,171 @@ function watchStatus(t){
 /* THE WATCH LIST. Every team he flagged, whatever its situation, measured the same way the
    Pickups table measures a candidate: against the slot he would actually drop, over the same
    weeks, with everything already played excluded from both sides. */
+/* ---- THE PLAN PANEL -------------------------------------------------------------------------
+ * Every pairing of a team he means to drop with a team he means to pick up, priced exactly the
+ * way the Pickups table prices a candidate: both sides over the SAME weeks, starting on the day
+ * the slot actually frees up, with everything already played left out of both.
+ * ONLY LIKE FOR LIKE. An NFL slot can only be filled by an NFL team, so a college pickup is
+ * never paired with an NFL drop -- and when that leaves nothing to pair, the panel says so
+ * rather than showing an empty table.
+ */
+function planPairs(){
+  const out = [];
+  for (const d of (PLAN.drop || [])){
+    const mine = BY.get(d);
+    if (!mine) continue;
+    const slot = (DATA.my_slots || []).find(x => x.n === d);
+    const from = swapFrom(slot || mine);
+    const incB = weekWindow(mine, from, DATA.hold_games);
+    const incR = windowPts(mine, from, null);
+    for (const g of (PLAN.get || [])){
+      const t = BY.get(g);
+      if (!t) continue;
+      if (cmpPool(t) !== cmpPool(mine)) continue;          // a slot takes its own kind only
+      const b = weekWindow(t, from, DATA.hold_games);
+      const r = windowPts(t, from, null);
+      out.push({drop: mine, get: t, from: from,
+                gain3: b.weeks ? b.pts - incB.pts : null,
+                gainR: r.games >= DATA.hold_games ? r.pts - incR.pts : null,
+                bank: b.pts, season: r.pts, incBank: incB.pts, incSeason: incR.pts,
+                p30: b.byes ? 0 : b.p,
+                legal: canClaim(t), free: t.owner == null});
+    }
+  }
+  return out.sort((a, b) => (b.gain3 == null ? -99 : b.gain3) - (a.gain3 == null ? -99 : a.gain3));
+}
+
+function planPanel(){
+  const nD = (PLAN.drop || []).length, nG = (PLAN.get || []).length;
+  const row = (n, side) => {
+    const t = BY.get(n);
+    if (!t) return '';
+    const q = String(n).replace(/'/g, "\\'");
+    return `<tr><td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span>
+        <b>${esc(n)}</b>${side === 'get' && t.owner != null
+          ? ' <span class="gtag t-hold" title="Another owner in your division holds this team, so you cannot claim it until they let it go.">TAKEN</span>'
+          : ''}${side === 'get' && t.owner == null && !canClaim(t)
+          ? ` <span class="gtag t-before" title="It cannot finish a ${DATA.hold_games}-game hold from the day your slot frees up, so it is not legal to claim this week.">TOO LATE</span>` : ''}</td>
+      <td class="c-cmp">${planBtn(n, true)}${watchBtn(n, true)}</td></tr>`;
+  };
+  const lists = `<div class="card"><h2>What You Mean to Do</h2>
+    <div class="row" style="align-items:flex-start;gap:14px">
+      <div class="grow" style="flex:1 1 260px;min-width:0">
+        <h3 class="txwk">Drop (${nD})</h3>
+        ${nD ? `<table>${(PLAN.drop || []).map(n => row(n, 'drop')).join('')}</table>`
+             : `<div class="empty">Nothing flagged. Press the <b>&minus;</b> beside any of your
+                own teams — on <b>My Roster</b>, on <b>Live Scores</b>, or in a team panel.</div>`}
+      </div>
+      <div class="grow" style="flex:1 1 260px;min-width:0">
+        <h3 class="txwk">Pick Up (${nG})</h3>
+        ${nG ? `<table>${(PLAN.get || []).map(n => row(n, 'get')).join('')}</table>`
+             : `<div class="empty">Nothing flagged. Press the <b>+</b> beside any team you do not
+                hold — on <b>College</b>, on <b>NFL</b>, on your <b>Watch List</b>, or in a team
+                panel.</div>`}
+      </div>
+    </div>
+    ${planCount() ? `<div class="row" style="margin-top:10px">
+      <button class="f" onclick="planClear()" title="Take everything off the plan and start again">Clear the Plan</button></div>` : ''}
+    <div class="note">Flagging a team here does nothing to your roster and tells nobody. It is a
+      note to yourself until you press <b>Send to Trades</b>.</div></div>`;
+
+  const pairs = planPairs();
+  /* AN ABSENCE IS NEVER AN ANSWER, and there are three different absences here. */
+  const why = () => {
+    if (!nD && !nG) return `Flag at least one team to drop and one to pick up, and every pairing
+      of them appears here with what the swap is worth.`;
+    if (!nD) return `You have ${nG} team${nG === 1 ? '' : 's'} flagged to pick up and none flagged
+      to drop. A pickup has to come out of a roster slot, so there is nothing to measure it
+      against yet.`;
+    if (!nG) return `You have ${nD} team${nD === 1 ? '' : 's'} flagged to drop and none flagged to
+      pick up. Flag the teams you are thinking about and each one is priced against these.`;
+    return `Nothing pairs up. A roster slot can only be filled by its own kind, so an NFL slot
+      needs an NFL team and a college slot needs a college team. Everything flagged to drop is
+      one kind and everything flagged to pick up is the other.`;
+  };
+
+  const table = pairs.length ? `<div class="card"><h2>How Each Swap Looks</h2>
+    <div class="scrhint"><b>Swipe</b> the table sideways to see the season figures.</div>
+    <div class="scr"><table>
+      <thead><tr><th class="c-team">Drop</th><th class="c-team">Pick up</th>
+        <th class="num c-p30" title="The chance the team you pick up wins all three games of the mandatory hold.">3-0</th>
+        <th class="num c-gain" title="What the swap is worth over the three weeks of the hold. Both teams measured over the SAME three weeks, starting the day the slot frees up.">Gain 3</th>
+        <th class="num c-sgain hide-s" title="What the swap is worth from the day the slot frees up to the end of the regular season.">Season gain</th>
+        <th class="c-then">Can you do it</th></tr></thead>
+      <tbody>${pairs.map(x => `<tr>
+        <td class="c-team"><span class="pill p-${x.drop.pool.toLowerCase()}">${x.drop.pool}</span> ${esc(x.drop.n)}</td>
+        <td class="c-team"><b>${esc(x.get.n)}</b></td>
+        <td class="num c-p30 ${x.p30 == null ? 'd' : x.p30 >= 0.5 ? 'g' : x.p30 >= 0.25 ? 'y' : 'b'}">${
+          x.p30 == null ? '<span class="d">—</span>' : pctP(x.p30)}</td>
+        <td class="num c-gain">${x.gain3 == null ? '<span class="d">—</span>'
+          : `<b class="${x.gain3 > 0.3 ? 'g' : x.gain3 < 0 ? 'b' : 'y'}">${x.gain3 >= 0 ? '+' : ''}${x.gain3.toFixed(2)}</b>`}</td>
+        <td class="num c-sgain hide-s">${x.gainR == null ? '<span class="d">—</span>'
+          : `<span class="${x.gainR > 0.5 ? 'g' : x.gainR < 0 ? 'b' : 'd'}">${x.gainR >= 0 ? '+' : ''}${x.gainR.toFixed(2)}</span>`}</td>
+        <td class="c-then">${x.legal
+          ? '<span class="pill v-keep">Yes</span>'
+          : x.free ? '<span class="pill v-no" title="It cannot finish the hold from the day this slot frees up.">Too late</span>'
+                   : '<span class="pill v-hold" title="Another owner in your division holds it.">Taken</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>
+    <div class="note">Every figure is <b>league points</b>, and both sides of every row are
+      measured over the same weeks starting on the day that slot frees up. Points either team has
+      already scored are in neither column — they are yours or theirs already, and a decision you
+      are making today cannot change them.</div></div>`
+    : `<div class="card"><h2>How Each Swap Looks</h2><div class="empty">${why()}</div></div>`;
+
+  return lists + table + planSendCard(pairs);
+}
+
+/* ---- HANDING IT TO THE TRADES TAB ----------------------------------------------------------
+ * Casey, 15 Sep 2026: "if it's already recorded, it would be great to send it to the Trades tab,
+ * or even just submit right from there -- but if that's too complicated, maybe there's a way to
+ * send to the Trades tab and I go there and review it and then save the trade."
+ * The second one, deliberately, and not because it is easier. A list only counts once it is
+ * SAVED, and a button on a planning screen that quietly enters a week would be the one place on
+ * this site where something binding happens without the word Save being pressed. So this fills
+ * the form in and stops.
+ */
+function planRows(){
+  /* ONE ROW PER TEAM TO PICK UP, each carrying the teams flagged to drop as its drop choices --
+     which is exactly the shape the trades form uses. A team wanted twice is still one row. */
+  const drops = (PLAN.drop || []).filter(n => BY.get(n));
+  return (PLAN.get || []).filter(n => BY.get(n)).map(n => {
+    const t = BY.get(n);
+    return {pickup: n, drops: drops.filter(d => cmpPool(BY.get(d)) === cmpPool(t))};
+  }).filter(r => r.drops.length);
+}
+function planSendCard(pairs){
+  const rows = planRows();
+  if (!planCount()) return '';
+  const blocked = (PLAN.get || []).filter(n => BY.get(n) && !canClaim(BY.get(n)));
+  return `<div class="card"><h2>Send It to Trades</h2>
+    ${rows.length ? `<p>This fills in <b>${rows.length}</b> row${rows.length === 1 ? '' : 's'} on
+      the <b>Trades</b> tab: one for each team you mean to pick up, with the teams you flagged to
+      drop as its drop choices. <b>Nothing is entered into a week.</b> You read it over there and
+      press <b>Save My Trades</b> yourself.</p>
+      ${blocked.length ? `<p class="note y"><b>${blocked.length} of them cannot be claimed this
+        week</b> — ${esc(blocked.join(', '))}. They are still filled in, and the Trades tab will
+        say why beside each one.</p>` : ''}
+      <div class="row"><button class="f primary" onclick="planSend()">Send to Trades</button></div>
+      <p class="note" id="planSent"></p>`
+    : `<div class="empty">Nothing to send yet. A row needs a team to pick up <b>and</b> at least
+       one team of the same kind to drop, because a trade is a pair.</div>`}
+  </div>`;
+}
+function planSend(){
+  const rows = planRows();
+  const say = el('planSent');
+  if (!rows.length) return;
+  const f = el('tradeFrame');
+  if (!f || !f.contentWindow){
+    if (say) say.innerHTML = '<b class="b">The Trades tab has not been opened yet in this '
+      + 'session.</b> Open <b>Trades</b> once, then come back and press this again.';
+    return;
+  }
+  try { f.contentWindow.postMessage({rfl: 'plan', rows: rows}, '*'); } catch (e) {}
+  if (say) say.innerHTML = '<b class="g">Sent.</b> Open the <b>Trades</b> tab to read it over '
+    + 'and save it. Nothing is in this week until you press Save My Trades there.';
+}
+
 function watchPanel(){
   if (!WATCH.length) return `<div class="card"><h2>Watch List</h2>
     <div class="empty"><p><b>Nothing on it yet.</b></p>
@@ -4318,7 +4488,7 @@ function watchPanel(){
               + ' slot, in Side by Side below'}"
           aria-label="${cmpSlotOf(t.n) ? 'Remove' : 'Add'} ${t.n} ${
             cmpSlotOf(t.n) ? 'from' : 'to'} the comparison">${cmpSlotOf(t.n) || '+'}</button>
-        ${watchBtn(t.n, true)}</td></tr>`
+        ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td></tr>`
       + (OPEN_WATCH === t.n
           ? `<tr><td colspan="8">${teamPanel(t, slotFor(t.pool === 'NFL' ? 'NFL' : 'COL'),
               t.owner === ME ? 'mine' : 'scout')}</td></tr>`
@@ -4390,6 +4560,7 @@ function toggleMine(n){ OPEN_MINE = (OPEN_MINE === n) ? null : n; renderPick(); 
  * Worth moving into the league back end later, now that one exists.
  */
 const WATCH_KEY = 'rfl_watch_v1';
+const PLAN_KEY = 'rfl_plan_v1';
 let WATCH = [];
 
 /* WHERE THE LIST REALLY LIVES.
@@ -4414,9 +4585,18 @@ function watchLoad(){
        drawn. Same rule as the saved viewer seat. */
     if (Array.isArray(v)) WATCH = v.filter(n => typeof n === 'string' && BY.get(n));
   } catch (e) { WATCH = []; }
+  try {
+    const raw = localStorage.getItem(PLAN_KEY);
+    if (raw){
+      const v = JSON.parse(raw) || {};
+      PLAN = {drop: (v.drop || []).filter(n => BY.get(n)),
+              get: (v.get || []).filter(n => BY.get(n))};
+    }
+  } catch (e) { PLAN = {drop: [], get: []}; }
 }
 function watchCache(){
   try { localStorage.setItem(WATCH_KEY, JSON.stringify(WATCH)); } catch (e) {}
+  try { localStorage.setItem(PLAN_KEY, JSON.stringify(PLAN)); } catch (e) {}
 }
 
 /* THE BACK END'S COPY, ASKED FOR ONCE THE PAGE KNOWS WHO IS SIGNED IN. */
@@ -4426,6 +4606,11 @@ function watchPull(){
     if (!a || !a.ok) return;                 // not signed in, or it did not answer: keep local
     const v = (a.prefs && Array.isArray(a.prefs.watch)) ? a.prefs.watch : [];
     WATCH = v.filter(n => typeof n === 'string' && BY.get(n));
+    /* THE PLAN TRAVELS WITH THE WATCH LIST. Same object, same round trip, so planning on a
+       laptop and entering it on a phone is one list rather than two. */
+    const pl = (a.prefs && a.prefs.plan) || {};
+    PLAN = {drop: (pl.drop || []).filter(n => BY.get(n)),
+            get: (pl.get || []).filter(n => BY.get(n))};
     WATCH_SYNCED = true;
     WATCH_ERR = null;
     watchCache();
@@ -4438,7 +4623,7 @@ function watchPull(){
 function watchPush(){
   watchCache();
   if (LEAGUE || !TRADES_API) return;
-  tradesCall('setprefs', {prefs: {watch: WATCH}}).then(a => {
+  tradesCall('setprefs', {prefs: {watch: WATCH, plan: PLAN}}).then(a => {
     const ok = !!(a && a.ok);
     WATCH_ERR = ok ? null
       : (a && a.why === 'nokey'
@@ -4450,6 +4635,56 @@ function watchPush(){
     WATCH_ERR = 'The league could not be reached, so this list is only in this browser for now.';
     if (PROJ_ON && el('pick') && !el('pick').hidden) renderPick();
   });
+}
+
+/* ---- THE PLAN: WHAT HE MEANS TO DO ON MONDAY ------------------------------------------------
+ * Casey, 15 Sep 2026: "it would be nice to model our trades ahead of time. Right now I can't go
+ * to the Trades tab and put in a trade today, but I'm looking at stuff and I know I'm going to
+ * want to drop Minnesota and South Carolina ... so I can start looking at, these are the teams I
+ * want to drop, I could flag them, and these are the teams I want to pick up, and start
+ * comparing. How does that model look?"
+ * Two flags, not one. The watch list is "keep an eye on this"; a PLAN is a decision he has
+ * already half made, and the two lists it needs are different lists. So a team he holds can be
+ * flagged to DROP and a team he does not can be flagged to GET, and the panel pairs them up and
+ * prices each pairing the way the Pickups table prices a candidate.
+ * IT SAVES WHERE THE WATCH LIST SAVES -- the same prefs object in the league back end -- so it
+ * follows him from the laptop he plans on to the phone he enters it on.
+ * NOTHING HERE IS A TRADE. Casey: "maybe there's a way to send it to the Trades tab and I go
+ * there and review it and then save the trade." That is exactly what Send To Trades does: it
+ * fills the form in and stops. Nothing is entered into a week that he has not pressed Save on.
+ */
+let PLAN = {drop: [], get: []};
+function planHas(list, n){ return (PLAN[list] || []).indexOf(n) >= 0; }
+function planSide(n){
+  const t = BY.get(n);
+  return (t && t.owner === ME) ? 'drop' : 'get';
+}
+function planToggle(n){
+  if (!n || !BY.get(n)) return;
+  const side = planSide(n);
+  const a = PLAN[side] || (PLAN[side] = []);
+  const i = a.indexOf(n);
+  if (i >= 0) a.splice(i, 1); else a.push(n);
+  watchSave();
+  if (SCOUT) renderScout();
+  if (PROJ_ON && el('pick') && !el('pick').hidden) renderPick();
+}
+function planClear(){ PLAN = {drop: [], get: []}; watchSave(); renderPick(); }
+function planCount(){ return (PLAN.drop || []).length + (PLAN.get || []).length; }
+/* The flag, beside the star, wherever a team is listed. Two controls with two jobs: the star
+   keeps an eye on a team, this one says what you mean to do about it. */
+function planBtn(n, small){
+  const side = planSide(n);
+  const on = planHas(side, n);
+  const q = String(n).replace(/'/g, "\\'");
+  return `<button type="button" class="wstar plan${on ? ' on' : ''}${small ? ' sm' : ''}"
+    onclick="event.preventDefault();event.stopPropagation();planToggle('${q}')"
+    title="${on ? 'On your plan. Press to take it off.'
+      : side === 'drop' ? 'Flag ' + n + ' as a team you mean to DROP. It goes on the Plan tab.'
+                        : 'Flag ' + n + ' as a team you mean to PICK UP. It goes on the Plan tab.'}"
+    aria-pressed="${on}"
+    aria-label="${on ? 'Remove' : 'Add'} ${n} ${on ? 'from' : 'to'} your plan">${
+    side === 'drop' ? '−' : '+'}</button>`;
 }
 
 function watchSave(){ watchPush(); }
@@ -5525,11 +5760,13 @@ function renderPick(){
      in it is one you stop opening. */
   const bar = `<div class="tabs subtabs">${subTab('roster', 'My roster')}${
     subTab('COL', 'College')}${subTab('NFL', 'NFL')}${
+    subTab('plan', 'Plan' + (planCount() ? ' (' + planCount() + ')' : ''))}${
     subTab('watch', 'Watch List' + (WATCH.length ? ' (' + WATCH.length + ')' : ''))}${
     rerateControl()}</div>`;
 
   const panels = {
     watch: watchPanel(),
+    plan: planPanel(),
     roster: `<div class="card"><h2>Your roster — what each slot earns from the week you could drop it</h2>
       <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
       <div class="scr"><table class="rostertbl">
