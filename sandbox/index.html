@@ -2652,14 +2652,24 @@ function markSeen(seat, week){
   try { localStorage.setItem(seenKey(seat, week), '1'); } catch (e) {}
 }
 /* THE ROWS THAT ARE THIS SEAT'S, out of whatever the league sent back. */
+/* THIS PANEL IS ABOUT THE PERSON READING IT, SO IT READS THEIR OWN SEAT AND NOTHING ELSE.
+ *
+ * Casey, 15 Sep 2026: "I got a pop up that said Week 2 is settled, you got one team this week. I
+ * didn't get a team this week. The team went to Spielman."
+ *
+ * It was showing Spielman's week and calling it his. `actingSeat()` answers "whose list is this
+ * form entering", which is the right question for the FORM and the wrong one here -- he had used
+ * the commissioner dropdown to enter Spielman's trade and it was still set to Spielman.
+ * WHOSE RESULT IT IS CANNOT DEPEND ON A DROPDOWN. It is the seat this device signed in as.
+ */
 function myResult(){
-  var a = actingSeat();
-  if (!a || !a.seat) return null;
+  var s = whoIsThis();
+  if (!s || !s.seat) return null;
   var R = S.results;
   if (!R || !R.results) return null;
-  var rows = R.results[key(a.div, a.seat)];
+  var rows = R.results[key(s.div, s.seat)];
   if (!rows || !rows.length) return null;
-  return {week: R.week, at: R.at, seat: a.seat, rows: rows};
+  return {week: R.week, at: R.at, seat: s.seat, rows: rows};
 }
 function resultLines(m){
   return m.rows.map(function(r){
@@ -2673,7 +2683,8 @@ function myResultCard(){
   var m = myResult();
   if (!m) return '';
   var got = m.rows.filter(function(r){ return r && sentence(r, m.seat).kind === 'won'; }).length;
-  return '<div class="card"><h2>Week ' + playOf(m.week) + ' &mdash; What Happened to Your List</h2>'
+  return '<div class="card"><h2>Week ' + playOf(m.week) + ' &mdash; What Happened to '
+    + esc(m.seat) + '&rsquo;s List</h2>'
     + '<p class="note">Settled ' + esc(pretty(m.at)) + '. '
     + (got ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + '.'
            : 'You did not get a team this week.')
@@ -2692,8 +2703,9 @@ function offerResult(){
   markSeen(m.seat, m.week);
   var got = m.rows.filter(function(r){ return r && sentence(r, m.seat).kind === 'won'; }).length;
   showHelp('Week ' + playOf(m.week) + ' Is Settled',
-    '<p>' + (got ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + ' this week.'
-                 : 'You did not get a team this week.') + '</p>'
+    '<p>This is <b>' + esc(m.seat) + '</b>. ' + (got
+        ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + ' this week.'
+        : 'You did not get a team this week.') + '</p>'
     + resultLines(m)
     + '<p class="note">This is also on the <b>My Trades</b> tab until the next week is settled. '
     + 'Every settled trade in the league is on the <b>Transactions</b> tab.</p>');
@@ -3706,6 +3718,10 @@ function doRun(){
     S.log.unshift(Object.assign({when: now()}, e));
   });
   S.requests = {};
+  /* NOBODY IS LEFT ENTERING FOR SOMEBODY ELSE AFTER A WEEK IS SETTLED. Casey entered Spielman's
+     trade through the commissioner dropdown and it stayed set to Spielman afterwards, which is
+     how his own results panel came to be Spielman's. The next thing he types is his own. */
+  S.actingAs = null;
   S.ranWeeks = S.ranWeeks || {};
   var prev = S.ranWeeks[weekNo()];
   S.ranWeeks[weekNo()] = {at: now(), n: (prev ? prev.n : 0) + out.log.length};
