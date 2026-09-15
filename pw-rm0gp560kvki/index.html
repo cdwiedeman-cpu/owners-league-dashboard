@@ -2352,7 +2352,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 11:48 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 11:57 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9101,16 +9101,46 @@ function buildTx(){
   }
   const calKeys = new Set(calWins.map(w => w.start + '|' + w.end));
   const stray = useCal ? wins.filter(w => !calKeys.has((w.start || '') + '|' + (w.end || ''))) : [];
+  /* ---- FOUR THINGS WRONG WITH THIS TABLE, ALL OF THEM CASEY'S, 15 SEP 2026 ----------------
+   * 1. "I don't quite understand why you have a little dot next to each of the dates, and
+   *    nobody's really going to get that if it's hover text." A mark whose meaning is only in a
+   *    tooltip is a mark nobody reads. The Status column already says the same thing in words,
+   *    so the dot is gone rather than explained.
+   * 2. "There was one trade that happened, so why doesn't it show the one trade for September
+   *    14th to 15th?" Because the count came from the commissioner's workbook, and a trade
+   *    settled on this site never reaches the workbook. It is counted from the TRADES now -- the
+   *    same list the tab above it prints -- and the workbook's figure is reported only where the
+   *    two disagree. Where a derived value exists, show the derived one.
+   * 3. "You say Trades: All. I don't know what All means." It meant all three pools. It says so.
+   * 4. "Status is To Come. We're already in that trade window, so that should be Open now."
+   *    Right: there were two states for three situations, and the one missing was the one that
+   *    is true today.
+   */
+  const nTrades = new Map();
+  for (const t of trades){
+    const w = winOfTrade(t);
+    if (!w) continue;
+    const k = (w.start || '') + '|' + (w.end || '');
+    nTrades.set(k, (nTrades.get(k) || 0) + 1);
+  }
   const winRows = rows.map(w => {
+    const k = (w.start || '') + '|' + (w.end || '');
     const done = w.end && w.end < today;
-    const n = useCal ? (nBy.get(w.start + '|' + w.end) || 0) : (w.n || 0);
+    const open = !done && (!w.start || w.start <= today);
+    const n = nTrades.get(k) || 0;
+    const typed = useCal ? (nBy.get(k) || 0) : (w.n || 0);
+    const state = done ? 'Closed' : open ? 'Open now' : 'Not open yet';
+    const pools = w.nfl_only ? '<b class="y">NFL only</b>'
+      : '<span class="d">NFL and college</span>';
     return `<tr class="${done ? 'g-before' : ''}"
-        title="${esc(`Opens Monday ${w.start || '?'}, closes Tuesday ${w.end || '?'}. A trade agreed in it scores for its new owner from the day after it closes. ${done ? 'This window has closed.' : 'Still to come.'}`)}">
-      <td style="white-space:nowrap">${winSpan(w)}${done ? '' : ' <span class="g" title="Still open or still to come">•</span>'}</td>
-      <td class="num d">${n}</td>
-      <td class="d" style="white-space:nowrap">${w.nfl_only
-        ? '<b class="y">NFL only</b>' : '<span class="d">All</span>'}</td>
-      <td class="d" style="white-space:nowrap">${done ? 'Closed' : 'To come'}</td></tr>`;
+        title="${esc(`Opens Monday ${w.start || '?'}, closes Tuesday ${w.end || '?'}. A trade agreed in it scores for its new owner from the day after it closes. ${done ? 'This window has closed.' : open ? 'This window is open now.' : 'This window has not opened yet.'}`)}">
+      <td style="white-space:nowrap">${winSpan(w)}</td>
+      <td class="num ${n ? '' : 'd'}"${typed && typed !== n
+        ? ` title="The commissioner's workbook records ${typed} for this window. This figure is counted from the trades themselves."` : ''}>${n}${
+        typed && typed !== n ? ' <span class="y" title="The workbook says a different number.">!</span>' : ''}</td>
+      <td class="d" style="white-space:nowrap">${pools}</td>
+      <td class="${open ? 'g' : 'd'}" style="white-space:nowrap">${
+        open ? '<b>' + state + '</b>' : state}</td></tr>`;
   }).join('');
 
   /* AN ABSENCE IS NEVER AN ANSWER, and neither is a silent correction. If the workbook holds a
@@ -9138,8 +9168,8 @@ function buildTx(){
       <colgroup><col style="width:44%"><col style="width:13%">
         <col style="width:24%"><col style="width:19%"></colgroup>
       <thead><tr><th style="white-space:nowrap">Window</th>
-        <th class="num" style="white-space:nowrap" title="Trades logged in this window.">No.</th>
-        <th style="white-space:nowrap" title="Which pools may trade in this window.">Trades</th>
+        <th class="num" style="white-space:nowrap" title="How many trades were settled in this window, counted from the trades themselves.">Trades</th>
+        <th style="white-space:nowrap" title="Which teams may change hands in this window.">Who Can Trade</th>
         <th style="white-space:nowrap">Status</th></tr></thead>
       <tbody>${winRows}</tbody></table></div>${strayNote}
     <div class="note">Every window runs <b>Monday to Tuesday</b>, weekly — <b>${rows.length}</b>
