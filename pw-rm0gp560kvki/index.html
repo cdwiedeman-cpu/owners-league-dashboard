@@ -1873,18 +1873,37 @@ function openCommish(which, view){
    * The frame cannot work this out for itself. It knows nothing about where it sits in this page
    * or where this page is scrolled to, so it is told, here, on every scroll.
    */
+  /* ONE MESSAGE PER PAINTED FRAME, AND ONLY WHEN THE BAND MOVED.
+   *
+   * Casey, 15 Sep 2026: "that little floating Add Another Trade and Submit My Trades at the
+   * bottom ... as you scroll, it kind of bounces, versus just kind of holding tight to the
+   * scroll."
+   * A message was posted on EVERY scroll event and a timer posted another one four times a
+   * second. The frame moved the bar once per message, so the bar was being placed far more
+   * often than the screen is painted, and the timer kept re-placing it after the scrolling
+   * stopped. That is the bounce. Now the band is measured inside requestAnimationFrame, which
+   * is the moment the browser is about to paint anyway, and an unchanged band sends nothing. */
+  let vPend = false, vLast = '';
   const tellView = () => {
     try {
       const r = f.getBoundingClientRect();
       const top = Math.max(0, -r.top);
       const height = Math.min(window.innerHeight, r.bottom) - Math.max(0, r.top);
+      const sig = Math.round(top) + '|' + Math.round(height);
+      if (sig === vLast) return;
+      vLast = sig;
       if (f.contentWindow) f.contentWindow.postMessage({rfl: 'view', top, height}, '*');
     } catch (e) {}
   };
-  window.addEventListener('scroll', tellView, {passive: true});
-  window.addEventListener('resize', tellView, {passive: true});
+  const tellSoon = () => {
+    if (vPend) return;
+    vPend = true;
+    requestAnimationFrame(() => { vPend = false; tellView(); });
+  };
+  window.addEventListener('scroll', tellSoon, {passive: true});
+  window.addEventListener('resize', tellSoon, {passive: true});
   f.addEventListener('load', () => { fit(); tellView(); setInterval(fit, 700);
-                                     setInterval(tellView, 400); });
+                                     setInterval(tellSoon, 400); });
 }
 
 /* THE RULES DOCUMENT, LOADED ONCE, THE FIRST TIME THE TAB IS PRESSED.
@@ -2403,7 +2422,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 11:41 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 11:57 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
