@@ -744,6 +744,15 @@ details>summary::marker{color:var(--faint)}
      to change tab. */
   header{position:sticky;top:0;z-index:30;background:var(--bg)}
   main{padding-top:8px}
+  /* THE FILTER ROW IS 175px OF A PHONE SCREEN AND IT IS TOUCHED ONCE A WEEK.
+     It collapses behind one button that says what it is currently set to. Nothing is removed and
+     nothing is decided for the reader -- it is one tap away and the tap is labelled. */
+  .bar.folded{display:none}
+  .filtoggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;
+   background:var(--pan);border:1px solid var(--line);border-radius:9px;color:var(--ink);
+   font:600 13px inherit;min-height:42px;padding:0 12px;margin:0 0 10px;text-align:left}
+  .filtoggle .sum{font-weight:400;font-size:12px;color:var(--dim);overflow:hidden;
+   text-overflow:ellipsis;white-space:nowrap}
   /* FIVE TABS DO NOT FIT A PHONE AT THE DESKTOP PADDING. Adding the Race tab took the strip to
      392px inside a 370px column and the whole PAGE gained 12px of sideways scroll -- the one
      thing this file is never allowed to do. Two changes, because one of them is a number that
@@ -2030,7 +2039,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 6:57 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 6:58 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8753,6 +8762,46 @@ watchWake();
    — that page shows no projection, so it needs no model. Guarded rather than deleted: the same
    file builds both pages. */
 if (PROJ_ON) computeRerate();
+/* ---- ON A PHONE, THE FILTERS FOLD --------------------------------------------------------
+ * Casey, 15 Sep 2026: "half of the screen is made up of your chips, the tabs, the filters, the
+ * who you are, the search. The scores are all the way at the bottom." Measured: 255px of header
+ * plus a 175px filter row before a single result, on an 852px screen.
+ * The header was fixed by letting the strips scroll sideways instead of wrapping. This is the
+ * other half: each section's filter row folds behind one button that SAYS WHAT IT IS SET TO, so
+ * nothing is hidden in the sense that matters -- the reader can see the state without opening it.
+ * Desktop is untouched: there is room there and folding would only add a click.
+ */
+const PHONE = () => window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+function barSummary(bar){
+  const on = [...bar.querySelectorAll('button[aria-pressed="true"], .seg button.on, .f.on')]
+    .map(b => b.textContent.trim()).filter(Boolean);
+  const sel = [...bar.querySelectorAll('select')]
+    .map(x => (x.options[x.selectedIndex] || {}).text || '').map(t => t.trim())
+    .filter(t => t && !/^any owner/i.test(t) && !/^—/.test(t));
+  const all = on.concat(sel);
+  return all.length ? all.slice(0, 3).join(' · ') : 'Tap to change';
+}
+function foldFilters(){
+  if (!PHONE()) return;
+  for (const sec of document.querySelectorAll('section')){
+    const bar = sec.querySelector(':scope > .bar');
+    if (!bar || bar.dataset.folder) continue;
+    const btn = document.createElement('button');
+    btn.className = 'filtoggle';
+    btn.type = 'button';
+    btn.innerHTML = '<span>Filters &amp; Search</span><span class="sum"></span><span>▾</span>';
+    btn.onclick = function(){
+      bar.classList.toggle('folded');
+      btn.lastElementChild.textContent = bar.classList.contains('folded') ? '▾' : '▴';
+      if (!bar.classList.contains('folded')) btn.querySelector('.sum').textContent = '';
+      else btn.querySelector('.sum').textContent = barSummary(bar);
+    };
+    bar.parentNode.insertBefore(btn, bar);
+    bar.dataset.folder = '1';
+    bar.classList.add('folded');
+    btn.querySelector('.sum').textContent = barSummary(bar);
+  }
+}
 function paintAll(){
   renderChips(); renderFilters(); renderScores(); renderStandings();
   if (PROJ_ON){ renderPick(); renderSlots(); renderRace(); }
@@ -8765,6 +8814,7 @@ function paintAll(){
   if (!PROJ_ON || onScreen('weekly')) renderWeekly();
   if (!PROJ_ON || onScreen('summary')) renderSummary();
   if (!PROJ_ON || onScreen('tx')) renderTx();
+  try { foldFilters(); } catch (e) {}
 }
 paintAll();
 /* THE TRADES ARRIVE AFTER THE FIRST PAINT, so a slow sheet never holds up the scores, and then
