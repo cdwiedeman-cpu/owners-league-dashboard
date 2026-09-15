@@ -1589,10 +1589,13 @@ function viewerPicker(){
      means there was not one. So the control sits in the filter row as well, beside the My-Teams
      button it governs, and it REOPENS THE SETUP PANEL rather than being a second, subtly
      different way of choosing. Two places, one action: both call openSetup(). */
+  /* AND THEN THE CHANGE HALF OF IT WENT. Casey, 15 Sep 2026: "you don't need to change owner,
+     I don't see what the point of that would be." Who you are comes from the seat you signed in
+     as. A control offering to make the page say somebody else is offering something it cannot
+     do, and both copies of it sent the reader to a sign-out that does not exist. The way IN
+     stays, because a reader who has not said who they are still needs one. */
   if (!LEAGUE || !(DATA.seats || []).length) return '';
-  return VIEWER
-    ? `<button class="f" onclick="openSetup()"
-         title="Pick a different owner. This page will highlight their teams instead of ${esc(VIEWER.owner)}'s.">You: <b>${esc(VIEWER.owner)}</b> — Change</button>`
+  return VIEWER ? ''
     : `<button class="f primary" onclick="openSetup()"
          title="Say which owner you are, and this page will highlight your teams">Pick Your Owner</button>`;
 }
@@ -2250,7 +2253,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 10:44 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 10:51 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
