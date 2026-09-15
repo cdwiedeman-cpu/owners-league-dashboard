@@ -22,7 +22,7 @@
   --badbg:#3a1717;--badline:#5b2626;--badtx:#ff9a9a;
   --goldline:#5c471a;--blueline:#274b6d;
   --pribg:#12324f;--priline:#2b5f8f;--pritx:#cfe6ff;
-  --chipon:#1d3550;--shade:rgba(4,8,13,.78);--sandbg:#3b1d02;
+  --chipon:#1d3550;--shade:rgba(4,8,13,.78);--sandbg:#3b1d02;--sandtx:#ffd9a0;
 }
 :root[data-theme="light"], :root.light{
   --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
@@ -33,7 +33,7 @@
   --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
   --goldline:#dcc58a;--blueline:#a9cbec;
   --pribg:#1462b8;--priline:#1462b8;--pritx:#ffffff;
-  --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;
+  --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;--sandtx:#6b4700;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]):not(.dark){
@@ -45,7 +45,7 @@
     --badbg:#fdeceb;--badline:#e8b0ab;--badtx:#8f1d16;
     --goldline:#dcc58a;--blueline:#a9cbec;
     --pribg:#1462b8;--priline:#1462b8;--pritx:#ffffff;
-    --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;
+    --chipon:#dceaf8;--shade:rgba(20,28,38,.45);--sandbg:#fff0d6;--sandtx:#6b4700;
   }
 }
 *{box-sizing:border-box}
@@ -57,8 +57,10 @@ body{padding-bottom:64px}
 /* THE BANNER IS NOT DECORATION. Casey has to be able to tell at a glance, on any screen and
    after any number of tabs, that what he is looking at cannot touch the live league. */
 .sandbar{position:sticky;top:0;z-index:40;background:var(--sandbg);border-bottom:2px solid var(--warn);
- color:#ffd9a0;padding:8px 12px;font-size:12px;font-weight:600;letter-spacing:.02em}
-.sandbar b{color:var(--warn)}
+ color:var(--sandtx);padding:8px 12px;font-size:12px;font-weight:600;letter-spacing:.02em}
+/* THE BANNER'S OWN TEXT, NOT THE PAGE'S WARNING COLOUR. Amber on a pale amber ground is the one
+   pairing that looked fine dark and vanished light -- 1.19 to 1. */
+.sandbar b{color:var(--sandtx)}
 h1{font-size:19px;margin:14px 0 2px}
 h2{font-size:15px;margin:0 0 8px}
 .sub{color:var(--dim);font-size:12px;margin:0 0 14px}
@@ -147,6 +149,10 @@ button[disabled]:hover{border-color:var(--line);color:var(--ink)}
 .pill{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:999px;
  padding:2px 9px;color:var(--dim);white-space:nowrap}
 .pill.good{color:var(--good);border-color:var(--goodline)}
+/* A PILL INSIDE A FILLED BUTTON BELONGS TO THE BUTTON. "Signed Out" was --dim on the blue of a
+   primary button: 1.25 to 1, and invisible. It inherits now. */
+button.pri .pill, .seg button.on .pill, button.add .pill{color:inherit;border-color:currentColor;
+ opacity:.85}
 .pill.bad{color:var(--bad);border-color:var(--badline)}
 .pill.gold{color:var(--gold);border-color:var(--goldline)}
 .pill.blue{color:var(--blue);border-color:var(--blueline)}
