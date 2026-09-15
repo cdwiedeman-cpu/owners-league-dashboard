@@ -3576,47 +3576,26 @@ function setting(label, opts, why){
       }).join('') + '</div>'
     + '<div class="setwhy">' + why + '</div></div>';
 }
+/* ---- THE RUN IT TAB, IN THE ORDER BOB NEEDS IT --------------------------------------------
+ * Casey, 15 Sep 2026: "the whole tab is about Run It, and Run the Coin Flips is kind of in the
+ * middle of the page and buried. There's so much stuff going on in that first box. How the Coin
+ * Flips Work should be in a different spot, because having it right next to Run the Coin Flips
+ * confuses what he needs to do. If you can clean this whole page up in terms of structure, that
+ * would be nice."
+ * So the order is: DO IT, then WHAT IS WAITING, then WHAT HAPPENED, then the settings, then the
+ * explanations. The one button that settles the week is the first thing on the tab and the only
+ * thing in its row -- a second button beside it of the same size is a fork in the road, and this
+ * is not a fork.
+ */
 function viewRun(){
   var reqs = pendingRequests();
   var auto = S.autoPeloton !== false;
-  var mail = S.autoEmail !== false;
   var prev = ranBefore();
   var drafts = draftSeats();
 
-  var h = clockBanner() + '<div class="card"><h2>How Monday Runs</h2>'
-    + setting('Settling Monday',
-        [{label: 'Automatically', on: auto, act: "S.autoPeloton=true;save();render()",
-          title: 'The schedule settles the week a few minutes after 4:00pm AZ every Monday'},
-         {label: 'I Do It Myself', on: !auto, act: "S.autoPeloton=false;save();render()",
-          title: 'Nothing is settled until you press Run the coin flips'}],
-        auto ? 'The week settles itself a few minutes after 4:00pm AZ every Monday. You do nothing.'
-             : 'Nothing will be settled on its own. Press <b>Run the Coin Flips</b> on this tab when '
-               + 'you have entered everything.')
-    /* THERE IS NO EMAIL SWITCH, BECAUSE NOTHING SENDS EMAIL. Casey, 14 Sep 2026: "the tool is
-       not sending emails, right? So that shouldn't be a switch." He is right, and it was worse
-       than a dead control: it DEFAULTED to The Tool Sends Them, and the results card then told
-       Bob every owner had been emailed when nobody had. A switch with only one real position is
-       a sentence. The back end sends no mail on purpose -- that is what got the Google account
-       disabled -- so this row says what happens and names the button that does it.
-       NAME THE SECTION AND THE BUTTON, NOT "IT APPEARS". Casey, 10 Sep 2026: "copy every
-       owner's email appears with the messages ready to paste -- what are you talking about?
-       Where should he be looking?" A promise that something will show up, with no name for the
-       thing or the place, is worse than saying nothing: the reader now knows to hunt for it. */
-    + '<div class="setrow"><div class="setlab">Results Emails</div>'
-    + '<div class="setwhy">Nothing is emailed by this tool, and nothing ever will be. '
-    + 'When a week is settled, the <b>Week ' + playWeek() + ' &mdash; What Happened</b> section '
-    + 'gains a <b>Copy Every Owner&#39;s Email</b> button. It puts every message on your '
-    + 'clipboard at once, each one headed with the address it goes to. You paste them into your '
-    + 'own mail and send them. That is the same whether the week settled itself on Monday or you '
-    + 'pressed <b>Run the Coin Flips</b> yourself.</div></div>'
-    + '</div>';
-
-  /* WHERE THE WEEK STANDS, in a sentence, before any button. The question somebody opens this
-     tab with is "has it run yet and is everything in", and a row of controls does not answer it. */
-  h += '<div class="card"><h2>Week ' + playWeek() + '</h2>'
-    + '<p class="note">These are the lists sent for the games that start on '
-    + esc(playWeekStarts()) + '. A list is entered during the week BEFORE the games it is '
-    + 'for, so this is always the week ahead.</p><div class="statline">'
+  /* ---- 1. THE ACTION ---------------------------------------------------------------------- */
+  var h = clockBanner() + '<div class="card"><h2>Week ' + playWeek() + ' — Run It</h2>'
+    + '<div class="statline">'
     + '<span class="big">' + (prev
         ? 'Settled at ' + esc(pretty(prev.at))
         : reqs.length ? 'Not settled yet' : 'Nothing entered yet') + '</span>'
@@ -3626,32 +3605,38 @@ function viewRun(){
               + (prev.n === 1 ? '' : 's') + ' moved</span>' : '')
     + (drafts.length ? '<span class="pill bad">' + drafts.length + ' typed but not sent</span>'
                      : '') + '</div>'
-    + (drafts.length
-        ? '<p class="note b">Typed a list but never pressed <b>Save My Trades</b>, so they are NOT '
-          + 'in this week: ' + esc(drafts.join(', ')) + '.</p>' : '')
-    + '<div class="row">'
-    + '<button class="pri" ' + (reqs.length ? '' : 'disabled')
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri big" ' + (reqs.length ? '' : 'disabled')
     + ' title="' + esc(reqs.length
         ? 'Settle every list that has been sent for week ' + playWeek()
         : 'Nothing has been sent for week ' + playWeek() + ' yet')
-    + '" onclick="askRun()">Run the Coin Flips</button>'
-    + (prev && canUndo()
-        ? '<button class="dang" onclick="askUndo()" title="Put every roster back to how it stood '
-          + 'at 4:00pm AZ and keep every list exactly as it was typed">Undo week ' + playWeek()
-          + '</button>' : '')
-    + '<button onclick="showHelp(\'How the Coin Flip Works\', SEEDNOTE)">How the Coin Flip '
-    + 'Works</button></div>'
+    + '" onclick="askRun()">Run the Coin Flips</button></div>'
     + '<p class="note">' + (reqs.length
         ? 'Settles all ' + reqs.length + ' list' + (reqs.length === 1 ? '' : 's') + ' at once, '
           + 'running a coin flip wherever more than one owner asked for the same team.'
           + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm AZ.' : '')
         : 'Nothing has been sent for week ' + playWeek() + ' yet. Enter a list on <b>Trades</b> '
           + 'and press <b>Save My Trades</b>.')
-    + '</p></div>';
+    + '</p>'
+    + (drafts.length
+        ? '<p class="note b">Typed a list but never pressed <b>Save My Trades</b>, so they are NOT '
+          + 'in this week: ' + esc(drafts.join(', ')) + '.</p>' : '')
+    + '<p class="note">These are the lists sent for the games that start on '
+    + esc(playWeekStarts()) + '. A list is entered during the week BEFORE the games it is for, '
+    + 'so this is always the week ahead.</p>'
+    /* UNDO IS ON ITS OWN, UNDER A RULE, because it is the opposite of the button above it and
+       only ever offers THIS week. Casey, 15 Sep 2026: "he can only undo the current week." */
+    + (prev && canUndo()
+        ? '<hr style="border:0;border-top:1px solid var(--line);margin:12px 0">'
+          + '<p class="note"><b>Ran it too early, or missed somebody?</b> Undoing puts every '
+          + 'roster back to how it stood at 4:00pm AZ and keeps every list exactly as it was '
+          + 'typed. Then add what was missing and run the week again.</p>'
+          + '<div class="row"><button class="dang" onclick="askUndo()">Undo Week '
+          + playWeek() + '</button></div>'
+        : '')
+    + '</div>';
 
-  h += claimQueueCard();
-  if (S.results) h += resultsCard();
-
+  /* ---- 2. WHAT IS WAITING ----------------------------------------------------------------- */
   if (reqs.length){
     h += '<div class="card"><h2>Waiting to Be Settled</h2><div class="scr"><table>'
       + '<colgroup><col style="width:34%"><col style="width:14%"><col style="width:52%"></colgroup>'
@@ -3661,14 +3646,8 @@ function viewRun(){
             + '<td class="d">' + esc(r.rows.map(function(x){ return x.pickup; }).join(', '))
             + '</td></tr>';
         }).join('') + '</tbody></table></div>'
-      /* A TESTING INSTRUCTION, AND IT HAS TO SAY SO. Casey, 11 Sep 2026: "I just want to make
-         sure that that is only for this test dashboard, that that will go away on the actual
-         dashboard." It is only here. On the real page the other owners are real people on their
-         own phones, so there is nothing to stage. Rather than delete the hint -- it is genuinely
-         how you make a flip happen in here -- it is LABELLED, because an unlabelled instruction
-         is one Bob may carry over to the real thing. */
-      /* AND IT IS NOT PRINTED AT ALL ON THE REAL PAGE. A paragraph that ends by saying it does
-         not apply here is a paragraph that should not be here. */
+      /* A TESTING INSTRUCTION, AND IT HAS TO SAY SO -- and it is not printed at all on the real
+         page. A paragraph that ends by saying it does not apply here should not be here. */
       + (Store.live() ? ''
           : '<p class="note sandonly"><b>Sandbox only.</b> To make a coin flip happen in here, '
             + 'sign in on another device as a different owner in the same division and ask for '
@@ -3676,6 +3655,41 @@ function viewRun(){
             + 'own lists, so nothing in this paragraph exists there.</p>')
       + '</div>';
   }
+
+  /* ---- 3. WHAT HAPPENED ------------------------------------------------------------------- */
+  h += claimQueueCard();
+  if (S.results) h += resultsCard();
+
+  /* ---- 4. THE SETTING, AND THEN THE EXPLANATIONS ------------------------------------------ */
+  h += '<div class="card"><h2>Settings</h2>'
+    + setting('Settling Monday',
+        [{label: 'Automatically', on: auto, act: "S.autoPeloton=true;save();render()",
+          title: 'The schedule settles the week a few minutes after 4:00pm AZ every Monday'},
+         {label: 'I Do It Myself', on: !auto, act: "S.autoPeloton=false;save();render()",
+          title: 'Nothing is settled until you press Run the coin flips'}],
+        auto ? 'The week settles itself a few minutes after 4:00pm AZ every Monday. You do nothing.'
+             : 'Nothing will be settled on its own. Press <b>Run the Coin Flips</b> at the top of '
+               + 'this tab when you have entered everything.')
+    /* THERE IS NO EMAIL SWITCH, BECAUSE NOTHING SENDS EMAIL. Casey, 14 Sep 2026: "the tool is not
+       sending emails, right? So that shouldn't be a switch." It DEFAULTED to The Tool Sends Them,
+       and the results card then told Bob every owner had been emailed when nobody had. A switch
+       with only one real position is a sentence. */
+    + '<div class="setrow"><div class="setlab">Results Emails</div>'
+    + '<div class="setwhy">Nothing is emailed by this tool, and nothing ever will be. Once a week '
+    + 'is settled, every owner&rsquo;s message is on this tab under <b>Week ' + playWeek()
+    + ' &mdash; What Happened</b>, with a Copy button on each one. Paste them into your own mail. '
+    + 'That is the same whether the week settled itself on Monday or you pressed <b>Run the Coin '
+    + 'Flips</b> yourself.</div></div>'
+    + '</div>';
+
+  h += '<div class="card"><h2>How It Works</h2>'
+    + '<p class="note">Worth reading once. Neither of these changes anything.</p>'
+    + '<div class="row">'
+    + '<button onclick="showHelp(\'How the Coin Flip Works\', SEEDNOTE)">How the Coin Flip '
+    + 'Works</button>'
+    + '<button onclick="showHelp(\'Running a Week Twice\', TWICENOTE)">Running a Week '
+    + 'Twice</button></div></div>';
+
   return h + clockCard();
 }
 /* EXPLAINED WITHOUT THE WORD "SEEDED". Casey, 11 Sep 2026: "what Bob currently uses is a
@@ -3707,6 +3721,19 @@ var SEEDNOTE = '<p><b>It is a randomizer.</b> Nobody can predict it, nobody can 
    not blocked; it is explained and confirmed, because "already ran" and "nothing happened" look
    identical from the outside. */
 function ranBefore(){ return (S.ranWeeks || {})[weekNo()] || null; }
+/* THE SECOND EXPLAINER ON THE RUN TAB. It answers the question Bob asks the first time he is
+   told to undo a week rather than just run it again. */
+var TWICENOTE = '<p><b>Running a week again does not redo it.</b> It settles only what has been '
+  + 'entered since the last run, against the rosters as they stand now. It cannot undo anything '
+  + 'already decided and it cannot give a team to somebody else.</p>'
+  + '<p><b>That is why a late request usually needs an undo instead.</b> A request that arrives '
+  + 'at 3:55 can join a coin flip another owner already won. Settling it on its own cannot reach '
+  + 'the answer the week should have had \u2014 only running the whole week with everything in it '
+  + 'can.</p>'
+  + '<p><b>A second run is the right tool</b> when the person you missed wanted a team nobody '
+  + 'else asked for. If you are not sure, undo and run the week again.</p>'
+  + '<p><b>Undo only ever offers this week.</b> Once the week turns it is gone, because a week '
+  + 'that has been played cannot be settled differently.</p>';
 function askRun(){
   /* ASK THE LEAGUE BEFORE SETTLING, because the other commissioner may have settled it already.
      Casey, 15 Sep 2026: Bob ran it on his machine and Casey's tab still said one seat was
@@ -3878,12 +3905,15 @@ function resultsCard(){
   return '<div class="card"><h2>Week ' + playOf(R.week) + ' &mdash; What Happened</h2>'
     + '<p class="note">Run at ' + esc(pretty(R.at)) + '. Every row gets a sentence. A blank row '
     + 'would leave an owner unable to tell a loss from a bug.</p>'
+    /* NO COPY-EVERYBODY BUTTON. Casey, 15 Sep 2026: "I don't know why you'd ever want to copy
+       every owner's email unless you were doing an email blast, and Bob already has his own
+       distribution list. Take that out and just have the individual seats." One clipboard
+       holding twenty-seven messages is also a thing you can only paste once, so it was never
+       the workflow it looked like. */
     + '<div class="card warn" style="margin:0 0 10px"><b>Nobody has been emailed yet.</b>'
-    + '<p class="note">This tool does not send mail. <b>Copy Every Owner&#39;s Email</b> puts '
-    + 'every message on your clipboard at once, each one headed with the address it goes to. '
-    + 'Paste them into your own mail and send them.</p>'
-    + '<div class="row"><button class="pri" onclick="copyAllEmails(this)">Copy Every Owner&#39;s '
-    + 'Email</button></div></div>'
+    + '<p class="note">This tool does not send mail and never will. Each owner below has a '
+    + '<b>Copy</b> button that puts their own message on your clipboard, headed with the address '
+    + 'it goes to. Paste it into your own mail and send it.</p></div>'
     + keys.map(function(k){
         var b = k.split('|'), seat = b[1];
         var rows = R.results[k] || [];
