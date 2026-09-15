@@ -2403,7 +2403,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 11:32 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 11:41 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4506,19 +4506,42 @@ function planPanel(){
       one kind and everything flagged to pick up is the other.`;
   };
 
-  const table = pairs.length ? `<div class="card"><h2>How Each Swap Looks</h2>
-    <div class="scrhint"><b>Swipe</b> the table sideways to see the season figures.</div>
-    <div class="scr"><table>
-      <thead><tr><th class="c-team">Drop</th><th class="c-team">Pick up</th>
-        <th class="num c-p30" title="The chance the team you pick up wins all three games of the mandatory hold.">3-0</th>
-        <th class="num c-gain" title="What the swap is worth over the three weeks of the hold. Both teams measured over the SAME three weeks, starting the day the slot frees up.">Gain 3</th>
-        <th class="num c-sgain hide-s" title="What the swap is worth from the day the slot frees up to the end of the regular season.">Season gain</th>
-        <th class="c-then">Can you do it</th></tr></thead>
-      <tbody>${pairs.map(x => `<tr>
-        <td class="c-team"><span class="pill p-${x.drop.pool.toLowerCase()}">${x.drop.pool}</span> ${esc(x.drop.n)}</td>
-        <td class="c-team"><b>${esc(x.get.n)}</b></td>
+  /* ---- ONE BLOCK PER TEAM YOU ARE DROPPING ---------------------------------------------------
+   * Casey, 15 Sep 2026: "it's adding each team I put in the plan, but it doesn't put the team I
+   * drop into that swap section. If I was really wanting to do a high-level compare I should see
+   * a row for the teams I'm going to swap out and the rows for the teams I'm considering swapping
+   * in, and what the gain would be."
+   * The gain was there and the thing it was measured AGAINST was not. A number called Gain 3 with
+   * nothing beside it saying what is being given up is a number you have to take on trust. So the
+   * team you are dropping gets its own row, in its own figures, and every candidate sits under it
+   * in the same columns — the comparison is then something you can read off the page rather than
+   * something you have to believe.
+   */
+  const byDrop = new Map();
+  for (const x of pairs){
+    if (!byDrop.has(x.drop.n)) byDrop.set(x.drop.n, {drop: x.drop, from: x.from,
+      bank: x.incBank, season: x.incSeason, gets: []});
+    byDrop.get(x.drop.n).gets.push(x);
+  }
+  const num = (v, cls) => v == null ? '<span class="d">—</span>'
+    : `<span class="${cls || ''}">${v >= 0 && cls ? '+' : ''}${v.toFixed(2)}</span>`;
+  const blocks = [...byDrop.values()].map(b => `<tbody>
+      <tr class="rbtot"><td class="c-team"><b>Drop</b>
+        <span class="pill p-${b.drop.pool.toLowerCase()}">${b.drop.pool}</span>
+        <b>${esc(b.drop.n)}</b></td>
+        <td class="num c-p30"><span class="d">—</span></td>
+        <td class="num c-bank"><b>${b.bank.toFixed(2)}</b></td>
+        <td class="num c-season hide-s"><b>${b.season.toFixed(2)}</b></td>
+        <td class="num c-gain"><span class="d">—</span></td>
+        <td class="num c-sgain hide-s"><span class="d">—</span></td>
+        <td class="c-then"><span class="d">what you give up</span></td></tr>
+      ${b.gets.map(x => `<tr>
+        <td class="c-team" style="padding-left:16px"><span class="d">↳</span>
+          <span class="pill p-${x.get.pool.toLowerCase()}">${x.get.pool}</span> <b>${esc(x.get.n)}</b></td>
         <td class="num c-p30 ${x.p30 == null ? 'd' : x.p30 >= 0.5 ? 'g' : x.p30 >= 0.25 ? 'y' : 'b'}">${
           x.p30 == null ? '<span class="d">—</span>' : pctP(x.p30)}</td>
+        <td class="num c-bank">${x.bank.toFixed(2)}</td>
+        <td class="num c-season hide-s d">${x.season.toFixed(2)}</td>
         <td class="num c-gain">${x.gain3 == null ? '<span class="d">—</span>'
           : `<b class="${x.gain3 > 0.3 ? 'g' : x.gain3 < 0 ? 'b' : 'y'}">${x.gain3 >= 0 ? '+' : ''}${x.gain3.toFixed(2)}</b>`}</td>
         <td class="num c-sgain hide-s">${x.gainR == null ? '<span class="d">—</span>'
@@ -4527,10 +4550,22 @@ function planPanel(){
           ? '<span class="pill v-keep">Yes</span>'
           : x.free ? '<span class="pill v-no" title="It cannot finish the hold from the day this slot frees up.">Too late</span>'
                    : '<span class="pill v-hold" title="Another owner in your division holds it.">Taken</span>'}</td>
-      </tr>`).join('')}</tbody></table></div>
-    <div class="note">Every figure is <b>league points</b>, and both sides of every row are
-      measured over the same weeks starting on the day that slot frees up. Points either team has
-      already scored are in neither column — they are yours or theirs already, and a decision you
+      </tr>`).join('')}</tbody>`).join('');
+
+  const table = pairs.length ? `<div class="card"><h2>How Each Swap Looks</h2>
+    <div class="scrhint"><b>Swipe</b> the table sideways to see the season figures.</div>
+    <div class="scr"><table>
+      <thead><tr><th class="c-team">Team</th>
+        <th class="num c-p30" title="The chance the team you pick up wins all three games of the mandatory hold. The team you are dropping has no figure here — it is not starting a hold.">3-0</th>
+        <th class="num c-bank" title="Expected league points over the three weeks of the hold, starting the day this slot frees up. The same three weeks for every row in the block.">Bank 3</th>
+        <th class="num c-season hide-s" title="Expected points from the day the slot frees up to the end of the regular season.">Season<br>pts</th>
+        <th class="num c-gain" title="Bank 3 minus what the team you are dropping earns over those same three weeks.">Gain 3</th>
+        <th class="num c-sgain hide-s" title="Season points minus what the team you are dropping earns over the same stretch.">Season<br>gain</th>
+        <th class="c-then">Can you do it</th></tr></thead>
+      ${blocks}</table></div>
+    <div class="note">Every figure is <b>league points</b>, and every row in a block is measured
+      over the same weeks, starting the day that slot frees up. Points either team has already
+      scored are in none of these columns — they are yours or theirs already, and a decision you
       are making today cannot change them.</div></div>`
     : `<div class="card"><h2>How Each Swap Looks</h2><div class="empty">${why()}</div></div>`;
 
@@ -4564,6 +4599,10 @@ function planSendCard(pairs){
       the <b>Trades</b> tab: one for each team you mean to pick up, with the teams you flagged to
       drop as its drop choices. <b>Nothing is entered into a week.</b> You read it over there and
       press <b>Submit My Trades</b> yourself.</p>
+      <p class="note">Once Monday's coin flips have run, trades are first come, first served for
+      the rest of the window — one team in and one team out, with no back-ups. Sending a plan then
+      fills in the claim form with the first pairing and tells you what it left behind. The rest
+      of your plan stays here.</p>
       ${blocked.length ? `<p class="note y"><b>${blocked.length} of them cannot be claimed this
         week</b> — ${esc(blocked.join(', '))}. They are still filled in, and the Trades tab will
         say why beside each one.</p>` : ''}

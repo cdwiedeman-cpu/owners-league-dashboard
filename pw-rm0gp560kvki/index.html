@@ -2403,7 +2403,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 11:40 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 11:41 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4599,6 +4599,10 @@ function planSendCard(pairs){
       the <b>Trades</b> tab: one for each team you mean to pick up, with the teams you flagged to
       drop as its drop choices. <b>Nothing is entered into a week.</b> You read it over there and
       press <b>Submit My Trades</b> yourself.</p>
+      <p class="note">Once Monday's coin flips have run, trades are first come, first served for
+      the rest of the window — one team in and one team out, with no back-ups. Sending a plan then
+      fills in the claim form with the first pairing and tells you what it left behind. The rest
+      of your plan stays here.</p>
       ${blocked.length ? `<p class="note y"><b>${blocked.length} of them cannot be claimed this
         week</b> — ${esc(blocked.join(', '))}. They are still filled in, and the Trades tab will
         say why beside each one.</p>` : ''}
