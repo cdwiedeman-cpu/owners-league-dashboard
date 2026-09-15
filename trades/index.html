@@ -5023,7 +5023,7 @@ function openFix(k){
     + 'dashboard works out points from this same list, so the points go back with it.</p>'
     + '<label class="lb" style="margin-top:12px" for="fixWhy">Why you are changing it</label>'
     + '<input class="search" id="fixWhy" type="text" style="max-width:100%" '
-      + 'placeholder="Ran in the wrong window">'
+      + 'placeholder="Type why you are changing this trade">'
     + '<p class="note" id="fixErr" style="margin:6px 0 0"></p>'
     + '<div class="row" style="margin-top:12px">'
     + '<button class="dang" onclick="doTakeBack(' + jq(k) + ')">Take the Trade Back</button>'
@@ -5191,7 +5191,7 @@ function handPick(){
     + '</select>'
     + '<label class="lb" style="margin-top:10px" for="hmWhy">Why you are changing it</label>'
     + '<input class="search" id="hmWhy" type="text" style="max-width:100%" '
-      + 'placeholder="Recorded on the wrong seat at the draft">';
+      + 'placeholder="Type why you are changing this roster">';
 }
 function doHandMove(){
   var err = el('hmErr');
@@ -5251,10 +5251,14 @@ function openFee(k){
     + '<label class="lb" style="margin-top:10px" for="feeAmt">Or another amount</label>'
     + '<input class="search" id="feeAmt" type="text" inputmode="text" '
       + 'value="' + esc(String(v)) + '" style="max-width:140px">'
-    + '<label class="lb" style="margin-top:10px" for="feeWhy">Why it is not the standard '
-      + money(FEE()) + '</label>'
+    /* THE LABEL IS NOT A STATEMENT ABOUT THE CURRENT AMOUNT. It read "Why it is not the standard
+       $3" while the amount on screen still WAS $3, which is a label contradicting the box beside
+       it. It names what the box is for instead, and says when it has to be filled in. */
+    + '<label class="lb" style="margin-top:10px" for="feeWhy">Why This Amount</label>'
+    + '<p class="note" style="margin:0 0 3px">Only needed if you change it from the standard '
+      + money(FEE()) + '. It is printed beside the amount on the Trade Fees tab.</p>'
     + '<input class="search" id="feeWhy" type="text" value="' + esc(e.fee_note || '') + '" '
-      + 'placeholder="Second move of one correction" style="max-width:100%">'
+      + 'placeholder="Type why this is not the standard amount" style="max-width:100%">'
     + '<p class="note" id="feeErr" style="margin:6px 0 0"></p>'
     + '<div class="row" style="margin-top:10px">'
     + '<button class="pri" onclick="saveFee(' + jq(k) + ')">Save</button>'
@@ -5292,15 +5296,35 @@ function saveFee(k){
 }
 
 function viewRosters(){
+  /* ---- NO WAY TO THROW THE SEASON AWAY FROM HERE ------------------------------------------
+   * Casey, 15 Sep 2026: "Put the Real Rosters Back -- not sure what that means. What are real
+   * rosters? As we go along, the real roster is the real roster from last week, not from the
+   * beginning of the draft. And I don't think you'd ever want to throw away every trade the
+   * league has run for the entire season. I wouldn't even give that as a button."
+   * He is right on both counts. The name named nothing a reader could picture, and the action
+   * behind it has no honest use once a week has been settled for real. A control whose only
+   * correct number of presses is zero should not be on the page.
+   * WHAT HE ACTUALLY NEEDS is already built and is deliberately narrow: Undo the Week, on the
+   * Run It tab, which only ever offers THIS week -- `canUndo()` refuses once the week has
+   * turned. That matches what he asked for: "he can only undo the current week ... if somebody
+   * put in a trade that was missed he could add that trade and rerun."
+   */
   var h = '<div class="card"><h2>' + (Store.live() ? 'Rosters' : 'Where the Sandbox Stands')
     + '</h2>'
-    + '<p class="note">' + (Store.live()
-        ? 'Every seat and the eleven teams on it, as the league stands now. Trades that have '
-          + 'been settled are already in here.'
-        : 'Started as a copy of the real rosters. Everything below is the result of what you have '
-          + 'done in here, and none of it has left this browser.') + '</p>'
-    + '<div class="row"><button class="dang" onclick="doReset()">Put the Real Rosters Back</button>'
-    + '</div></div>';
+    + (Store.live()
+        ? '<p class="note">Every seat and the eleven teams on it, as the league stands now. '
+          + 'Settled trades are already in here.</p>'
+          + '<p class="note"><b>To put one trade right, use the Fix button on its line below.</b> '
+          + 'It takes that one trade back, or swaps the team for a different one, and leaves '
+          + 'every other trade alone.</p>'
+          + '<p class="note"><b>To run this Monday again from the start, use Undo the Week on the '
+          + 'Run It tab.</b> That puts the rosters back to 4:00pm today and keeps every list '
+          + 'exactly as the owners typed it. It only ever offers the current week.</p>'
+        : '<p class="note">Started as a copy of the real rosters. Everything below is the result '
+          + 'of what you have done in here, and none of it has left this browser.</p>'
+          + '<div class="row"><button class="dang" onclick="doReset()">Start This Practice Copy '
+          + 'Again</button></div>')
+    + '</div>';
   var boss = isCommish();
   h += S.log.length ? '<div class="card"><h2>What Has Moved</h2><div class="scr"><table>'
       + '<colgroup><col style="width:20%"><col style="width:18%"><col style="width:18%">'
@@ -5365,19 +5389,15 @@ function viewRosters(){
    for this outright on 12 Sep 2026: he wants to run a real week early, check it, and put it all
    back before Monday. */
 function doReset(){
-  var body = Store.live()
-    ? '<p>This throws away <b>every trade the league has run</b> and puts the drafted rosters '
-      + 'back. It happens in the league, so it happens for everybody, not only on this '
-      + 'device.</p>'
-      + '<p>Do it when you have been testing and want a clean start. Do not do it after a week '
-      + 'has been settled for real.</p>'
-      + '<p>Sign-ins and the access list are kept.</p>'
-    : '<p>This throws away every trade you have run in here and reloads the drafted rosters. '
-      + 'Sign-ins and the access list are kept.</p>';
-  showHelp(Store.live() ? 'Throw away every trade and start again?' : 'Put the real rosters back?',
+  /* PRACTICE ONLY. The live page no longer offers this at all -- see viewRosters(). */
+  if (Store.live()) return;
+  var body = '<p>This throws away every trade you have run in the practice copy and loads the '
+    + 'drafted rosters again. Nothing here has ever reached the real league.</p>'
+    + '<p>Your sign-ins and the access list are kept.</p>';
+  showHelp('Start This Practice Copy Again?',
     body
     + '<div class="row" style="margin-top:10px">'
-    + '<button class="dang" onclick="reallyReset()">Yes, Reset the Rosters</button>'
+    + '<button class="dang" onclick="reallyReset()">Yes, Start Again</button>'
     + '<button onclick="closeHelp()">Leave It Alone</button></div>');
 }
 function reallyReset(){
