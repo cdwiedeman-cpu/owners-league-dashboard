@@ -580,7 +580,9 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
    It is `position: fixed` here, which is the whole point: it holds the bottom edge with no
    messages and no arithmetic, so it cannot trail the scroll. The trades page decides everything
    the bar SAYS and hands it over finished; this is only where it is drawn. */
-#rflbar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--pan);
+/* BELOW THIS PAGE'S OWN PANELS, which sit at 60. A panel covers the whole screen, so at 55
+   the bar goes behind the shade with everything else, which is where it belongs. */
+#rflbar{position:fixed;left:0;right:0;bottom:0;z-index:55;background:var(--pan);
  border-top:1px solid var(--line);padding:9px 12px;display:flex;flex-wrap:wrap;gap:8px;
  align-items:center;box-shadow:0 -4px 14px rgba(15,47,82,.12)}
 #rflbar[hidden]{display:none}
@@ -2512,7 +2514,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 12:22 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 12:23 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
