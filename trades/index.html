@@ -1995,12 +1995,72 @@ function closeHelp(){ OPEN = null; var b = el('help'); b.hidden = true; b.innerH
 var FRAME_VIEW = null;
 window.addEventListener('message', function(e){
   var d = e && e.data;
-  if (!d || d.rfl !== 'view') return;
+  if (!d) return;
+  if (d.rfl === 'plan') return takePlan(d.rows);
+  if (d.rfl !== 'view') return;
   if (typeof d.top !== 'number' || typeof d.height !== 'number') return;
   FRAME_VIEW = d;
   placeModal();
   placeBar();
 });
+
+/* ---- A PLAN ARRIVING FROM THE PICKUPS TAB ---------------------------------------------------
+ * Casey, 15 Sep 2026: "if it's already recorded, it would be great to send it to the Trades tab
+ * ... and I go to the Trades tab and then can review it and then save the trade."
+ * It FILLS THE FORM IN AND STOPS. Nothing is entered into a week that has not had Save My Trades
+ * pressed on it -- a planning screen is the last place on this site where something binding
+ * should happen without that word.
+ * IT NEVER OVERWRITES A LIST THAT IS ALREADY SENT. A list sitting in Monday's flips is a
+ * commitment; replacing it from another tab, silently, is the one outcome that could cost him a
+ * team. He is asked first.
+ */
+function takePlan(rows){
+  if (!Array.isArray(rows) || !rows.length) return;
+  var a = actingSeat();
+  if (!a || !a.seat){
+    showHelp('Sign In First', '<p>The plan cannot be filled in until this page knows whose list '
+      + 'it is. Sign in on this tab and press Send to Trades again.</p>');
+    return;
+  }
+  /* Only teams this page still recognises, and never more rows than a list may hold. */
+  var clean = rows.filter(function(r){ return r && r.pickup; })
+    .slice(0, P.MAX_ROWS)
+    .map(function(r){
+      var drops = (r.drops || []).slice(0, P.MAX_DROPS);
+      if (!drops.length) drops = [''];
+      if (drops.length < P.MAX_DROPS) drops = drops.concat(['']);
+      return {pickup: r.pickup, drops: drops, cond: {type: 'always', row: 1}};
+    });
+  if (!clean.length) return;
+  var cur = myReq();
+  var had = (cur && cur.rows || []).filter(function(r){ return r && r.pickup; }).length;
+  var put = function(){
+    setRows(clean);
+    /* A LIST THAT WAS ALREADY SENT GOES BACK OUT OF THE WEEK, because what is in the week is no
+       longer what is on the screen. Same rule as changing a row by hand. */
+    var r = myReq(); if (r){ r.submitted = null; save(); }
+    setTab('trades'); render();
+    showHelp('Your Plan Is Filled In',
+      '<p><b>' + clean.length + ' trade' + (clean.length === 1 ? '' : 's') + '</b> from your '
+      + 'Pickups plan ' + (clean.length === 1 ? 'is' : 'are') + ' on this tab now.</p>'
+      + '<p><b>Nothing is in Monday\u2019s coin flips yet.</b> Read it over, change anything you '
+      + 'want, and press <b>Save My Trades</b>.</p>');
+  };
+  if (!had) return put();
+  showHelp('Replace the List You Have?',
+    '<p>You already have <b>' + had + ' trade' + (had === 1 ? '' : 's') + '</b> on this tab'
+    + ((cur && cur.submitted) ? ', and ' + (had === 1 ? 'it is' : 'they are')
+        + ' <b>saved for Monday</b>' : '') + '.</p>'
+    + '<p>Filling in your plan replaces ' + (had === 1 ? 'it' : 'them') + '.'
+    + ((cur && cur.submitted) ? ' Your seat comes back OUT of this week until you press <b>Save '
+        + 'My Trades</b> again.' : '') + '</p>'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="pri" onclick="closeHelp();_planPut()">Replace It With My Plan</button>'
+    + '<button onclick="closeHelp()">Keep What I Have</button></div>', true);
+  _PLAN_PUT = put;
+}
+var _PLAN_PUT = null;
+function _planPut(){ if (_PLAN_PUT) _PLAN_PUT(); }
 /* THE ACTION BAR SITS ON THE BOTTOM EDGE OF WHATEVER IS ON SCREEN. Same problem as the panel,
    same answer: inside the dashboard the frame does not scroll, so `position: fixed` would pin it
    to the bottom of a page two screens tall. Standing alone the CSS default is already right. */
