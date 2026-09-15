@@ -716,6 +716,34 @@ details>summary::marker{color:var(--faint)}
      it also let one chip run 34px past the viewport once the results chip grew a clock. Wrapping
      at spaces keeps every word whole and the page still does not scroll sideways. */
   .chip{font-size:10px;white-space:normal;max-width:100%}
+  /* ---- A PHONE SCREEN IS FOR THE SCORES, NOT FOR THE FURNITURE ------------------------------
+   *
+   * Casey, 15 Sep 2026: "half of the screen is made up of your chips, the buttons for the tabs,
+   * the filters, the who you are, the search. The scores are all the way at the bottom. And it
+   * applies to every page on the mobile app."
+   *
+   * Measured on a 393x852 phone: 255px of header before `main` even starts, and the first score
+   * card began 446px down. More than half the screen spent before a single result.
+   *
+   * Two things were eating it. The tab strip WRAPPED to two and three rows, which was the right
+   * answer to "the page must never scroll sideways" and the wrong answer to "the strip must not
+   * eat the screen" -- a strip that scrolls sideways BY ITSELF does neither. And the date-stamp
+   * chips, which are worth having and are not worth 89px on every visit, are now one line that
+   * opens.
+   */
+  .tabs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+   scrollbar-width:none;margin:0 -10px;padding:0 10px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto}
+  /* The stamps collapse to one row that can be swiped, rather than a block that wraps to four. */
+  .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+   margin:0 -10px 6px;padding:0 10px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;white-space:nowrap}
+  /* THE TABS STAY WITH YOU. Scrolling a long scoreboard used to mean scrolling all the way back
+     to change tab. */
+  header{position:sticky;top:0;z-index:30;background:var(--bg)}
+  main{padding-top:8px}
   /* FIVE TABS DO NOT FIT A PHONE AT THE DESKTOP PADDING. Adding the Race tab took the strip to
      392px inside a 370px column and the whole PAGE gained 12px of sideways scroll -- the one
      thing this file is never allowed to do. Two changes, because one of them is a number that
@@ -2002,7 +2030,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 4:59 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 6:57 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
