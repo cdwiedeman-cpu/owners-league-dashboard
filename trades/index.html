@@ -300,6 +300,15 @@ td.num,th.num{text-align:right}
 /* ---- THE TWO BUTTONS THAT MATTER ARE ALWAYS ON SCREEN ---------------------------------------
    He kept scrolling up and down hunting for Add Another Trade and Send My List. On a page this
    tall that is not a labelling problem, it is a position problem. */
+/* ---- WHOSE LIST THIS IS, AT THE TOP OF THE LIST ----------------------------------------------
+   A commissioner only. Quiet when it is set to you, and unmissable when it is not: entering a
+   trade into the wrong owner's list is the one mistake this page cannot undo for you. */
+.acting{border:1px solid var(--line);border-radius:9px;background:var(--pan2);
+ padding:9px 11px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.acting select{flex:1 1 200px;min-width:0;margin:0}
+.acting .note{flex:1 1 100%;margin:0}
+.acting.on{background:#fdecea;border-color:var(--bad);border-left:4px solid var(--bad)}
+.acting.on select{border-color:var(--bad)}
 /* ROOM FOR THE STRIP AT THE FOOT OF AN iPHONE. Without this the bar sits in the band iOS keeps
    for the home indicator, and the curved corner takes a bite out of whatever is nearest it.
    `env()` is zero everywhere that has no such strip, so it costs nothing on a laptop. */
@@ -3152,7 +3161,7 @@ function viewTrades(){
     + mine.length + ' on your roster</p>';
 
   var h = clockBanner() + myResultCard() + waysStrip(fcfs, helpRow);
-  if (fcfs) return h + fcfsForm(a, free, mine, k) + commishCard(s) + clockCard();
+  if (fcfs) return h + fcfsForm(a, free, mine, k) + clockCard();
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
 
@@ -3176,7 +3185,7 @@ function viewTrades(){
       + '<div class="row"><button onclick="unsubmit()">Change My Trades</button></div></div>';
   }
 
-  h += '<div class="card"><h2>Your List for Monday</h2>';
+  h += '<div class="card"><h2>Your List for Monday</h2>' + actingStrip();
   if (sent){
     /* SUBMITTED MEANS SUBMITTED. The rows go read-only rather than staying editable behind a
        green banner -- a form you can still type into is a form you can leave half-changed
@@ -3281,7 +3290,7 @@ function viewTrades(){
       + '<span class="grow"><b class="g">Saved and in for Monday.</b> ' + rows.length + ' trade'
       + (rows.length === 1 ? '' : 's') + '.</span></div>';
   }
-  return h + commishCard(s0) + clockCard();
+  return h + clockCard();
 }
 
 /* THE SHAPE OF THE WEEK, WITHOUT THE WALL.
@@ -3575,27 +3584,46 @@ var HOWNOTE = '', WAYSNOTE = '';
    it and forgets it -- and it used to sit between an owner and the form. It stays OPEN whenever
    he has actually chosen somebody else, because then it is not a setting any more, it is the
    answer to "whose list am I looking at". */
-function commishCard(s){
+/* ---- WHOSE LIST THIS IS, AT THE TOP OF THE LIST -----------------------------------------------
+ *
+ * Casey, 15 Sep 2026: "all I see on the trades tab to start is Add a Trade. You have to scroll
+ * down to see Entering for Someone Else, and this is on my laptop. A lot of times I've come in
+ * here, I've clicked Add a Trade and not recognised that oh, this is already filtered to Michael
+ * Spielman and not myself."
+ *
+ * A SETTING THAT CHANGES WHAT A FORM DOES BELONGS ON THE FORM. It was a card of its own below
+ * the list, so the one fact that decides whose trade you are about to enter was the last thing
+ * on the screen instead of the first. It is a line at the top of the list now, above the first
+ * Add a Trade, and only a commissioner has it at all.
+ *
+ * AND IT GOES BACK TO YOU EVERY TIME. It was kept with the rest of the saved state, so a
+ * commissioner who entered a trade for somebody last week came back this week still set to that
+ * owner, with nothing on the screen where they were looking to say so. It is cleared at boot
+ * now: it lasts for the visit, never past it. See `boot()`.
+ */
+function commishCard(){ return ''; }
+function actingStrip(){
+  var s = whoIsThis();
   if (!s || s.role !== 'commissioner') return '';
   var on = !!S.actingAs;
-  return '<div class="card' + (on ? ' warn' : '') + '">'
-    + '<h2>Entering for Someone Else</h2>'
-    + (on
-        ? '<p class="note b">You are entering for <b>' + esc(String(S.actingAs).split('|')[1])
-          + '</b>, not for yourself. Set it back to yourself when you are done.</p>'
-        : '<p class="note">This is set to <b>you</b>, so the list above is your own. Change it '
-          + 'only to enter a trade an owner has told you about.</p>')
-    + '<label class="lb" for="ba">Submitting for</label><select id="ba" '
-    + 'onchange="S.actingAs=this.value||null;save();render()"><option value="">— myself ('
-    + esc(s.seat) + ') —</option>'
+  var who = on ? String(S.actingAs).split('|')[1] : '';
+  return '<div class="acting' + (on ? ' on' : '') + '">'
+    + '<label class="lb" for="ba" style="margin:0">Entering for</label>'
+    + '<select id="ba" onchange="S.actingAs=this.value||null;save();render()">'
+    + '<option value="">Myself (' + esc(s.seat) + ')</option>'
     + DATA.seats.map(function(x){
         var kk = key(x.div, x.owner);
         return '<option value="' + esc(kk) + '"' + (S.actingAs === kk ? ' selected' : '') + '>'
-          + esc(x.owner) + ' — ' + esc(DATA.div_names[x.div] || x.div) + '</option>';
+          + esc(x.owner) + ' \u2014 ' + esc(DATA.div_names[x.div] || x.div) + '</option>';
       }).join('') + '</select>'
-    + '<p class="note" style="margin-top:8px">Same form, same rules, same clock. The trade is '
-    + 'recorded against <b>their team</b>, not against you, and the log keeps a line saying you '
-    + 'entered it.</p></div>';
+    + (on
+        ? '<button class="dang" onclick="S.actingAs=null;save();render()">Back to My Own '
+          + 'List</button>'
+          + '<p class="note b">Every trade below is <b>' + esc(who) + '</b>&rsquo;s, not yours. '
+          + 'It is recorded against their team, and the log keeps a line saying you entered it.</p>'
+        : '<p class="note">This list is your own. Change this only to enter a trade an owner has '
+          + 'told you about. It goes back to you next time you open the page.</p>')
+    + '</div>';
 }
 /* THE RULES BUTTON MOVED INTO THE HEADER ROW WITH THE OTHER TWO, so this card is gone rather
    than left behind for somebody to wire back in under the form it was taken out of. */
@@ -3797,7 +3825,7 @@ function fcfsForm(a, free, mine, k){
   var dns = (kind ? ofKind(mine, kind) : mine)
               .map(function(n){ return {n: n, why: whyNotDrop(k, n, S.fcp)}; });
   var ups = free.map(function(n){ return {n: n, why: whyNotClaim(n)}; });
-  return '<div class="card">'
+  return '<div class="card"><h2>Claim a Team</h2>' + actingStrip()
     + pickField('fp', 'Pick up', S.fcp, ups)
     + '<div style="margin-top:9px">' + pickField('fd', 'Drop', S.fcd, dns) + '</div>'
     + '<div class="row" style="margin-top:11px">'
@@ -5911,6 +5939,11 @@ function boot(){
     refreshMe(function(){ boot(); });
     return;
   }
+  /* A COMMISSIONER STARTS AS THEMSELVES, EVERY TIME. Entering for somebody else is a thing you
+     do for one trade, not a setting you leave on -- and left on, it is invisible until you have
+     already typed a trade into the wrong owner's list. */
+  S.actingAs = null;
+  try { save(); } catch (e) {}
   Store.boot(bootOpts());
 }
 buildRulesNote();
