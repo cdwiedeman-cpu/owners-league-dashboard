@@ -5005,23 +5005,45 @@ function openFix(k){
   if (!e){ showHelp('That Trade Is Gone', '<p>Somebody else put it right while this was open. '
     + 'The list below is up to date.</p>'); return; }
   var stop = fixBlocked(e);
-  var head = '<p><b>' + esc(e.owner) + '</b> — ' + esc(DATA.div_names[e.div] || e.div)
-    + ', week ' + e.week + '.<br>Came in: <b class="g">' + esc(e['in']) + '</b><br>'
-    + 'Went out: <b>' + esc(e.out || '— (nothing)') + '</b></p>';
+  var head = '<p><b>' + esc(e.owner) + '</b> \u2014 ' + esc(DATA.div_names[e.div] || e.div)
+    + ', week ' + e.week + '.<br>They got: <b class="g">' + esc(e['in'] || 'nothing') + '</b><br>'
+    + 'They gave up: <b>' + esc(e.out || 'nothing') + '</b></p>';
   if (stop){
     showHelp('This One Cannot Be Put Right Yet', head + '<p>' + stop + '</p>'
       + '<div class="row" style="margin-top:10px"><button onclick="closeHelp()">Close</button>'
       + '</div>');
     return;
   }
-  var opts = ['<option value="">Choose a team…</option>'].concat(
-    freeIn(e.div).map(function(n){ return '<option value="' + esc(n) + '">' + esc(n)
-      + '</option>'; })).join('');
+  /* ---- EITHER SIDE OF THE TRADE CAN BE WRONG ----------------------------------------------
+   * Casey, 15 Sep 2026: "team to put on instead doesn't really make sense ... it's more like
+   * correct the team he wanted. But shouldn't there be an option to correct a team he dropped?
+   * Maybe the wrong team was dropped."
+   * Yes, and it is the same correction. A trade is a pair, so the panel shows the pair and lets
+   * either half be changed. Leaving both as they are and pressing Save changes nothing, which is
+   * why Take the Trade Back is a separate button and not a third option in a list.
+   * WHAT IS ON OFFER ON EACH SIDE:
+   *   they got     -> every team free in that division, plus the one they actually got
+   *   they gave up -> every team on their roster now, plus the one they actually gave up
+   */
+  var k2 = key(e.div, e.owner);
+  var inOpts = freeIn(e.div).slice();
+  if (e['in'] && inOpts.indexOf(e['in']) < 0) inOpts.push(e['in']);
+  inOpts.sort();
+  var outOpts = (S.rosters[k2] || []).slice();
+  if (e.out && outOpts.indexOf(e.out) < 0) outOpts.push(e.out);
+  outOpts = outOpts.filter(function(n){ return n !== e['in']; }).sort();
+  var opt = function(list, cur){
+    return list.map(function(n){
+      return '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n)
+        + '</option>';
+    }).join('');
+  };
   showHelp('Put This Trade Right', head
-    + '<p class="note">Taking it back puts ' + esc(e.out || 'nothing') + ' on the roster, takes '
-    + esc(e['in']) + ' off, removes this line from the list, and charges nobody for it. The '
-    + 'dashboard works out points from this same list, so the points go back with it.</p>'
-    + '<label class="lb" style="margin-top:12px" for="fixWhy">Why you are changing it</label>'
+    + '<p class="note"><b>Taking it back undoes this one trade and nothing else.</b> '
+    + esc(e.out || 'Nothing') + ' goes back on the roster, ' + esc(e['in'] || 'nothing')
+    + ' comes off, the line disappears from the list and nobody is charged for it. The dashboard '
+    + 'works out points from that same list, so the points go back with it.</p>'
+    + '<label class="lb" style="margin-top:12px" for="fixWhy">Why You Are Changing It</label>'
     + '<input class="search" id="fixWhy" type="text" style="max-width:100%" '
       + 'placeholder="Type why you are changing this trade">'
     + '<p class="note" id="fixErr" style="margin:6px 0 0"></p>'
@@ -5029,12 +5051,17 @@ function openFix(k){
     + '<button class="dang" onclick="doTakeBack(' + jq(k) + ')">Take the Trade Back</button>'
     + '<button onclick="closeHelp()">Leave It Alone</button></div>'
     + '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">'
-    + '<p><b>Or give them a different team instead.</b> This takes the trade back and puts one '
-    + 'new team on the roster in the same week, for the same charge.</p>'
-    + '<label class="lb" for="fixNew">Team to put on instead</label>'
-    + '<select class="search" id="fixNew" style="max-width:100%">' + opts + '</select>'
+    + '<p><b>Or keep the trade and correct it.</b> Change either side, or both. It stays on week '
+    + e.week + ' at the same charge, so nobody pays twice for one correction.</p>'
+    + '<label class="lb" for="fixNew">The Team They Got</label>'
+    + '<select class="search" id="fixNew" style="max-width:100%">'
+      + opt(inOpts, e['in']) + '</select>'
+    + '<label class="lb" style="margin-top:10px" for="fixOut">The Team They Gave Up</label>'
+    + '<select class="search" id="fixOut" style="max-width:100%">'
+      + '<option value="">Nothing \u2014 they gave up no team</option>'
+      + opt(outOpts, e.out) + '</select>'
     + '<div class="row" style="margin-top:10px">'
-    + '<button class="pri" onclick="doFixSwap(' + jq(k) + ')">Save the Replacement</button>'
+    + '<button class="pri" onclick="doFixSwap(' + jq(k) + ')">Save the Correction</button>'
     + '</div>', true);
 }
 
@@ -5094,46 +5121,66 @@ function doTakeBack(k){
 function doFixSwap(k){
   var e = fixRow(k); if (!e){ closeHelp(); render(); return; }
   var why = _fixWhy(); if (why === null) return;
-  var sel = el('fixNew');
-  var nw = sel ? String(sel.value || '').trim() : '';
   var err = el('fixErr');
-  if (!nw){
-    if (err) err.innerHTML = '<b class="b">Choose the team to put on instead.</b> To put the '
-      + 'roster back with nothing in its place, use Take the Trade Back.';
+  var say = function(m){ if (err) err.innerHTML = '<b class="b">' + m + '</b>'; };
+  var selIn = el('fixNew'), selOut = el('fixOut');
+  var nIn = selIn ? String(selIn.value || '').trim() : '';
+  var nOut = selOut ? String(selOut.value || '').trim() : '';
+  if (!nIn){ say('Choose the team they got. To leave them with nothing, use Take the Trade Back.'); return; }
+  if (nIn === (e['in'] || '') && nOut === (e.out || '')){
+    say('Nothing is changed. Pick a different team on one side, or use Take the Trade Back.');
     return;
   }
   var stop = fixBlocked(e);
   if (stop){ if (err) err.innerHTML = stop; return; }
-  /* CHECKED AGAINST THE ROSTERS AS THEY ARE NOW, not against the list drawn when the panel
-     opened. A team can be claimed between the two. */
-  if (freeIn(e.div).indexOf(nw) < 0){
-    if (err) err.innerHTML = '<b class="b">' + esc(nw) + ' is not free in '
-      + esc(DATA.div_names[e.div] || e.div) + ' any more.</b> Close this and open it again to '
-      + 'see the teams that are.';
-    return;
-  }
   var was = {owner: e.owner, div: e.div, 'in': e['in'], out: e.out, week: e.week,
              fee: (typeof e.fee === 'number') ? e.fee : null, fee_note: e.fee_note || ''};
-  _takeBack(e);
   var k2 = key(was.div, was.owner);
+  var keepR = (S.rosters[k2] || []).slice();
+  var keepA = JSON.parse(JSON.stringify(S.acquiredAt || {}));
+  var keepL = (S.log || []).slice();
+  _takeBack(e);
+  /* CHECKED AGAINST THE ROSTERS AS THEY ARE AFTER THE TAKE-BACK, which is the state the new
+     trade actually lands in. A check against the state the panel was drawn in would let a team
+     through that somebody claimed in between. If either half fails, EVERYTHING goes back -- a
+     correction that half-applies is worse than one that refuses. */
+  var undo = function(){
+    S.rosters[k2] = keepR; S.acquiredAt = keepA; S.log = keepL;
+  };
+  if (freeIn(was.div).indexOf(nIn) < 0){
+    undo();
+    say(nIn + ' is not free in ' + (DATA.div_names[was.div] || was.div) + ' any more. Close this '
+        + 'and open it again to see the teams that are.');
+    return;
+  }
   var r = (S.rosters[k2] || []).slice();
-  if (was.out){ var i = r.indexOf(was.out); if (i >= 0) r.splice(i, 1); }
-  r.push(nw);
+  if (nOut){
+    if (r.indexOf(nOut) < 0){
+      undo();
+      say(nOut + ' is not on ' + was.owner + '\u2019s roster, so it cannot be the team they gave '
+          + 'up.');
+      return;
+    }
+    r.splice(r.indexOf(nOut), 1);
+    if (S.acquiredAt[k2]) delete S.acquiredAt[k2][nOut];
+  }
+  r.push(nIn);
   S.rosters[k2] = r.sort();
-  markGot(k2, nw, today());
+  markGot(k2, nIn, today());
   var me = whoIsThis();
-  /* THE SAME WEEK AND THE SAME CHARGE. This is the trade they should have got, not a second
-     one, so it is not a second fee either. */
+  /* THE SAME WEEK AND THE SAME CHARGE. This is the trade they should have had, not a second one,
+     so it is not a second fee either. */
   S.log.unshift({when: now(), by: (me && me.seat) || null, div: was.div, owner: was.owner,
-                 'in': nw, out: was.out || '', week: was.week,
+                 'in': nIn, out: nOut || '', week: was.week,
                  how: 'put right by the commissioner',
                  fee: was.fee, fee_note: was.fee_note});
-  noteFix('Replaced: ' + was.owner + ' — ' + was['in'] + ' became ' + nw
-          + ', week ' + was.week, why);
+  noteFix('Corrected: ' + was.owner + ' \u2014 got ' + (was['in'] || 'nothing') + ', now '
+          + nIn + '; gave up ' + (was.out || 'nothing') + ', now ' + (nOut || 'nothing')
+          + '; week ' + was.week, why);
   save(); closeHelp(); render();
-  showHelp('Done', '<p><b>' + esc(was.owner) + '</b> now holds <b class="g">' + esc(nw)
-    + '</b> instead of ' + esc(was['in']) + '. It is on the list for week ' + was.week
-    + ' at the same charge as the trade it replaces.</p>');
+  showHelp('Done', '<p><b>' + esc(was.owner) + '</b> now has <b class="g">' + esc(nIn)
+    + '</b> and gave up <b>' + esc(nOut || 'nothing') + '</b>. It is on the list for week '
+    + was.week + ' at the same charge as the trade it replaces.</p>');
 }
 
 /* ---- MOVING A TEAM BY HAND ---------------------------------------------------------------
