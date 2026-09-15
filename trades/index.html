@@ -1460,7 +1460,7 @@ function clockMode(s){
 }
 /* FIRST COME OPENS WHEN THE COIN FLIPS HAVE RUN, NOT AT 4:00PM.
  *
- * Casey, 15 Sep 2026, mid-settle with Bob: "because we have switched past four o'clock, My Trades
+ * Casey, 15 Sep 2026, mid-settle with Bob: "because we have switched past four o'clock, Trades
  * only lets you do Claim It Now, and it doesn't give us the ability to edit what we put in for
  * Michael Spielman. It should not switch to Claim It Now until Bob runs the coin flips."
  *
@@ -1940,7 +1940,7 @@ function commishOnly(what){
   var h = '<div class="card"><h2>' + esc(what) + ' Is the Commissioner&rsquo;s</h2>';
   if (!Store.live()){
     return h + '<p class="note">This part of the page belongs to the commissioner. Your own '
-      + 'trades are on the <b>My Trades</b> tab.</p></div>';
+      + 'trades are on the <b>Trades</b> tab.</p></div>';
   }
   var m = LIVE_ME;
   if (m === null){
@@ -1948,12 +1948,12 @@ function commishOnly(what){
   }
   if (!m.ok && m.why === 'nokey'){
     return h + '<p class="note"><b>This device is not signed in.</b> Nothing is wrong with your '
-      + 'seat. Go to <b>My Trades</b> and ask for a sign-in link, and these tabs come back if '
+      + 'seat. Go to <b>Trades</b> and ask for a sign-in link, and these tabs come back if '
       + 'the league has you as a commissioner.</p></div>';
   }
   if (!m.ok && m.why === 'dead'){
     return h + '<p class="note"><b>This device was signed out.</b> ' + esc(cap(m.note || ''))
-      + '. Go to <b>My Trades</b> and sign in again.</p></div>';
+      + '. Go to <b>Trades</b> and sign in again.</p></div>';
   }
   if (!m.ok){
     return h + '<p class="note">The league could not say who this device is, so nothing '
@@ -1966,7 +1966,7 @@ function commishOnly(what){
     + '<p class="note">If that is wrong, ask a commissioner to change your <b>Role</b> to '
     + '<b>commissioner</b> on the <b>Access List</b> tab. It takes effect on the next thing you '
     + 'do here.</p>'
-    + '<p class="note">Your own trades are on the <b>My Trades</b> tab.</p></div>';
+    + '<p class="note">Your own trades are on the <b>Trades</b> tab.</p></div>';
 }
 function setTab(t){
   if (COMMISH_TABS[t] && !isCommish()) t = 'signin';
@@ -2125,7 +2125,7 @@ function render(){
     var sb = el('sandbar'); if (sb) sb.hidden = true;
     var h1 = document.querySelector('h1'); if (h1) h1.hidden = true;
     var sl = el('subline'); if (sl) sl.hidden = true;
-    /* `only=auto` LETS THE PAGE DECIDE. The league dashboard shows one tab called My Trades and
+    /* `only=auto` LETS THE PAGE DECIDE. The league dashboard shows one tab called Trades and
        an owner who has not signed in has to be able to sign in from it -- otherwise the only way
        in is an address nobody gave them. So: signed in, they get their trades; not signed in,
        they get the sign-in box, in the same tab. */
@@ -2595,7 +2595,7 @@ function showTokenTest(){
  * only thing that knows whose key this is, is the league.
  *
  * Casey, 14 Sep 2026, signed in on the live page as a commissioner, with Run It and the Access
- * List both open in front of him: "My Trades says sign in first." Both were true at once. The
+ * List both open in front of him: "Trades says sign in first." Both were true at once. The
  * dashboard had asked the league who he was and been told; the trades tab had asked the practice
  * copy's device list, found it empty, and concluded nobody was there.
  */
@@ -2744,11 +2744,11 @@ function editRow(i, field, v, j){
  * owners go on the app to see the actual trade results? And will they know to do that?"
  *
  * They will not, and that was the hole. Nothing sends mail, the owner's list is cleared when the
- * week settles, and My Trades went back to an empty form. AN ABSENCE IS NEVER AN ANSWER: an owner
+ * week settles, and Trades went back to an empty form. AN ABSENCE IS NEVER AN ANSWER: an owner
  * who asked for three teams and got none of them saw the same empty screen as one who never
  * entered at all, and could not tell a loss from a bug.
  *
- * So the answer is where the question was asked -- on My Trades, not on a tab they have to be
+ * So the answer is where the question was asked -- on Trades, not on a tab they have to be
  * told about. It arrives twice: as a panel the first time they open the page after the week
  * settles, and as a card that stays on the tab until the next week is settled. The panel is shown
  * once per device and per week, which is what "the first time" means on a phone AND a laptop.
@@ -2816,7 +2816,7 @@ function offerResult(){
         ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + ' this week.'
         : 'You did not get a team this week.') + '</p>'
     + resultLines(m)
-    + '<p class="note">This is also on the <b>My Trades</b> tab until the next week is settled. '
+    + '<p class="note">This is also on the <b>Trades</b> tab until the next week is settled. '
     + 'Every settled trade in the league is on the <b>Transactions</b> tab.</p>');
 }
 
@@ -2869,7 +2869,7 @@ function viewTrades(){
       + 'only if you do win an earlier trade. That is how you say &ldquo;if I miss out on Navy, '
       + 'try Alabama instead&rdquo;, or &ldquo;if I do get Navy, go after Alabama as '
       + 'well&rdquo;.</li>'
-      + '<li>Press <b>Save My Trades</b>. Until you press it, your trades are only on this '
+      + '<li>Press <b>Save Trades</b>. Until you press it, your trades are only on this '
       + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
       + '<p class="note">Up to ' + P.MAX_ROWS + ' trades. You can change and re-send as often as '
       + 'you like, right up to Monday at 3:59pm AZ.</p>';
@@ -2914,7 +2914,7 @@ function viewTrades(){
       + '<b>week ' + playWeek() + '</b>, the games that start on ' + esc(playWeekStarts())
       + '. Nothing happens until Monday at 4:00pm AZ, and you can change it any time before '
       + 'then.</p>'
-      + '<div class="row"><button onclick="unsubmit()">Change My Trades</button></div></div>';
+      + '<div class="row"><button onclick="unsubmit()">Change Trades</button></div></div>';
   }
 
   h += '<div class="card">';
@@ -2964,7 +2964,7 @@ function viewTrades(){
       /* SEND IS THE END OF THE JOB, so it is the biggest thing on the page and it is on its own.
          Clear Them All is not a step in the job and no longer sits beside the step that is. */
       h += '<div class="sendwrap">'
-        + '<button class="pri big" onclick="submitList()">Save My Trades</button>'
+        + '<button class="pri big" onclick="submitList()">Save Trades</button>'
         + '<div class="row" style="margin-top:8px;justify-content:center">'
         /* NOT class="f". On this page `f` means FAINT TEXT, so the button read as greyed out --
            Casey, 15 Sep 2026: "it looks like it's grayed out, so it doesn't look like it's ever a
@@ -2976,10 +2976,10 @@ function viewTrades(){
       /* THE STATUS SITS WITH THE BUTTON THAT CHANGES IT. Nowhere else on the page needs to
          carry it while the list is still being built. */
       h += '<div class="row" style="margin-top:12px;border-top:1px solid var(--line);'
-        + 'padding-top:12px"><button class="pri" onclick="submitList()">Save My Trades</button>'
+        + 'padding-top:12px"><button class="pri" onclick="submitList()">Save Trades</button>'
         + '<span class="pill bad">Not Saved Yet</span>'
         + '<span class="note">This list is <b>not</b> in Monday&rsquo;s coin flips until you '
-        + 'press <b>Save My Trades</b>. You can change them and save again as often as you like, '
+        + 'press <b>Save Trades</b>. You can change them and save again as often as you like, '
         + 'up to Monday at 3:59pm AZ.</span></div>';
     }
   }
@@ -2996,12 +2996,12 @@ function viewTrades(){
       + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades &middot; not saved yet'
       + '</span>'
       + '<button class="pri" ' + (rows.length ? '' : 'disabled')
-      + ' onclick="submitList()">Save My Trades</button></div>';
+      + ' onclick="submitList()">Save Trades</button></div>';
   } else {
     h += '<div class="stickybar" id="actbar">'
       + '<span class="grow"><b class="g">Saved and in for Monday.</b> ' + rows.length + ' trade'
       + (rows.length === 1 ? '' : 's') + '.</span>'
-      + '<button onclick="unsubmit()">Change My Trades</button></div>';
+      + '<button onclick="unsubmit()">Change Trades</button></div>';
   }
   return h + commishCard(s0) + clockCard();
 }
@@ -3622,7 +3622,7 @@ function viewRun(){
     + (drafts.length ? '<span class="pill bad">' + drafts.length + ' typed but not sent</span>'
                      : '') + '</div>'
     + (drafts.length
-        ? '<p class="note b">Typed a list but never pressed <b>Save My Trades</b>, so they are NOT '
+        ? '<p class="note b">Typed a list but never pressed <b>Save Trades</b>, so they are NOT '
           + 'in this week: ' + esc(drafts.join(', ')) + '.</p>' : '')
     + '<div class="row">'
     + '<button class="pri" ' + (reqs.length ? '' : 'disabled')
@@ -3640,8 +3640,8 @@ function viewRun(){
         ? 'Settles all ' + reqs.length + ' list' + (reqs.length === 1 ? '' : 's') + ' at once, '
           + 'running a coin flip wherever more than one owner asked for the same team.'
           + (auto ? ' The schedule would do this by itself a few minutes after 4:00pm AZ.' : '')
-        : 'Nothing has been sent for week ' + playWeek() + ' yet. Enter a list on <b>My trades</b> '
-          + 'and press <b>Save My Trades</b>.')
+        : 'Nothing has been sent for week ' + playWeek() + ' yet. Enter a list on <b>Trades</b> '
+          + 'and press <b>Save Trades</b>.')
     + '</p></div>';
 
   h += claimQueueCard();
@@ -4208,7 +4208,7 @@ function welcomeText(seat, code, email){
   + '5. Open it from the icon and type your code in once more.\n'
   + '\n'
   + 'ENTERING A TRADE\n'
-  + 'Go to the My Trades tab. Name the team you want to pick up and the teams you would be willing to give up for it, then press Save My Trades.\n'
+  + 'Go to the Trades tab. Name the team you want to pick up and the teams you would be willing to give up for it, then press Save Trades.\n'
   + 'You can change your list as often as you like until the window closes at 3:59pm AZ on Monday. AZ is Arizona time, which the league runs on all year.\n'
   + '\n'
   + 'If the code will not work, reply to this message and I will send you a new one.\n';
@@ -5363,7 +5363,7 @@ function saveLight(st, why){
  *
  * This used to open a panel asking for a COMMISSIONER KEY, read off the Settings tab of a Google
  * spreadsheet. There is no spreadsheet and no such key, and an owner never had one to begin with.
- * Casey, 14 Sep 2026, on the live page: "I went to the My Trades tab because I thought I should
+ * Casey, 14 Sep 2026, on the live page: "I went to the Trades tab because I thought I should
  * be putting in that code you provided me, and it still asked me for a commissioner key."
  *
  * There is one way in now and it is the same for all 33 people: type the six characters your
