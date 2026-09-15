@@ -23,9 +23,18 @@
   --badbg:#3a1717;--badline:#4a1f1f;--badtx:#f87171;
   --minebg:#1b1533;--mineline:#3d3163;
   --tvline:#1e4a63;--shade:rgba(4,8,13,.78);--sunk:#06121f;
+  /* ---- THE LEAGUE'S OWN COLOURS -----------------------------------------------------------
+   * Casey, 15 Sep 2026: "can the header where we have the Reality Football League be a different
+   * colour? The tabs could be a different colour ... the background behind the live scoring
+   * could be a better colour ... get creative and make this thing look good."
+   * Navy for the header and the tab strip, amber for the one line that has to catch the eye.
+   * The cards stay the panel colour so nothing a reader has to READ sits on a strong colour. */
+  --brand:#0a1a2a;--brand2:#12395c;--brandink:#e9f1fa;--brandacc:#f5a524;
+  --brandhd:#74aee6;--brandrule:#1d3550;--brandsoft:#13202e;
+  --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%23ffffff' fill-opacity='0.030' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E");
 }
 :root[data-theme="light"]{
-  --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+  --bg:#e9eef6;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
   --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
   --tv:#0c6c81;
   --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
@@ -34,10 +43,13 @@
   --minebg:#f0ebfb;--mineline:#c4b2ef;
   --tvline:#a6d4e0;--shade:rgba(20,28,38,.45);--sunk:#eef2f7;
     --pnfl:#0b6a8a;--pfbs:#8a4b00;--pfbsline:#e3c39a;--pfcs:#5b34b5;
+      --brand:#0f2f52;--brand2:#1f5d99;--brandink:#ffffff;--brandacc:#f6b73c;
+    --brandhd:#14487d;--brandrule:#d5e2f0;--brandsoft:#eef3fa;
+    --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%230f2f52' fill-opacity='0.038' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E");
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
-    --bg:#f4f6f9;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
+    --bg:#e9eef6;--pan:#ffffff;--pan2:#eaeff5;--line:#ccd6e0;--ink:#0d1622;--dim:#41566b;
     --faint:#6d8095;--good:#0b7a3e;--bad:#b3261e;--gold:#8a6100;--blue:#1462b8;--mine:#5b34b5;
     --tv:#0c6c81;
     --warnbg:#fdf3dd;--warnline:#e0c98a;--warntx:#7a5600;
@@ -46,13 +58,26 @@
     --minebg:#f0ebfb;--mineline:#c4b2ef;
     --tvline:#a6d4e0;--shade:rgba(20,28,38,.45);--sunk:#eef2f7;
     --pnfl:#0b6a8a;--pfbs:#8a4b00;--pfbsline:#e3c39a;--pfcs:#5b34b5;
+      --brand:#0f2f52;--brand2:#1f5d99;--brandink:#ffffff;--brandacc:#f6b73c;
+    --brandhd:#14487d;--brandrule:#d5e2f0;--brandsoft:#eef3fa;
+    --wm:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='210'%3E%3Ctext x='105' y='118' font-family='Helvetica,Arial,sans-serif' font-size='46' font-weight='700' fill='%230f2f52' fill-opacity='0.038' text-anchor='middle' transform='rotate(-30 105 105)'%3ERFL%3C/text%3E%3C/svg%3E");
   }
 }
 *{box-sizing:border-box}
 a{color:var(--blue)}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+body{margin:0;background-color:var(--bg);background-image:var(--wm);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
  -webkit-text-size-adjust:100%}
-header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px 0}
+header{position:sticky;top:0;z-index:20;color:var(--brandink);
+ background:linear-gradient(118deg,var(--brand) 0%,var(--brand2) 62%,var(--brand) 100%);
+ border-bottom:3px solid var(--brandacc);padding:10px 14px 0}
+/* EVERYTHING INSIDE THE HEADER IS ON NAVY NOW, so it is coloured against navy rather than
+   against the page. The chips were --dim on --bg and would have gone nearly invisible. */
+header h1{color:var(--brandink);font-weight:800}
+header .chip{color:rgba(255,255,255,.90);border-color:rgba(255,255,255,.30);
+ background:rgba(255,255,255,.08)}
+header .chip.warn{color:#ffd98a;border-color:rgba(255,217,138,.55)}
+header .chip.bad{color:#ffb8b2;border-color:rgba(255,184,178,.55)}
+header .chip-action{color:#1d1305;background:var(--brandacc);border:none}
 /* THE HEADER GIVES WAY TO THE FILTERS ONCE YOU SCROLL. On a 390px phone the chip row wraps to
    five lines and the header stands 186px tall; sticking a 114px filter bar under that would lock
    300px of a 780px screen and leave less scoreboard than header. The chips are BUILD AND
@@ -84,6 +109,12 @@ h1{font-size:16px;margin:0 0 6px;letter-spacing:.02em}
 .tab{appearance:none;background:transparent;border:1px solid var(--line);border-bottom:none;color:var(--dim);
  font:600 13px inherit;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;min-height:38px}
 .tab[aria-selected=true]{background:var(--pan);color:var(--ink);border-color:var(--line)}
+/* THE OPEN TAB IS THE PAGE. It takes the page's own colour so the strip reads as a row of
+   folders with one of them pulled forward, and the closed ones are cut out of the navy. */
+header .tab{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);
+ border-bottom:none;color:rgba(255,255,255,.86)}
+header .tab[aria-selected=true]{background:var(--bg);color:var(--brandhd);
+ border-color:var(--bg);font-weight:800}
 main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
 .bar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 /* Every clickable mark is at least 12x12px and carries hover text -- standing rule. */
@@ -440,7 +471,12 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
 .f.primary:hover{filter:brightness(1.08)}
 .f.primary:active{transform:translateY(1px);box-shadow:none}
 .card{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
-.card h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:0 0 10px;font-weight:700}
+.card h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brandhd);
+ margin:0 0 10px;font-weight:800;border-bottom:2px solid var(--brandrule);padding-bottom:7px}
+/* A heading that carries a warning keeps the warning colour. `.card h2` outranks `.y` on its
+   own, so the gold has to be claimed back here or the warning reads like every other heading. */
+.card h2.y{color:var(--gold)} .card h2.b{color:var(--bad)}
+thead th{background:var(--brandsoft)}
 .note{font-size:12px;color:var(--dim);line-height:1.5;margin-top:10px}
 .tiechip{display:inline-flex;align-items:center;justify-content:center;min-height:16px;
   min-width:22px;padding:0 5px;margin-left:5px;border:1px solid var(--line);border-radius:4px;
@@ -449,6 +485,10 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
 .tiechip:hover,.tiechip:focus{border-color:var(--blue);color:var(--blue)}
 tr.tiehit>td{background:var(--pan2)}
 table{width:100%;border-collapse:collapse;table-layout:fixed}
+/* Casey, same day, on Standings: "we see Michael Spielman, that's pretty small -- could we
+   increase the text size to make that stand out?" The owner's name is the row's subject. */
+td.c-own{font-size:14.5px;font-weight:600}
+td.c-own.d, tr.slot-kid td.c-own{font-size:13px;font-weight:400}
 th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);font-size:13px;overflow-wrap:anywhere}
 th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:700}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
@@ -654,7 +694,12 @@ a.tvl .tvgo{font-size:9px;opacity:.75}
 .gc{float:right;font-size:10px;color:var(--faint);letter-spacing:.03em}
 .grp{grid-column:1/-1}
 .gm{display:grid;grid-template-columns:1fr;gap:2px;padding:8px 0;border-bottom:1px solid var(--line)}
-.gm .t{grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.gm .t{grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;align-items:baseline;
+ font-size:15.5px;font-weight:600}
+/* Casey, 15 Sep 2026: "the games, like Texas Tech versus Houston -- shouldn't the font size be a
+   little bigger for each of the teams?" The two team names and the two scores are the reason
+   anybody opens this tab, so they are the biggest text on the card. */
+.gm .t .s{font-size:16.5px}
 .gm .s{font-variant-numeric:tabular-nums;font-weight:700;min-width:2.2em;text-align:right}
 .gm .st{grid-column:1/-1;font-size:11px;color:var(--faint)}
 .win{color:var(--good)}
@@ -2146,7 +2191,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '14 Sep 2026, 8:27 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Sep 2026, 10:26 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
