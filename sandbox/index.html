@@ -232,6 +232,12 @@ td.num,th.num{text-align:right}
  display:flex;justify-content:space-between;align-items:center;gap:8px}
 .tradehd .tno{font-weight:700;font-size:15px;color:var(--ink);letter-spacing:.01em}
 .tradehd .tsub{font-size:11px;color:var(--dim)}
+/* THE ONE CONTROL ON THIS CARD THAT THROWS WORK AWAY. Outlined in the warning colour rather than
+   filled: it has to be findable at a glance without competing with Save My Trades, which is the
+   button somebody is actually trying to reach. */
+.tradehd .rmrow{flex:0 0 auto;border-color:var(--bad);color:var(--bad);background:var(--pan);
+ font-weight:700;white-space:nowrap}
+.tradehd .rmrow:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
 .dropbox{border-left:3px solid var(--line);padding:2px 0 2px 11px;margin:0 0 2px}
 /* ---- THE TRADE CARD, READ BY SOMEBODY WHO IS NOT LOOKING FOR IT ------------------------------
  * Casey, 15 Sep 2026: "even the text under What Would You Give Up, it's this tiny text -- are
@@ -248,6 +254,7 @@ td.num,th.num{text-align:right}
  */
 .tradehd .tno{font-size:17px}
 .tradehd .tsub{font-size:14px;color:var(--ink);font-weight:600}
+  .tradehd .rmrow{font-size:13px;min-height:36px;padding:0 12px}
 .tradehd .tsub.none{color:var(--dim);font-weight:400;font-style:italic}
 .trow label.lb.step{font-size:14px}
 .trow label.lb.step .num{min-width:21px;height:21px;line-height:21px;font-size:12px}
@@ -3488,8 +3495,12 @@ function rowForm(r, i, free, mine, k){
     /* THE HEADER SAYS WHAT THIS TRADE IS, at a size that can be read without leaning in. */
     + '<span class="tsub' + (r.pickup ? '' : ' none') + '">'
     + (r.pickup ? esc(r.pickup) : 'no team chosen yet') + '</span>'
-    + '<button onclick="delRow(' + i + ')" title="Remove trade ' + (i + 1)
-    + '">Remove</button></div>'
+    /* IT REMOVES A WHOLE TRADE, SO IT LOOKS LIKE IT DOES. Casey, 15 Sep 2026: "the Remove button
+       in the top right corner needs to stand out more. It's a grey button that is kind of hidden
+       on the page." A plain grey button beside a plain grey header is a control nobody sees until
+       they are hunting for it, and this is the one control on the card that throws work away. */
+    + '<button class="rmrow" onclick="delRow(' + i + ')" title="Remove trade ' + (i + 1)
+    + ' from your list">\u2715 Remove Trade ' + (i + 1) + '</button></div>'
     /* THE TWO HALVES SIT BESIDE EACH OTHER WHERE THERE IS ROOM. */
     + '<div class="tgrid"><div class="half">'
     + pickField('p' + i, 'The Team You Want', r.pickup, ups, null, '1')
