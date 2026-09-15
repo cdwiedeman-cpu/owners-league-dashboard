@@ -5205,10 +5205,18 @@ function openHandMove(){
   var opts = ['<option value="">Choose a seat…</option>'].concat(
     handSeats().map(function(o){ return '<option value="' + esc(o.v) + '">' + esc(o.t)
       + '</option>'; })).join('');
+  /* WHICH OF THE TWO TOOLS THIS IS, SAID ON ITS FACE. Casey, 15 Sep 2026: "I don't understand
+     how that is different from the Put It Right button next to what has been traded. I'm a
+     little confused as to why you'd use one versus the other, and I'm certain Bob will be."
+     The difference is whether there is a LINE to put right, so that is the sentence. */
   showHelp('Move a Team by Hand',
-    '<p>This changes one roster directly. Use it when there is no trade to put right — a '
-    + 'team recorded on the wrong seat, or a swap the two owners agreed off the page.</p>'
-    + '<label class="lb" style="margin-top:10px" for="hmSeat">Whose roster</label>'
+    '<p><b>Use this only when no trade caused the problem.</b> A team recorded on the wrong seat '
+    + 'at the draft, or a swap two owners agreed between themselves and never entered.</p>'
+    + '<p class="note"><b>If a trade on the list is wrong, close this and press Fix on that line '
+    + 'instead.</b> Fix knows what that trade was: it puts the roster back the way it stood '
+    + 'before it, and takes the charge off with it. This one knows none of that. It changes the '
+    + 'roster you name, and it charges nothing, because there is no trade behind it.</p>'
+    + '<label class="lb" style="margin-top:10px" for="hmSeat">Whose Roster</label>'
     + '<select class="search" id="hmSeat" style="max-width:100%" onchange="handPick()">'
       + opts + '</select>'
     + '<div id="hmRest"></div>'
@@ -5226,17 +5234,17 @@ function handPick(){
   var off = (S.rosters[k] || []).slice().sort();
   var on = freeIn(div);
   host.innerHTML =
-    '<label class="lb" style="margin-top:10px" for="hmOff">Take off the roster</label>'
+    '<label class="lb" style="margin-top:10px" for="hmOff">Take Off the Roster</label>'
     + '<select class="search" id="hmOff" style="max-width:100%">'
     + '<option value="">Nothing — only add a team</option>'
     + off.map(function(n){ return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('')
     + '</select>'
-    + '<label class="lb" style="margin-top:10px" for="hmOn">Put on the roster</label>'
+    + '<label class="lb" style="margin-top:10px" for="hmOn">Put On the Roster</label>'
     + '<select class="search" id="hmOn" style="max-width:100%">'
     + '<option value="">Nothing — only take a team off</option>'
     + on.map(function(n){ return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('')
     + '</select>'
-    + '<label class="lb" style="margin-top:10px" for="hmWhy">Why you are changing it</label>'
+    + '<label class="lb" style="margin-top:10px" for="hmWhy">Why You Are Changing It</label>'
     + '<input class="search" id="hmWhy" type="text" style="max-width:100%" '
       + 'placeholder="Type why you are changing this roster">';
 }
