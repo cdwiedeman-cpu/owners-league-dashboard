@@ -2361,7 +2361,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Sep 2026, 12:21 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '15 Sep 2026, 12:22 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3715,28 +3715,28 @@ function rerateNote(){
      not differ by "preseason vs results" -- they differ by WHERE THE RATINGS STOP. One is the
      file as last built; the other adds the automatic nudge from games finished since. Labelled
      that way, the words stay true after every future rebuild. */
-  return explain('What the Ratings buttons are choosing between', `Every projected number on these
-    three tabs — win probability, 3-0, Bank 3, Season pts, Gain, Advice, and your roster's Next 3
-    and Rest — is built from a set of team ratings. The two buttons choose <b>where those ratings
-    stop</b>.
-    <br><br><b>as last built</b> — the ratings exactly as they were at your last refresh,
-    <b>${DATA._built}</b>. That refresh is the thorough one: verified results, current Vegas
-    lines, moved win totals, injuries and quarterback news, and a check of whether the model
-    itself is off. It only happens when you ask for it.
-    <br><b>+ live scores</b> — the same ratings, plus one automatic adjustment: for every game
-    finished since that refresh, each team is moved by how it played against what the model
+  return explain('What the Projections Buttons Choose Between', `Every projected number on these
+    tabs — win probability, 3-0, Bank 3, Season pts, Gain, Advice, and your roster's Next 3 and
+    Rest — is built from a set of team ratings. The two buttons choose <b>how current those
+    ratings are</b>.
+    <br><br><b>Frozen at ${dayOnly(DATA._built)}</b> — the ratings exactly as they were at your
+    last refresh, <b>${DATA._built}</b>. That refresh is the thorough one: verified results,
+    current Vegas lines, moved win totals, injuries and quarterback news, and a check of whether
+    the model itself is off. It only happens when you ask for it.
+    <br><b>Updated by results</b> — the same ratings, plus one automatic adjustment: for every
+    game finished since that refresh, each team is moved by how it played against what the model
     expected. <b>This needs no rebuild.</b> The page asks ESPN for scores each time you open it
     and again while games are running, and every new final moves the ratings straight away.
     ${since === 0
       ? `<br><br><b>Right now the two buttons give exactly the same numbers.</b> Nothing has been
-         played since your last refresh, so there is nothing for the live half to add. They will
+         played since your last refresh, so there is nothing for the updated one to add. They will
          start to differ the first Saturday after a refresh.`
       : `<br><br><b>${since} game${since === 1 ? '' : 's'} finished since that refresh</b> and
-         ${since === 1 ? 'is' : 'are'} in the live view only.`}
+         ${since === 1 ? 'is' : 'are'} counted only under <b>Updated by results</b>.`}
     ${n === 0 ? '' : `<br><b>${n} team${n === 1 ? ' has' : 's have'} played this season.</b>${big
         ? ` The biggest rating change is <b>${big[0]}</b>, ${big[1] >= 0 ? 'better' : 'worse'} than
           expected by ${Math.abs(big[1]).toFixed(1)} points a game.` : ''}`}
-    <br><br><b>What the live part cannot do.</b> It only knows final scores. It cannot see a new
+    <br><br><b>What the updates cannot do.</b> It only knows final scores. It cannot see a new
     Vegas line, a win total that has moved, an injury, a quarterback change, or a fault in the
     model's own logic. Those need a refresh — which is why both exist rather than one.
     <br><b>What neither does.</b> Games already played are never re-priced; they are facts. And
