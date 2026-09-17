@@ -1854,7 +1854,7 @@ function sentence(r, seat){
   switch (r.outcome){
     case O.WON:
       others = drawn.filter(function(x){ return x !== seat; });
-      return {kind: 'won', head: t + ', dropping ' + r.drop + ': got it.',
+      return {kind: 'won', head: t + ', dropping ' + r.drop + ': you won it.',
         body: asked.length + ' owner' + (asked.length === 1 ? '' : 's') + ' asked for ' + t + '. '
               + (others.length
                   ? 'You won the coin flip against ' + nameList(others) + '.'
@@ -1864,7 +1864,7 @@ function sentence(r, seat){
               + ' ' + r.drop + ' goes back into the pool.'
               + (r.lapsed ? ' (Everyone in that flip had already won one this week, so nobody stood aside.)' : '')};
     case O.WON_ALONE:
-      return {kind: 'won', head: t + ', dropping ' + r.drop + ': got it.',
+      return {kind: 'won', head: t + ', dropping ' + r.drop + ': you won it.',
         body: 'You were the only owner who asked for ' + t + ', so there was no coin flip. '
               + r.drop + ' goes back into the pool.'};
     case O.LOST:
@@ -1933,29 +1933,68 @@ function sentence(r, seat){
 function resultWeek(){
   return playOf(S.results ? S.results.week : null);
 }
-function emailFor(seatK, rows){
-  var bits = seatK.split('|'), div = bits[0], seat = bits[1];
-  var lines = ['Your trades — week ' + resultWeek() + ' · ' + seat
-               + ' (' + (DATA.div_names[div] || div) + ')', ''];
-  var gotAny = false;
+/* ---- WHAT AN OWNER IS TOLD ON A MONDAY -----------------------------------------------------
+ *
+ * Casey, 17 Sep 2026: "when I copied the email into Yahoo the text is a little bit muddled. It's
+ * all kind of one continuous set of text ... these rows should be spaced out."
+ *
+ * A compose window will not take spacing through a link. Everything a compose address carries is
+ * plain words, and a rich text compose box closes the gaps up. So this message travels the same
+ * way the code email does: the formatted version goes on the clipboard and the window opens
+ * empty, ready for one paste. THE PLAIN VERSION IS STILL WRITTEN, because Copy It Instead uses
+ * it and a browser that refuses the clipboard falls back to it.
+ *
+ * THE SHAPE HE ASKED FOR, IN ORDER: the week and the owner as a heading, then one block per row
+ * with the result on its own line and the reason under it, then the first-come line last.
+ */
+function resultHead(seatK){
+  var bits = seatK.split('|');
+  return {title: 'Your Trades for Week ' + resultWeek(),
+          who: bits[1] + ' \u00b7 ' + (DATA.div_names[bits[0]] || bits[0])};
+}
+function resultBlocks(seatK, rows){
+  var seat = seatK.split('|')[1];
+  var out = [], gotAny = false;
   (rows || []).forEach(function(r){
     if (!r) return;
-    var s = sentence(r, seat);
-    if (s.kind === 'won') gotAny = true;
-    lines.push('Row ' + r.row + ' — ' + s.head);
-    lines.push('  ' + s.body);
-    lines.push('');
+    var sen = sentence(r, seat);
+    if (sen.kind === 'won') gotAny = true;
+    out.push({head: 'Row ' + r.row + ' \u2014 ' + sen.head, body: sen.body});
   });
-  if (!rows || !rows.length) lines.push('You entered no rows this week.', '');
+  if (!out.length) out.push({head: '', body: 'You entered no rows this week.'});
   /* THE LAST LINE MATTERS AS MUCH AS THE RESULTS. An owner who lost everything needs to know the
      first-come window is open RIGHT NOW and closes Tuesday at 5pm, or they read the email, feel
      finished, and miss it. */
-  lines.push(gotAny
-    ? 'First come, first served is Open Now and closes Tuesday at 5:00pm AZ.'
-    : 'You did not pick anything up this week. First come, first served is Open Now and closes '
-      + 'Tuesday at 5:00pm AZ — anything still unowned in your division can be claimed '
-      + 'outright, no coin flip.');
-  return lines.join('\n');
+  out.push({head: '', body: gotAny
+    ? 'First come, first served is open now and closes Tuesday at 5:00pm AZ.'
+    : 'You did not pick anything up this week. First come, first served is open now and closes '
+      + 'Tuesday at 5:00pm AZ. Anything still unowned in your division can be claimed outright, '
+      + 'with no coin flip.'});
+  return out;
+}
+function resultHtml(seatK, rows){
+  var f = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  var p = 'margin:0 0 14px;font:16px/1.6 ' + f + ';color:#12202e';
+  var h = resultHead(seatK);
+  var out = '<p style="margin:0 0 4px;font:700 19px/1.3 ' + f + ';color:#12202e">'
+          + esc(h.title) + '</p>'
+          + '<p style="margin:0 0 18px;font:15px/1.5 ' + f + ';color:#44586c">'
+          + esc(h.who) + '</p>';
+  resultBlocks(seatK, rows).forEach(function(bk){
+    if (bk.head) out += '<p style="' + p + ';margin-bottom:4px"><b>' + esc(bk.head) + '</b></p>';
+    out += '<p style="' + p + '">' + esc(bk.body) + '</p>';
+  });
+  return out;
+}
+function emailFor(seatK, rows){
+  var h = resultHead(seatK);
+  var lines = [h.title, h.who, ''];
+  resultBlocks(seatK, rows).forEach(function(bk){
+    if (bk.head) lines.push(bk.head);
+    lines.push(bk.body);
+    lines.push('');
+  });
+  return lines.join('\n').replace(/\n+$/, '\n');
 }
 
 /* ---- shell ---------------------------------------------------------------------------------- */
@@ -4242,51 +4281,68 @@ function resultsCard(){
   var keys = Object.keys(R.results).filter(function(k){ return (R.results[k] || []).length; }).sort();
   if (!keys.length) return '<div class="card"><div class="empty">The week resolved with nothing '
     + 'in it — no seat had a readable row.</div></div>';
-  /* THE COPY BLOCK IS ALWAYS HERE. It used to be hidden whenever the email switch was on, and
-     the switch was on by default, so the normal case printed "Each owner has been emailed their
-     own results" while nothing had been sent. Nothing sends mail. */
+  /* THE RESULTS ARE WHAT THIS CARD IS FOR. Casey, 17 Sep 2026: "do we need the section of
+     nobody has emailed it yet under the Run It tab? That takes up a lot of space ... it's
+     already in the Access List, it defaults to Yahoo for Bob, and whatever he selected in the
+     Access List works the same here."
+     He is right on both counts. WHERE MAIL IS WRITTEN IS ONE SETTING, kept on the device and
+     read by every button on the page, so asking again here was a second copy of one question.
+     And a standing notice that nothing has been sent said the same thing every week to the one
+     person who already knew it. Both are behind How Sending Works now, and the week's results
+     start at the top of the card. */
   return '<div class="card"><h2>Week ' + playOf(R.week) + ' &mdash; What Happened</h2>'
-    + '<p class="note">Run at ' + esc(pretty(R.at)) + '. Every row gets a sentence. A blank row '
-    + 'would leave an owner unable to tell a loss from a bug.</p>'
-    /* NO COPY-EVERYBODY BUTTON. Casey, 15 Sep 2026: "I don't know why you'd ever want to copy
-       every owner's email unless you were doing an email blast, and Bob already has his own
-       distribution list. Take that out and just have the individual seats." One clipboard
-       holding twenty-seven messages is also a thing you can only paste once, so it was never
-       the workflow it looked like. */
-    + '<div class="card warn" style="margin:0 0 10px"><b>Nobody has been emailed yet.</b>'
-    + '<p class="note">This tool does not send mail and never will. Each owner below has a '
-    + '<b>Create Email</b> button that opens a new message, already addressed and already '
-    + 'written. You read it and press send. A seat with two owners gets one message carrying '
-    + 'both addresses.</p>'
-    + mailPicker() + '</div>'
+    + '<div class="row" style="margin:0 0 4px"><span class="grow note" style="margin:0">Run at '
+    + esc(pretty(R.at)) + '.</span>'
+    + '<button style="font-size:12px;min-height:30px;padding:4px 10px" '
+    + 'onclick="showHelp(\'How Sending Works\', SENDNOTE)">How Sending Works</button></div>'
     + keys.map(function(k){
         var b = k.split('|'), seat = b[1];
         var rows = R.results[k] || [];
-        return '<div style="margin:12px 0 4px"><b>' + esc(seat) + '</b> <span class="pill">'
-          + esc(DATA.div_names[b[0]] || b[0]) + '</span></div>'
+        /* THE OWNER'S NAME ON THE LEFT, HIS THREE BUTTONS ON THE RIGHT OF THE SAME LINE.
+           Casey, 17 Sep 2026: "they're big and they're underneath the trade itself ... it might
+           make sense to group those buttons, make them a little smaller and put them over on the
+           right side of the row, so more rows will be visible instead of this being such a long,
+           clunky list." A Monday with nine trades on it was nine screens.
+           IT WRAPS RATHER THAN SHRINKING. On a narrow phone the three drop under the name and
+           nothing scrolls sideways. */
+        var sq = jq(k);
+        var bsty = 'font-size:12px;min-height:30px;padding:4px 10px';
+        return '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;'
+          + 'margin:14px 0 4px"><div style="flex:1 1 140px;min-width:0"><b>' + esc(seat)
+          + '</b> <span class="pill">' + esc(DATA.div_names[b[0]] || b[0]) + '</span></div>'
+          + '<div class="row" style="flex:0 0 auto;margin:0;gap:5px">'
+          + '<button class="pri" style="' + bsty + '" title="Opens a new message to '
+          + esc(seat) + ', addressed and with the subject filled in, and puts the result on your '
+          + 'clipboard. Click into the message and paste." '
+          + 'onclick="writeResultMail(' + sq + ',this)">Create Email</button>'
+          + '<button style="' + bsty + '" title="Puts the whole message on your clipboard as '
+          + 'plain text, with the address at the top" onclick="copyOne(' + sq
+          + ',this)">Copy</button>'
+          + '<button style="' + bsty + '" title="Shows what this owner will read, before you '
+          + 'open anything" onclick="showEmail(' + sq + ')">Read It</button>'
+          + '</div></div>'
           + rows.map(function(r){
               if (!r) return '';
               var s = sentence(r, seat);
               return '<div class="res ' + s.kind + '"><div class="t">Row ' + r.row + ' — '
                 + esc(s.head) + '</div><div class="w">' + esc(s.body) + '</div></div>';
-            }).join('')
-          /* "SEE THE EMAIL SPIELMAN GETS" IS A LIE AND IT IS GONE. Casey, 15 Sep 2026: "he's not
-             getting an email any more, so that button should be removed." Nothing sends mail.
-             What Bob needs is the message ON HIS CLIPBOARD, per owner, because there are several
-             trades on a Monday and highlighting each one by hand is the thing he was doing.
-             PLAIN TEXT, so it pastes without this page's dark background. */
-          /* CREATE IT, DO NOT COPY IT. Casey, 17 Sep 2026: "the button you have that says Copy
-             Michael Spielman's email should be create it in the email app and rename it to
-             Create Email to Send to Seat Name." Every address on the seat goes in the To line,
-             so a seat with two owners is one message and not two. */
-          + '<div class="row" style="margin-top:6px">'
-          + '<button class="pri" onclick="writeResultMail(' + jq(k) + ')">Create Email to Send to '
-          + esc(seat) + '</button>'
-          + '<button onclick="copyOne(' + jq(k) + ',this)">Copy It Instead</button>'
-          + '<button onclick="showEmail(' + jq(k) + ')">Read It First</button></div>';
+            }).join('');
       }).join('')
     + '</div>';
 }
+var SENDNOTE =
+  '<p class="note"><b>Nothing here sends mail, and it never will.</b> Each owner has a '
+  + '<b>Create Email</b> button that opens a new message, already addressed, with the subject '
+  + 'filled in and the message on your clipboard. Click into the message and paste, read it, '
+  + 'and press send.</p>'
+  + '<p class="note">A seat with two owners gets one message carrying both addresses, so you '
+  + 'are not sending the same thing twice.</p>'
+  + '<p class="note">The message is dated to the week you ran, not to the day you are writing, '
+  + 'so it still reads correctly if you send it on Tuesday.</p>'
+  + '<p class="note"><b>Where the mail gets written is set on the Access List</b>, under Where '
+  + 'You Write Your Mail. It is already Yahoo. Whatever is chosen there is what these buttons '
+  + 'use, so there is nothing to set here.</p>';
+
 /* ALL OF THEM AT ONCE, separated so they can be pasted one at a time. Twenty-seven messages
    retyped by hand is not a workflow anybody sustains for three weeks. */
 /* THE FIRST-COME CLAIMS THAT AN UNDO TOOK OFF THE ROSTERS, waiting to be decided again against
@@ -4365,10 +4421,24 @@ function oneEmail(k){
 function resultSubject(k){
   return 'Your trades — week ' + resultWeek() + ' · ' + String(k).split('|')[1];
 }
-function writeResultMail(k){
+function writeResultMail(k, btn){
   var bits = String(k).split('|');
   var rows = (S.results && S.results.results[k]) || [];
-  openMail(addressesFor(bits[0], bits[1]), resultSubject(k), emailFor(k, rows), bits[1]);
+  var to = addressesFor(bits[0], bits[1]);
+  if (!to.length){
+    showHelp('No Address for ' + esc(bits[1]),
+      '<p>There is no email address on file for this seat, so there is nothing to write to.</p>'
+      + '<p>Put one in with <b>Change Address</b> on the Access List, then press this again.</p>');
+    return;
+  }
+  copyRich(resultHtml(k, rows), emailFor(k, rows), btn, 'Copied \u2014 now paste');
+  /* THE ADDRESS AND THE SUBJECT TRAVEL IN THE LINK. THE MESSAGE DOES NOT: a plain body would
+     arrive with its spacing closed up, which is the thing being fixed. */
+  var kind = mailApp();
+  var url = composeURL(kind, to.join(','), resultSubject(k), '');
+  url = url.replace(/&body=$/, '');
+  if (kind === 'mailto'){ window.location.href = url; return; }
+  window.open(url, '_blank', 'noopener');
 }
 function copyOne(k, btn){
   copyPlain(oneEmail(k), btn, 'Copied', 'Here Is the Message');
