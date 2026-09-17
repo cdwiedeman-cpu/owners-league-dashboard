@@ -1137,6 +1137,7 @@ details>summary::marker{color:var(--faint)}
        generated document that lives at /docs/rules.html, shown in a frame -- not a copy. So it
        is current the moment build_rules_doc.py runs, with nothing to remember and no second
        place for a rule to go stale. -->
+  <section id="start" hidden><div id="startBody"></div></section>
   <section id="rules" hidden><div id="rulesBody"></div></section>
   <section id="guide" hidden><div id="guideBody"></div></section>
   <section id="csignin" hidden></section>
@@ -1239,7 +1240,15 @@ const COMMISH_ONLY_TABS = [['crun','Run It'],['caccess','Access List']];
    the sign in. We need a name that represents instructions." It is called Commissioner Guide: it
    says who it is for and that it is something to read, and it cannot be mistaken for a thing to
    do. */
-const RULES_TAB = [['rules','League Rules']];
+/* ---- THE HELP PAGE IS A TAB TOO ----------------------------------------------------------
+ * Casey, 17 Sep 2026: "shouldn't the new help guide be another tab next to League Rules in
+ * the app? I don't see it there."
+ * It should. An owner who is stuck is already IN the app, and telling them to go and find
+ * an email is asking them to leave the thing they are stuck in. It is the same document as
+ * /start/, framed the same way League Rules is, so there is one copy of it and the tab can
+ * never fall behind the page. GETTING STARTED COMES FIRST, because somebody reading it has
+ * not got as far as the rulebook. */
+const RULES_TAB = [['start','Getting Started'], ['rules','League Rules']];
 const GUIDE_TAB = [['guide','Commissioner Guide']];
 /* WHAT THE SHEET SAID LAST TIME. Casey, 13 Sep 2026: "when I load the App, the Run It and Access
    list tabs are not there for a few seconds and then they appear." They were waiting on a round
@@ -1295,7 +1304,7 @@ function composeTabs(){
     .concat(RULES_TAB);
 }
 let TABS = composeTabs();
-const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','rules','guide']
+const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','start','rules','guide']
   .concat(COMMISH_SECTIONS);
 
 /* PUT THE TAB UP, OR TAKE IT DOWN, TO MATCH WHO THE LEAGUE SAYS THIS IS. */
@@ -1737,6 +1746,7 @@ function showTab(which){
     if (fr) fr.hidden = false;
     openCommish(which);
   }
+  if (which === 'start') openStart();
   if (which === 'rules') openRules();
   if (which === 'guide') openGuide();
   /* The header only folds on the scores tab, so leaving it has to unfold. */
@@ -1972,13 +1982,31 @@ function openCommish(which, view){
   /* THE BAR BELONGS TO THE TRADES TAB AND TO THE PART OF IT THAT IS ON SCREEN. Scroll the frame
      out of view, or open another tab, and it comes off -- a floating Submit button over the
      standings would be a button belonging to nothing the reader can see. */
+  /* ---- THE BAR BELONGS TO THE TRADES TAB, NOT TO THE SECTION -------------------------------
+   *
+   * Casey, 17 Sep 2026: "the Add Another Trade floating bar is now on every tab and not just the
+   * Trades tab."
+   *
+   * FOUR TABS SHARE ONE SECTION. Sign In, Trades, Run It and the Access List are all the same
+   * trades application drawn one view at a time, so `#ctrades` is on screen for all four. This
+   * asked whether the SECTION was showing, which is true on every one of them, so a Submit My
+   * Trades bar floated over the Access List where there is no list to submit.
+   * ASK THE TAB, NOT THE SECTION. `showTab()` already marks the live tab with `aria-selected`,
+   * so there is one answer and this reads it rather than keeping a second one. */
+  const onTradesTab = () => {
+    const t = el(tabId('ctrades'));
+    return !!(t && t.getAttribute('aria-selected') === 'true');
+  };
   const barFit = () => {
     const b = el('rflbar');
     if (!b || !b.dataset.html) return;
     const r = f.getBoundingClientRect();
     const onScreen = r.bottom > 40 && r.top < window.innerHeight - 20;
-    const onTab = !!(host && host.offsetParent !== null);
-    b.hidden = !(onScreen && onTab);
+    const show = onScreen && onTradesTab() && !!(host && host.offsetParent !== null);
+    b.hidden = !show;
+    /* AND THE ROOM GOES WITH IT. The page kept a bar's worth of empty space at its foot on every
+       other tab, because the padding was set when the bar arrived and never released. */
+    document.body.style.paddingBottom = show ? (b.offsetHeight + 10) + 'px' : '';
   };
   window.addEventListener('scroll', barFit, {passive: true});
   window.addEventListener('resize', barFit, {passive: true});
@@ -1995,9 +2023,8 @@ function openCommish(which, view){
       const b = barShell();
       b.dataset.html = d.html || '';
       b.innerHTML = d.html || '';
-      document.body.style.paddingBottom = d.html ? (b.offsetHeight + 10) + 'px' : '';
       barFit();
-      if (!d.html) b.hidden = true;
+      if (!d.html){ b.hidden = true; document.body.style.paddingBottom = ''; }
     });
   }
   /* SAID FROM BOTH ENDS, because either one can be ready first. */
@@ -2018,6 +2045,7 @@ function openCommish(which, view){
  * whole rulebook, and is not shared.
  */
 const DOC_LOADED = {};
+function openStart(){ openDoc('start', '../docs/start.html', 'Getting Started'); }
 function openRules(){ openDoc('rules', '../docs/rules.html', 'League Rules'); }
 function openGuide(){ openDoc('guide', '../docs/trades.html', 'Commissioner Guide'); }
 function openDoc(which, src, title){
@@ -2523,7 +2551,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '16 Sep 2026, 11:31 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '16 Sep 2026, 6:22 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
