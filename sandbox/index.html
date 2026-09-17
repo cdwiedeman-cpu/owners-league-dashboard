@@ -309,6 +309,16 @@ td.num,th.num{text-align:right}
 .mailhd{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;
  flex:0 0 100%;margin-bottom:1px}
 button.mailbtn{font-size:11px;min-height:26px;padding:3px 8px;margin:0}
+button.mailbtn.pri{background:var(--pribg);border-color:var(--priline);color:var(--pritx);
+ font-weight:700;min-height:30px}
+/* Asked once, at the top of the tab, and the answer is filled in so it reads as a setting
+   rather than four things to press. */
+.mailpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 0;
+ border-top:1px solid var(--line);padding-top:10px}
+.mailpick .mailhd{flex:0 0 100%}
+.mailpick button.mailbtn{min-height:30px;font-size:12px;padding:4px 11px}
+.mailpick button.mailbtn.on{background:var(--pick);border-color:var(--brandhd);
+ color:var(--brandhd);font-weight:700}
 .acting{border:1px solid var(--line);border-radius:9px;background:var(--pan2);
  padding:9px 11px;margin:0 0 12px;display:flex;flex-wrap:wrap;gap:9px;align-items:center}
 .acting select{flex:1 1 200px;min-width:0;margin:0}
@@ -4232,8 +4242,10 @@ function resultsCard(){
        the workflow it looked like. */
     + '<div class="card warn" style="margin:0 0 10px"><b>Nobody has been emailed yet.</b>'
     + '<p class="note">This tool does not send mail and never will. Each owner below has a '
-    + '<b>Copy</b> button that puts their own message on your clipboard, headed with the address '
-    + 'it goes to. Paste it into your own mail and send it.</p></div>'
+    + '<b>Create Email</b> button that opens a new message, already addressed and already '
+    + 'written. You read it and press send. A seat with two owners gets one message carrying '
+    + 'both addresses.</p>'
+    + mailPicker() + '</div>'
     + keys.map(function(k){
         var b = k.split('|'), seat = b[1];
         var rows = R.results[k] || [];
@@ -4250,9 +4262,14 @@ function resultsCard(){
              What Bob needs is the message ON HIS CLIPBOARD, per owner, because there are several
              trades on a Monday and highlighting each one by hand is the thing he was doing.
              PLAIN TEXT, so it pastes without this page's dark background. */
+          /* CREATE IT, DO NOT COPY IT. Casey, 17 Sep 2026: "the button you have that says Copy
+             Michael Spielman's email should be create it in the email app and rename it to
+             Create Email to Send to Seat Name." Every address on the seat goes in the To line,
+             so a seat with two owners is one message and not two. */
           + '<div class="row" style="margin-top:6px">'
-          + '<button class="pri" onclick="copyOne(' + jq(k) + ',this)">Copy ' + esc(seat)
-          + '&rsquo;s Email</button>'
+          + '<button class="pri" onclick="writeResultMail(' + jq(k) + ')">Create Email to Send to '
+          + esc(seat) + '</button>'
+          + '<button onclick="copyOne(' + jq(k) + ',this)">Copy It Instead</button>'
           + '<button onclick="showEmail(' + jq(k) + ')">Read It First</button></div>';
       }).join('')
     + '</div>';
@@ -4322,12 +4339,23 @@ function copyAllEmails(btn){
   copyPlain(all, btn, 'Copied ' + keys.length, 'Every Owner\u2019s Message');
 }
 /* ONE OWNER'S MESSAGE, ADDRESSED AND READY. */
+/* EVERY ADDRESS ON THE SEAT. This read `a.email`, which is the seat's own field and is empty
+   once a seat has `members` -- so a two-owner seat addressed nobody, silently, and Bob would
+   have pasted a message with no address at the top of it. */
 function oneEmail(k){
+  var bits = String(k).split('|');
   var rows = (S.results && S.results.results[k]) || [];
-  var to = (S.access || []).filter(function(a){ return a.div + '|' + a.seat === k && a.email; })
-             .map(function(a){ return a.email; });
+  var to = addressesFor(bits[0], bits[1]);
   return 'To: ' + (to.length ? to.join(', ') : '(no address on file — tell them yourself)')
        + '\n\n' + emailFor(k, rows);
+}
+function resultSubject(k){
+  return 'Your trades — week ' + playWeek() + ' · ' + String(k).split('|')[1];
+}
+function writeResultMail(k){
+  var bits = String(k).split('|');
+  var rows = (S.results && S.results.results[k]) || [];
+  openMail(addressesFor(bits[0], bits[1]), resultSubject(k), emailFor(k, rows), bits[1]);
 }
 function copyOne(k, btn){
   copyPlain(oneEmail(k), btn, 'Copied', 'Here Is the Message');
@@ -4580,16 +4608,71 @@ function composeURL(kind, to, subject, body){
      some mail programs still refuse it, which is a broken button for no gain. */
   return 'mailto:' + String(to || '') + '?subject=' + s + '&body=' + b;
 }
-function writeMail(kind, seat, code, email){
-  if (!email){
-    showHelp('No Address for ' + seat,
-      '<p>There is no email address on file for this person, so there is nothing to write to.</p>'
-      + '<p>Put one in with <b>Change Address</b> on this row, then press this again.</p>');
+/* ---- WHERE BOB WRITES HIS MAIL, ASKED ONCE -------------------------------------------------
+ *
+ * Casey, 17 Sep 2026: "if you can have an app create an email, then the buttons we have in our
+ * league app should do that instead of create a copy."
+ *
+ * Right, and the reason it was a copy button was that nothing here knows what he writes mail in.
+ * FOUR BUTTONS ON EVERY ROW WOULD ANSWER THAT QUESTION TWENTY-SEVEN TIMES. So it is asked once,
+ * at the top of the tab, remembered on this device, and after that every row is ONE button.
+ * The copy buttons stay underneath. A compose window that does not open is a dead end, and a
+ * clipboard cannot fail.
+ */
+var MAIL_APPS = [['yahoo', 'Yahoo'], ['outlook', 'Outlook'], ['gmail', 'Gmail'],
+                 ['mailto', 'My Mail App']];
+var MAIL_KEY = 'rfl_mail_app';
+function mailApp(){
+  try { return localStorage.getItem(MAIL_KEY) || 'mailto'; } catch (e) { return 'mailto'; }
+}
+function setMailApp(k){
+  try { localStorage.setItem(MAIL_KEY, k); } catch (e) {}
+  render();
+}
+function mailPicker(){
+  var cur = mailApp();
+  return '<div class="mailpick"><span class="mailhd">Where You Write Your Mail</span>'
+    + MAIL_APPS.map(function(x){
+        return '<button class="mailbtn' + (cur === x[0] ? ' on' : '') + '" '
+          + 'onclick="setMailApp(' + jsq(x[0]) + ')">' + esc(x[1]) + '</button>';
+      }).join('')
+    + '<p class="note" style="flex:1 1 100%;margin:5px 0 0">Every <b>Create an Email</b> button '
+    + 'on this tab opens a new message there, already addressed and already written. '
+    + '<b>My Mail App</b> means whichever program this computer is set to use, and it does '
+    + 'nothing on a computer that has none set.</p></div>';
+}
+/* EVERY ADDRESS ON A SEAT, NOT THE FIRST ONE. Casey, 17 Sep 2026: "if it is a seat with two or
+   more owners then it includes each owner's email address in the email so he doesn't have to
+   send to both owners in that seat." A seat is a team and a team can have two people. */
+function addressesFor(div, seat){
+  var out = [];
+  (S.access || []).forEach(function(a){
+    if (a.div !== div || a.seat !== seat) return;
+    var people = (a.members && a.members.length) ? a.members : [{email: a.email}];
+    people.forEach(function(m){
+      var e = String((m && m.email) || '').trim();
+      if (e && out.indexOf(e) === -1) out.push(e);
+    });
+  });
+  return out;
+}
+function openMail(to, subject, body, whoFor){
+  if (!to || !to.length){
+    showHelp('No Address on File',
+      '<p>There is no email address for ' + esc(whoFor || 'this seat') + ', so there is nothing '
+      + 'to write to.</p><p>Put one in on the <b>Access List</b> tab, then press this again.</p>');
     return;
   }
-  var url = composeURL(kind, email, welcomeSubject(), welcomeBody(seat, code));
+  var kind = mailApp();
+  var url = composeURL(kind, to.join(','), subject, body);
   if (kind === 'mailto'){ window.location.href = url; return; }
   window.open(url, '_blank', 'noopener');
+}
+/* A CODE GOES TO ONE PERSON, so this one is addressed to the person and never to the seat.
+   That is the opposite of the results email below, and it is deliberate: a code IS the sign-in,
+   and two people on a seat get two different codes. */
+function writeCodeMail(seat, code, email){
+  openMail(email ? [email] : [], welcomeSubject(), welcomeBody(seat, code), seat);
 }
 function copyPart(what, seat, code, email, btn){
   var text = what === 'to' ? (email || '')
@@ -4720,24 +4803,19 @@ function liveAccessTable(){
         + '<button style="font-size:11px;min-height:26px;padding:3px 7px" '
         + 'onclick="copyCode(' + jsq(m.code || '') + ',this)" title="Puts just the six characters on '
         + 'your clipboard, with no colours on them">Copy Code</button></div>'
-        /* FOUR WAYS OUT, because nobody here knows which mail Bob writes in. */
+        /* ONE BUTTON. Where the mail gets written is asked once, at the top of the tab. */
         + (function(){
             var q = jsq(a.seat) + ',' + jsq(m.code || '') + ',' + jsq(m.email || '');
-            var b = function(kind, label, tip){
-              return '<button class="mailbtn" title="' + tip + '" '
-                + 'onclick="writeMail(' + jsq(kind) + ',' + q + ')">' + label + '</button>';
-            };
             var c = function(what, label){
               return '<button class="mailbtn" onclick="copyPart(' + jsq(what) + ',' + q
                 + ',this)">' + label + '</button>';
             };
-            return '<div class="mailrow"><span class="mailhd">Write the email</span>'
-              + b('yahoo', 'Yahoo', 'Opens a Yahoo compose window with the address, the subject and the message already in it')
-              + b('outlook', 'Outlook', 'Opens Outlook on the web with the address, the subject and the message already in it')
-              + b('gmail', 'Gmail', 'Opens Gmail with the address, the subject and the message already in it')
-              + b('mailto', 'My Mail App', 'Opens whichever mail program this computer is set to use. It does nothing if none is set, so use one of the other three instead')
+            return '<div class="mailrow">'
+              + '<button class="mailbtn pri" style="flex:1 1 100%" '
+              + 'title="Opens a new message with their address, the subject and their own code '
+              + 'already in it" onclick="writeCodeMail(' + q + ')">Create an Email</button>'
               + '</div>'
-              + '<div class="mailrow"><span class="mailhd">Or copy</span>'
+              + '<div class="mailrow"><span class="mailhd">Or Copy</span>'
               + c('to', 'Address') + c('subject', 'Subject') + c('body', 'Message')
               + '</div>';
           })()
@@ -5038,7 +5116,7 @@ function viewAccess(){
      list be on the dashboard. It reads that it is a practice copy." It read that way on both,
      which made the real one look like a toy and would have had somebody typing into a copy of
      their league. */
-  return '<div class="card"><h2>Access List</h2>'
+  return '<div class="card"><h2>Access List</h2>' + (Store.live() ? mailPicker() : '')
     + (Store.live()
       /* WHAT IT IS FOR, THEN WHAT TO DO WHERE. Casey, 13 Sep 2026: "why did you start with the
          wording that this is what the access tab of the league spreadsheet says right now ... I
