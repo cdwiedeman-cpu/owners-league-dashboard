@@ -191,6 +191,8 @@ section h3{margin:26px 0 6px;padding-top:14px;border-top:1px solid var(--rule,#e
 section h3:first-of-type{border-top:0;padding-top:0;margin-top:18px}
 </style>
 <style>
+/* A framed document is inside a tab, and the tab strip is the navigation. */
+.framed .sitenav{display:none}
 .sitenav{position:sticky;top:0;z-index:50;background:var(--card);
  border-bottom:1px solid var(--rule);margin:0 0 8px;
  font-family:Archivo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -206,7 +208,7 @@ section h3:first-of-type{border-top:0;padding-top:0;margin-top:18px}
 </style>
 </head>
 <body>
-<nav class="sitenav"><div class="inner"><a class="home" href="./">RFL Documents</a><a class="" href="start.html">Getting Started</a><a class="here" href="rules.html">League Rules</a></div></nav>
+<nav class="sitenav"><div class="inner"><a class="home" href="./">RFL Documents</a><a class="" href="start.html">Getting Started</a><a class="here" href="rules.html">League Rules</a></div></nav><script>try{if(window.top!==window.self){document.documentElement.classList.add('framed');}}catch(e){document.documentElement.classList.add('framed');}</script>
 <div class="wrap">
 
   <header>

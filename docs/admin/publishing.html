@@ -160,6 +160,8 @@ ol.tight{padding-left:20px}
   display:block;overflow-wrap:anywhere;color:var(--ink);margin:8px 0 0}
 </style>
 <style>
+/* A framed document is inside a tab, and the tab strip is the navigation. */
+.framed .sitenav{display:none}
 .sitenav{position:sticky;top:0;z-index:50;background:var(--card);
  border-bottom:1px solid var(--rule);margin:0 0 8px;
  font-family:Archivo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -175,7 +177,7 @@ ol.tight{padding-left:20px}
 </style>
 </head>
 <body>
-<nav class="sitenav"><div class="inner"><a class="home" href="./">Commissioner</a><a class="" href="commissioner.html">Commissioner Guide</a><a class="" href="bob.html">Setting Bob Up</a><a class="here" href="publishing.html">Publishing the Dashboards</a></div></nav>
+<nav class="sitenav"><div class="inner"><a class="home" href="./">Commissioner</a><a class="" href="commissioner.html">Commissioner Guide</a><a class="" href="bob.html">Setting Bob Up</a><a class="here" href="publishing.html">Publishing the Dashboards</a></div></nav><script>try{if(window.top!==window.self){document.documentElement.classList.add('framed');}}catch(e){document.documentElement.classList.add('framed');}</script>
 <div class="wrap">
 
   <header>
