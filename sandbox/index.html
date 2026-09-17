@@ -4594,23 +4594,26 @@ function welcomeHtml(seat, code){
 /* ONE PRESS, BOTH HALVES. The clipboard may only be written while the browser is handling a real
    click, so the copy goes first and the compose window opens after it. */
 function copyRich(html, text, btn, word){
-  var ok = false;
+  /* WAIT FOR THE ANSWER. Writing rich text hands back a PROMISE, and the first cut of this said
+     "Copied" the moment the call was made rather than when it succeeded. A browser that refuses
+     the clipboard refuses it a beat later, so the reader was told the message was copied, the
+     fallback never ran, and the paste came up empty. A BUTTON THAT REPORTS SUCCESS IT HAS NOT
+     HAD IS WORSE THAN A BUTTON THAT FAILS, because the failure is discovered by the person
+     reading the email. */
+  var plain = function(){
+    copyPlain(text, btn, word || 'Copied', 'Here Is the Message');
+  };
   try {
     if (navigator.clipboard && window.ClipboardItem){
       navigator.clipboard.write([new ClipboardItem({
         'text/html': new Blob([html], {type: 'text/html'}),
         'text/plain': new Blob([text], {type: 'text/plain'})
-      })]);
-      ok = true;
+      })]).then(function(){ flash(btn, word || 'Copied'); })
+        .catch(plain);
+      return;
     }
-  } catch (e) { ok = false; }
-  if (!ok){
-    /* A BROWSER THAT WILL NOT TAKE RICH TEXT STILL TAKES PLAIN. The reader loses the links and
-       keeps the words, which beats losing both. */
-    copyPlain(text, btn, word || 'Copied', 'Here Is the Message');
-    return;
-  }
-  flash(btn, word || 'Copied');
+  } catch (e) {}
+  plain();
 }
 function copyCode(code, btn){
   copyPlain(String(code || ''), btn, 'Copied', 'Here Is the Code');
