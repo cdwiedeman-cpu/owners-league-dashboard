@@ -4716,8 +4716,7 @@ function welcomeText(seat, code, email){
  * a machine that writes all its mail on a website, that is often nothing at all, and the button
  * does nothing. THE ANSWER IS NOT TO PICK ONE. Each of the three web mail services has its own
  * compose address that takes the same three things, so all four are offered and whichever one
- * he uses is one press. The Copy buttons underneath are the floor: they cannot fail, and they
- * still beat typing the address in by hand.
+ * he uses is one press.
  */
 function composeURL(kind, to, subject, body){
   var t = encodeURIComponent(to || ''), s = encodeURIComponent(subject || ''),
@@ -4737,8 +4736,6 @@ function composeURL(kind, to, subject, body){
  * Right, and the reason it was a copy button was that nothing here knows what he writes mail in.
  * FOUR BUTTONS ON EVERY ROW WOULD ANSWER THAT QUESTION TWENTY-SEVEN TIMES. So it is asked once,
  * at the top of the tab, remembered on this device, and after that every row is ONE button.
- * The copy buttons stay underneath. A compose window that does not open is a dead end, and a
- * clipboard cannot fail.
  */
 /* ALL FOUR, AND YAHOO IS THE DEFAULT.
  *
@@ -4841,12 +4838,6 @@ function writeCodeMail(seat, code, email, btn){
   url = url.replace(/&body=$/, '');
   if (kind === 'mailto'){ window.location.href = url; return; }
   window.open(url, '_blank', 'noopener');
-}
-function copyPart(what, seat, code, email, btn){
-  var text = what === 'to' ? (email || '')
-           : what === 'subject' ? welcomeSubject()
-           : welcomeBody(seat, code);
-  copyPlain(text, btn, 'Copied', 'Here It Is');
 }
 function copyWelcome(seat, code, email, btn){
   copyPlain(welcomeText(seat, code, email), btn, 'Copied', 'Here Is the Message');
@@ -4971,22 +4962,20 @@ function liveAccessTable(){
         + '<button style="font-size:11px;min-height:26px;padding:3px 7px" '
         + 'onclick="copyCode(' + jsq(m.code || '') + ',this)" title="Puts just the six characters on '
         + 'your clipboard, with no colours on them">Copy Code</button></div>'
-        /* ONE BUTTON. Where the mail gets written is asked once, at the top of the tab. */
+        /* TWO BUTTONS ON A ROW AND NO MORE. Casey, 17 Sep 2026: "remove the Or Copy address,
+           subject and message from the access list page. We just need Copy Code and the option
+           to create an email and copy it."
+           They were there from when the email had to be assembled by hand. One button now does
+           the whole job, so the three beside it were three ways to do a piece of it, and the row
+           was reading as a toolbox rather than as a person. */
         + (function(){
             var q = jsq(a.seat) + ',' + jsq(m.code || '') + ',' + jsq(m.email || '');
-            var c = function(what, label){
-              return '<button class="mailbtn" onclick="copyPart(' + jsq(what) + ',' + q
-                + ',this)">' + label + '</button>';
-            };
             return '<div class="mailrow">'
               + '<button class="mailbtn pri" style="flex:1 1 100%" '
               + 'title="Opens a new message addressed to them with the subject filled in, and '
               + 'puts the whole message on your clipboard with its formatting and its links. '
               + 'Click into the message and paste." '
               + 'onclick="writeCodeMail(' + q + ',this)">Create an Email and Copy It</button>'
-              + '</div>'
-              + '<div class="mailrow"><span class="mailhd">Or Copy</span>'
-              + c('to', 'Address') + c('subject', 'Subject') + c('body', 'Message')
               + '</div>';
           })()
         + '</td>'
@@ -5396,11 +5385,12 @@ function columnRows(){
                 + 'puts just those six characters on your clipboard as plain text, so they paste '
                 + 'into an email readably instead of carrying this page&rsquo;s dark background '
                 + 'with them.'],
-       ['Create an Email Copy', 'Puts a finished message on your clipboard: their address, their '
+       ['Create an Email and Copy It', 'Opens a new message to that one person, already '
+                + 'addressed, with the subject filled in and the message empty. The message '
+                + 'itself is on your clipboard, so click into it and paste. It carries their '
                 + 'code, the link to the website, how to sign in, how to put the page on an '
-                + 'iPhone or Android home screen, and how to enter a trade. Paste it into an '
-                + 'email or a text to that one person and send it. Send each code on its own, '
-                + 'never in a message that reaches more than one owner.'],
+                + 'iPhone or Android home screen, and how to enter a trade. Send each code on '
+                + 'its own, never in a message that reaches more than one owner.'],
        ['Role', '<b>owner</b> for almost everybody. <b>commissioner</b> also lets that person '
                 + 'settle a week, enter a trade for any seat, and open this page. The last '
                 + 'commissioner cannot be stood down.'],
