@@ -4558,6 +4558,25 @@ function siteURL(){
   if (!u) u = String(location.href).split('?')[0].split('#')[0];
   return u;
 }
+/* ---- AN ADDRESS IN AN EMAIL HAS TO BE CLICKABLE ----------------------------------------------
+ *
+ * Casey, 17 Sep 2026: "there is not a link when creating the code email."
+ *
+ * A compose window opened from a link can only be handed PLAIN TEXT, so this message cannot carry
+ * a real anchor however it is written. What it can do is give the mail service something it will
+ * turn into a link by itself, and the rule for that is simple: THE ADDRESS NEEDS ITS SCHEME and
+ * it needs to stand on its own. Gmail and Yahoo both make a link out of https://rflowners.com and
+ * both leave a bare rflowners.com as words.
+ * So every address in this message is forced to https:// and put on a line of its own, with no
+ * full stop after it -- a trailing full stop is the classic way to get a dead link, because it
+ * gets swallowed into the address.
+ */
+function webLink(u){
+  u = String(u || '').trim().replace(/[).,]+$/, '');
+  if (!u) return u;
+  if (/^https?:\/\//i.test(u)) return u;
+  return 'https://' + u.replace(/^\/\//, '');
+}
 /* THE INSTRUCTIONS PAGE, WHICH IS A PLACE AND NOT AN EVENT.
  *
  * Casey, 17 Sep 2026: "you shouldn't refer to the one time email Bob is sending to the league and
@@ -4602,11 +4621,13 @@ function welcomeBody(seat, code){
   + '\n'
   + 'Your team: ' + seat + '\n'
   + 'Your code: ' + code + '\n'
-  + 'The website: ' + url + '\n'
+  + 'The website:\n'
+  + webLink(url) + '\n'
   + '\n'
   + 'Open the website, type those six characters into the box, and press Sign Me In. That device then stays signed in for the rest of the season.\n'
   + '\n'
-  + 'Step by step instructions: ' + startURL() + '\n'
+  + 'Step by step instructions:\n'
+  + webLink(startURL()) + '\n'
   + 'That page covers signing in, putting the league on your phone home screen, what each tab is for, and how to enter a trade. Nothing on it asks for a code, so you can read it before you have signed in.\n'
   + '\n'
   + 'Your code is yours alone. Anyone who has it can enter trades for your team, so please do not pass it on and do not post it anywhere the league can see it.\n'
