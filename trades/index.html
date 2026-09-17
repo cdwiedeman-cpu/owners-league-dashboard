@@ -4759,7 +4759,10 @@ function composeURL(kind, to, subject, body, bcc){
  * nobody uses costs almost nothing, while a missing choice costs a commissioner who changes mail
  * service a rebuild. Bob is the one sending twenty-seven of these, so Yahoo is what a device
  * that has never chosen gets. */
-var MAIL_APPS = [['yahoo', 'Yahoo'], ['outlook', 'Outlook'], ['gmail', 'Gmail'],
+/* YAHOO, GMAIL, OUTLOOK, THEN WHATEVER THIS COMPUTER USES. Casey, 17 Sep 2026: "make Yahoo the
+   first option, put Gmail as the second option, then Outlook, then My Mail App." The first two
+   are what this league actually writes its mail in, so they read first. */
+var MAIL_APPS = [['yahoo', 'Yahoo'], ['gmail', 'Gmail'], ['outlook', 'Outlook'],
                  ['mailto', 'My Mail App']];
 var MAIL_KEY = 'rfl_mail_app';
 function mailApp(){
@@ -4781,12 +4784,10 @@ function mailPicker(){
         return '<button class="mailbtn' + (cur === x[0] ? ' on' : '') + '" '
           + 'onclick="setMailApp(' + jsq(x[0]) + ')">' + esc(x[1]) + '</button>';
       }).join('')
-    + '<p class="note" style="flex:1 1 100%;margin:5px 0 0">A <b>Create an Email</b> button opens '
-    + 'a new message there, addressed and with its subject filled in. On the Access List it also '
-    + 'puts the message on your clipboard with its formatting and its links, so click into the '
-    + 'message and paste. <b>My Mail App</b> means whichever program this computer is set to use, '
-    + 'so it does nothing on a computer that has none set. If the window will not open, the '
-    + '<b>Copy</b> buttons always work.</p></div>';
+    /* ONE SENTENCE. What the buttons do is explained by the buttons, and the rest of what this
+       paragraph used to carry is in What Each Column Is For. */
+    + '<p class="note" style="flex:1 1 100%;margin:5px 0 0">Every button on this tab that writes '
+    + 'an email writes it here. Change this only if you write your mail somewhere else.</p></div>';
 }
 /* EVERY ADDRESS ON A SEAT, NOT THE FIRST ONE. Casey, 17 Sep 2026: "if it is a seat with two or
    more owners then it includes each owner's email address in the email so he doesn't have to
@@ -4830,26 +4831,41 @@ function openMail(to, subject, body, whoFor){
  * so the message is not addressed to nobody.
  */
 function leagueMailList(){
-  var seen = {}, to = [], missing = [];
+  /* THE COMMISSIONERS GO IN THE TO LINE AND EVERYBODY ELSE GOES IN BCC.
+     Casey, 17 Sep 2026: "put my email address in the To line with Bob so that when they reply it
+     will come to me as well. Usually if they reply it means they're having an issue and I'll
+     have to be the one that fixes it."
+     It is worked out from the ROLE column rather than from a typed-in address, so it is right
+     whoever is holding the job, and a commissioner is never in both lines. */
+  var seen = {}, to = [], bcc = [], missing = [];
   (S.access || []).forEach(function(a){
     if (a.status === 'removed') return;
-    var people = (a.members && a.members.length) ? a.members : [{email: a.email || ''}];
+    var people = (a.members && a.members.length) ? a.members
+               : [{email: a.email || '', role: a.role || 'owner'}];
     people.forEach(function(m){
       var e = String(m.email || '').trim();
       if (!e){ missing.push(a.seat); return; }
       var k = e.toLowerCase();
       if (seen[k]) return;
       seen[k] = 1;
-      to.push(e);
+      (m.role === 'commissioner' ? to : bcc).push(e);
     });
   });
-  return {to: to, missing: missing};
+  /* THE PERSON PRESSING IT IS ALWAYS ON THE TO LINE, even if the league has them down as an
+     owner. A message addressed to nobody looks like junk mail to a mail service. */
+  var me = String((whoIsThis() || {}).email || '').trim();
+  if (me && to.map(function(x){ return x.toLowerCase(); }).indexOf(me.toLowerCase()) < 0){
+    to.unshift(me);
+    var at = bcc.map(function(x){ return x.toLowerCase(); }).indexOf(me.toLowerCase());
+    if (at > -1) bcc.splice(at, 1);
+  }
+  return {to: to, bcc: bcc, missing: missing, all: to.length + bcc.length};
 }
 function writeLeagueMail(btn){
   var L = leagueMailList();
   /* AN ABSENCE IS NEVER AN ANSWER. An empty list opens an empty message, which looks like the
      button failed, so it says what is missing and where to put it right. */
-  if (!L.to.length){
+  if (!L.all){
     showHelp('No Addresses on the List Yet',
       '<p>Nobody in the access list has an email address on file, so there is nobody to send '
       + 'this to.</p><p>Put addresses in with <b>Change Address</b> on each row, then press '
@@ -4857,9 +4873,8 @@ function writeLeagueMail(btn){
     return;
   }
   copyRich(LEAGUE_MAIL.html, LEAGUE_MAIL.text, btn, 'Copied \u2014 now paste');
-  var me = (whoIsThis() || {}).email || '';
   var kind = mailApp();
-  var url = composeURL(kind, me, LEAGUE_MAIL.subject, '', L.to.join(','));
+  var url = composeURL(kind, L.to.join(','), LEAGUE_MAIL.subject, '', L.bcc.join(','));
   url = url.replace(/&body=$/, '');
   if (kind === 'mailto'){ window.location.href = url; return; }
   window.open(url, '_blank', 'noopener');
@@ -4868,27 +4883,43 @@ function leagueMailCard(){
   var L = leagueMailList();
   var who = MAIL_APPS.filter(function(x){ return x[0] === mailApp(); });
   var label = who.length ? who[0][1] : 'your mail';
-  var count = L.to.length;
+  var count = L.bcc.length;
   return '<div class="card"><h2>Send the League Email</h2>'
-    + '<p class="note">This is the one message that goes to everybody. It carries the website '
-    + 'address, says their own code is coming separately, and walks them through signing in, '
-    + 'putting the league on their phone, and entering a trade.</p>'
     + '<div class="row"><button class="pri" onclick="writeLeagueMail(this)">Create the League '
-    + 'Email</button></div>'
+    + 'Email</button>'
+    + '<button onclick="showHelp(\'The League Email\', LEAGUEMAILNOTE)">What This '
+    + 'Sends</button></div>'
     + '<p class="note" style="margin-top:8px">' + esc(label) + ' opens with <b>' + count
-    + ' address' + (count === 1 ? '' : 'es') + '</b> already in the Bcc line and the subject '
-    + 'filled in. The message is on your clipboard. Click into the empty message and press '
-    + 'Command V, or Control V on a PC.</p>'
-    + '<p class="note">The addresses go in <b>Bcc</b> on purpose. Nobody sees anybody '
-    + 'else&rsquo;s address, and a reply comes back to you alone.</p>'
+    + ' owner' + (count === 1 ? '' : 's') + '</b> in the Bcc line and the subject filled in. '
+    + 'The message is on your clipboard. Click into it and press Command V, or Control V on a '
+    + 'PC.</p>'
+    + '<p class="note">The To line carries the commissioners: ' + esc(L.to.join(', ')) + '.</p>'
+    /* AN ABSENCE IS NEVER AN ANSWER, and this one has to be on the screen rather than behind a
+       button: it is the difference between sending to everybody and sending to everybody but
+       two. */
     + (L.missing.length
         ? '<p class="note b">' + L.missing.length + ' seat'
-          + (L.missing.length === 1 ? ' has' : 's have') + ' no address on file and will not get '
-          + 'it: ' + esc(L.missing.join(', ')) + '. Put the addresses in with <b>Change '
-          + 'Address</b>, then press the button again.</p>'
-        : '<p class="note">Every seat on the list has an address.</p>')
+          + (L.missing.length === 1 ? ' has' : 's have') + ' no address and will not get it: '
+          + esc(L.missing.join(', ')) + '.</p>'
+        : '')
     + '</div>';
 }
+/* EVERYTHING ELSE ABOUT THAT EMAIL, BEHIND THE BUTTON. It is read once. */
+var LEAGUEMAILNOTE =
+  '<p class="note">This is the one message that goes to everybody. It carries the website '
+  + 'address, says their own code is coming separately, and walks them through signing in, '
+  + 'putting the league on their phone home screen, and entering a trade.</p>'
+  + '<p class="note"><b>The addresses go in Bcc, not To.</b> Nobody sees anybody else\u2019s '
+  + 'address that way. A reply also comes back to you alone rather than to all twenty-seven.</p>'
+  + '<p class="note"><b>The To line carries the commissioners.</b> Every owner is in Bcc, and '
+  + 'each commissioner is in To, so a reply that goes to everyone named reaches all of you.</p>'
+  + '<p class="note">One thing to watch. If an owner presses <b>Reply</b> rather than <b>Reply '
+  + 'All</b>, the answer goes only to whoever sent the message. Forward those on.</p>'
+  + '<p class="note"><b>The message opens empty and that is deliberate.</b> A mail service will '
+  + 'not take headings, bold or links through a link. The clipboard is the only way to carry '
+  + 'formatting into a new message, so the words arrive when you paste.</p>'
+  + '<p class="note">Send it again whenever you like. Somebody who already has the site loses '
+  + 'nothing by getting it twice.</p>';
 
 /* A CODE GOES TO ONE PERSON, so this one is addressed to the person and never to the seat.
    That is the opposite of the results email below, and it is deliberate: a code IS the sign-in,
@@ -5341,7 +5372,18 @@ function setSeatStatusP(i, status){
 
 function viewAccess(){
   var rows = S.access;
-  var filled = rows.filter(function(r){ return String(r.email || '').trim(); }).length;
+  /* PEOPLE, NOT ROWS. Six seats have two owners, and a row counted as filled because one of its
+     two people had an address would hide the other one. It also has to read the members list:
+     on the live page the address is on the PERSON and the row has none at all, so counting
+     `r.email` there reported nought out of twenty-seven with every address in place. */
+  var filled = (function(){
+    var have = 0, all = 0;
+    (rows || []).forEach(function(r){
+      var people = (r.members && r.members.length) ? r.members : [{email: r.email || ''}];
+      people.forEach(function(m){ all++; if (String(m.email || '').trim()) have++; });
+    });
+    return {have: have, all: all};
+  })();
   /* WHAT TO DO, THEN WHAT EACH COLUMN MEANS, THEN THE TABLE. Casey, 10 Sep 2026: "it should have
      some instruction of what he needs to populate, and what the status column means, and what
      keys last retired means and what to do with that." A grid of editable cells with no key is
@@ -5367,19 +5409,15 @@ function viewAccess(){
          Everything shaped like "this has happened, what do I do" moved into the button below,
          because the page had grown into a wall of text explaining controls that now say what
          they are on their own face. */
+      /* ONE LINE, THEN THE TABLE. Casey, 17 Sep 2026: "there's text up at the top, you have to
+         scroll a ways to get down to the actual access list. Can we reorganise that text, whether
+         it's in a separate button or instruction, like we've done with the trades tab."
+         Same fault as the trades tab and the same fix. A HEADING NAMES WHAT IS UNDER IT, and
+         five paragraphs of standing advice sat between the words Access List and the list. The
+         advice is read once, by one person; the table is read every week by that same person.
+         So the advice went behind How Codes Work and the table came up. */
       ? '<p class="note">Every seat in the league and every person who can sign in to one. This '
-        + 'page is where all of it is managed. There is no spreadsheet behind it any more.</p>'
-        + '<p class="note"><b>To give somebody their code, copy it off their row and send it to '
-        + 'them.</b> They type '
-        + 'it into the dashboard once on each device they use. It does not expire and using it '
-        + 'does not use it up.</p>'
-        + '<p class="note"><b>A code is the sign-in.</b> Anyone holding it can enter trades for '
-        + 'that seat, so give it to that person and nobody else. Never send one to a group '
-        + 'address and never post one where the league can see it.</p>'
-        + '<p class="note"><b>Six seats have two owners.</b> Each person has their own code and '
-        + 'their own role. They share the roster and either can enter that team\u2019s trades.</p>'
-        + '<p class="note">Every change here takes effect on that person\u2019s next request. '
-        + 'Nothing is rebuilt and nobody has to sign in again.</p>'
+        + 'page is where all of it is managed.</p>'
       : '<p class="note"><b>This is a practice copy.</b> Nothing you type here reaches the real '
         + 'league and nothing there appears here. It is here so you can try &ldquo;an owner '
         + 'leaves&rdquo; without waiting for an owner to leave.</p>'
@@ -5390,9 +5428,10 @@ function viewAccess(){
        nothing to paste anywhere. */
     /* THE PASTE-IT-INTO-THE-SHEET STEPS ARE GONE WITH THE SHEET. There is nowhere to paste it
        and a button that copies a CSV for nothing is a button that gets pressed and puzzled over. */
-    + '<p class="note"><b>' + filled + ' of ' + rows.length + '</b> row'
-    + (rows.length === 1 ? '' : 's') + ' have an address so far.</p>'
+    + '<p class="note"><b>' + filled.have + ' of ' + filled.all + '</b> '
+    + (filled.all === 1 ? 'person has' : 'people have') + ' an address.</p>'
     + '<div class="row">'
+    + '<button onclick="showHelp(\'How Codes Work\', CODESNOTE)">How Codes Work</button>'
     + '<button onclick="showHelp(\'What Each Column Is For\', columnHelp())">'
     + 'What Each Column Is For</button>'
     + '<button onclick="showHelp(\'What to Do When Something Changes\', ACCESSNOTE)">'
@@ -5486,6 +5525,20 @@ function columnRows(){
                 + 'Back</b> undoes it.']];
   return rows;
 }
+/* WHAT A CODE IS AND WHAT IT IS NOT. Behind a button because it is standing advice: true every
+   week, needed on one afternoon. */
+var CODESNOTE =
+  '<p class="note"><b>To give somebody their code, press Create an Email and Copy It on their '
+  + 'row.</b> They type it into the website once on each device they use. It does not expire and '
+  + 'using it does not use it up.</p>'
+  + '<p class="note"><b>A code is the sign-in.</b> Anyone holding it can enter trades for that '
+  + 'seat, so give it to that person and nobody else. Never send one to a group address and '
+  + 'never post one where the league can see it.</p>'
+  + '<p class="note"><b>Six seats have two owners.</b> Each person has their own code and their '
+  + 'own role. They share the roster and either of them can enter that team\u2019s trades.</p>'
+  + '<p class="note">Every change on this page takes effect the next time that person does '
+  + 'anything. Nothing is rebuilt and nobody has to sign in again.</p>';
+
 var ACCESSNOTE =
     '<p><b>An owner gets a new email address.</b></p>'
   + '<ol><li>Press <b>Change Address</b> on their row and type the new one.</li></ol>'
