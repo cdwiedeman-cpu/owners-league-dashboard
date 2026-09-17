@@ -4619,11 +4619,22 @@ function composeURL(kind, to, subject, body){
  * The copy buttons stay underneath. A compose window that does not open is a dead end, and a
  * clipboard cannot fail.
  */
-var MAIL_APPS = [['yahoo', 'Yahoo'], ['outlook', 'Outlook'], ['gmail', 'Gmail'],
-                 ['mailto', 'My Mail App']];
+/* TWO, BECAUSE THERE ARE TWO PEOPLE WHO EVER SEE THIS TAB. Casey, 17 Sep 2026: "Bob confirmed he
+   uses Yahoo, so I think you just build it for Gmail or Yahoo." Run It and the Access List are
+   commissioner-only, so the whole audience is Bob on Yahoo and Casey on Gmail. Outlook and the
+   plain mail link were two choices that neither of them would ever press, on a setting whose
+   only job is to be pressed once. `composeURL()` still knows how to build all four, so adding
+   one back is a line here and nothing else.
+   YAHOO IS THE DEFAULT because Bob is the one sending twenty-seven of these. */
+var MAIL_APPS = [['yahoo', 'Yahoo'], ['gmail', 'Gmail']];
 var MAIL_KEY = 'rfl_mail_app';
 function mailApp(){
-  try { return localStorage.getItem(MAIL_KEY) || 'mailto'; } catch (e) { return 'mailto'; }
+  var k = '';
+  try { k = localStorage.getItem(MAIL_KEY) || ''; } catch (e) {}
+  /* A CHOICE THAT IS NO LONGER OFFERED IS NOT A CHOICE. A device that picked Outlook before this
+     was cut back would otherwise keep opening Outlook with no button on screen to change it. */
+  for (var i = 0; i < MAIL_APPS.length; i++) if (MAIL_APPS[i][0] === k) return k;
+  return 'yahoo';
 }
 function setMailApp(k){
   try { localStorage.setItem(MAIL_KEY, k); } catch (e) {}
@@ -4637,9 +4648,9 @@ function mailPicker(){
           + 'onclick="setMailApp(' + jsq(x[0]) + ')">' + esc(x[1]) + '</button>';
       }).join('')
     + '<p class="note" style="flex:1 1 100%;margin:5px 0 0">Every <b>Create an Email</b> button '
-    + 'on this tab opens a new message there, already addressed and already written. '
-    + '<b>My Mail App</b> means whichever program this computer is set to use, and it does '
-    + 'nothing on a computer that has none set.</p></div>';
+    + 'on this tab opens a new message there, already addressed and already written. You read it '
+    + 'over and press send. If the window does not open, use the <b>Copy</b> buttons instead.</p>'
+    + '</div>';
 }
 /* EVERY ADDRESS ON A SEAT, NOT THE FIRST ONE. Casey, 17 Sep 2026: "if it is a seat with two or
    more owners then it includes each owner's email address in the email so he doesn't have to
