@@ -1920,9 +1920,22 @@ function sentence(r, seat){
         body: r.detail || 'It was ' + r.outcome + '.'};
   }
 }
+/* THE WEEK THE RESULT IS FOR, NOT THE WEEK IT IS BEING READ IN.
+ *
+ * Casey, 17 Sep 2026: "the create email for Spielman refers to week 3, but his trade happened in
+ * week 2."
+ *
+ * `playWeek()` is derived from the clock, so it answers "what week is a list being built for
+ * NOW". A settled result is a FACT ABOUT A WEEK THAT HAS PASSED, and writing its email on
+ * Wednesday made it say Wednesday's week. `S.results.week` has carried the right answer all
+ * along and `playOf()` exists to convert it; this was the one place that reached for the clock
+ * instead. ANYTHING STORED IS DATED FROM WHAT WAS STORED WITH IT. */
+function resultWeek(){
+  return playOf(S.results ? S.results.week : null);
+}
 function emailFor(seatK, rows){
   var bits = seatK.split('|'), div = bits[0], seat = bits[1];
-  var lines = ['Your trades — week ' + playWeek() + ' · ' + seat
+  var lines = ['Your trades — week ' + resultWeek() + ' · ' + seat
                + ' (' + (DATA.div_names[div] || div) + ')', ''];
   var gotAny = false;
   (rows || []).forEach(function(r){
@@ -4350,7 +4363,7 @@ function oneEmail(k){
        + '\n\n' + emailFor(k, rows);
 }
 function resultSubject(k){
-  return 'Your trades — week ' + playWeek() + ' · ' + String(k).split('|')[1];
+  return 'Your trades — week ' + resultWeek() + ' · ' + String(k).split('|')[1];
 }
 function writeResultMail(k){
   var bits = String(k).split('|');
