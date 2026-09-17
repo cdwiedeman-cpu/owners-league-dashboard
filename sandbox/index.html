@@ -4576,7 +4576,9 @@ function composeURL(kind, to, subject, body){
   if (kind === 'gmail')  return 'https://mail.google.com/mail/?view=cm&fs=1&to=' + t + '&su=' + s + '&body=' + b;
   if (kind === 'yahoo')  return 'https://compose.mail.yahoo.com/?to=' + t + '&subject=' + s + '&body=' + b;
   if (kind === 'outlook') return 'https://outlook.live.com/mail/0/deeplink/compose?to=' + t + '&subject=' + s + '&body=' + b;
-  return 'mailto:' + encodeURIComponent(to || '') + '?subject=' + s + '&body=' + b;
+  /* THE ADDRESS ITSELF IS NOT ENCODED IN A mailto:. Percent-encoding the @ is legal and
+     some mail programs still refuse it, which is a broken button for no gain. */
+  return 'mailto:' + String(to || '') + '?subject=' + s + '&body=' + b;
 }
 function writeMail(kind, seat, code, email){
   if (!email){
