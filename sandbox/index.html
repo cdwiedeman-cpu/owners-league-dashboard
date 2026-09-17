@@ -4619,14 +4619,19 @@ function composeURL(kind, to, subject, body){
  * The copy buttons stay underneath. A compose window that does not open is a dead end, and a
  * clipboard cannot fail.
  */
-/* TWO, BECAUSE THERE ARE TWO PEOPLE WHO EVER SEE THIS TAB. Casey, 17 Sep 2026: "Bob confirmed he
-   uses Yahoo, so I think you just build it for Gmail or Yahoo." Run It and the Access List are
-   commissioner-only, so the whole audience is Bob on Yahoo and Casey on Gmail. Outlook and the
-   plain mail link were two choices that neither of them would ever press, on a setting whose
-   only job is to be pressed once. `composeURL()` still knows how to build all four, so adding
-   one back is a line here and nothing else.
-   YAHOO IS THE DEFAULT because Bob is the one sending twenty-seven of these. */
-var MAIL_APPS = [['yahoo', 'Yahoo'], ['gmail', 'Gmail']];
+/* ALL FOUR, AND YAHOO IS THE DEFAULT.
+ *
+ * Casey, 17 Sep 2026: "Bob confirmed he uses Yahoo, so I think you just build it for Gmail or
+ * Yahoo." Then, having seen it: "I didn't realize how you were going to do the Yahoo vs Gmail vs
+ * other options. Put the other options back with Outlook and plain email link."
+ *
+ * Cutting it to two was the wrong read of the first message. THIS IS A SETTING, NOT A PROMPT: it
+ * is pressed once and then it is a line of small text at the top of a tab forever, so a choice
+ * nobody uses costs almost nothing, while a missing choice costs a commissioner who changes mail
+ * service a rebuild. Bob is the one sending twenty-seven of these, so Yahoo is what a device
+ * that has never chosen gets. */
+var MAIL_APPS = [['yahoo', 'Yahoo'], ['outlook', 'Outlook'], ['gmail', 'Gmail'],
+                 ['mailto', 'My Mail App']];
 var MAIL_KEY = 'rfl_mail_app';
 function mailApp(){
   var k = '';
@@ -4649,8 +4654,9 @@ function mailPicker(){
       }).join('')
     + '<p class="note" style="flex:1 1 100%;margin:5px 0 0">Every <b>Create an Email</b> button '
     + 'on this tab opens a new message there, already addressed and already written. You read it '
-    + 'over and press send. If the window does not open, use the <b>Copy</b> buttons instead.</p>'
-    + '</div>';
+    + 'over and press send. <b>My Mail App</b> means whichever program this computer is set to '
+    + 'use, so it does nothing on a computer that has none set. If the window does not open, use '
+    + 'the <b>Copy</b> buttons instead.</p></div>';
 }
 /* EVERY ADDRESS ON A SEAT, NOT THE FIRST ONE. Casey, 17 Sep 2026: "if it is a seat with two or
    more owners then it includes each owner's email address in the email so he doesn't have to
