@@ -4547,6 +4547,71 @@ function copyPlain(text, btn, word, title){
     + '<pre class="mono" style="white-space:pre-wrap;background:#fff;color:#111;padding:10px;'
     + 'border-radius:8px;max-height:340px;overflow:auto">' + esc(text) + '</pre>');
 }
+/* ---- THE SAME MESSAGE, WITH ITS FORMATTING AND ITS LINKS ------------------------------------
+ *
+ * Casey, 17 Sep 2026: "that Create an Email button in the Access List needs to be create and copy
+ * like you did with the others, so it creates the email with the subject and then Bob pastes with
+ * formatted text so the hyperlinks work."
+ *
+ * A COMPOSE ADDRESS CARRIES PLAIN WORDS AND NOTHING ELSE, which is the whole reason the two email
+ * pages work the way they do. So this row works the same way: the message is created with its
+ * subject, and the formatted version goes on the clipboard at the same moment, ready to paste.
+ * The links are then REAL links rather than an address the reader has to retype.
+ * EVERY STYLE IS INLINE. A mail compose box throws a stylesheet away and keeps inline styles.
+ */
+function welcomeHtml(seat, code){
+  var f = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  var p = 'margin:0 0 13px;font:16px/1.6 ' + f + ';color:#12202e';
+  var link = function(u){
+    return '<a href="' + esc(u) + '" style="color:#14487d;font-weight:600">'
+         + esc(String(u).replace(/^https?:\/\//, '')) + '</a>';
+  };
+  var site = webLink(siteURL()), start = webLink(startURL());
+  return ''
+  + '<p style="' + p + '">Here is your own sign-in code for the league website.</p>'
+  + '<table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 15px;'
+  + 'border-collapse:collapse">'
+  + '<tr><td style="padding:4px 14px 4px 0;font:15px/1.6 ' + f + ';color:#44586c">Your team</td>'
+  + '<td style="padding:4px 0;font:700 16px/1.6 ' + f + ';color:#12202e">' + esc(seat) + '</td></tr>'
+  + '<tr><td style="padding:4px 14px 4px 0;font:15px/1.6 ' + f + ';color:#44586c">Your code</td>'
+  + '<td style="padding:4px 0"><span style="font:700 20px/1.4 ui-monospace,Menlo,Consolas,'
+  + 'monospace;letter-spacing:2px;background:#eef3f8;border:1px solid #d7e0ea;border-radius:6px;'
+  + 'padding:4px 12px;color:#12202e">' + esc(code) + '</span></td></tr>'
+  + '<tr><td style="padding:4px 14px 4px 0;font:15px/1.6 ' + f + ';color:#44586c">The website</td>'
+  + '<td style="padding:4px 0;font:16px/1.6 ' + f + '">' + link(site) + '</td></tr>'
+  + '</table>'
+  + '<p style="' + p + '">Open the website, type those six characters into the box, and press '
+  + '<b>Sign Me In</b>. That device then stays signed in for the rest of the season.</p>'
+  + '<p style="' + p + '">Step by step instructions: ' + link(start) + '</p>'
+  + '<p style="' + p + '">That page covers signing in, putting the league on your phone home '
+  + 'screen, what each tab is for, and how to enter a trade. Nothing on it asks for a code, so '
+  + 'you can read it before you have signed in.</p>'
+  + '<p style="' + p + '">Your code is yours alone. Anyone who has it can enter trades for your '
+  + 'team, so please do not pass it on and do not post it anywhere the league can see it.</p>'
+  + '<p style="' + p + '">If the code will not work, reply to this message and I will send you a '
+  + 'new one.</p>';
+}
+/* ONE PRESS, BOTH HALVES. The clipboard may only be written while the browser is handling a real
+   click, so the copy goes first and the compose window opens after it. */
+function copyRich(html, text, btn, word){
+  var ok = false;
+  try {
+    if (navigator.clipboard && window.ClipboardItem){
+      navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html], {type: 'text/html'}),
+        'text/plain': new Blob([text], {type: 'text/plain'})
+      })]);
+      ok = true;
+    }
+  } catch (e) { ok = false; }
+  if (!ok){
+    /* A BROWSER THAT WILL NOT TAKE RICH TEXT STILL TAKES PLAIN. The reader loses the links and
+       keeps the words, which beats losing both. */
+    copyPlain(text, btn, word || 'Copied', 'Here Is the Message');
+    return;
+  }
+  flash(btn, word || 'Copied');
+}
 function copyCode(code, btn){
   copyPlain(String(code || ''), btn, 'Copied', 'Here Is the Code');
 }
@@ -4705,11 +4770,12 @@ function mailPicker(){
         return '<button class="mailbtn' + (cur === x[0] ? ' on' : '') + '" '
           + 'onclick="setMailApp(' + jsq(x[0]) + ')">' + esc(x[1]) + '</button>';
       }).join('')
-    + '<p class="note" style="flex:1 1 100%;margin:5px 0 0">Every <b>Create an Email</b> button '
-    + 'on this tab opens a new message there, already addressed and already written. You read it '
-    + 'over and press send. <b>My Mail App</b> means whichever program this computer is set to '
-    + 'use, so it does nothing on a computer that has none set. If the window does not open, use '
-    + 'the <b>Copy</b> buttons instead.</p></div>';
+    + '<p class="note" style="flex:1 1 100%;margin:5px 0 0">A <b>Create an Email</b> button opens '
+    + 'a new message there, addressed and with its subject filled in. On the Access List it also '
+    + 'puts the message on your clipboard with its formatting and its links, so click into the '
+    + 'message and paste. <b>My Mail App</b> means whichever program this computer is set to use, '
+    + 'so it does nothing on a computer that has none set. If the window will not open, the '
+    + '<b>Copy</b> buttons always work.</p></div>';
 }
 /* EVERY ADDRESS ON A SEAT, NOT THE FIRST ONE. Casey, 17 Sep 2026: "if it is a seat with two or
    more owners then it includes each owner's email address in the email so he doesn't have to
@@ -4741,8 +4807,21 @@ function openMail(to, subject, body, whoFor){
 /* A CODE GOES TO ONE PERSON, so this one is addressed to the person and never to the seat.
    That is the opposite of the results email below, and it is deliberate: a code IS the sign-in,
    and two people on a seat get two different codes. */
-function writeCodeMail(seat, code, email){
-  openMail(email ? [email] : [], welcomeSubject(), welcomeBody(seat, code), seat);
+function writeCodeMail(seat, code, email, btn){
+  if (!email){
+    showHelp('No Address for ' + esc(seat),
+      '<p>There is no email address on file for this person, so there is nothing to write to.</p>'
+      + '<p>Put one in with <b>Change Address</b> on this row, then press this again.</p>');
+    return;
+  }
+  copyRich(welcomeHtml(seat, code), welcomeBody(seat, code), btn, 'Copied \u2014 now paste');
+  /* THE SUBJECT AND THE ADDRESS TRAVEL IN THE LINK. THE MESSAGE DOES NOT: a plain body would have
+     to be deleted before the paste, and a reader who forgot would send it twice over. */
+  var kind = mailApp();
+  var url = composeURL(kind, email, welcomeSubject(), '');
+  url = url.replace(/&body=$/, '');
+  if (kind === 'mailto'){ window.location.href = url; return; }
+  window.open(url, '_blank', 'noopener');
 }
 function copyPart(what, seat, code, email, btn){
   var text = what === 'to' ? (email || '')
@@ -4882,8 +4961,10 @@ function liveAccessTable(){
             };
             return '<div class="mailrow">'
               + '<button class="mailbtn pri" style="flex:1 1 100%" '
-              + 'title="Opens a new message with their address, the subject and their own code '
-              + 'already in it" onclick="writeCodeMail(' + q + ')">Create an Email</button>'
+              + 'title="Opens a new message addressed to them with the subject filled in, and '
+              + 'puts the whole message on your clipboard with its formatting and its links. '
+              + 'Click into the message and paste." '
+              + 'onclick="writeCodeMail(' + q + ',this)">Create an Email and Copy It</button>'
               + '</div>'
               + '<div class="mailrow"><span class="mailhd">Or Copy</span>'
               + c('to', 'Address') + c('subject', 'Subject') + c('body', 'Message')
