@@ -1938,11 +1938,8 @@ function resultWeek(){
  * Casey, 17 Sep 2026: "when I copied the email into Yahoo the text is a little bit muddled. It's
  * all kind of one continuous set of text ... these rows should be spaced out."
  *
- * A compose window will not take spacing through a link. Everything a compose address carries is
- * plain words, and a rich text compose box closes the gaps up. So this message travels the same
- * way the code email does: the formatted version goes on the clipboard and the window opens
- * empty, ready for one paste. THE PLAIN VERSION IS STILL WRITTEN, because Copy It Instead uses
- * it and a browser that refuses the clipboard falls back to it.
+ * The blocks are separated by BLANK LINES and nothing is indented. Two leading spaces are eaten
+ * by every compose box there is, which is what made the reason run on from the result.
  *
  * THE SHAPE HE ASKED FOR, IN ORDER: the week and the owner as a heading, then one block per row
  * with the result on its own line and the reason under it, then the first-come line last.
@@ -1970,20 +1967,6 @@ function resultBlocks(seatK, rows){
     : 'You did not pick anything up this week. First come, first served is open now and closes '
       + 'Tuesday at 5:00pm AZ. Anything still unowned in your division can be claimed outright, '
       + 'with no coin flip.'});
-  return out;
-}
-function resultHtml(seatK, rows){
-  var f = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-  var p = 'margin:0 0 14px;font:16px/1.6 ' + f + ';color:#12202e';
-  var h = resultHead(seatK);
-  var out = '<p style="margin:0 0 4px;font:700 19px/1.3 ' + f + ';color:#12202e">'
-          + esc(h.title) + '</p>'
-          + '<p style="margin:0 0 18px;font:15px/1.5 ' + f + ';color:#44586c">'
-          + esc(h.who) + '</p>';
-  resultBlocks(seatK, rows).forEach(function(bk){
-    if (bk.head) out += '<p style="' + p + ';margin-bottom:4px"><b>' + esc(bk.head) + '</b></p>';
-    out += '<p style="' + p + '">' + esc(bk.body) + '</p>';
-  });
   return out;
 }
 function emailFor(seatK, rows){
@@ -4312,9 +4295,9 @@ function resultsCard(){
           + '</b> <span class="pill">' + esc(DATA.div_names[b[0]] || b[0]) + '</span></div>'
           + '<div class="row" style="flex:0 0 auto;margin:0;gap:5px">'
           + '<button class="pri" style="' + bsty + '" title="Opens a new message to '
-          + esc(seat) + ', addressed and with the subject filled in, and puts the result on your '
-          + 'clipboard. Click into the message and paste." '
-          + 'onclick="writeResultMail(' + sq + ',this)">Create Email</button>'
+          + esc(seat) + ', addressed, with the subject filled in and the result already written '
+          + 'out. Read it and press send." '
+          + 'onclick="writeResultMail(' + sq + ')">Create Email</button>'
           + '<button style="' + bsty + '" title="Puts the whole message on your clipboard as '
           + 'plain text, with the address at the top" onclick="copyOne(' + sq
           + ',this)">Copy</button>'
@@ -4332,9 +4315,8 @@ function resultsCard(){
 }
 var SENDNOTE =
   '<p class="note"><b>Nothing here sends mail, and it never will.</b> Each owner has a '
-  + '<b>Create Email</b> button that opens a new message, already addressed, with the subject '
-  + 'filled in and the message on your clipboard. Click into the message and paste, read it, '
-  + 'and press send.</p>'
+  + '<b>Create Email</b> button that opens a new message, already addressed and already written '
+  + 'out. Read it and press send. There is nothing to paste.</p>'
   + '<p class="note">A seat with two owners gets one message carrying both addresses, so you '
   + 'are not sending the same thing twice.</p>'
   + '<p class="note">The message is dated to the week you ran, not to the day you are writing, '
@@ -4421,7 +4403,14 @@ function oneEmail(k){
 function resultSubject(k){
   return 'Your trades — week ' + resultWeek() + ' · ' + String(k).split('|')[1];
 }
-function writeResultMail(k, btn){
+/* THE MESSAGE GOES IN THE WINDOW. NOT ON THE CLIPBOARD.
+   This was briefly a copy-and-paste, to carry bold and spacing the way the code email does.
+   Casey, 17 Sep 2026: "that's too complicated, and it's not that important. It's not that type
+   of email where it really needs to be formatted. I was being picky. Revert it back."
+   He is right, and the two emails are not the same job. A code email is read once by somebody
+   new and carries two links. A Monday result is four short lines to somebody who knows exactly
+   what they are looking at. The blank lines between the blocks survive on their own. */
+function writeResultMail(k){
   var bits = String(k).split('|');
   var rows = (S.results && S.results.results[k]) || [];
   var to = addressesFor(bits[0], bits[1]);
@@ -4431,14 +4420,7 @@ function writeResultMail(k, btn){
       + '<p>Put one in with <b>Change Address</b> on the Access List, then press this again.</p>');
     return;
   }
-  copyRich(resultHtml(k, rows), emailFor(k, rows), btn, 'Copied \u2014 now paste');
-  /* THE ADDRESS AND THE SUBJECT TRAVEL IN THE LINK. THE MESSAGE DOES NOT: a plain body would
-     arrive with its spacing closed up, which is the thing being fixed. */
-  var kind = mailApp();
-  var url = composeURL(kind, to.join(','), resultSubject(k), '');
-  url = url.replace(/&body=$/, '');
-  if (kind === 'mailto'){ window.location.href = url; return; }
-  window.open(url, '_blank', 'noopener');
+  openMail(to, resultSubject(k), emailFor(k, rows), bits[1]);
 }
 function copyOne(k, btn){
   copyPlain(oneEmail(k), btn, 'Copied', 'Here Is the Message');
