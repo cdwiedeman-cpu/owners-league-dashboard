@@ -1,0 +1,243 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reality Football League — Setting Bob up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --ground:#f6f8fa; --card:#ffffff; --sunk:#eef2f6;
+  --ink:#0e1822; --body:#33465a; --faint:#64798f;
+  --rule:#d8e0e8;
+  --accent:#12609f; --accent-soft:#e4eef7;
+  --good:#1b6647; --good-soft:#e0f0e8;
+  --care:#8a5a12; --care-soft:#f7eeda;
+  --stop:#9c3227; --stop-soft:#f9e6e3;
+  --shadow:0 1px 2px rgba(14,24,34,.06), 0 8px 24px -16px rgba(14,24,34,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+    --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+    --rule:#26333f;
+    --accent:#79bcff; --accent-soft:#152a3d;
+    --good:#68d8a2; --good-soft:#12291f;
+    --care:#f0c264; --care-soft:#2c2413;
+    --stop:#f28b81; --stop-soft:#2e1a18;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+  --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+  --rule:#26333f;
+  --accent:#79bcff; --accent-soft:#152a3d;
+  --good:#68d8a2; --good-soft:#12291f;
+  --care:#f0c264; --care-soft:#2c2413;
+  --stop:#f28b81; --stop-soft:#2e1a18;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--body);
+  font:400 17px/1.62 "Source Serif 4",Georgia,"Times New Roman",serif;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:44rem;margin:0 auto;padding:56px 22px 96px;display:flex;flex-direction:column;gap:38px}
+h1,h2,h3,.eyebrow,.stepn,.chip,.kbd,.addr{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+h1{
+  font-size:clamp(30px,6vw,42px); line-height:1.08; letter-spacing:-.022em; font-weight:700;
+  color:var(--ink); margin:0; text-wrap:balance;
+}
+h2{
+  font-size:20px; line-height:1.25; letter-spacing:-.012em; font-weight:700;
+  color:var(--ink); margin:0 0 4px; text-wrap:balance;
+}
+h3{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 6px;letter-spacing:-.005em}
+p{margin:0 0 12px}
+p:last-child{margin-bottom:0}
+b,strong{font-weight:600;color:var(--ink)}
+a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+.eyebrow{
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  margin:0 0 12px;
+}
+.lede{font-size:19px;line-height:1.55;color:var(--body);margin:16px 0 0}
+.lede b{color:var(--ink)}
+
+/* ---- the answer, up top ---- */
+.verdict{
+  background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--good);
+  border-radius:10px;padding:20px 22px;box-shadow:var(--shadow);
+}
+.verdict h2{color:var(--good)}
+
+section{display:flex;flex-direction:column;gap:16px}
+.rule{height:1px;background:var(--rule);border:0;margin:0}
+
+/* ---- Q&A ---- */
+.qa{display:flex;flex-direction:column;gap:22px}
+.q{border-left:2px solid var(--rule);padding-left:18px}
+.q h3{font-size:16px}
+
+/* ---- routes table ---- */
+.routes{width:100%;border-collapse:collapse;font-family:Archivo,sans-serif;font-size:14.5px}
+.routes th,.routes td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+.routes th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+/* NO NOWRAP. This was written for a short last column -- a yes, a no, a dollar amount -- and
+   every generated document inherited it, including the rules table whose last column is a
+   paragraph. That table then ran off the side of the page and had to be scrolled across to be
+   read. NOTHING IN THESE DOCUMENTS SCROLLS SIDEWAYS. A short cell does not wrap anyway, because
+   there is nothing in it to wrap. */
+.routes td:last-child{font-weight:600}
+.yes{color:var(--good)} .no{color:var(--stop)}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ---- steps ---- */
+.steps{display:flex;flex-direction:column;gap:2px;counter-reset:s}
+.step{
+  /* minmax(0,1fr) not 1fr: a grid track's automatic minimum is its MIN-CONTENT width, so a
+     single unbreakable filename in the body pushed the whole page to 690px on a 390px phone. */
+  display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:16px;align-items:start;
+  padding:18px 0;border-top:1px solid var(--rule);
+}
+.step:first-child{border-top:0}
+.stepn{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13px;font-weight:600;
+  color:var(--accent);background:var(--accent-soft);border-radius:6px;
+  text-align:center;padding:4px 0;font-variant-numeric:tabular-nums;
+}
+.step .bd{font-size:16.5px}
+.step .bd p{margin-bottom:8px}
+
+/* ---- confidence chips: which of these did I actually verify ---- */
+.chip{
+  display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;margin-bottom:8px;
+}
+.chip.ok{color:var(--good);background:var(--good-soft)}
+.chip.look{color:var(--care);background:var(--care-soft)}
+.kbd{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.9em;font-weight:600;
+  background:var(--sunk);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;color:var(--ink);
+  /* Filenames live in here and some are 45 characters. nowrap made them unbreakable and they
+     widened the page; anywhere breaks ONLY when there is no room, so short ones stay intact. */
+  overflow-wrap:anywhere;
+}
+.note{
+  background:var(--sunk);border:1px solid var(--rule);border-radius:9px;padding:16px 18px;
+  font-size:15.5px;line-height:1.58;
+}
+.note.care{background:var(--care-soft);border-color:transparent}
+.note.stop{background:var(--stop-soft);border-color:transparent}
+.note h3{margin-bottom:4px}
+.note.care h3{color:var(--care)}
+.note.stop h3{color:var(--stop)}
+ol.tight,ul.tight{margin:8px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:7px}
+/* The deliverables list names files, and the longest is 38 characters of unbreakable filename.
+   In a full-width note anywhere only breaks when nothing else can give, so ordinary words are
+   untouched -- unlike a 20px column, where this same property once stacked KEEP one letter
+   per line. Width is what makes it safe or unsafe, not the property. */
+ol.tight li,ul.tight li{overflow-wrap:anywhere}
+li::marker{color:var(--faint)}
+footer{color:var(--faint);font-size:13.5px;font-family:Archivo,sans-serif;line-height:1.6}
+@media (prefers-reduced-motion:no-preference){
+  a{transition:color .15s ease}
+}
+
+/* A directory tree and a quoted ask are the two shapes this page has that the iPad guide
+   does not. Both are monospace blocks that must scroll inside themselves, never widen the page. */
+pre.tree{margin:10px 0 0;padding:14px 16px;background:var(--sunk);border:1px solid var(--rule);
+  border-radius:9px;font:400 13px/1.65 "IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color:var(--ink);overflow-x:auto}
+pre.tree .cmt{color:var(--faint)}
+p.ask{margin:10px 0;padding:11px 15px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:0 8px 8px 0;font-family:Archivo,sans-serif;font-size:15px;color:var(--ink)}
+p.ask::before{content:"“"}
+p.ask::after{content:"”"}
+.routes td:last-child{white-space:normal}
+ol.tight{padding-left:20px}
+</style>
+<style>
+section h3{margin:26px 0 6px;padding-top:14px;border-top:1px solid var(--rule,#e6e6e2);
+  font-size:17px}
+section h3:first-of-type{border-top:0;padding-top:0;margin-top:18px}
+section h4{margin:18px 0 5px;font-size:15px}
+ol li,ul li{margin:0 0 7px}
+</style>
+<style>
+.sitenav{position:sticky;top:0;z-index:50;background:var(--card);
+ border-bottom:1px solid var(--rule);margin:0 0 8px;
+ font-family:Archivo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.sitenav .inner{max-width:860px;margin:0 auto;padding:9px 18px;display:flex;flex-wrap:wrap;
+ gap:6px 14px;align-items:center}
+.sitenav a{text-decoration:none;font-size:13px;color:var(--faint);padding:5px 2px;
+ border-bottom:2px solid transparent;white-space:nowrap}
+.sitenav a:hover{color:var(--accent)}
+.sitenav a.here{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.sitenav a.home{font-weight:700;color:var(--ink);margin-right:4px}
+.sitenav a.home:hover{color:var(--accent)}
+@media print{.sitenav{display:none}}
+</style>
+</head>
+<body>
+<nav class="sitenav"><div class="inner"><a class="home" href="./">Commissioner</a><a class="" href="commissioner.html">Commissioner Guide</a><a class="here" href="bob.html">Setting Bob Up</a><a class="" href="publishing.html">Publishing the Dashboards</a></div></nav>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Reality Football League · for Casey and Bob</p>
+    <h1>Setting Bob Up</h1>
+    <p class="lead">Everything it takes to give Bob his own way in to the league, in the order
+      to do it. It is much shorter than it used to be.</p>
+  </header>
+
+  <section>
+    <h3>Before You Start</h3>
+    <p>One thing, and you can look it up at any time: Bob's sign-in code, off the <b>Access
+       List</b> tab of the dashboard.</p>
+    <p>There is no password to hand over and no authenticator to set up. The league used to run on
+       a shared Google account and that account was disabled without warning, so it does not work
+       that way any more. Bob's code is his alone and yours is yours.</p>
+    <p>Send the code to him on its own. Never send it in a message that reaches more than one
+       person.</p>
+  </section>
+
+  <section>
+<p>Bob needs one thing, and it takes about a minute.</p>
+
+<h3>Give Him His Code</h3>
+<ol>
+  <li>Open the <b>Access List</b> tab on the dashboard.</li>
+  <li>Find his row. His code is in the <b>Code</b> column.</li>
+  <li>Email or text it to him on its own. Never put it in a group message.</li>
+  <li>He opens the dashboard, goes to <b>Trades</b>, and types it in.</li>
+</ol>
+<p>He is then signed in on that device for good. He does the same on any other phone or computer
+   he uses, with the same code.</p>
+
+<h3>What He Can Do Once He Is In</h3>
+<p>His row says <b>commissioner</b>, so he sees everything you see. He can settle a week, enter a
+   trade for any seat, read every code, and retire somebody's sign-in.</p>
+<p>The league will not let either of you stand down the last commissioner. There is no way for the
+   two of you to lock yourselves out.</p>
+
+<h3>There Is Nothing Else to Set Up</h3>
+<p>No shared account, no password, no authenticator app, and no spreadsheet. Bob's code is his
+   own, yours is yours, and the league works out who is asking from the code itself.</p>
+<p>This used to take an evening and a written-down password. It does not any more.</p>
+
+<h3>If He Loses His Phone</h3>
+<p>Open the Access List, press <b>Retire and Issue a New Code</b> on his row, and read him the new
+   code. Every device he was signed in on is turned away straight away. Your own sign-in is not
+   touched.</p>
+
+  </section>
+
+  <footer>
+    <p>Bob has full access once he has one thing: his own six character code. Everything else
+      that used to be on this page was there to share one account between two people, and there
+      is no shared account any more.</p>
+  </footer>
+</div>
+</body>
