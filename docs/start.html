@@ -1,0 +1,347 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Getting Started</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{
+  --ground:#f6f8fa; --card:#ffffff; --sunk:#eef2f6;
+  --ink:#0e1822; --body:#33465a; --faint:#64798f;
+  --rule:#d8e0e8;
+  --accent:#12609f; --accent-soft:#e4eef7;
+  --good:#1b6647; --good-soft:#e0f0e8;
+  --care:#8a5a12; --care-soft:#f7eeda;
+  --stop:#9c3227; --stop-soft:#f9e6e3;
+  --shadow:0 1px 2px rgba(14,24,34,.06), 0 8px 24px -16px rgba(14,24,34,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+    --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+    --rule:#26333f;
+    --accent:#79bcff; --accent-soft:#152a3d;
+    --good:#68d8a2; --good-soft:#12291f;
+    --care:#f0c264; --care-soft:#2c2413;
+    --stop:#f28b81; --stop-soft:#2e1a18;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0d151d; --card:#141f2a; --sunk:#101a23;
+  --ink:#e9eff5; --body:#b3c3d2; --faint:#8497a9;
+  --rule:#26333f;
+  --accent:#79bcff; --accent-soft:#152a3d;
+  --good:#68d8a2; --good-soft:#12291f;
+  --care:#f0c264; --care-soft:#2c2413;
+  --stop:#f28b81; --stop-soft:#2e1a18;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--body);
+  font:400 17px/1.62 "Source Serif 4",Georgia,"Times New Roman",serif;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:44rem;margin:0 auto;padding:56px 22px 96px;display:flex;flex-direction:column;gap:38px}
+h1,h2,h3,.eyebrow,.stepn,.chip,.kbd,.addr{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+h1{
+  font-size:clamp(30px,6vw,42px); line-height:1.08; letter-spacing:-.022em; font-weight:700;
+  color:var(--ink); margin:0; text-wrap:balance;
+}
+h2{
+  font-size:20px; line-height:1.25; letter-spacing:-.012em; font-weight:700;
+  color:var(--ink); margin:0 0 4px; text-wrap:balance;
+}
+h3{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 6px;letter-spacing:-.005em}
+p{margin:0 0 12px}
+p:last-child{margin-bottom:0}
+b,strong{font-weight:600;color:var(--ink)}
+a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+.eyebrow{
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  margin:0 0 12px;
+}
+.lede{font-size:19px;line-height:1.55;color:var(--body);margin:16px 0 0}
+.lede b{color:var(--ink)}
+
+/* ---- the answer, up top ---- */
+.verdict{
+  background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--good);
+  border-radius:10px;padding:20px 22px;box-shadow:var(--shadow);
+}
+.verdict h2{color:var(--good)}
+
+section{display:flex;flex-direction:column;gap:16px}
+.rule{height:1px;background:var(--rule);border:0;margin:0}
+
+/* ---- Q&A ---- */
+.qa{display:flex;flex-direction:column;gap:22px}
+.q{border-left:2px solid var(--rule);padding-left:18px}
+.q h3{font-size:16px}
+
+/* ---- routes table ---- */
+.routes{width:100%;border-collapse:collapse;font-family:Archivo,sans-serif;font-size:14.5px}
+.routes th,.routes td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+.routes th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+/* NO NOWRAP. This was written for a short last column -- a yes, a no, a dollar amount -- and
+   every generated document inherited it, including the rules table whose last column is a
+   paragraph. That table then ran off the side of the page and had to be scrolled across to be
+   read. NOTHING IN THESE DOCUMENTS SCROLLS SIDEWAYS. A short cell does not wrap anyway, because
+   there is nothing in it to wrap. */
+.routes td:last-child{font-weight:600}
+.yes{color:var(--good)} .no{color:var(--stop)}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ---- steps ---- */
+.steps{display:flex;flex-direction:column;gap:2px;counter-reset:s}
+.step{
+  /* minmax(0,1fr) not 1fr: a grid track's automatic minimum is its MIN-CONTENT width, so a
+     single unbreakable filename in the body pushed the whole page to 690px on a 390px phone. */
+  display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:16px;align-items:start;
+  padding:18px 0;border-top:1px solid var(--rule);
+}
+.step:first-child{border-top:0}
+.stepn{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13px;font-weight:600;
+  color:var(--accent);background:var(--accent-soft);border-radius:6px;
+  text-align:center;padding:4px 0;font-variant-numeric:tabular-nums;
+}
+.step .bd{font-size:16.5px}
+.step .bd p{margin-bottom:8px}
+
+/* ---- confidence chips: which of these did I actually verify ---- */
+.chip{
+  display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;margin-bottom:8px;
+}
+.chip.ok{color:var(--good);background:var(--good-soft)}
+.chip.look{color:var(--care);background:var(--care-soft)}
+.kbd{
+  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.9em;font-weight:600;
+  background:var(--sunk);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;color:var(--ink);
+  /* Filenames live in here and some are 45 characters. nowrap made them unbreakable and they
+     widened the page; anywhere breaks ONLY when there is no room, so short ones stay intact. */
+  overflow-wrap:anywhere;
+}
+.note{
+  background:var(--sunk);border:1px solid var(--rule);border-radius:9px;padding:16px 18px;
+  font-size:15.5px;line-height:1.58;
+}
+.note.care{background:var(--care-soft);border-color:transparent}
+.note.stop{background:var(--stop-soft);border-color:transparent}
+.note h3{margin-bottom:4px}
+.note.care h3{color:var(--care)}
+.note.stop h3{color:var(--stop)}
+ol.tight,ul.tight{margin:8px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:7px}
+/* The deliverables list names files, and the longest is 38 characters of unbreakable filename.
+   In a full-width note anywhere only breaks when nothing else can give, so ordinary words are
+   untouched -- unlike a 20px column, where this same property once stacked KEEP one letter
+   per line. Width is what makes it safe or unsafe, not the property. */
+ol.tight li,ul.tight li{overflow-wrap:anywhere}
+li::marker{color:var(--faint)}
+footer{color:var(--faint);font-size:13.5px;font-family:Archivo,sans-serif;line-height:1.6}
+@media (prefers-reduced-motion:no-preference){
+  a{transition:color .15s ease}
+}
+
+/* A directory tree and a quoted ask are the two shapes this page has that the iPad guide
+   does not. Both are monospace blocks that must scroll inside themselves, never widen the page. */
+pre.tree{margin:10px 0 0;padding:14px 16px;background:var(--sunk);border:1px solid var(--rule);
+  border-radius:9px;font:400 13px/1.65 "IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color:var(--ink);overflow-x:auto}
+pre.tree .cmt{color:var(--faint)}
+p.ask{margin:10px 0;padding:11px 15px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:0 8px 8px 0;font-family:Archivo,sans-serif;font-size:15px;color:var(--ink)}
+p.ask::before{content:"“"}
+p.ask::after{content:"”"}
+.routes td:last-child{white-space:normal}
+ol.tight{padding-left:20px}
+</style>
+<style>
+.addr{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:17px;font-weight:600;
+  background:var(--sunk);border:1px solid var(--rule);border-radius:7px;padding:11px 14px;
+  display:block;overflow-wrap:anywhere;color:var(--ink);margin:10px 0 0;text-align:center}
+.when td:first-child{white-space:nowrap;font-weight:600}
+</style>
+<style>
+.sitenav{position:sticky;top:0;z-index:50;background:var(--card);
+ border-bottom:1px solid var(--rule);margin:0 0 8px;
+ font-family:Archivo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.sitenav .inner{max-width:860px;margin:0 auto;padding:9px 18px;display:flex;flex-wrap:wrap;
+ gap:6px 14px;align-items:center}
+.sitenav a{text-decoration:none;font-size:13px;color:var(--faint);padding:5px 2px;
+ border-bottom:2px solid transparent;white-space:nowrap}
+.sitenav a:hover{color:var(--accent)}
+.sitenav a.here{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.sitenav a.home{font-weight:700;color:var(--ink);margin-right:4px}
+.sitenav a.home:hover{color:var(--accent)}
+@media print{.sitenav{display:none}}
+</style>
+</head>
+<body>
+<nav class="sitenav"><div class="inner"><a class="home" href="./">RFL Documents</a><a class="here" href="start.html">Getting Started</a><a class="" href="rules.html">League Rules</a><a class="" href="trades.html">Trades and Signing In</a><a class="" href="bob.html">Setting Bob Up</a><a class="" href="publishing.html">Publishing the Dashboards</a></div></nav>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Reality Football League</p>
+    <h1>Getting Started</h1>
+    <p class="lede">Everything you need to open the league, put it on your phone, and enter a
+      trade. It takes about five minutes once.</p>
+  </header>
+
+  <div class="verdict">
+    <h2>The Address</h2>
+    <p>This is the whole thing. There is nothing to install and nothing to sign up for.</p>
+    <a class="addr" href="https://rflowners.com">rflowners.com</a>
+  </div>
+
+  <hr class="rule">
+
+  <section>
+    <h2>Your Code</h2>
+    <p>Bob emails you a <b>six character code</b>, on its own, just for you. It is how the site
+      knows which eleven teams are yours.</p>
+    <p>Type it into the box the first time you open the league, and press <b>Sign Me In</b>.
+      Upper case and lower case both work. That device then stays signed in for the rest of the
+      season.</p>
+    <p class="note"><b>Two characters catch people out.</b> No code has the letter O in it and no
+      code has the number 1 in it. So a character that looks like the letter O is a zero, and one
+      that looks like the number 1 is the letter I.</p>
+    <p>Your code is yours alone. Anybody who has it can enter trades for your team, so please do
+      not pass it on. If it will not work, email Bob and he will send you a new one.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>Every Device Asks Once</h2>
+    <p>The league remembers each device on its own. So your computer asks for the code once, your
+      phone asks once, and the home screen icon asks once. After that it never asks again.</p>
+    <p>That is not a fault. It is what stops somebody who picks up your phone from being asked
+      nothing at all.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>Put It On Your Phone</h2>
+    <p>This gives you an icon that sits with your real apps and opens straight to the league.
+      Trades close on a Monday afternoon and your phone is what you will have with you, so it is
+      worth the two minutes. Find your phone below.</p>
+  </section>
+
+  <hr class="rule">
+
+<section><h2>iPhone or iPad, using Safari</h2><div class="steps">
+<div class="step"><div class="stepn">1</div><div class="bd"><p><b>Open the league in Safari.</b></p><p>Go to <b>rflowners.com</b>. It has to be Safari for this, not another browser.</p></div></div>
+<div class="step"><div class="stepn">2</div><div class="bd"><p><b>Find the Share button.</b></p><p>It is a square with an arrow coming out of the top of it.</p><p>On most iPhones it sits along the bar at the foot of the screen. On newer iPhones that bar is gone: tap the three dots beside the web address instead, then tap <b>Share</b>.</p></div></div>
+<div class="step"><div class="stepn">3</div><div class="bd"><p><b>Tap Add to Home Screen.</b></p><p>It is some way down that list, so keep scrolling.</p></div></div>
+<div class="step"><div class="stepn">4</div><div class="bd"><p><b>Leave Open as Web App turned on.</b></p><p>If you see that switch, leave it on. It is what makes the league open like an app rather than a browser tab.</p></div></div>
+<div class="step"><div class="stepn">5</div><div class="bd"><p><b>Tap Add.</b></p><p>The icon appears with your other apps, labelled <b>RFL</b>.</p></div></div>
+</div></section><hr class="rule">
+<section><h2>iPhone or iPad, using Chrome</h2><div class="steps">
+<div class="step"><div class="stepn">1</div><div class="bd"><p><b>Open the league in Chrome.</b></p><p>Go to <b>rflowners.com</b>.</p></div></div>
+<div class="step"><div class="stepn">2</div><div class="bd"><p><b>Tap the Share button beside the web address.</b></p><p>Same square with the arrow coming out of the top.</p></div></div>
+<div class="step"><div class="stepn">3</div><div class="bd"><p><b>Tap Add to Home Screen, then tap Add.</b></p></div></div>
+</div></section><hr class="rule">
+<section><h2>Android, using Chrome</h2><div class="steps">
+<div class="step"><div class="stepn">1</div><div class="bd"><p><b>Open the league in Chrome.</b></p><p>Go to <b>rflowners.com</b>.</p></div></div>
+<div class="step"><div class="stepn">2</div><div class="bd"><p><b>Tap the three dots at the top right of the screen.</b></p></div></div>
+<div class="step"><div class="stepn">3</div><div class="bd"><p><b>Tap Add to Home screen.</b></p><p>Some phones word it <b>Install app</b>, and on a few it sits inside <b>Share</b> first. All three do the same job.</p></div></div>
+<div class="step"><div class="stepn">4</div><div class="bd"><p><b>Tap Add or Install.</b></p></div></div>
+</div></section><hr class="rule">
+<section><h2>Android, using Samsung Internet</h2><div class="steps">
+<div class="step"><div class="stepn">1</div><div class="bd"><p><b>Open the league in Samsung Internet.</b></p><p>Go to <b>rflowners.com</b>.</p></div></div>
+<div class="step"><div class="stepn">2</div><div class="bd"><p><b>Tap the three lines at the bottom right of the screen.</b></p></div></div>
+<div class="step"><div class="stepn">3</div><div class="bd"><p><b>Tap Add page to, then tap Home screen.</b></p></div></div>
+<div class="step"><div class="stepn">4</div><div class="bd"><p><b>Tap Add.</b></p></div></div>
+</div></section><hr class="rule">
+
+  <section>
+    <h2>Once the Icon Is There</h2>
+    <p>Open the league from the new icon and type your code in one more time. The icon keeps its
+      own sign-in, separate from your browser, so it asks once and then never again.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>What the Tabs Are For</h2>
+    <div class="scroller"><table class="routes">
+      <thead><tr><th>Tab</th><th>What it holds</th></tr></thead>
+      <tbody><tr><td><b>Live Scores</b></td><td style="font-weight:400">Every game your teams are playing, updating as they go. Tap any team name to see its whole schedule and the results so far. There is a button to show only your own eleven teams, and a list to look back at an earlier week.</td></tr>
+<tr><td><b>Standings</b></td><td style="font-weight:400">Where everybody sits, by division and overall. Your own row is marked. A tie on points is settled on record, so the record columns are here too.</td></tr>
+<tr><td><b>Weekly / Quarterly</b></td><td style="font-weight:400">What every owner scored in each week, and how those weeks add into the four quarters the league pays out on.</td></tr>
+<tr><td><b>Season Summary</b></td><td style="font-weight:400">The whole season on one grid, with all forty-one scoring categories. This is the one that replaces the spreadsheet Bob used to send round.</td></tr>
+<tr><td><b>Trades</b></td><td style="font-weight:400">Where you enter your own trades. It also holds the trade results, the trade fees and the trade windows.</td></tr>
+<tr><td><b>League Rules</b></td><td style="font-weight:400">The full rulebook, including every payout. If you have ever wondered exactly what a shutout is worth, it is in here.</td></tr></tbody>
+    </table></div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>How to Enter a Trade</h2>
+    <div class="steps">
+<div class="step"><div class="stepn">1</div><div class="bd"><p><b>Tap the Trades tab, then Add a Trade.</b></p></div></div>
+<div class="step"><div class="stepn">2</div><div class="bd"><p><b>Box 1 is The Team You Want.</b></p><p>Start typing a team name and the list narrows as you type. Teams you are not allowed to claim are still shown, dimmed, with the reason written beside them.</p></div></div>
+<div class="step"><div class="stepn">3</div><div class="bd"><p><b>Box 2 is What You Would Give Up.</b></p><p>Choose up to four of your own teams you would be willing to lose for it, in the order you would rather lose them.</p><p><b>Only one of them is actually dropped.</b> It is the first team on your list that you still hold and are still allowed to drop. The others are back-ups, in case an earlier trade on your list has already taken one of them.</p></div></div>
+<div class="step"><div class="stepn">4</div><div class="bd"><p><b>Want more than one team? Tap Add Another Trade.</b></p><p>You can enter up to ten. They are taken in order, top to bottom, so put what you want most at the top.</p></div></div>
+<div class="step"><div class="stepn">5</div><div class="bd"><p><b>From the second trade on, choose When to Process This Trade.</b></p><p>Three choices. <b>Process It No Matter What</b> is the normal one. <b>Only if I Win an Earlier Trade</b> is how you say &ldquo;if I do get Navy, go after Alabama as well&rdquo;. <b>Only if I Don&rsquo;t Win an Earlier Trade</b> is how you say &ldquo;if I miss out on Navy, try Alabama instead&rdquo;.</p></div></div>
+<div class="step"><div class="stepn">6</div><div class="bd"><p><b>Press Submit My Trades.</b></p><p>Nothing counts until you press it. You can change your list and submit again as often as you like, right up to the deadline. Nobody else sees what you have entered.</p></div></div>
+</div>
+    <p class="note">The three buttons at the top of the Trades tab are worth a read before your
+      first one. <b>How to Enter a Trade</b> walks through it. <b>What Am I Allowed to Trade?</b>
+      lists the rules on holding and claiming. <b>How the Week Works</b> explains the two
+      windows.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>When Trades Happen</h2>
+    <p>Every time in the league is Arizona time, all year round.</p>
+    <div class="scroller"><table class="routes when">
+      <tbody>
+        <tr><td>Monday, 3:59pm AZ</td><td style="font-weight:400">The last minute to get your
+          list in.</td></tr>
+        <tr><td>Monday afternoon</td><td style="font-weight:400">Bob runs the coin flips. If two
+          owners in the same division want the same team, this is what settles it.</td></tr>
+        <tr><td>Until Tuesday, 5:00pm AZ</td><td style="font-weight:400">First come, first
+          served. Anything in your division that nobody owns is yours if you ask for it first.
+          No queue and no coin flip. The Trades tab changes to a Claim a Team form by itself
+          when this window opens.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>The Rules, In Short</h2>
+    <ul>
+      <li>One team in and one team out, every time.</li>
+      <li>College for college, NFL for NFL. FBS and FCS both count as college.</li>
+      <li>You have to hold a team for three of its games before you can drop it.</li>
+      <li>A team you pick up has to have three games still to play.</li>
+      <li>A team whose season is over cannot be traded away at all.</li>
+    </ul>
+    <p>The site already applies all of this. It will not let you build a trade that breaks a
+      rule, and it says why beside any team you cannot pick.</p>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>If You Get Stuck</h2>
+    <p>Email Bob. Send him the trade you want in whatever words you like and he will enter it for
+      you, then get you set up to do the next one yourself.</p>
+    <p>And if anything on the site looks wrong, please say so, even if you are not sure. Several
+      things have already been fixed because somebody said that a number looked off.</p>
+  </section>
+
+</div>
+</body>
+</html>
