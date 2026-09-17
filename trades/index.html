@@ -4545,6 +4545,23 @@ function siteURL(){
   if (!u) u = String(location.href).split('?')[0].split('#')[0];
   return u;
 }
+/* THE INSTRUCTIONS PAGE, WHICH IS A PLACE AND NOT AN EVENT.
+ *
+ * Casey, 17 Sep 2026: "you shouldn't refer to the one time email Bob is sending to the league and
+ * this needs to make sense if he has to resend codes or send to new owners. So instead you should
+ * refer them to the detailed instructions page and I think provide that link."
+ *
+ * He is right, and the first wording was already stale the second time it was used. A message
+ * that points at "the other email I sent" is wrong for a code reissued in November and wrong for
+ * an owner who joins next August. A message that points at an ADDRESS is right every time.
+ * FROM THE ORIGIN, NEVER TYPED. This page is served from the same site as /start/, so the address
+ * is derived rather than written down, and moving the site moves both together. */
+function startURL(){
+  try {
+    if (/^https?:$/.test(location.protocol)) return location.origin + '/start/';
+  } catch (e) {}
+  return 'rflowners.com/start';
+}
 /* THE WHOLE MESSAGE, READY TO SEND. Plain text on purpose: it pastes into any mail app and into a
    text message without carrying anything with it. */
 /* EVERY LINE HERE IS A WHOLE LINE. Casey, 14 Sep 2026, reading the pasted message: "your code is
@@ -4576,7 +4593,8 @@ function welcomeBody(seat, code){
   + '\n'
   + 'Open the website, type those six characters into the box, and press Sign Me In. That device then stays signed in for the rest of the season.\n'
   + '\n'
-  + 'The step by step instructions are in the other email I sent the whole league, including how to put the league on your phone home screen and how to enter a trade.\n'
+  + 'Step by step instructions: ' + startURL() + '\n'
+  + 'That page covers signing in, putting the league on your phone home screen, what each tab is for, and how to enter a trade. Nothing on it asks for a code, so you can read it before you have signed in.\n'
   + '\n'
   + 'Your code is yours alone. Anyone who has it can enter trades for your team, so please do not pass it on and do not post it anywhere the league can see it.\n'
   + '\n'
