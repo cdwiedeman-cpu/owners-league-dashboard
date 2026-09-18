@@ -2565,7 +2565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '17 Sep 2026, 10:39 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '17 Sep 2026, 10:53 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10010,10 +10010,19 @@ function openLeagueScout(n){
      one it is what that owner actually banked, which is nothing for a game played outside the
      weeks they held it. A GAME THEY DID NOT OWN IS STILL A GAME: the score stays, the points go
      to zero, and the cell says why rather than leaving him to work it out. */
+  /* NO POINTS COLUMN FROM THE SCOREBOARD. Casey, 18 Sep 2026: "for the live scoring table it
+     should not show points at all, just the score, because there's three owners that own it and
+     they might not have owned it for that period of time. Only show the points in the standings,
+     weekly/quarterly and summary tabs."
+     He is right, and it is the project's own rule about naming the quantity: one team is held by
+     up to three owners at once, so THERE IS NO SUCH THING as "the points" for a game here. A
+     number under that heading would have to mean one owner's, and the reader has not named one.
+     Points appear only when the panel was opened from somebody's roster, which is the only place
+     the question has an answer. */
   const sp = (SCOUT_SPELL && SCOUT_SPELL.team === n) ? SCOUT_SPELL : null;
   const ptsCell = (g, s) => {
+    if (!sp) return '';
     const full = pointsFor(t.pool, s.pf, s.pa);
-    if (!sp) return `<td class="num">${full.toFixed(1)}</td>`;
     const w = weekOf(t.pool, gd(g));
     const held = (sp.from == null || w >= sp.from) && (sp.to == null || w < sp.to);
     return held
@@ -10024,6 +10033,11 @@ function openLeagueScout(n){
     <td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
     <td class="num ${s.pf > s.pa ? 'g' : 'b'}">${s.pf}–${s.pa}</td>
     ${ptsCell(g, s)}</tr>`).join('');
+  /* THE COLUMNS FOLLOW. A colgroup that still lists four widths for a three column table is the
+     kind of thing that lines a score up under nothing. */
+  const resCols = sp
+    ? '<col style="width:26%"><col style="width:38%"><col style="width:20%"><col style="width:16%">'
+    : '<col style="width:30%"><col style="width:46%"><col style="width:24%">';
   /* A row with no date at all is kept rather than dropped: unknown is not "already played".
      A row whose game has a final score is dropped, because it is in Results now. */
   const upcoming = (t.sched || []).filter(g => !liveDone(g))
@@ -10058,6 +10072,10 @@ function openLeagueScout(n){
     <div>
       <div class="note">${ownerHTML(n)}${got ? ` · <b>${got.w}-${got.l}${got.t ? '-' + got.t : ''}</b>
         · <b>${got.pts.toFixed(1)}</b> league points so far` : ''}</div>
+      ${sp ? '' : `<div class="note"><b>Scores only.</b> Up to three owners hold this team, one
+        in each division, and each of them has held it for different weeks. Open it from
+        <b>Standings</b>, <b>Weekly / Quarterly</b> or <b>Season Summary</b> to see what one
+        owner earned from it.</div>`}
       ${sp ? `<div class="note y"><b>Points are what ${esc(sp.owner)} earned from ${esc(n)}</b>,
         for the weeks they held it${sp.from == null ? '' : ` — week ${sp.from}${
         sp.to == null ? ' to now' : ' to ' + (sp.to - 1)}`}. Every game is listed, because the
@@ -10065,9 +10083,10 @@ function openLeagueScout(n){
         hold it.</div>` : ''}
       ${espnBtn ? `<div class="row" style="margin:8px 0">${espnBtn}</div>` : ''}
       ${rows ? `<h2>Results</h2><div class="scr"><table>
-        <colgroup><col style="width:26%"><col style="width:38%"><col style="width:20%"><col style="width:16%"></colgroup>
-        <thead><tr><th>Date</th><th>Opponent</th><th class="num">Score</th>
-        <th class="num" title="${sp ? esc(sp.owner) + ' earned this from the game. A game played outside the weeks they held the team pays them nothing.' : 'What this game paid whoever held the team that week.'}">${sp ? 'Their pts' : 'Pts'}</th></tr></thead>
+        <colgroup>${resCols}</colgroup>
+        <thead><tr><th>Date</th><th>Opponent</th><th class="num">Score</th>${sp
+          ? `<th class="num" title="${esc(sp.owner)} earned this from the game. A game played outside the weeks they held the team pays them nothing.">Their pts</th>`
+          : ''}</tr></thead>
         <tbody>${rows}</tbody></table></div>${stillUnknown
           ? `<div class="note y"><b>${stillUnknown} more game${stillUnknown === 1 ? ' has' : 's have'}
              been played and ${stillUnknown === 1 ? 'its score is' : 'their scores are'} not here
