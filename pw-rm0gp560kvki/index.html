@@ -708,10 +708,14 @@ select.wksel{background:var(--pan2);border:1px solid var(--line);color:var(--ink
 /* THE ONE DELIBERATELY WIDE TABLE. Forty-odd scoring categories cannot be squeezed into 390px
    and must not be: it scrolls sideways inside its own `.scr`, and nothing else on the page does.
    `table-layout:auto` because there is no sensible fixed width for forty columns, and `nowrap` so
-   a category name never breaks mid-word — the one column that needs wrapping is the team name. */
+   a category name never breaks mid-word.
+   THE TEAM NAME DOES NOT WRAP EITHER. Casey, 18 Sep 2026: "the column that has the team is
+   wrapping the team name, and considering we already have to scroll across this big table, I
+   don't know if that really adds any value." He is right: wrapping is worth a column's width on
+   a table that has to fit, and this table never fits. It buys nothing and costs a row's height.*/
 table.wide{table-layout:auto;width:auto;min-width:100%;white-space:nowrap}
 table.wide th,table.wide td{overflow-wrap:normal}
-table.wide .c-own{white-space:normal;min-width:170px}
+table.wide .c-own{white-space:nowrap;min-width:170px}
 table.wide th.c-cat{vertical-align:bottom;max-width:96px;white-space:normal}
 table.wide th.c-cat .cl{display:block;font-size:10px;line-height:1.15;letter-spacing:0;
   text-transform:none;color:var(--dim)}
@@ -719,6 +723,14 @@ table.wide th.c-cat .cp{display:block;font-size:11px;font-weight:700;color:var(-
 /* THE ? BESIDE A COLUMN HEAD. A real control: 18px square (the 12x12 floor is a floor, not a
    target), keyboard reachable, and it opens a panel rather than relying on a hover this page
    will never get on a phone. */
+/* A TEAM NAME YOU CAN PRESS. It has to read as part of the row, not as a button in a form, so it
+   takes the row's own type and marks itself with a dotted underline. It is a real control: a
+   <button>, so the keyboard and a screen reader find it, and it clears the 12x12 floor on its own
+   height. `text-align:left` because a button centres its label and these sit in a text column. */
+.tlink{appearance:none;background:none;border:0;padding:0 1px;margin:0;font:inherit;color:inherit;
+  cursor:pointer;text-align:left;text-decoration:underline;text-decoration-style:dotted;
+  text-underline-offset:2px;text-decoration-color:var(--line)}
+.tlink:hover,.tlink:focus-visible{color:var(--blue);text-decoration-color:var(--blue)}
 .qm{appearance:none;background:var(--pan2);border:1px solid var(--line);color:var(--dim);
   border-radius:50%;width:18px;height:18px;line-height:1;padding:0;margin-left:4px;
   font:700 11px inherit;cursor:pointer;vertical-align:middle}
@@ -2553,7 +2565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '17 Sep 2026, 10:15 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '17 Sep 2026, 10:39 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5346,6 +5358,38 @@ function needSeason(redraw){
   Promise.resolve(loadSeason()).then(() => { try { redraw && redraw(); } catch (e) {} })
     .catch(() => {});
 }
+/* ---- OPENING A TEAM FROM SOMEBODY'S ROSTER -------------------------------------------------
+ *
+ * Casey, 18 Sep 2026: "on standings and season summary, if you click on the team you get the same
+ * information you get under live scoring ... and if you could show whether they earned a point or
+ * not from that team on the schedule. For the first two games Virginia would show the score but
+ * zero points for Spielman, because he didn't own them then."
+ *
+ * THE SAME PANEL, NOT A SECOND ONE. `openLeagueScout` already draws a team's results and schedule
+ * and is on both pages, so every one of these tables opens that rather than growing its own.
+ *
+ * WHAT CHANGES IS THE POINTS COLUMN. Opened from the scoreboard it answers "what is this game
+ * worth". Opened from an owner's slot it answers "what did THIS OWNER get from it", which is a
+ * different question with a different answer for every game outside the weeks they held the team.
+ * THE SCORE IS SHOWN EITHER WAY. A game they did not own still happened, and hiding it would
+ * leave a team's season with holes in it.
+ */
+let SCOUT_SPELL = null;
+function jsStr(v){ return "'" + String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
+function openScoutFor(name, owner, fromW, toW){
+  SCOUT_SPELL = {team: name, owner: owner, from: fromW, to: toW};
+  openLeagueScout(name);
+}
+/* THE NAME, AS SOMETHING YOU CAN PRESS. It looks like the text around it until you touch it,
+   because a roster table full of buttons reads as a form. */
+function teamLink(name, owner, fromW, toW){
+  const a = [jsStr(name), jsStr(owner || ''), fromW == null ? 'null' : fromW,
+             toW == null ? 'null' : toW].join(',');
+  return `<button class="tlink" onclick="event.stopPropagation();openScoutFor(${a})"
+    title="${esc(name)}: every game, the score, and what ${esc(owner || 'this slot')} earned from
+    it">${esc(name)}</button>`;
+}
+
 function openScout(n){
   if (LEAGUE) return openLeagueScout(n);
   if (!n) return;
@@ -5358,7 +5402,7 @@ function openScout(n){
   if (x) x.focus({preventScroll: true});
 }
 function closeScout(){
-  SCOUT = null; WHY = null;
+  SCOUT = null; WHY = null; SCOUT_SPELL = null;
   const m = el('scout'); m.hidden = true; m.innerHTML = '';
   document.body.style.overflow = '';
 }
@@ -7183,9 +7227,10 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       ${QKEYS().map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
       ${postCell(postOfSlot(g))}</tr>`;
     if (open && !many) return head + `<tr class="slot-kid"><td></td>
-      <td colspan="${nCols - 1}" style="font-size:11px;line-height:1.5">${grpOnlyNote(g)}</td></tr>`;
+      <td colspan="${nCols - 1}" style="font-size:11px;line-height:1.5">${grpOnlyNote(g, o)}</td></tr>`;
     const lin = (!open) ? '' : g.spells.slice().reverse().map(t => kidRow(
-      `<span class="d">↳↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
+      `<span class="d">↳↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
+       teamLink(t.team, o.owner, t.from_week, t.to_week)}
        <span class="d" style="font-size:11px">${grpSpan(t)} · ${lRec(t)}</span>${
        t.held === false ? ' <span class="gtag t-before">TRADED AWAY</span>' : ''}`,
       'slot-kid' + (t.held === false ? ' g-before' : ''),
@@ -9129,10 +9174,11 @@ function weeklyCard(o, weeks){
       <td class="num"><b>${weeks.reduce((a, wk) => a + slotWeek(g, wk), 0).toFixed(1)}</b></td></tr>`;
     if (open && !many)
       return head + `<tr class="slot-kid"><td colspan="${weeks.length + 2}"
-        style="font-size:11px;line-height:1.5">${grpOnlyNote(g)}</td></tr>`;
+        style="font-size:11px;line-height:1.5">${grpOnlyNote(g, o)}</td></tr>`;
     const kids = !open ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
         t.held === false ? ' g-before' : ''}">
-      <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
+      <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
+        teamLink(t.team, o.owner, t.from_week, t.to_week)}
         <span class="d" style="font-size:11px">${grpSpan(t)}</span></td>
       ${weeks.map(wk => cell(t, wk)).join('')}
       <td class="num d">${qTot(t).toFixed(1)}</td></tr>`).join('');
@@ -9385,10 +9431,13 @@ function grpHeadLabel(o, g){
     g.unplaced ? ' <span class="gtag t-hold" title="This team could not be matched to a roster slot from the ownership history — two moves in the same week cannot be told apart. Its points are shown on their own rather than dropped.">SLOT UNKNOWN</span>' : ''}`;
 }
 /* The one line a never-traded slot has to say. */
-function grpOnlyNote(g){
-  return `<span class="d">↳↳</span> <span class="d">${esc(g.cur.team)} has held this slot all
-    season — ${grpSpan(g.cur) || 'since the draft'}. Nothing has been traded into or out of it,
-    so its points are this team's alone.</span>`;
+/* IT TAKES AN OWNER NOW, because the one line it prints is the only way into a slot that has
+   never been traded, and that panel has to know whose points it is showing. */
+function grpOnlyNote(g, o){
+  return `<span class="d">↳↳</span> ${teamLink(g.cur.team, o && o.owner, g.cur.from_week,
+    g.cur.to_week)} <span class="d">has held this slot all season — ${
+    grpSpan(g.cur) || 'since the draft'}. Nothing has been traded into or out of it, so its
+    points are this team's alone. Tap the name for its schedule and results.</span>`;
 }
 
 function slotLabel(t){
@@ -9467,10 +9516,11 @@ function summaryCard(o){
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td></tr>`;
     if (open && !many)
       return head + `<tr class="slot-kid"><td colspan="${cats.length + qs.length + 4}"
-        style="font-size:11px;line-height:1.5;white-space:normal">${grpOnlyNote(g)}</td></tr>`;
+        style="font-size:11px;line-height:1.5;white-space:normal">${grpOnlyNote(g, o)}</td></tr>`;
     const kids = !open ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
         t.held === false ? ' g-before' : ''}">
-      <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}
+      <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
+        teamLink(t.team, o.owner, t.from_week, t.to_week)}
         <span class="d" style="font-size:11px">${grpSpan(t)}</span></td>
       ${cats.map(c => catCell(t, c)).join('')}
       ${bonusCell()}
@@ -9956,10 +10006,24 @@ function openLeagueScout(n){
   const played = (t.hist || []).filter(g => !g.nc).map(g => ({g: g, s: scoreOf(g)}))
     .concat(sinceBuild.map(g => ({g: g, s: scoreOf(g)})));
   const stillUnknown = played.filter(x => !x.s).length;
+  /* WHOSE POINTS. With no spell this is what the game is worth to whoever held the team. With
+     one it is what that owner actually banked, which is nothing for a game played outside the
+     weeks they held it. A GAME THEY DID NOT OWN IS STILL A GAME: the score stays, the points go
+     to zero, and the cell says why rather than leaving him to work it out. */
+  const sp = (SCOUT_SPELL && SCOUT_SPELL.team === n) ? SCOUT_SPELL : null;
+  const ptsCell = (g, s) => {
+    const full = pointsFor(t.pool, s.pf, s.pa);
+    if (!sp) return `<td class="num">${full.toFixed(1)}</td>`;
+    const w = weekOf(t.pool, gd(g));
+    const held = (sp.from == null || w >= sp.from) && (sp.to == null || w < sp.to);
+    return held
+      ? `<td class="num g" title="Week ${w}, inside the weeks ${esc(sp.owner)} held ${esc(n)}.">${full.toFixed(1)}</td>`
+      : `<td class="num d" title="Week ${w}. ${esc(sp.owner)} did not hold ${esc(n)} that week, so this game paid them nothing. The game itself was worth ${full.toFixed(1)}.">0.0</td>`;
+  };
   const rows = played.filter(x => x.s).map(({g, s}) => `<tr>
     <td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
     <td class="num ${s.pf > s.pa ? 'g' : 'b'}">${s.pf}–${s.pa}</td>
-    <td class="num">${pointsFor(t.pool, s.pf, s.pa).toFixed(1)}</td></tr>`).join('');
+    ${ptsCell(g, s)}</tr>`).join('');
   /* A row with no date at all is kept rather than dropped: unknown is not "already played".
      A row whose game has a final score is dropped, because it is in Results now. */
   const upcoming = (t.sched || []).filter(g => !liveDone(g))
@@ -9994,10 +10058,16 @@ function openLeagueScout(n){
     <div>
       <div class="note">${ownerHTML(n)}${got ? ` · <b>${got.w}-${got.l}${got.t ? '-' + got.t : ''}</b>
         · <b>${got.pts.toFixed(1)}</b> league points so far` : ''}</div>
+      ${sp ? `<div class="note y"><b>Points are what ${esc(sp.owner)} earned from ${esc(n)}</b>,
+        for the weeks they held it${sp.from == null ? '' : ` — week ${sp.from}${
+        sp.to == null ? ' to now' : ' to ' + (sp.to - 1)}`}. Every game is listed, because the
+        team played them all. A game outside those weeks reads <b>0.0</b> and says so when you
+        hold it.</div>` : ''}
       ${espnBtn ? `<div class="row" style="margin:8px 0">${espnBtn}</div>` : ''}
       ${rows ? `<h2>Results</h2><div class="scr"><table>
         <colgroup><col style="width:26%"><col style="width:38%"><col style="width:20%"><col style="width:16%"></colgroup>
-        <thead><tr><th>Date</th><th>Opponent</th><th class="num">Score</th><th class="num">Pts</th></tr></thead>
+        <thead><tr><th>Date</th><th>Opponent</th><th class="num">Score</th>
+        <th class="num" title="${sp ? esc(sp.owner) + ' earned this from the game. A game played outside the weeks they held the team pays them nothing.' : 'What this game paid whoever held the team that week.'}">${sp ? 'Their pts' : 'Pts'}</th></tr></thead>
         <tbody>${rows}</tbody></table></div>${stillUnknown
           ? `<div class="note y"><b>${stillUnknown} more game${stillUnknown === 1 ? ' has' : 's have'}
              been played and ${stillUnknown === 1 ? 'its score is' : 'their scores are'} not here
