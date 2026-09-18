@@ -2553,7 +2553,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '16 Sep 2026, 7:02 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '17 Sep 2026, 10:15 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5171,7 +5171,14 @@ function teamPanel(t, inc, mode, opts){
     const inHold = yours && owned <= DATA.hold_games;
     const vg = g.vg == null ? '<span class="nolink">not posted</span>'
       : `<span class="vg">${g.vg > 0 ? '−' : '+'}${Math.abs(g.vg).toFixed(1)}</span>`;
-    const tag = yours ? '' : '<span class="gtag t-before">BEFORE PICKUP</span>';
+    /* PLAYED SINCE THE BUILD. Casey, 17 Sep 2026, on the league page: a game that has gone final
+       was still sitting in the schedule. Same cause here, same answer: LIVE_SCORES holds only
+       finished games, so a scheduled game with one has been played. The row stays where it is,
+       because this table IS the whole season in order, but it stops pretending the game is
+       still to come. */
+    const fin = g.d ? liveScore(t.n, g.d) : null;
+    const tag = (fin ? '<span class="gtag t-past">PLAYED</span>' : '')
+      + (yours ? '' : '<span class="gtag t-before">BEFORE PICKUP</span>');
     const holdEnds = own && ownSlot && g.d === ownSlot.third_game;
     /* THE HOLD MARKER IS A LABEL, NOT A DOT. Casey, 30 Aug 2026: "why do some teams in the
        schedule have a small orange dot next to the team and some do not?" It marked the three
@@ -5184,8 +5191,9 @@ function teamPanel(t, inc, mode, opts){
         scout ? ''
           : own ? (holdEnds ? '<span class="gtag t-hold" title="This team\'s third game. You must let it play this one; you can drop it afterwards.">HOLD ENDS</span>' : '')
                 : (inHold ? '<span class="gtag t-hold" title="One of the three games you are obliged to hold this team for once you pick it up.">MUST HOLD</span>' : '')}</td>
-      <td class="num ${g.p>=0.7?'g':g.p>=0.5?'y':'b'}"
-          title="${g.p >= P_CEIL ? 'The model prices this above 99%, but it only prices on-field strength — it has no term for weather, injury or a forfeit, so the board never shows 100%.' : ''}">${pctP(g.p)}</td>
+      <td class="num ${fin ? (fin.won ? 'g' : fin.tied ? 'y' : 'b') : g.p>=0.7?'g':g.p>=0.5?'y':'b'}"
+          title="${fin ? 'Final score, from ESPN on this page. The build was made before this game was played.' : g.p >= P_CEIL ? 'The model prices this above 99%, but it only prices on-field strength — it has no term for weather, injury or a forfeit, so the board never shows 100%.' : ''}">${
+        fin ? `<span class="fin ${fin.won ? 'g' : fin.tied ? 'y' : 'b'}">${fin.won ? 'W' : fin.tied ? 'T' : 'L'} ${fin.pf}–${fin.pa}</span>` : pctP(g.p)}</td>
       <td class="num d c-model">${g.m == null ? '—' : (g.m > 0 ? '−' : '+') + Math.abs(g.m).toFixed(1)}</td>
       <td class="num">${vg}</td></tr>`
       + (WHY === t.n + '|' + i ? `<tr><td colspan="5"><div class="gwhy">${gameWhy(t, g, yours, inc)}</div></td></tr>` : '');
@@ -9927,14 +9935,35 @@ function openLeagueScout(n){
     const lv = liveScore(n, gd(g));
     return lv ? {pf: lv.pf, pa: lv.pa} : null;
   };
-  const played = (t.hist || []).filter(g => !g.nc).map(g => ({g: g, s: scoreOf(g)}));
+  /* ---- A GAME THAT WENT FINAL TONIGHT IS STILL IN `sched` -----------------------------------
+   * Casey, 17 Sep 2026: "the Lions lost to the Bills, it shows in Live Scores and the points are
+   * in the standings, but clicking the Bills still shows Detroit on the schedule." Same for
+   * Pittsburgh and Syracuse on the college side.
+   *
+   * `hist` and `sched` ARE A SNAPSHOT OF THE MOMENT THE FILE WAS BUILT. Every game played since
+   * then is still sitting in `sched`, and this panel decided which table a game belonged in by
+   * reading those two lists and nothing else. The standings were right on the same screen,
+   * because they are computed from what the page FETCHES. Two stores of one fact, and only one
+   * of them was being kept up to date.
+   *
+   * THE LIVE INDEX IS THE ANSWER AND IT IS ALREADY HERE. `LIVE_SCORES` is written only for games
+   * ESPN reports as done, so a scheduled game with a live score IS a played game. It moves to
+   * Results and leaves the Schedule. NOT A DATE TEST: a game today is not a game finished, and
+   * kickoff being in the past does not mean the whistle has gone.
+   */
+  const liveDone = g => !!(gd(g) && liveScore(n, gd(g)));
+  const sinceBuild = (t.sched || []).filter(g => !g.bye && liveDone(g));
+  const played = (t.hist || []).filter(g => !g.nc).map(g => ({g: g, s: scoreOf(g)}))
+    .concat(sinceBuild.map(g => ({g: g, s: scoreOf(g)})));
   const stillUnknown = played.filter(x => !x.s).length;
   const rows = played.filter(x => x.s).map(({g, s}) => `<tr>
     <td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
     <td class="num ${s.pf > s.pa ? 'g' : 'b'}">${s.pf}–${s.pa}</td>
     <td class="num">${pointsFor(t.pool, s.pf, s.pa).toFixed(1)}</td></tr>`).join('');
-  /* A row with no date at all is kept rather than dropped: unknown is not "already played". */
-  const upcoming = (t.sched || []).filter(g => !gd(g) || gd(g) >= azToday());
+  /* A row with no date at all is kept rather than dropped: unknown is not "already played".
+     A row whose game has a final score is dropped, because it is in Results now. */
+  const upcoming = (t.sched || []).filter(g => !liveDone(g))
+                                  .filter(g => !gd(g) || gd(g) >= azToday());
   /* ALL OF THEM. This was capped at eight with a line saying "showing the next 8 of 18" and no
      way to see the other ten -- Casey, 10 Sep 2026: "why wouldn't you just give me the full
      schedule instead?" There is no reason. A cap on a list nobody can page through is a dead
