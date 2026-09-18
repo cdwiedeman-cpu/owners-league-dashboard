@@ -2565,7 +2565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '18 Sep 2026, 12:50 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '18 Sep 2026, 9:14 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3075,6 +3075,24 @@ function azDay(iso){
   } catch (e) { return String(iso).slice(0, 10); }
 }
 function azToday(){ return azDay(new Date()); }
+
+/* WHICH CALENDAR DAY DID THIS GAME BELONG TO? ESPN gives a KICKOFF TIMESTAMP IN UTC, and a
+   night game in the United States has already rolled over to the next UTC day: Denver at
+   Kansas City kicked off 5:15pm Arizona on Monday 14 September and ESPN stamps it
+   2026-09-15T00:15Z. Reading the first ten characters of that string gives TUESDAY, which is
+   the first day of the NEXT league week -- so Kansas City's win landed in week 2, and week 1
+   was short two teams. Casey found it on 18 Sep 2026: "that Monday night was the completion
+   of week one for the NFL ... week one should have included those games."
+   Monday night is the only kickoff this can move. A league week runs Tuesday through Monday,
+   so a Saturday night game stamped Sunday UTC is still inside the same week. A Monday night
+   game stamped Tuesday UTC is not. That is true of a Monday night COLLEGE game too, which is
+   why this is one rule for both pools rather than a fix to the NFL path.
+   A plain date is left alone. 'America/Phoenix' applied to '2026-09-14' would read it as UTC
+   midnight and hand back the 13th. */
+function dayOf(iso){
+  const s = String(iso || '');
+  return /\d{2}:\d{2}/.test(s) ? azDay(s) : s.slice(0, 10);
+}
 
 /* IN-PROGRESS FIRST, THEN TODAY'S FINALS, THEN WHAT IS COMING, THEN THE REST.
    Casey, 30 Aug 2026: "can you put the games that are still in progress at the top."
@@ -6463,7 +6481,7 @@ let SEASON = null, SEASON_ERR = null, SEASON_PROGRESS = '';
    Casey, 6 Sep 2026, from the iPhone: Spielman led with 13.0, the page refreshed itself while a
    team was open, and the table came back with Casey on top at 11.5 -- then killing the app and
    reopening put 13.0 back. See applyLiveToSeason for what was actually happening. */
-function gameKey(id, date){ return id ? 'id:' + id : 'd:' + String(date || '').slice(0, 10); }
+function gameKey(id, date){ return id ? 'id:' + id : 'd:' + dayOf(date); }
 function r2(x){ return Math.round(x * 100) / 100; }
 
 /* THE 50-POINT BONUS IS THE TEAM'S OWN SCORE, NOT THE MARGIN. Casey found it on 8 Sep 2026:
@@ -6521,7 +6539,7 @@ function weekOf(pool, iso){
   const C = DATA.calendar || {};
   const w1 = C.league_week1_start;
   if (!w1) return 0;
-  const d = new Date(String(iso).slice(0, 10) + 'T00:00:00Z');
+  const d = new Date(dayOf(iso) + 'T00:00:00Z');
   const d1 = new Date(w1 + 'T00:00:00Z');
   if (d < d1) return 0;
   return 1 + Math.floor((d - d1) / 6048e5);
@@ -6546,7 +6564,7 @@ function weekOf(pool, iso){
 function gwOf(iso){
   const C = DATA.calendar || {};
   if (!C.grid_anchor || !iso) return 0;
-  const d = new Date(String(iso).slice(0, 10) + 'T00:00:00Z');
+  const d = new Date(dayOf(iso) + 'T00:00:00Z');
   const a = new Date(C.grid_anchor + 'T00:00:00Z');
   return Math.max(0, Math.floor((d - a) / 6048e5));
 }
@@ -6647,7 +6665,7 @@ async function loadSeason(){
           score: Number(x.score), won: !!x.winner}));
         if (sides.length !== 2 || sides.some(x => isNaN(x.score))) continue;
         const gid = ev.id ? 'id:' + ev.id
-          : 'k:' + String(ev.date).slice(0, 10) + '|'
+          : 'k:' + dayOf(ev.date) + '|'
             + [sides[0].name, sides[1].name].map(x => String(x)).sort().join('|');
         if (seenGame.has(gid)) continue;      // already scored from the other scoreboard
         seenGame.add(gid);
@@ -6702,7 +6720,7 @@ async function loadSeason(){
              goes into the Q3 bucket. If it falls into Q4, it goes into the Q4 bucket." Which
              means there is nothing special to do at all -- the game is filed by its week exactly
              as a regular-season game is, and the shift machinery was deleted. */
-          const afterW18 = !cal('week18_end') || String(ev.date).slice(0, 10) > cal('week18_end');
+          const afterW18 = !cal('week18_end') || dayOf(ev.date) > cal('week18_end');
           if (isPost && !afterW18){
             const gw = weekOf(mePool, ev.date);
             cur.wk[gw] = r2((cur.wk[gw] || 0) + p);
