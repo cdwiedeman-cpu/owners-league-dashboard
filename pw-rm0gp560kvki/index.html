@@ -81,12 +81,20 @@ header{position:sticky;top:0;z-index:20;color:var(--brandink);
    A sports page is read in one glance, so the top of it is a badge, a name and one control --
    not a wall of date stamps. The stamps still exist and are still honest; they moved behind
    the Status button, where a reader who wants them gets all of them at once. */
-.mast{display:flex;align-items:center;gap:9px;margin:0 0 8px;min-width:0}
+/* THE MAST WRAPS. It held a badge, a name and one control, and a second control was one too
+   many for a phone: every item here refuses to shrink except the title, so adding What's New
+   took "Reality Football League" down to 19 pixels of "R." Measured, not guessed. With wrapping
+   the controls drop to a line of their own on a narrow screen and the name keeps its width.
+   On a laptop everything still fits on one line, so nothing moves there. */
+.mast{display:flex;align-items:center;gap:9px;margin:0 0 8px;min-width:0;flex-wrap:wrap}
 .mark{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
  width:32px;height:32px;border-radius:9px;background:var(--brandacc);color:#17243a;
  font:800 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
  letter-spacing:.02em;box-shadow:0 1px 0 rgba(255,255,255,.35) inset}
-header h1{color:var(--brandink);font-weight:800;flex:1 1 auto;min-width:0;margin:0;
+/* A FLOOR UNDER THE NAME, so it is the row that wraps rather than the title that disappears.
+   It still ends in an ellipsis when there is genuinely no room, which is a shortened name and
+   not a missing one. */
+header h1{color:var(--brandink);font-weight:800;flex:1 1 auto;min-width:130px;margin:0;
  font-size:16px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* The Status button never shrinks and never wraps: it is the way back to every date on the
    page, and a control that disappears when the title is long is a control nobody finds. */
@@ -94,6 +102,19 @@ header h1{color:var(--brandink);font-weight:800;flex:1 1 auto;min-width:0;margin
  border-radius:8px;border:1px solid rgba(255,255,255,.34);background:rgba(255,255,255,.12);
  color:#ffffff;font:700 12px/1 inherit;white-space:nowrap}
 .statusbtn:hover{background:rgba(255,255,255,.22)}
+/* THE UNREAD MARK. The same button whether or not there is something new in it, because a
+   control that appears and disappears is one nobody learns where to find. Only the dot changes,
+   and the wording in its hover text changes with it. */
+#newsbtn.unread{background:rgba(255,255,255,.24);border-color:rgba(150,235,185,.7)}
+#newsbtn.unread .dot{background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.3)}
+/* WHAT'S NEW. Plain reading width, and the steps are numbered because they are done in order. */
+#news .wn{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+#news .wn:first-of-type{border-top:0;margin-top:6px;padding-top:0}
+#news h3{margin:14px 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--dim)}
+#news p{margin:0 0 9px;font-size:13.5px;line-height:1.6;color:var(--ink)}
+#news ol{margin:0;padding-left:20px}
+#news ol li{font-size:13.5px;line-height:1.6;color:var(--ink);margin:0 0 7px}
 .statusbtn .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
  background:var(--brandacc);margin-right:6px;vertical-align:middle}
 /* THE LIGHT, ON NAVY. Green while the scores are arriving, RED when they are not -- and red
@@ -1074,6 +1095,12 @@ details>summary::marker{color:var(--faint)}
     <button type="button" class="statusbtn" onclick="openInfo()"
       title="Every date on this page: when it was updated, when the rosters were set, how far the results run, and where each figure came from."><span
       class="dot"></span>Status</button>
+    <!-- WHAT'S NEW. Hidden until the payload carries an entry, which is the all-owners page
+         only. The reader is shown it once on its own, and this button is how they get back to
+         it afterwards. -->
+    <button type="button" class="statusbtn" id="newsbtn" hidden onclick="openNews()"
+      title="What has changed on this page, and how to use it."><span
+      class="dot"></span>What's New</button>
   </div>
   <!-- `scroller` DECLARES THAT THESE TWO OWN THEIR OVERFLOW. On a phone they scroll sideways
        instead of wrapping to three rows, and test_devices.js exempts a scroller's children from
@@ -1092,6 +1119,9 @@ details>summary::marker{color:var(--faint)}
      Same in-page panel as the team detail, for the same reason a native dialog is never used
      here: this is read on a phone inside a browser app that may not draw one. -->
 <div id="info" class="modal" hidden role="dialog" aria-modal="true" aria-label="Page status"></div>
+<!-- WHAT'S NEW. Same in-page panel as the rest, for the same reason: this is read on a phone
+     inside a third-party browser app that may not draw a native dialog. -->
+<div id="news" class="modal" hidden role="dialog" aria-modal="true" aria-label="What's new"></div>
 <!-- FIRST RUN. The league page needs one thing from a reader before it can say "your teams", and
      a dropdown in a filter row is something you have to notice. This asks. Same in-page panel as
      the team detail -- never a native dialog, for the same reason alert() is banned here: this is
@@ -1342,11 +1372,40 @@ function whoAmI(){
   let k = '';
   try { k = localStorage.getItem('rfl_commish_key') || ''; } catch (e) { k = ''; }
   if (!k) return Promise.resolve(null);
+  /* THREE ANSWERS, NOT TWO. Casey, 18 Sep 2026: "we still want people to only have to put in a
+     code the first time, and they don't have to sign in again unless they go to a new device or
+     if we change the code for them."
+     The first half already worked. The second half did not, and the reason is that this used to
+     fold two different answers into one `null`:
+       * the league answered and said this key is nobody -- the code was replaced, or the seat
+         was retired. The reader must be asked again.
+       * the league could not be reached at all. Nothing is known, and a reader must NOT be
+         signed out because their train went into a tunnel.
+     The league says which: it answers `ok:false` with a reason for a key it does not know, and
+     that is a different thing from a request that never arrived. */
   return fetch(TRADES_API + (TRADES_API.indexOf('?') < 0 ? '?' : '&') + 'fn=me&key='
                + encodeURIComponent(k))
     .then(r => r.json())
-    .then(a => (a && a.ok && a.me) ? a.me : null)
+    .then(a => {
+      if (a && a.ok && a.me) return a.me;        // signed in, and this is who
+      if (a && a.ok === false) return 'no';      // asked, and told this key is nobody
+      return null;                               // could not be asked
+    })
     .catch(() => null);
+}
+
+/* THE CODE THIS DEVICE HOLDS IS NO LONGER A CODE. Clear it and ask, rather than leaving a page
+   that says somebody's name while the league no longer agrees. Only ever called on the league's
+   own answer, never on a failed request. */
+function forgetStaleSignIn(){
+  try { localStorage.removeItem('rfl_commish_key'); } catch (e) {}
+  try { localStorage.removeItem(VIEWER_KEY); } catch (e) {}
+  rememberSignedIn(false);
+  SIGNED_IN = null;
+  viewerSet('');
+  setSignInTab(false);
+  addCommishTabs(false);
+  openSetup(true);
 }
 function askCommish(){ return whoAmI().then(me => !!(me && me.role === 'commissioner')); }
 
@@ -1439,7 +1498,12 @@ let MY_DIV = DATA.my_div === undefined ? 'PFD' : DATA.my_div;
 function viewerLoad(){
   if (!LEAGUE) return;
   try {
-    const raw = localStorage.getItem(VIEWER_KEY);
+    /* AND ONLY IF THEY ARE SIGNED IN. A saved name from the old picker is not a sign-in and
+       must never stand in for one -- that is exactly the 14 Sep 2026 fault, where a name picked
+       months earlier meant the page never asked Casey for his code. With the picker gone the
+       only way this was ever written is a sign-in, but a phone that used the old page still has
+       one saved, so it is dropped rather than trusted. */
+    const raw = hasKey() ? localStorage.getItem(VIEWER_KEY) : null;
     if (raw){
       const v = JSON.parse(raw);
       if (v && v.div && v.owner && (DATA.seats || []).some(s => s.div === v.div && s.owner === v.owner))
@@ -1461,10 +1525,6 @@ function viewerLoad(){
 }
 /* ---- first-run setup ------------------------------------------------------------------- */
 let SETUP_OPEN = false;
-/* SOMEBODY WITHOUT A CODE ASKED TO CARRY ON ANYWAY. Held for this visit only: next time the
-   page opens it asks again, because the answer is usually "I have not been given it yet". */
-let CODE_FALLBACK = false;
-
 /* REDEEMING A CODE FROM THE DASHBOARD ITSELF, rather than sending them off to another tab to do
    it. The trades page still owns signing in; this is the same call it makes. */
 function setupCodeGo(){
@@ -1487,6 +1547,12 @@ function setupCodeGo(){
       }
       try { localStorage.setItem('rfl_commish_key', a.key); } catch (e) {}
       closeSetup();
+      /* AND THEN WHAT'S NEW. Hooked to ANSWERING the panel, never to escaping it: a reader who
+         presses ✕ or Escape is asking for the panel to go away, and handing them a second one
+         is the trap the first panel is careful not to be. test_league_ui.js checks exactly that,
+         and it caught this the first time round. Somebody who dismisses the sign-in reads What's
+         New on their next visit, or by pressing the button. */
+      setTimeout(newsMaybe, 0);
       /* THE TRADES TAB HAS ALREADY DECIDED THIS DEVICE IS SIGNED OUT. Rebuild it so it asks the
          league again, now that there is a key for it to ask with. */
       resetTradeFrame();
@@ -1522,14 +1588,9 @@ function openSetup(auto){
    * SIGNING IN IS EVERY PAGE'S QUESTION. Owner-picking is still the league page's alone. */
   if (!LEAGUE && !(TRADES_API && !SIGNED_IN)) return;
   const box = el('setup'); if (!box) return;
-  const seats = DATA.seats || [];
-  if (!seats.length) return;
-  const cur = VIEWER ? VIEWER.div + '|' + VIEWER.owner : '';
-  const groups = DIVORDER.filter(d => seats.some(x => x.div === d)).map(d =>
-    `<optgroup label="${DIVNAME[d] || d} division">${seats.filter(x => x.div === d).map(x => {
-      const k = x.div + '|' + x.owner;
-      return `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(x.owner)}</option>`;
-    }).join('')}</optgroup>`).join('');
+  /* THE SEAT LIST USED TO GATE THIS, because the panel was a list of seats. It is a sign-in
+     now, and a sign-in needs no list -- so an empty one must not be able to shut the front door
+     on the whole league. */
   SETUP_OPEN = true;
   box.hidden = false;
   /* A SIGNED-IN READER IS NOT ASKED WHO THEY ARE. The sheet has already said, and it said it
@@ -1560,22 +1621,21 @@ function openSetup(auto){
    * the answer on trust -- its own words were "nothing is verified, it is a convenience, not a
    * login". Anybody could set the page to anybody. A code makes the same question a real one.
    *
-   * THERE IS STILL A WAY PAST IT, and deliberately. Not every owner will have a code, and Casey
-   * enters trades for those who do not. Refusing them the scoreboard as well would make the page
-   * useless to the people who need the most help. So the way past is quiet, and it hands them
-   * the old unverified name picker, which is all it ever was.
+   * THE CODE IS THE ONLY WAY IN, and there is no second door. Casey, 18 Sep 2026: "the code we
+   * put in already ties them to everything else on the screen. That choose your name was
+   * something we got rid of a long time ago. Why are you bringing that back?"
+   * He is right, and it was mine. On 13 Sep I added an "I do not have a code" link behind the
+   * sign-in and wired the old name picker to it, reasoning that an owner who had not been given
+   * a code yet would otherwise be locked out. Nobody asked for that, and it contradicted what he
+   * had said the day before: "the first time you go to the web page it pops up and asks for the
+   * code, and you can't do anything until you put in the code."
+   * A NAME PICKED FROM A LIST IS NOT A SIGN-IN. It was never verified, its own copy said so, and
+   * anybody could set the page to anybody. An owner who has lost their code asks the
+   * commissioner for it, which is a thing they already know how to do.
    */
-  /* ONLY ON THE WAY IN. Once somebody is identified -- signed in, or having said they have no
-     code and picked a name -- reopening this panel is them wanting to CHANGE something, not
-     wanting to be challenged again. Demanding the code a second time would trap a reader who
-     genuinely has not got one behind a door they already told us they cannot open. */
-  /* A NAME PICKED UNDER THE OLD PANEL IS NOT A SIGN-IN.
-     Casey, 14 Sep 2026: "it now does it properly on my personal dashboard, but it's not doing it
-     on the main dashboard that everybody else would see." He had picked his name on that page
-     months ago, under the version whose own copy said nothing was verified. That saved pick was
-     standing in for having signed in, so the page never asked. It is not the same thing and it
-     does not count as one. */
-  if (auto && TRADES_API && !CODE_FALLBACK && !SIGNED_IN){
+  /* ONLY ON THE WAY IN. Once somebody has signed in, reopening this panel is them wanting to
+     look at something, not wanting to be challenged again. */
+  if (TRADES_API && !SIGNED_IN){
     box.innerHTML = `<div class="modalbox">
       <div class="modalhd"><div><h2>Sign In</h2></div></div>
       <div class="note"><b>Your commissioner emailed or texted you a six character code.</b> Type
@@ -1591,59 +1651,22 @@ function openSetup(auto){
       <div class="note" id="setupCodeWhy" style="margin-top:10px">Upper case or lower case both
         work. No code has the letter O or the number 1 in it, so a character that looks like one
         of those is the other.</div>
-      <div class="note" style="margin-top:14px"><a href="#" onclick="event.preventDefault();
-        CODE_FALLBACK=true;${LEAGUE ? 'openSetup(false)' : 'closeSetup()'}">I do not have a
-        code</a></div>
     </div>`;
     document.body.style.overflow = 'hidden';
     const f = el('setupCode'); if (f) f.focus({preventScroll: true});
     return;
   }
 
-  box.innerHTML = `<div class="modalbox">
-    <div class="modalhd"><div><h2>${VIEWER ? 'Change Owner' : 'Welcome to the P/W Reality Football League Dashboard'}</h2></div>
-      <button class="modalx" onclick="closeSetup()" aria-label="Close">✕</button></div>
-    <div class="note"><b>Which owner are you?</b> Once you say, this page highlights your eleven
-      teams on the scoreboard, tags your row in the standings, and opens the Weekly and Season
-      Summary grids on you.</div>
-    <div class="bar" style="margin-top:10px">
-      <select class="search" id="setupWho" style="flex:1 1 240px;max-width:100%"
-        aria-label="Which owner are you">
-        <option value="">Choose your name…</option>${groups}</select>
-      <button class="f primary" id="setupGo" onclick="setupCommit()">That's me</button>
-    </div>
-    ${VIEWER ? `<div style="margin-top:10px"><button class="f" onclick="closeSetup()">Keep
-      ${esc(VIEWER.owner)}</button> <span class="d" style="font-size:12px">— leave it as it is.</span></div>` : ''}
-    <div class="note" style="margin-top:10px">This is remembered <b>in this browser only</b>.
-      Nothing is sent anywhere and nothing is verified — it is a convenience, not a login, so
-      there is no password and nothing to forget. You can pick a different owner whenever you
-      like with <b>Change owner</b> at the top of the page.</div>
-  </div>`;
-  const sel = el('setupWho');
-  if (sel) sel.focus({preventScroll: true});
-  document.body.style.overflow = 'hidden';
+  /* NOTHING ELSE TO ASK. The owner list that used to live here is gone: who you are comes from
+     the code. This is only reached on a page with no league behind it, where there is nothing to
+     sign in to and therefore nothing to ask. */
+  closeSetup();
 }
 function closeSetup(){
   SETUP_OPEN = false;
   const box = el('setup'); if (!box) return;
   box.hidden = true; box.innerHTML = '';
   document.body.style.overflow = '';
-}
-/* SELECTING IS NOT CHOOSING. A phone's picker fires `change` as you scroll past a name, so the
-   commit is its own button -- the alternative is landing on whoever happened to be under your
-   thumb. */
-function setupCommit(){
-  const sel = el('setupWho');
-  const v = sel ? sel.value : '';
-  if (!v){
-    /* An absence is never an answer: say what is missing rather than doing nothing. */
-    const b = el('setupGo');
-    if (b) b.textContent = 'Pick a name first';
-    if (sel) sel.focus();
-    return;
-  }
-  closeSetup();
-  viewerSet(v);
 }
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && SETUP_OPEN) closeSetup(); });
 
@@ -1700,23 +1723,10 @@ function isMine(name){
   if (!VIEWER) return false;
   return labelsOf(name).some(l => l.div === VIEWER.div && l.owner === VIEWER.owner);
 }
-function viewerPicker(){
-  /* WHERE HE LOOKED FOR IT. Casey, 6 Sep 2026: "I don't see a way to reset owner ... you should
-     have a reset owner option so that it can go back to the prompt page and somebody can repick
-     who they are." There WAS one, on a chip in the header, and he could not find it -- which
-     means there was not one. So the control sits in the filter row as well, beside the My-Teams
-     button it governs, and it REOPENS THE SETUP PANEL rather than being a second, subtly
-     different way of choosing. Two places, one action: both call openSetup(). */
-  /* AND THEN THE CHANGE HALF OF IT WENT. Casey, 15 Sep 2026: "you don't need to change owner,
-     I don't see what the point of that would be." Who you are comes from the seat you signed in
-     as. A control offering to make the page say somebody else is offering something it cannot
-     do, and both copies of it sent the reader to a sign-out that does not exist. The way IN
-     stays, because a reader who has not said who they are still needs one. */
-  if (!LEAGUE || !(DATA.seats || []).length) return '';
-  return VIEWER ? ''
-    : `<button class="f primary" onclick="openSetup()"
-         title="Say which owner you are, and this page will highlight your teams">Pick Your Owner</button>`;
-}
+/* NO OWNER PICKER ANYWHERE. Casey, 15 Sep 2026 took the CHANGE half of this away: "you don't
+   need to change owner, I don't see what the point of that would be." On 18 Sep 2026 the way IN
+   went too, for the same reason: "the code we put in already ties them to everything else on the
+   screen." Who you are comes from the seat you signed in as, and nothing else sets it. */
 function ownerHTML(name){
   const ls = labelsOf(name);
   if (!ls.length) return '<span class="own nolink">free agent in all three divisions</span>';
@@ -2206,9 +2216,10 @@ function renderChips(){
          sent the reader to a sign-out that does not exist. Saying who you are is still worth a
          line, and that line stays. */
     else
-      c.unshift(`<span class="chip warn" data-keep="1" title="Nothing is highlighted and the My-teams filter is not offered until you say which owner you are.">No owner picked
-        <button class="f" style="margin-left:8px;padding:4px 10px;font-size:11px;min-height:26px"
-          onclick="openSetup()" title="Say which owner you are">Pick owner</button></span>`);
+      /* NO BUTTON ON THIS CHIP EITHER. It used to open the owner list, and that list is gone.
+         The sign-in panel asks on the way in, and the Sign In tab is there for anybody who
+         closed it, so a third way to reach the same question is a third thing to keep true. */
+      c.unshift(`<span class="chip warn" data-keep="1" title="Nothing is highlighted and the My-teams filter is not offered until you sign in with your code. Your commissioner has it.">Not signed in</span>`);
   }
   const ages = (DATA.inputs||[]).filter(x=>x.age!=null);
   if (ages.length){
@@ -2322,6 +2333,90 @@ function openInfo(){
   if (x) x.focus({preventScroll: true});
 }
 function closeInfo(){ const m = el('info'); m.hidden = true; m.innerHTML = ''; }
+
+/* ---- WHAT'S NEW --------------------------------------------------------------------------
+   Casey, 18 Sep 2026: "when they first log in it's a quick what's new, and explains anything new
+   that we've enhanced ... so people are kind of recognising when we do these enhancements, what
+   is being enhanced and newly available."
+
+   IT SHOWS ITSELF ONCE, THEN WAITS TO BE ASKED. A panel that opens every visit is a panel people
+   learn to dismiss without reading. This one opens when the newest entry is one this phone has
+   not seen, and after that the What's New button is how it is reopened. What has been seen is
+   the DATE of the newest entry, so shipping a new one brings the panel back on its own and
+   nothing has to be reset by hand.
+
+   WHAT IT SAYS IS NOT WRITTEN HERE. `whats_new.py` is the only copy of it, and `league_payload`
+   ships owner entries only. The personal page carries no `whats_new` key at all, so the button
+   stays hidden there without needing to know which page it is on.
+
+   IT WAITS FOR THE OWNER PICKER. The league page asks a new reader who they are first. Two
+   panels stacked on a phone on a first visit is a wall, so this one follows that one. */
+const NEWS_KEY = 'rfl_whats_new_seen_v1';
+function newsData(){
+  const n = DATA.whats_new;
+  return (n && n.entries && n.entries.length) ? n : null;
+}
+function newsSeen(){ try { return localStorage.getItem(NEWS_KEY) || ''; } catch (e) { return ''; } }
+function newsButton(){
+  const b = el('newsbtn'), n = newsData();
+  if (!b) return;
+  b.hidden = !n;
+  if (!n) return;
+  const unread = newsSeen() !== n.newest;
+  b.classList.toggle('unread', unread);
+  b.title = unread ? 'Something on this page has changed. Read what it is and how to use it.'
+                   : 'What has changed on this page, and how to use it.';
+}
+function renderNews(){
+  const n = newsData(); if (!n) return;
+  const li = (rows) => (rows || []).map(x => `<li>${esc(x)}</li>`).join('');
+  const body = n.entries.map(e => `<div class="wn">
+      <h2>${esc(e.title)}</h2>
+      ${(e.what || []).map(x => `<p>${esc(x)}</p>`).join('')}
+      ${(e.how || []).length ? `<h3>How to Use It</h3><ol>${li(e.how)}</ol>` : ''}
+      ${e.also ? `<p class="note">${esc(e.also)}</p>` : ''}
+    </div>`).join('');
+  el('news').innerHTML = `<div class="modalbox">
+    <div class="modalhd"><div><h2>What's New</h2></div>
+      <button class="modalx" onclick="closeNews()" title="Close" aria-label="Close">&times;</button>
+    </div>
+    <div>
+      <p class="note" style="margin-top:0">Here is what has changed on this page. Tap
+        <b>What's New</b> to read it again whenever you like.</p>
+      ${body}
+      <div class="row" style="margin-top:16px">
+        <button class="f primary" onclick="closeNews()">Got It</button>
+      </div>
+    </div></div>`;
+}
+function openNews(){
+  if (!newsData()) return;
+  renderNews();
+  el('news').hidden = false;
+  document.body.style.overflow = 'hidden';
+  const x = document.querySelector('#news .modalx');
+  if (x) x.focus({preventScroll: true});
+}
+/* READ IS MARKED ON THE WAY OUT, not on the way in. Closing it is the only thing that proves it
+   was in front of somebody. */
+function closeNews(){
+  const m = el('news'); if (!m || m.hidden) return;
+  m.hidden = true; m.innerHTML = '';
+  document.body.style.overflow = '';
+  const n = newsData();
+  if (n){ try { localStorage.setItem(NEWS_KEY, n.newest); } catch (e) { /* not saved */ } }
+  newsButton();
+}
+/* Safe to call as often as you like: it opens nothing once the newest entry has been read. */
+function newsMaybe(){
+  const n = newsData();
+  if (!n || SETUP_OPEN || newsSeen() === n.newest) return;
+  openNews();
+}
+/* THE SAME THREE WAYS OUT the other panels give: the X, the backdrop and Escape. */
+document.addEventListener('click', ev => { if (ev.target === el('news')) closeNews(); });
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && el('news') && !el('news').hidden) closeNews(); });
 /* THREE WAYS OUT, the same three the team panel gives: the X, the backdrop and Escape. */
 document.addEventListener('click', ev => { if (ev.target === el('info')) closeInfo(); });
 document.addEventListener('keydown', ev => {
@@ -2565,7 +2660,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '18 Sep 2026, 9:14 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '18 Sep 2026, 2:39 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3414,7 +3509,6 @@ function renderFilters(){
   el('sfilters').innerHTML = weekPicker() +
     fs.map(([k,l]) => `<button class="f ${k==='ME'?'me':''}" aria-pressed="${FILTER===k}"
       onclick="setFilter('${k}')">${l}</button>`).join('')
-    + (LEAGUE ? viewerPicker() : '')
     + `<input class="search" id="q" type="search" placeholder="Search team…" value="${Q}"
         oninput="Q=this.value;renderScores()" aria-label="Search for a team">`
     + `<select class="search" id="ownq" onchange="OWNQ=this.value;renderScores()"
@@ -10068,9 +10162,18 @@ function openLeagueScout(n){
       ? `<td class="num g" title="Week ${w}, inside the weeks ${spMine ? 'you' : esc(sp.owner)} held ${esc(n)}.">${full.toFixed(1)}</td>`
       : `<td class="num d" title="Week ${w}. ${spMine ? 'You' : esc(sp.owner)} did not hold ${esc(n)} that week, so this game paid ${spMine ? 'you' : 'them'} nothing. The game itself was worth ${full.toFixed(1)}.">0.0</td>`;
   };
-  /* WITH A POINTS COLUMN the score is one number among numbers and reads right-aligned. Without
-     one it is the last column above the Schedule's Where column, so it starts where that starts. */
-  const scoreCls = sp ? 'num ' : '';
+  /* THE SCORE READS DOWN THE PANEL, NOT ACROSS ITS OWN ROW. It sits directly above the
+     Schedule's Where column in both shapes, so it is left-aligned in both and the two start on
+     the same pixel. Right-aligning it when the points column appeared pushed its text to the far
+     side of a narrow column while Where stayed on the left, and Casey saw exactly that on
+     18 Sep 2026: "the score column under results and the where column under schedule are offset.
+     They don't align anymore."
+     THE CHECK THAT MISSED IT MEASURED THE WRONG THING. verify_scoutcols.js read the left edge of
+     each CELL, and the cells were always in the right place. What the eye follows is where the
+     TEXT starts, and text alignment moves that without moving the box. It measures the text now.
+     Pts earned stays right-aligned. It is the last column, nothing sits under it, and a column
+     of numbers is read down its digits. */
+  const scoreCls = '';
   const rows = played.filter(x => x.s).map(({g, s}) => `<tr>
     <td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
     <td class="${scoreCls}${s.pf > s.pa ? 'g' : 'b'}">${s.pf}–${s.pa}</td>
@@ -10451,6 +10554,14 @@ if (TRADES_API){
      commissioner's key, and whose seat it is. They used to be two separate round trips and only
      the first one existed, which is why signing in changed the trades tab and nothing else. */
   const adopt = me => {
+    /* THE LEAGUE SAID THIS KEY IS NOBODY: the code was replaced, or the seat was retired. Ask
+       again. Until 18 Sep 2026 the key simply stayed in the browser and the page went on showing
+       that owner's name for ever, because `hasKey()` cannot tell a live key from a dead one. */
+    if (me === 'no'){ forgetStaleSignIn(); return; }
+    /* THE LEAGUE COULD NOT BE ASKED. Leave everything exactly as it is. Stripping the tabs and
+       the name here would sign somebody out over a lost connection, which is the opposite of
+       "you only put your code in once". */
+    if (me === null && hasKey()) return;
     setSignInTab(!!(me && me.seat));
     addCommishTabs(!!(me && me.role === 'commissioner'));
     if (me && me.div && me.seat) signedInAs(me.div, me.seat);
@@ -10504,8 +10615,16 @@ function addCommishTabs(yes){
    personal page asks only while nobody has signed in -- once Casey has, it never asks again. */
 /* ASK ON THE WAY IN, ON BOTH PAGES, UNTIL SOMEBODY HAS ACTUALLY SIGNED IN. The league page also
    still asks a reader it has never seen at all, which is the owner-picker's own case. */
-if ((TRADES_API && !rememberedSignedIn() && !hasKey()) || (LEAGUE && !VIEWER && !hasKey())) {
+/* ASKED ON THE WAY IN, EVERY TIME, UNTIL THERE IS A CODE BEHIND IT. Keyed on the sign-in and
+   not on VIEWER: a name saved by the old picker is not a sign-in, and treating it as one is how
+   a reader got past this door without one. */
+if ((TRADES_API && !rememberedSignedIn() && !hasKey()) || (LEAGUE && !hasKey())) {
   openSetup(true);
 }
+/* WHAT'S NEW, AFTER THE PAGE HAS DRAWN. `newsButton()` shows the control whenever the payload
+   carries an entry; `newsMaybe()` opens the panel only on a first read of the newest one, and
+   does nothing at all while the owner picker is up. */
+newsButton();
+newsMaybe();
 pollNow();
 </script></body></html>
