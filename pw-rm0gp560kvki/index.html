@@ -2565,7 +2565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '17 Sep 2026, 11:32 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '17 Sep 2026, 11:33 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10016,14 +10016,21 @@ function openLeagueScout(n){
      Points appear only when the panel was opened from somebody's roster, which is the only place
      the question has an answer. */
   const sp = (SCOUT_SPELL && SCOUT_SPELL.team === n) ? SCOUT_SPELL : null;
+  /* WHOSE POINTS, IN THE READER'S OWN WORDS. Casey, 18 Sep 2026: "instead of saying Their points
+     I think it should say Your points, because that's what it's representing."
+     Right when the slot is his. NOT right on the all-owners page, where he can open anybody's
+     roster and reading "your points" over Spielman's column would be a label contradicting the
+     number under it. So the page asks who the reader is: their own slot says YOUR, somebody
+     else's says THEIR, and the line above the table names the owner either way. */
+  const spMine = !!(sp && sp.owner && typeof meName === 'function' && meName() === sp.owner);
   const ptsCell = (g, s) => {
     if (!sp) return '';
     const full = pointsFor(t.pool, s.pf, s.pa);
     const w = weekOf(t.pool, gd(g));
     const held = (sp.from == null || w >= sp.from) && (sp.to == null || w < sp.to);
     return held
-      ? `<td class="num g" title="Week ${w}, inside the weeks ${esc(sp.owner)} held ${esc(n)}.">${full.toFixed(1)}</td>`
-      : `<td class="num d" title="Week ${w}. ${esc(sp.owner)} did not hold ${esc(n)} that week, so this game paid them nothing. The game itself was worth ${full.toFixed(1)}.">0.0</td>`;
+      ? `<td class="num g" title="Week ${w}, inside the weeks ${spMine ? 'you' : esc(sp.owner)} held ${esc(n)}.">${full.toFixed(1)}</td>`
+      : `<td class="num d" title="Week ${w}. ${spMine ? 'You' : esc(sp.owner)} did not hold ${esc(n)} that week, so this game paid ${spMine ? 'you' : 'them'} nothing. The game itself was worth ${full.toFixed(1)}.">0.0</td>`;
   };
   /* WITH A POINTS COLUMN the score is one number among numbers and reads right-aligned. Without
      one it is the last column above the Schedule's Where column, so it starts where that starts. */
@@ -10082,8 +10089,9 @@ function openLeagueScout(n){
         in each division, and each of them has held it for different weeks. Open it from
         <b>Standings</b>, <b>Weekly / Quarterly</b> or <b>Season Summary</b> to see what one
         owner earned from it.</div>`}
-      ${sp ? `<div class="note y"><b>Points are what ${esc(sp.owner)} earned from ${esc(n)}</b>,
-        for the weeks they held it${sp.from == null ? '' : ` — week ${sp.from}${
+      ${sp ? `<div class="note y"><b>Points are what ${
+        spMine ? 'you have' : esc(sp.owner) + ' has'} earned from ${esc(n)}</b>, for the weeks ${
+        spMine ? 'you' : 'they'} held it${sp.from == null ? '' : ` — week ${sp.from}${
         sp.to == null ? ' to now' : ' to ' + (sp.to - 1)}`}. Every game is listed, because the
         team played them all. A game outside those weeks reads <b>0.0</b> and says so when you
         hold it.</div>` : ''}
@@ -10091,7 +10099,7 @@ function openLeagueScout(n){
       ${rows ? `<h2>Results</h2><div class="scr"><table>
         <colgroup>${resCols}</colgroup>
         <thead><tr><th>Date</th><th>Opponent</th><th class="${scoreCls}">Score</th>${sp
-          ? `<th class="num" title="${esc(sp.owner)} earned this from the game. A game played outside the weeks they held the team pays them nothing.">Their pts</th>`
+          ? `<th class="num" title="${spMine ? 'You' : esc(sp.owner)} earned this from the game. A game played outside the weeks ${spMine ? 'you' : 'they'} held the team pays ${spMine ? 'you' : 'them'} nothing.">${spMine ? 'Your' : 'Their'} pts</th>`
           : ''}</tr></thead>
         <tbody>${rows}</tbody></table></div>${stillUnknown
           ? `<div class="note y"><b>${stillUnknown} more game${stillUnknown === 1 ? ' has' : 's have'}
