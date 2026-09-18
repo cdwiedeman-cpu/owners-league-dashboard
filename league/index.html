@@ -2565,7 +2565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '17 Sep 2026, 11:44 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '17 Sep 2026, 11:45 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10055,8 +10055,14 @@ function openLeagueScout(n){
      the score, being right-aligned, ended up against the panel edge. With no points column the
      Results table takes the SCHEDULE's widths exactly, and the score aligns the way the Where
      column does. A COLUMN THAT LINES UP WITH NOTHING IS THE SAME DEFECT AS A MERGED CELL. */
+  /* BOTH TABLES SHARE THEIR FIRST TWO COLUMNS, whichever shape they are in. Date and Opponent
+     are the columns the eye reads down the panel, so they hold still; the Schedule's Where column
+     simply spans whatever the Results table spends on Score and points. */
   const resCols = sp
     ? '<col style="width:24%"><col style="width:34%"><col style="width:19%"><col style="width:23%">'
+    : '<col style="width:26%"><col style="width:52%"><col style="width:22%">';
+  const schedCols = sp
+    ? '<col style="width:24%"><col style="width:34%"><col style="width:42%">'
     : '<col style="width:26%"><col style="width:52%"><col style="width:22%">';
   /* A row with no date at all is kept rather than dropped: unknown is not "already played".
      A row whose game has a final score is dropped, because it is in Results now. */
@@ -10118,7 +10124,7 @@ function openLeagueScout(n){
                  Reload somewhere ESPN is reachable.`
               : `<b>${esc(n)} has not played yet this season.</b> Their first game is below.`}</div>`}
       ${left ? `<h2>Schedule</h2><div class="scr"><table>
-        <colgroup><col style="width:26%"><col style="width:52%"><col style="width:22%"></colgroup>
+        <colgroup>${schedCols}</colgroup>
         <thead><tr><th>Date</th><th>Opponent</th><th>Where</th></tr></thead>
         <tbody>${left}</tbody></table></div>
         <div class="note">${upcoming.length} game${upcoming.length === 1 ? '' : 's'} still to
