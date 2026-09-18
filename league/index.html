@@ -2565,7 +2565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '17 Sep 2026, 10:55 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '17 Sep 2026, 11:32 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10025,15 +10025,25 @@ function openLeagueScout(n){
       ? `<td class="num g" title="Week ${w}, inside the weeks ${esc(sp.owner)} held ${esc(n)}.">${full.toFixed(1)}</td>`
       : `<td class="num d" title="Week ${w}. ${esc(sp.owner)} did not hold ${esc(n)} that week, so this game paid them nothing. The game itself was worth ${full.toFixed(1)}.">0.0</td>`;
   };
+  /* WITH A POINTS COLUMN the score is one number among numbers and reads right-aligned. Without
+     one it is the last column above the Schedule's Where column, so it starts where that starts. */
+  const scoreCls = sp ? 'num ' : '';
   const rows = played.filter(x => x.s).map(({g, s}) => `<tr>
     <td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
-    <td class="num ${s.pf > s.pa ? 'g' : 'b'}">${s.pf}–${s.pa}</td>
+    <td class="${scoreCls}${s.pf > s.pa ? 'g' : 'b'}">${s.pf}–${s.pa}</td>
     ${ptsCell(g, s)}</tr>`).join('');
   /* THE COLUMNS FOLLOW. A colgroup that still lists four widths for a three column table is the
      kind of thing that lines a score up under nothing. */
+  /* THE TWO TABLES IN THIS PANEL ARE ONE PICTURE. Casey, 18 Sep 2026: "the score is now far over
+     to the right and no longer aligns with the Where column on the schedule table below."
+     He is right, and I caused it: dropping the points column left the three remaining columns on
+     widths of their own, so Date and Opponent no longer lined up with the Schedule under them and
+     the score, being right-aligned, ended up against the panel edge. With no points column the
+     Results table takes the SCHEDULE's widths exactly, and the score aligns the way the Where
+     column does. A COLUMN THAT LINES UP WITH NOTHING IS THE SAME DEFECT AS A MERGED CELL. */
   const resCols = sp
     ? '<col style="width:26%"><col style="width:38%"><col style="width:20%"><col style="width:16%">'
-    : '<col style="width:30%"><col style="width:46%"><col style="width:24%">';
+    : '<col style="width:26%"><col style="width:52%"><col style="width:22%">';
   /* A row with no date at all is kept rather than dropped: unknown is not "already played".
      A row whose game has a final score is dropped, because it is in Results now. */
   const upcoming = (t.sched || []).filter(g => !liveDone(g))
@@ -10080,7 +10090,7 @@ function openLeagueScout(n){
       ${espnBtn ? `<div class="row" style="margin:8px 0">${espnBtn}</div>` : ''}
       ${rows ? `<h2>Results</h2><div class="scr"><table>
         <colgroup>${resCols}</colgroup>
-        <thead><tr><th>Date</th><th>Opponent</th><th class="num">Score</th>${sp
+        <thead><tr><th>Date</th><th>Opponent</th><th class="${scoreCls}">Score</th>${sp
           ? `<th class="num" title="${esc(sp.owner)} earned this from the game. A game played outside the weeks they held the team pays them nothing.">Their pts</th>`
           : ''}</tr></thead>
         <tbody>${rows}</tbody></table></div>${stillUnknown
