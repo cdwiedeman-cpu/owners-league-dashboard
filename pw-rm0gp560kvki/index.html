@@ -2565,7 +2565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '17 Sep 2026, 10:53 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '17 Sep 2026, 10:55 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7226,12 +7226,10 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       <td class="num d c-q">—</td>
       ${QKEYS().map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
       ${postCell(postOfSlot(g))}</tr>`;
-    if (open && !many) return head + `<tr class="slot-kid"><td></td>
-      <td colspan="${nCols - 1}" style="font-size:11px;line-height:1.5">${grpOnlyNote(g, o)}</td></tr>`;
     const lin = (!open) ? '' : g.spells.slice().reverse().map(t => kidRow(
       `<span class="d">↳↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
        teamLink(t.team, o.owner, t.from_week, t.to_week)}
-       <span class="d" style="font-size:11px">${grpSpan(t)} · ${lRec(t)}</span>${
+       <span class="d" style="font-size:11px">${spellTail(t, many)} · ${lRec(t)}</span>${
        t.held === false ? ' <span class="gtag t-before">TRADED AWAY</span>' : ''}`,
       'slot-kid' + (t.held === false ? ' g-before' : ''),
       `<span class="d">${(t.pts || 0).toFixed(1)}</span>`,
@@ -9172,14 +9170,11 @@ function weeklyCard(o, weeks){
         return own ? `<td class="num g">${((own.wk || {})[wk]).toFixed(1)}</td>` : cell(g.cur, wk);
       }).join('')}
       <td class="num"><b>${weeks.reduce((a, wk) => a + slotWeek(g, wk), 0).toFixed(1)}</b></td></tr>`;
-    if (open && !many)
-      return head + `<tr class="slot-kid"><td colspan="${weeks.length + 2}"
-        style="font-size:11px;line-height:1.5">${grpOnlyNote(g, o)}</td></tr>`;
     const kids = !open ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
         t.held === false ? ' g-before' : ''}">
       <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
         teamLink(t.team, o.owner, t.from_week, t.to_week)}
-        <span class="d" style="font-size:11px">${grpSpan(t)}</span></td>
+        <span class="d" style="font-size:11px">${spellTail(t, many)}</span></td>
       ${weeks.map(wk => cell(t, wk)).join('')}
       <td class="num d">${qTot(t).toFixed(1)}</td></tr>`).join('');
     return head + kids;
@@ -9422,6 +9417,19 @@ function grpSpan(t){
    able to click on the team name and see the slot lineage." With no trades a slot has one team
    and there is nothing to list -- but a row that does nothing when tapped is indistinguishable
    from one that is broken, and an absence is never an answer. It opens and says so. */
+/* AND IT OPENS INTO THE SAME SHAPE AS A TRADED ONE. Casey, 18 Sep 2026: "the way the schedule
+   opens up in the slots is great when there is a slot, but for teams like Detroit it's a little
+   line of very small text and you don't see that it's a link until you hover over it. Make it
+   look exactly like Virginia: indented, FBS in front of it, same size, with the explanation after
+   it in the smaller text."
+   He is right, and it is the same fault as a heading that names the wrong thing: a one-team slot
+   was drawn as a SENTENCE and a many-team slot as a ROW, so the eye learned one pattern and then
+   met another. There is one pattern now. The sentence became the tail of the row it was
+   explaining, which is where an explanation belongs. */
+function spellTail(t, many){
+  const span = grpSpan(t);
+  return many ? span : (span ? span + ' · held this slot all season' : 'held this slot all season');
+}
 function grpHeadLabel(o, g){
   const open = OPEN_SLOT === grpKey(o, g);
   const n = g.spells.length;
@@ -9431,15 +9439,6 @@ function grpHeadLabel(o, g){
     g.unplaced ? ' <span class="gtag t-hold" title="This team could not be matched to a roster slot from the ownership history — two moves in the same week cannot be told apart. Its points are shown on their own rather than dropped.">SLOT UNKNOWN</span>' : ''}`;
 }
 /* The one line a never-traded slot has to say. */
-/* IT TAKES AN OWNER NOW, because the one line it prints is the only way into a slot that has
-   never been traded, and that panel has to know whose points it is showing. */
-function grpOnlyNote(g, o){
-  return `<span class="d">↳↳</span> ${teamLink(g.cur.team, o && o.owner, g.cur.from_week,
-    g.cur.to_week)} <span class="d">has held this slot all season — ${
-    grpSpan(g.cur) || 'since the draft'}. Nothing has been traded into or out of it, so its
-    points are this team's alone. Tap the name for its schedule and results.</span>`;
-}
-
 function slotLabel(t){
   return `<span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${esc(t.team)}${
     t.held === false ? ' <span class="gtag t-before" title="No longer on this roster. The points are the ones earned while it was.">TRADED AWAY</span>' : ''}${
@@ -9514,14 +9513,11 @@ function summaryCard(o){
       ${qs.map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
       ${postCell(postOfSlot(g))}
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td></tr>`;
-    if (open && !many)
-      return head + `<tr class="slot-kid"><td colspan="${cats.length + qs.length + 4}"
-        style="font-size:11px;line-height:1.5;white-space:normal">${grpOnlyNote(g, o)}</td></tr>`;
     const kids = !open ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
         t.held === false ? ' g-before' : ''}">
       <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
         teamLink(t.team, o.owner, t.from_week, t.to_week)}
-        <span class="d" style="font-size:11px">${grpSpan(t)}</span></td>
+        <span class="d" style="font-size:11px">${spellTail(t, many)}</span></td>
       ${cats.map(c => catCell(t, c)).join('')}
       ${bonusCell()}
       ${qs.map(q => `<td class="num d c-q">${((t.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
