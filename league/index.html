@@ -2565,7 +2565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '17 Sep 2026, 11:33 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '17 Sep 2026, 11:44 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10022,6 +10022,13 @@ function openLeagueScout(n){
      roster and reading "your points" over Spielman's column would be a label contradicting the
      number under it. So the page asks who the reader is: their own slot says YOUR, somebody
      else's says THEIR, and the line above the table names the owner either way. */
+  /* THE COLUMN IS NAMED FOR WHAT IS IN IT, NOT FOR WHOSE IT IS. Casey, 18 Sep 2026: "Your pts is
+     a bad name for this. A good name would be Points Earned, or just leave it at Pts."
+     He is right and the reason is worth keeping: a heading that says WHOSE has to be re-decided
+     every time the reader changes, and it was already wrong once on the all-owners page. A
+     heading that says WHAT is true for everybody. Whose it is belongs in the line above the
+     table, which names them, and that line is one sentence rather than one word.
+     `spMine` stays, because the SENTENCE still has to know whether to say you or their name. */
   const spMine = !!(sp && sp.owner && typeof meName === 'function' && meName() === sp.owner);
   const ptsCell = (g, s) => {
     if (!sp) return '';
@@ -10049,7 +10056,7 @@ function openLeagueScout(n){
      Results table takes the SCHEDULE's widths exactly, and the score aligns the way the Where
      column does. A COLUMN THAT LINES UP WITH NOTHING IS THE SAME DEFECT AS A MERGED CELL. */
   const resCols = sp
-    ? '<col style="width:26%"><col style="width:38%"><col style="width:20%"><col style="width:16%">'
+    ? '<col style="width:24%"><col style="width:34%"><col style="width:19%"><col style="width:23%">'
     : '<col style="width:26%"><col style="width:52%"><col style="width:22%">';
   /* A row with no date at all is kept rather than dropped: unknown is not "already played".
      A row whose game has a final score is dropped, because it is in Results now. */
@@ -10099,7 +10106,7 @@ function openLeagueScout(n){
       ${rows ? `<h2>Results</h2><div class="scr"><table>
         <colgroup>${resCols}</colgroup>
         <thead><tr><th>Date</th><th>Opponent</th><th class="${scoreCls}">Score</th>${sp
-          ? `<th class="num" title="${spMine ? 'You' : esc(sp.owner)} earned this from the game. A game played outside the weeks ${spMine ? 'you' : 'they'} held the team pays ${spMine ? 'you' : 'them'} nothing.">${spMine ? 'Your' : 'Their'} pts</th>`
+          ? `<th class="num" title="${spMine ? 'You' : esc(sp.owner)} earned this from the game. A game played outside the weeks ${spMine ? 'you' : 'they'} held the team pays ${spMine ? 'you' : 'them'} nothing.">Pts earned</th>`
           : ''}</tr></thead>
         <tbody>${rows}</tbody></table></div>${stillUnknown
           ? `<div class="note y"><b>${stillUnknown} more game${stillUnknown === 1 ? ' has' : 's have'}
