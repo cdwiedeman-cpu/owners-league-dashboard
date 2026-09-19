@@ -1099,7 +1099,7 @@ details>summary::marker{color:var(--faint)}
          only. The reader is shown it once on its own, and this button is how they get back to
          it afterwards. -->
     <button type="button" class="statusbtn" id="newsbtn" hidden onclick="openNews()"
-      title="What has changed on this page, and how to use it."><span
+      title="What has changed in the app, and how to use it."><span
       class="dot"></span>What's New</button>
   </div>
   <!-- `scroller` DECLARES THAT THESE TWO OWN THEIR OVERFLOW. On a phone they scroll sideways
@@ -2364,8 +2364,11 @@ function newsButton(){
   if (!n) return;
   const unread = newsSeen() !== n.newest;
   b.classList.toggle('unread', unread);
-  b.title = unread ? 'Something on this page has changed. Read what it is and how to use it.'
-                   : 'What has changed on this page, and how to use it.';
+  /* THE SUBJECT IS THE APP, NOT THE PAGE. Casey, 19 Sep 2026: "it's not what's changed on this
+     page, it's here's what's changed in the app." A reader who is looking at Standings reads
+     "this page" as the Standings tab, and then goes looking for a change that is not there. */
+  b.title = unread ? 'Something in the app has changed. Read what it is and how to use it.'
+                   : 'What has changed in the app, and how to use it.';
 }
 function renderNews(){
   const n = newsData(); if (!n) return;
@@ -2381,7 +2384,7 @@ function renderNews(){
       <button class="modalx" onclick="closeNews()" title="Close" aria-label="Close">&times;</button>
     </div>
     <div>
-      <p class="note" style="margin-top:0">Here is what has changed on this page. Tap
+      <p class="note" style="margin-top:0">Here is what has changed in the app. Tap
         <b>What's New</b> to read it again whenever you like.</p>
       ${body}
       <div class="row" style="margin-top:16px">
@@ -2660,7 +2663,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '18 Sep 2026, 2:39 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '18 Sep 2026, 9:36 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
