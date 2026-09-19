@@ -2370,6 +2370,18 @@ function newsButton(){
   b.title = unread ? 'Something in the app has changed. Read what it is and how to use it.'
                    : 'What has changed in the app, and how to use it.';
 }
+/* THE BUTTON EXPLAINS ITSELF, ON EVERY ENTRY THERE WILL EVER BE. Casey, 19 Sep 2026: "should we
+   also say on every what's new pop up that we tell them at the bottom, use the What's New button
+   to see this again?" and "you should probably add the What's New button to the pop-up, because
+   that's something that's new and we should tell them what it is and where to look for it."
+   It is written in this function rather than as an entry in whats_new.py, because it is true of
+   every entry rather than of one of them. It comes AFTER the news rather than before it: a reader
+   who has just finished reading is the one asking how to get back to this.
+   A NOTE LIKE THIS ONE GOES OUTSIDE THE BACKTICKS. Written inside the markup it describes, a
+   block comment is not a comment at all: it is text in a template literal, and it renders on the
+   page for the reader to see. The parse check passes either way, because it is valid JavaScript.
+   The same goes for writing the closing marker of a block comment INSIDE one, which ends it
+   early and turns the rest of the sentence into code. Both of those happened writing this. */
 function renderNews(){
   const n = newsData(); if (!n) return;
   const li = (rows) => (rows || []).map(x => `<li>${esc(x)}</li>`).join('');
@@ -2384,9 +2396,14 @@ function renderNews(){
       <button class="modalx" onclick="closeNews()" title="Close" aria-label="Close">&times;</button>
     </div>
     <div>
-      <p class="note" style="margin-top:0">Here is what has changed in the app. Tap
-        <b>What's New</b> to read it again whenever you like.</p>
+      <p class="note" style="margin-top:0">Here is what has changed in the app.</p>
       ${body}
+      <div class="wn">
+        <h3>Finding This Again</h3>
+        <p><b>What's New</b> is new as well, and this panel is what it opens. You will find the
+          button beside <b>Status</b>. It carries a green dot whenever something has changed that
+          you have not read yet, and you can tap it to read any of this again.</p>
+      </div>
       <div class="row" style="margin-top:16px">
         <button class="f primary" onclick="closeNews()">Got It</button>
       </div>
@@ -2663,7 +2680,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '18 Sep 2026, 9:36 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '18 Sep 2026, 9:40 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
