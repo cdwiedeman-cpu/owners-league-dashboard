@@ -115,6 +115,10 @@ header h1{color:var(--brandink);font-weight:800;flex:1 1 auto;min-width:130px;ma
 #news p{margin:0 0 9px;font-size:13.5px;line-height:1.6;color:var(--ink)}
 #news ol{margin:0;padding-left:20px}
 #news ol li{font-size:13.5px;line-height:1.6;color:var(--ink);margin:0 0 7px}
+/* The line that opens the earlier changes. Full width so it reads as a section rather than as a
+   button floating beside the text, and tall enough to tap without aiming. */
+#news #newsOlder{width:100%;min-height:42px;justify-content:center;font-weight:700}
+#news #newsOlderBox .wn:first-child{border-top:0;margin-top:12px;padding-top:0}
 .statusbtn .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
  background:var(--brandacc);margin-right:6px;vertical-align:middle}
 /* THE LIGHT, ON NAVY. Green while the scores are arriving, RED when they are not -- and red
@@ -2390,13 +2394,30 @@ function renderNews(){
      `intro` is carried by the ONE entry that introduced this panel, and the payload sets the flag
      only while that entry is still the newest. Ship a second entry and the sentence goes, with
      nothing to remember and nothing to delete. */
+  /* THE NEWEST IS OPEN, THE REST ARE FOLDED AWAY BEHIND ONE LINE. Casey, 19 Sep 2026, asked
+     whether the panel replaces its contents each time or keeps a running list. It keeps them, and
+     that is right until about December, when a reader opening the app after a month away would
+     have to scroll past September to reach October. He picked this: "show the newest one open and
+     the older ones collapsed under a line they can tap."
+     COLLAPSED EVERY TIME THE PANEL OPENS, because this markup is rebuilt on each open. That is
+     what should happen: the reason the panel opened is the thing at the top of it. */
   const li = (rows) => (rows || []).map(x => `<li>${esc(x)}</li>`).join('');
-  const body = n.entries.map(e => `<div class="wn">
+  const one = e => `<div class="wn">
       <h2>${esc(e.title)}</h2>
       ${(e.what || []).map(x => `<p>${esc(x)}</p>`).join('')}
       ${(e.how || []).length ? `<h3>How to Use It</h3><ol>${li(e.how)}</ol>` : ''}
       ${e.also ? `<p class="note">${esc(e.also)}</p>` : ''}
-    </div>`).join('');
+    </div>`;
+  const rows = n.entries || [];
+  const older = rows.slice(1);
+  const body = rows.length ? one(rows[0]) : '';
+  const back = older.length ? `<div class="wn">
+      <button class="f" id="newsOlder" aria-expanded="false" aria-controls="newsOlderBox"
+        onclick="newsShowOlder()"
+        title="Everything that changed before this, newest first.">Earlier Changes (${
+          older.length})</button>
+      <div id="newsOlderBox" hidden>${older.map(one).join('')}</div>
+    </div>` : '';
   el('news').innerHTML = `<div class="modalbox">
     <div class="modalhd"><div><h2>What's New</h2></div>
       <button class="modalx" onclick="closeNews()" title="Close" aria-label="Close">&times;</button>
@@ -2404,6 +2425,7 @@ function renderNews(){
     <div>
       <p class="note" style="margin-top:0">Here is what has changed in the app.</p>
       ${body}
+      ${back}
       <div class="wn">
         <h3>Finding This Again</h3>
         <p>${n.intro ? `<b>What's New</b> is new as well, and this panel is what it opens. ` : ''
@@ -2416,6 +2438,17 @@ function renderNews(){
       </div>
     </div></div>`;
 }
+/* ONE WAY IN AND NO WAY BACK, deliberately. A reader who opened the earlier changes wanted to
+   read them, and folding them away again while they are half way down is a control fighting them.
+   Closing the panel resets it, because the markup is rebuilt on the next open. */
+function newsShowOlder(){
+  const box = el('newsOlderBox'), btn = el('newsOlder');
+  if (!box || !btn) return;
+  box.hidden = false;
+  btn.hidden = true;
+  box.setAttribute('aria-hidden', 'false');
+}
+
 function openNews(){
   if (!newsData()) return;
   renderNews();
@@ -2687,7 +2720,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '18 Sep 2026, 9:56 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '18 Sep 2026, 10:09 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
