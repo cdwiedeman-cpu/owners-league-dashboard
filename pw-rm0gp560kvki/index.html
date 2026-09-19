@@ -2384,6 +2384,12 @@ function newsButton(){
    early and turns the rest of the sentence into code. Both of those happened writing this. */
 function renderNews(){
   const n = newsData(); if (!n) return;
+  /* THE FIRST SENTENCE IS ONLY TRUE ONCE. Casey, 19 Sep 2026: "after this week, will the Finding
+     This Again section not say What's New is new as well? Because it's only new this week ... in
+     future What's New articles it should just have the second sentence."
+     `intro` is carried by the ONE entry that introduced this panel, and the payload sets the flag
+     only while that entry is still the newest. Ship a second entry and the sentence goes, with
+     nothing to remember and nothing to delete. */
   const li = (rows) => (rows || []).map(x => `<li>${esc(x)}</li>`).join('');
   const body = n.entries.map(e => `<div class="wn">
       <h2>${esc(e.title)}</h2>
@@ -2400,9 +2406,10 @@ function renderNews(){
       ${body}
       <div class="wn">
         <h3>Finding This Again</h3>
-        <p><b>What's New</b> is new as well, and this panel is what it opens. You will find the
-          button beside <b>Status</b>. It carries a green dot whenever something has changed that
-          you have not read yet, and you can tap it to read any of this again.</p>
+        <p>${n.intro ? `<b>What's New</b> is new as well, and this panel is what it opens. ` : ''
+        }You will find the <b>What's New</b> button beside <b>Status</b>. It carries a green dot
+          whenever something has changed that you have not read yet, and you can tap it to read
+          any of this again.</p>
       </div>
       <div class="row" style="margin-top:16px">
         <button class="f primary" onclick="closeNews()">Got It</button>
@@ -2680,7 +2687,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '18 Sep 2026, 9:40 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '18 Sep 2026, 9:56 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
