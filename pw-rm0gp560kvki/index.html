@@ -2824,7 +2824,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 11:37 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 11:38 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4512,6 +4512,12 @@ function weeksLeft(t, from){
   return last;
 }
 
+/* THE FLOOR A LONGER HOLD HAS TO CLEAR, in league points. Casey chose it on 20 Sep 2026 after
+   seeing 1.0, 1.5, 2.0 and 2.5 run against the teams he named: "I think showing Lamar as eight
+   weeks probably makes more sense, actually." AT MODULE SCOPE ON PURPOSE -- the copy that tells
+   the reader the bar reads this, and so does the suite. A number written twice is a number that
+   will disagree with itself. */
+const LONG_FLOOR = 2.0;
 function recommend(t, inc, minEdge){
   minEdge = minEdge == null ? 0.15 : minEdge;
   const from = swapFrom(inc);
@@ -4545,7 +4551,6 @@ function recommend(t, inc, minEdge){
    * 20 Sep 2026: "I think showing Lamar as eight weeks probably makes more sense, actually."
    * At 2.0: Harvard KEEP +3.10, Idaho St KEEP +2.99, Alabama St KEEP +2.19, Lamar 8w +2.13,
    * Marist back to 3w, Valparaiso and Albany AVOID. KEEPs fall from 120 to 52. */
-  const LONG_FLOOR = 2.0;
   const ladder = [];
   for (let w = minW; w <= maxW; w++) ladder.push(gainAt(w));
   const mand = ladder[0];
@@ -4947,7 +4952,7 @@ function availTable(kind){
         over ${inc.n} is largest. A team worth holding to the end of the regular season reads
         <b>KEEP</b>.
         <br><b>A hold longer than ${DATA.hold_games} games has to be worth at least
-        2.00 points.</b> Below that it is a coin flip, not a plan, so the advice falls back to the
+        ${LONG_FLOOR.toFixed(2)} points.</b> Below that it is a coin flip, not a plan, so the advice falls back to the
         ${DATA.hold_games} games you are obliged to hold anyway. The ${DATA.hold_games}-game hold
         itself has no such bar, because it is the cost of taking the team at all rather than a
         recommendation about length.
