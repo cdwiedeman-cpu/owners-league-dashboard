@@ -475,7 +475,13 @@ catch (e) {}
 'use strict';
 
 var MAX_ROWS  = 10;      // Casey, 9 Sep 2026: "I do think 10 rows is plenty."
-var MAX_DROPS = 4;       // "four drops each ... that should be enough."
+/* FIVE. Casey, 9 Sep 2026: "four drops each ... that should be enough." Then, 20 Sep 2026, after
+   building his own list: "maybe add a fifth drop option. We only have four. I think we need to
+   let it be five, just because I almost hit that limit of four." A list that runs out is a trade
+   that does not go through, and the only cost of a longer one is a line on the card.
+   THIS IS THE ONE STORE. The page reads P.MAX_DROPS, the settle reads it, and every sentence
+   that prints a number prints this one. */
+var MAX_DROPS = 5;
 
 /* ---------------------------------------------------------------------------------------------
  * A COIN FLIP THAT CANNOT BE RE-RUN IS NOT AUDITABLE.
@@ -3080,6 +3086,18 @@ function unsubmit(){
 function addRow(cond, drops){
   var rows = myRows().slice();
   if (rows.length >= P.MAX_ROWS) return;
+  /* EVERY NEW TRADE STARTS FROM THE TEAMS THE EARLIER ONES ALREADY OFFERED, conditional or not.
+     Casey, 20 Sep 2026: "it should fire on no matter what, because if you're doing no matter
+     what, then you need to add all the teams before it ... so I need to drop all those teams
+     that I've already put in."
+     He is right, and an unconditional trade needs it MORE than a backup does. It runs whatever
+     happened above it, so by the time it runs an earlier trade may already have taken the team
+     it was going to give up. A short list there is a trade that does not go through. */
+  if (!drops || !drops.length){
+    var above = [];
+    for (var k = 1; k <= rows.length; k++) above.push(k);
+    drops = dropsFrom(above);
+  }
   rows.push({pickup: '', drops: (drops && drops.length) ? drops.slice() : [''],
              cond: cond || {type: 'always'}});
   setRows(rows); render();
@@ -3169,16 +3187,10 @@ function editRow(i, field, v, j){
   else if (field === 'drop'){ row.drops = row.drops.slice(); row.drops[j] = v;
     row.drops = row.drops.filter(function(x, k){ return x || k === 0; });
     if (row.drops.length < P.MAX_DROPS && row.drops[row.drops.length - 1]) row.drops.push(''); }
-  else if (field === 'condtype'){
-    row.cond = {type: v, rows: condRowsFor(row.cond, i)};
-    /* THE SAME PREFILL THE BUTTON DOES, for somebody who added an ordinary trade and then
-       decided it should wait on the ones above it. Only on a row with NO drops typed in yet, so
-       it can never overwrite a choice somebody made. */
-    if (v !== 'always' && !(row.drops || []).filter(Boolean).length){
-      var pre = dropsFrom(row.cond.rows);
-      if (pre.length) row.drops = pre;
-    }
-  }
+  /* NO PREFILL HERE ANY MORE. Every new trade arrives with the earlier teams already on it, so
+     a row that is empty by the time somebody sets a condition is empty because they cleared it.
+     Filling it again would undo that. */
+  else if (field === 'condtype'){ row.cond = {type: v, rows: condRowsFor(row.cond, i)}; }
   else if (field === 'condrow'){
     /* TOGGLE, BECAUSE A CONDITION CAN NAME SEVERAL TRADES. Pressing a trade that is already
        named takes it off the list, and the LAST one cannot be taken off -- a condition with
