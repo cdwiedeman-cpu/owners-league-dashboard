@@ -3305,33 +3305,43 @@ function viewTrades(){
         + '<div class="row" style="justify-content:center;margin-bottom:6px">'
         + '<button class="pri" onclick="addRow()">Add a Trade</button></div>';
     } else {
-      /* THE NEXT BUTTON IS WHERE THE EYE ALREADY IS.
+      /* THE NEXT BUTTON IS WHERE THE EYE ALREADY IS -- AND THERE IS ONLY ONE OF THEM.
        *
        * Casey, 15 Sep 2026: "Bob kept scrolling back up to the top to try to add another trade."
-       * A bar at the bottom of the screen did not fix it and neither would a bigger label. The
-       * reason is simpler: he finished a trade and looked for the next step DIRECTLY UNDER THE
-       * THING HE HAD JUST FINISHED. There was nothing there, because the only Add button sat
-       * after all four of them.
-       * So there is one after EVERY trade. It costs a line of screen and it means the next step
-       * is never somewhere else. "We're dealing with a bunch of old people that don't know how to
-       * use computers very well" -- that is not a reason to explain harder, it is a reason to put
-       * the button where the hand already is.
+       * A bar at the bottom of the screen did not fix it and neither would a bigger label. He
+       * finished a trade and looked for the next step DIRECTLY UNDER THE THING HE HAD JUST
+       * FINISHED, and there was nothing there. So the add button sits under the LAST trade,
+       * which is the one somebody has just finished.
+       *
+       * IT USED TO SIT UNDER EVERY TRADE, and the ones in the middle read "+ Add a Trade Here".
+       * THEY DID NOT ADD A TRADE THERE. `addRow()` appends, so the new trade landed at the
+       * bottom whichever button was pressed, and the label was simply false. Casey found it on
+       * 20 Sep 2026: "there's a button in between trade one and trade two that says add a trade
+       * here, I click that and then it puts a third trade at the bottom ... that's going to
+       * confuse people. I don't know what that is for to begin with."
+       *
+       * AND INSERTING FOR REAL IS NOT THE FIX, which he worked out in the same breath: "if we're
+       * trying to allow a reordering we should allow a reordering of trades, but reordering
+       * trades would then impact the way that they've defined their drops ... I don't think that
+       * works." A trade's position is not decoration. The order decides which drop is still
+       * available by the time a later trade runs, and every condition points at a row NUMBER.
+       * Moving a trade silently rewrites both. So the list is built top to bottom, and a mistake
+       * in the middle is fixed with Remove Trade.
        */
       h += rows.map(function(r, i){
         var last = (i === rows.length - 1);
         return rowForm(r, i, free, mine, k)
-          + (rows.length < P.MAX_ROWS
-              ? '<div class="row addrow"><button class="add" onclick="addRow()">'
-                + '+ Add ' + (last ? 'Another Trade' : 'a Trade Here') + '</button>'
-                /* THE BACKUP BUTTON ONLY SITS UNDER THE LAST TRADE, because that is the trade it
-                   backs up. Putting one under every trade would ask the reader which row the new
-                   one follows, which is the question this button exists to answer for them. */
-                + (last
-                    ? '<button class="add bk" onclick="addBackupRow()" title="Adds a trade that '
-                      + 'is only tried if trade ' + rows.length + ' does not go through">'
-                      + '+ Add a Backup Trade</button>'
-                    : '')
-                + '<span class="note">' + (i + 1) + ' of ' + rows.length + ' so far</span></div>'
+          /* BOTH BUTTONS, UNDER THE LAST TRADE, AND NOWHERE ELSE. The backup one belongs there
+             because that is the trade it backs up; the plain one belongs there because that is
+             the trade somebody has just finished. */
+          + (last && rows.length < P.MAX_ROWS
+              ? '<div class="row addrow">'
+                + '<button class="add" onclick="addRow()">+ Add Another Trade</button>'
+                + '<button class="add bk" onclick="addBackupRow()" title="Adds a trade that is '
+                + 'only tried if trade ' + rows.length + ' does not go through">'
+                + '+ Add a Backup Trade</button>'
+                + '<span class="note">' + rows.length + ' of ' + P.MAX_ROWS + ' trades</span>'
+                + '</div>'
               : '');
       }).join('');
       /* SEND IS THE END OF THE JOB, so it is the biggest thing on the page and it is on its own.
