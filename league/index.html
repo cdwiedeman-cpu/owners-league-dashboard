@@ -2823,7 +2823,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:20 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:38 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4208,9 +4208,51 @@ function bookPrices(g){
   return gap >= 0 && gap <= BOOK_DAYS;
 }
 
+/* ---- WHAT A TEAM IS WORTH AFTER THE REGULAR SEASON ENDS -------------------------------------
+ * Casey, 20 Sep 2026, working out what a keeper even is: "Harvard is clearly that team because
+ * we think they're projected to probably win their division. Idaho State is probably a team that
+ * is going to be projected to make the playoffs. Lamar is probably borderline."
+ * He is describing the POSTSEASON, and until tonight the Pickups tab did not count it at all.
+ * `post_pts` on the payload is the DRAFT BOARD's August number and must not be used: it is
+ * missing for the 57 FCS teams the draft board never carried, where it reads 0.0 by default.
+ * `teamProjection()` is the live one. It is what the Standings projection runs on, it rebuilds
+ * the win distribution from current results and current game prices every time, and it covers
+ * all 264 college teams with nothing missing. Measured 20 Sep 2026: Lamar 1.00 where the draft
+ * board said 0.00, Alabama St 0.93, Harvard 2.39, Idaho St 3.83, Minnesota 1.25.
+ * MEMOISED, because it integrates a Poisson-binomial over Gauss-Hermite nodes per team and the
+ * available board asks for it 264 times per render. Cleared whenever the prices move. */
+const POST_CACHE = new Map();
+function postOf(name){
+  if (POST_CACHE.has(name)) return POST_CACHE.get(name);
+  let v = null;
+  try { const pr = teamProjection(name, 0); v = (pr && pr.post != null) ? pr.post : null; }
+  catch (e) { v = null; }
+  POST_CACHE.set(name, v);
+  return v;
+}
+
+/* HOW LONG THE EASY RUN LASTS. Casey, 20 Sep 2026: "if I'm trying to simply find a team that I
+   can pick up for three games that should win three games ... it could also be three games, four
+   games, maybe five games, maybe six games. If their schedule is that easy ... that's great as
+   well because it gives me flexibility."
+   So it is the number of games from the day the slot frees up that this team is FAVOURED in,
+   counted straight through and stopping at the first one it is not. A bye is not a loss and does
+   not break the run; it is not a game either, so it does not count toward it. */
+function easyRun(t, from){
+  let k = 0;
+  for (const g of (t.sched || [])){
+    if (g.bye) continue;
+    if (from && g.d <= from) continue;
+    if (g.p == null || g.p < 0.5) break;
+    k++;
+  }
+  return k;
+}
+
 /* Re-price every UNPLAYED game in place, keeping the August numbers alongside so the panels can
    show both and so turning this off is exact rather than approximate. */
 function applyRerate(){
+  POST_CACHE.clear();
   const src = () => (RERATE_ON ? RERATE : RERATE_BUILT);
   for (const t of DATA.teams){
     const adj = src().get(t.n) || 0;
@@ -4669,12 +4711,49 @@ function dropOrderNote(list){
 
 /* Per POOL, because the two tables are read for different reasons and a sort chosen on the
    college board has no business reordering the eight NFL rows. */
-let PSORT = {COL: {key: 'gain3', dir: -1}, NFL: {key: 'gain3', dir: -1}};
+/* ---- TWO DIFFERENT QUESTIONS, TWO VIEWS OF THE SAME LIST ------------------------------------
+ * Casey, 20 Sep 2026: "maybe we need to be separating this out into two completely different
+ * views in terms of pickups. One view is ... if I'm trying to simply find a team that I can pick
+ * up for three games that should win three games. And then I try to find a keeper the next time
+ * I try to trade that slot. Versus teams that are actually worth keeping."
+ * A SWITCH RATHER THAN TWO MORE SUB-TABS, because the question is orthogonal to the pool: he
+ * wants streamers and keepers in both College and NFL, and four tabs would say otherwise.
+ * It changes the default sort and two of the nine columns. Everything else is the same board,
+ * because it IS the same board -- what changes is which number decides the order. */
+let PICKMODE = (() => {
+  try { const v = localStorage.getItem('rfl_pickmode'); if (v === 'keep' || v === 'stream') return v; }
+  catch (e) {}
+  return 'stream';
+})();
+function setPickMode(m){
+  if (PICKMODE === m) return;
+  PICKMODE = m;
+  try { localStorage.setItem('rfl_pickmode', m); } catch (e) {}
+  /* THE SORT FOLLOWS THE QUESTION. Leaving it on the other view's column would open Keepers
+     ranked by a three-week number, which is the thing this switch exists to stop. */
+  PSORT = {COL: {key: PICK_DEFAULT[m], dir: -1}, NFL: {key: PICK_DEFAULT[m], dir: -1}};
+  renderPick();
+}
+const PICK_DEFAULT = {stream: 'gain3', keep: 'keepgain'};
+function pickModeBar(){
+  const opt = (m, label, tip) => `<button class="tab rrbtn${PICKMODE === m ? ' on' : ''}"
+      data-pickmode="${m}" onclick="setPickMode('${m}')" aria-pressed="${PICKMODE === m}"
+      title="${tip}">${label}</button>`;
+  return `<span class="rrgroup">
+    <span class="rrlab" title="The same teams, ranked for two different jobs. It changes the order and two columns; it filters nothing out.">Looking For</span>
+    ${opt('stream', 'Streamers',
+          'A team for the three games you are obliged to hold, ranked on what those three weeks are worth. Easy Run says how many games from now it is favoured in, so a run longer than three is a team you can keep a while without deciding anything.')}
+    ${opt('keep', 'Keepers',
+          'A team worth holding to the end, ranked on the whole rest of the season INCLUDING the postseason. Post is what the playoffs, a conference title and a bowl are worth to it, recomputed every week from results.')}
+  </span>`;
+}
+let PSORT = {COL: {key: PICK_DEFAULT[PICKMODE], dir: -1},
+             NFL: {key: PICK_DEFAULT[PICKMODE], dir: -1}};
 let PMORE = {COL: 25, NFL: 8};
 let PUPSET = false;
 const PSTEP = {COL: 25, NFL: 8};
 function setPSort(kind, key){
-  const cur = PSORT[kind] || {key: 'gain3', dir: -1};
+  const cur = PSORT[kind] || {key: PICK_DEFAULT[PICKMODE], dir: -1};
   /* A SECOND TAP TURNS IT ROUND. A first tap on a new column opens on the useful end: biggest
      first for every number, A to Z for the name. */
   PSORT[kind] = (cur.key === key) ? {key: key, dir: -cur.dir}
@@ -4783,6 +4862,9 @@ function availTable(kind){
   const incB3 = mine ? weekWindow(mine, from, HOLD_WKS)
                      : {pts: 0, games: 0, byes: 0, weeks: 0, p: null};
   const incRest = mine ? windowPts(mine, from, null) : {pts: 0, games: 0};
+  /* WHAT THE TEAM HE WOULD DROP IS WORTH AFTER THE REGULAR SEASON. It has to be subtracted, or
+     every candidate is credited with a postseason the incumbent also has. Minnesota is 1.25. */
+  const incPost = mine ? postOf(mine.n) : 0;
 
   const _frozenOut = DATA.teams.filter(t => t.owner == null && want(t) && t.claim_ok && !canClaim(t));
   FROZEN_NOTE = frozenNote(_frozenOut);
@@ -4792,7 +4874,15 @@ function availTable(kind){
       const r = windowPts(t, from, null);
       /* Both sides are the SAME three weeks, so a bye on either side costs its owner a week and
          the difference is like for like. */
-      return {t, b, r, p30: b.p,
+      /* THE KEEP NUMBER IS THE WHOLE REST OF THE SEASON PLUS THE POSTSEASON, on both sides.
+         The postseason is paid to whoever holds the team at the end, so it belongs to a hold
+         that runs to the end and to no shorter one -- which is exactly what makes it the number
+         that separates a keeper from a streamer. */
+      const post = postOf(t.n);
+      const keepGain = (r.games >= DATA.hold_games && post != null && incPost != null)
+        ? (r.pts + post) - (incRest.pts + incPost) : null;
+      return {t, b, r, p30: b.p, post: post, keepGain: keepGain,
+              run: easyRun(t, from),
               gain3: b.weeks ? b.pts - incB3.pts : null,
               gainR: r.games >= DATA.hold_games ? r.pts - incRest.pts : null,
               skipped: (t.sched || []).filter(g => !g.bye && g.ep != null && g.d <= from).length};
@@ -4804,7 +4894,7 @@ function availTable(kind){
   /* SORTED ON THE RAW FIGURES, never on what the cell prints. Two teams 0.004 apart print the
      same number and are not tied, and an ordering taken from the rounded value puts them in
      whichever order the filter happened to leave them in. */
-  const ps = PSORT[kind] || {key: 'gain3', dir: -1};
+  const ps = PSORT[kind] || {key: PICK_DEFAULT[PICKMODE], dir: -1};
   const val = {
     team:   x => x.t.n,
     p30:    x => (x.b.byes ? 0 : (x.p30 == null ? -1 : x.p30)),
@@ -4816,7 +4906,11 @@ function availTable(kind){
        upset each are not equal if one of them was a three-touchdown underdog. */
     ups:    x => { const w = upsetWins(x.t);
                    return w.length * 1000 - (w.length ? Math.min(...w.map(u => u.line)) : 0); },
-  }[ps.key] || (x => x.gain3);
+    post:   x => (x.post == null ? -1 : x.post),
+    keepgain: x => (x.keepGain == null ? -Infinity : x.keepGain),
+    run:    x => x.run,
+  }[ps.key] || (x => (PICKMODE === 'keep' ? (x.keepGain == null ? -Infinity : x.keepGain)
+                                          : x.gain3));
   list = list.slice().sort((a, b) => {
     const va = val(a), vb = val(b);
     const c = (typeof va === 'string') ? String(va).localeCompare(String(vb))
@@ -4845,7 +4939,9 @@ function availTable(kind){
      of a long table is only found by the reader who has already scrolled past the thing
      it was meant to explain. It sits ahead of the scroll container so it does not scroll
      sideways with the table it is describing. */
-  return `${FROZEN_NOTE}<div class="scrhint"><b>Swipe</b> the table sideways to see Bank 3, Season pts, Season gain and Upsets.</div>
+  return `${FROZEN_NOTE}<div class="row" style="margin:0 0 10px;align-items:center;gap:10px">${
+      pickModeBar()}</div>
+    <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
     <div class="scr" data-avail="${kind}"><table>
     <!-- The Cmp column is a FIXED pixel width, not a percentage: it holds a 26px control and a
          percentage of a narrow phone table is smaller than the button inside it. -->
@@ -4868,13 +4964,16 @@ function availTable(kind){
       <th class="num c-p30 ${SH('p30')}" onclick="setPSort('${kind}','p30')" title="Probability it wins EVERY game in the three weeks the hold occupies your roster slot, starting from ${from} — the day ${inc.n}'s slot frees up. Those are the same three weeks Bank 3 adds up. A BYE inside them is a week that banks nothing and cannot be won, so it makes a sweep impossible and the figure reads 0% with BYE beside it. Changing the team above changes this.">3-0${AR('p30')}</th>
       <th class="num c-bank ${SH('bank')}" onclick="setPSort('${kind}','bank')" title="Expected league points over the THREE WEEKS from ${from} that the hold occupies your roster slot. A bye inside them contributes nothing, so a team with one banks only the games it actually plays — that is the cost of the bye. Games it plays before ${from} belong to its current owner and are not counted.">Bank 3${AR('bank')}</th>
       <th class="num c-gain ${SH('gain3')}" onclick="setPSort('${kind}','gain3')" title="Bank 3 minus what ${inc.n} earns over THE SAME THREE WEEKS. Both sides start on ${from} and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.">Gain 3${AR('gain3')}</th>
-      <th class="num c-season hide-s ${SH('season')}" onclick="setPSort('${kind}','season')" title="Expected points from ${from} to the end of the regular season.">Season<br>pts${AR('season')}</th>
-      <th class="num c-sgain hide-s ${SH('sgain')}" onclick="setPSort('${kind}','sgain')" title="Season points minus what ${inc.n} earns over the same stretch. Casey, 31 Aug 2026: a column called just Gain beside one called Gain 3 says nothing about which is which.">Season<br>gain${AR('sgain')}</th>
+      ${PICKMODE === 'keep'
+        ? `<th class="num c-season hide-s ${SH('post')}" onclick="setPSort('${kind}','post')" title="Expected points after the regular season ends: the playoff ladder, a conference title, a bowl. Paid to whoever holds the team then, so it counts for a hold that runs to the end and for no shorter one. Recomputed every week from results, not read off the draft board.">Post${AR('post')}</th>
+           <th class="num c-sgain hide-s ${SH('keepgain')}" onclick="setPSort('${kind}','keepgain')" title="The whole rest of the season INCLUDING the postseason, minus what ${inc.n} earns over the same stretch including its own postseason. This is the number that separates a keeper from a team with a soft October.">Keep<br>Gain${AR('keepgain')}</th>`
+        : `<th class="num c-season hide-s ${SH('run')}" onclick="setPSort('${kind}','run')" title="How many games from ${from} this team is favoured in, straight through, stopping at the first one it is not. Three is enough for the hold. More than three is a team you can keep a while without having to decide anything. A bye does not break the run and does not count toward it.">Easy<br>Run${AR('run')}</th>
+           <th class="num c-sgain hide-s ${SH('season')}" onclick="setPSort('${kind}','season')" title="Expected points from ${from} to the end of the regular season. The postseason is not in it — press Keepers for that.">Season<br>pts${AR('season')}</th>`}
       <th class="num c-ups hide-s ${SH('ups')}" onclick="setPSort('${kind}','ups')" title="How many games this team has won as an underdog, measured against the pre-game line. A team the market keeps getting wrong is a team that may be better than every projection on this page thinks. Tap to sort by it.">Upsets${AR('ups')}</th>
       <th class="c-then" title="How long to hold this team. AVOID means every length loses points against ${inc.n}. Otherwise it is the number of WEEKS where the gain over ${inc.n} peaks — the same weeks Gain 3 measures, so the shortest recommendation and Gain 3 are the same number. A team with a bye in its opening stretch needs 4 weeks to play its 3 games, so its minimum reads 4w. Recomputed when you change the team above.">Advice</th></tr></thead><tbody>` +
     shown.map(x => {
       const t = x.t, rec = recommend(t, inc);
-      const g3 = x.gain3, gr = x.gainR;
+      const g3 = x.gain3, gr = x.gainR, kg = x.keepGain;
       /* EVERY ROW CARRIES A +. It used to appear only where the swap was already legal, which
          meant that on a cold open -- comparison defaulting to a college team -- the whole NFL
          list showed inert dots, and the reason was hidden in a tooltip. Casey, 31 Aug 2026:
@@ -4909,8 +5008,15 @@ function availTable(kind){
             x.b.byes === 1 ? 'is a bye' : 'are byes'} — a week with no game banks nothing and cannot be won, so a sweep is off the table and this reads 0%. It still banks ${x.b.pts.toFixed(2)} from the ${x.b.games} game${x.b.games === 1 ? '' : 's'} it does play; judge it on Bank 3 and Gain 3, not on the sweep.">BYE</span>` : ''}</td>
         <td class="num c-bank">${x.b.pts.toFixed(2)}</td>
         <td class="num c-gain"><b class="${g3 > 0.3 ? 'g' : g3 < 0 ? 'b' : 'y'}">${g3 >= 0 ? '+' : ''}${g3.toFixed(2)}</b></td>
-        <td class="num d c-season hide-s">${x.r.pts.toFixed(2)}</td>
-        <td class="num c-sgain hide-s"><span class="${gr > 0.5 ? 'g' : gr < 0 ? 'b' : 'd'}">${gr == null ? '—' : (gr >= 0 ? '+' : '') + gr.toFixed(2)}</span></td>
+        ${PICKMODE === 'keep'
+          ? `<td class="num c-season hide-s"><span class="${x.post == null ? 'd'
+                : x.post >= 2 ? 'g' : x.post >= 0.75 ? 'y' : 'd'}">${
+              x.post == null ? '—' : x.post.toFixed(2)}</span></td>
+             <td class="num c-sgain hide-s"><b class="${kg == null ? 'd'
+                : kg > 0.5 ? 'g' : kg < 0 ? 'b' : 'y'}">${
+              kg == null ? '—' : (kg >= 0 ? '+' : '') + kg.toFixed(2)}</b></td>`
+          : `<td class="num c-season hide-s"><span class="${x.run >= 5 ? 'g' : x.run >= 3 ? 'y' : 'd'}">${x.run}</span></td>
+             <td class="num d c-sgain hide-s">${x.r.pts.toFixed(2)}</td>`}
         <td class="num c-ups hide-s">${(() => { const w = upsetWins(t);
           return w.length ? `<b class="g" title="${esc(w.map(upsetSay).join('\n'))}">${w.length}</b>`
                           : '<span class="d">0</span>'; })()}</td>
@@ -7681,8 +7787,16 @@ async function loadSeason(){
     if (cached){ SEASON = cached.map; SEASON_SRC = cached; }
     else { SEASON = bakedSeason(); SEASON_SRC = null; }
     SEASON_LIVE = false;
+    POST_CACHE.clear();
   } else {
     SEASON = pts;
+    /* THE POSTSEASON DEPENDS ON WINS ALREADY BANKED, so a value worked out before the results
+       arrived is wrong and must not be kept. The board renders once on load, which fills the
+       cache with SEASON still null -- every team read one win short, and Harvard's postseason
+       came out 1.73 instead of 2.39. Cleared the moment the results land, on both paths.
+       A CACHE IS ONLY SAFE WHEN EVERYTHING IT DEPENDS ON CLEARS IT. This one depends on two
+       things: the game prices, which applyRerate clears it for, and the results. */
+    POST_CACHE.clear();
     SEASON_LIVE = true;
     SEASON_SRC = null;
     /* A SHORT SWEEP IS NOT WORTH REMEMBERING. If any week-scoreboard failed these totals are
