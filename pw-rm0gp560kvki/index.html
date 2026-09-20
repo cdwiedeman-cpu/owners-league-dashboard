@@ -2749,7 +2749,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 11:27 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 11:31 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5462,7 +5462,14 @@ function teamPanel(t, inc, mode, opts){
        schedule have a small orange dot next to the team and some do not?" It marked the three
        games of the mandatory hold and the only explanation was a bullet in a paragraph below
        the table. A mark whose meaning has to be looked up is a mark that gets ignored. */
-    return `<tr class="gline ${scout ? 'g-none' : yours ? 'g-yours' : 'g-before'}"
+    /* A GAME THAT HAS GONE FINAL LOOKS LIKE ONE. Casey, 20 Sep 2026: South Carolina played
+       Mississippi State, the row showed the score, "but it doesn't show it grayed out like the
+       games played above it, and it still shows a green line next to it."
+       The row was still wearing the colour that says whether the game is yours to earn from,
+       which is a question about a game still to come. Once it is played it is history, and it
+       takes the same grey as every other played game. The PLAYED tag and the score were already
+       right; only the row's own dress was a week behind. */
+    return `<tr class="gline ${fin ? 'g-past' : scout ? 'g-none' : yours ? 'g-yours' : 'g-before'}"
         onclick="event.stopPropagation();toggleWhy('${t.n.replace(/'/g,"\\'")}',${i})">
       <td class="d">${when(g, t.pool)}</td>
       <td>${g.loc === 'Home' ? 'vs' : g.loc === 'Away' ? 'at' : 'vs'} ${oppLink(g.opp)} <span class="d">▸</span>${scout ? '' : tag}${
