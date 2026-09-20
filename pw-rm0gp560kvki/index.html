@@ -934,21 +934,36 @@ details>summary::marker{color:var(--faint)}
    five-character number in 112px. Team takes a third now and the numbers take what a number
    needs. MEASURE, DO NOT GUESS: verify_pickcols.js drives the page at five widths and fails on
    any wrapped cell. */
-.cg1{width:46px} .cg2{width:32%} .cg3{width:9%} .cg4{width:9%}
-.cg5{width:9%} .cg6{width:10%} .cg7{width:10%} .cg8{width:9%} .cg9{width:12%}
+.cg1{width:46px} .cg2{width:34%} .cg3{width:9%} .cg4{width:9%}
+.cg5{width:9%} .cg6{width:10%} .cg7{width:10%} .cg8{width:9%} .cg9{width:10%}
 /* ONE FLOOR, EVERY WIDTH. Percentages of a narrow window are narrower than the words in them, so
    the table keeps a minimum and the box around it scrolls -- the gesture this page already uses
    everywhere. It used to be set only inside the phone media query, which left a small laptop
    window wrapping with no floor at all. */
-[data-avail] table{min-width:740px}
+/* THE FLOOR IS SET BY THE PHONE, NOT BY THE LAPTOP. A team cell needs 283px of room on a phone
+   and 245 on a laptop, because a touch screen draws the compare button, the plan flag and the
+   watch star larger. Measured 20 Sep 2026 at 390px and 280px. */
+[data-avail] table{min-width:900px}
 /* THE WATCH LIST HAD NO WIDTHS AT ALL, so its eight columns were sized one-eighth each: 130px
    for a team name that needs 206 and 130 for a number that needs 57. Measured on 20 Sep 2026,
    same pass as the available board above. Same floor, same scrolling box. */
-table.watchtbl{min-width:740px}
+table.watchtbl{min-width:800px}
 table.watchtbl .cw1{width:32%} table.watchtbl .cw2{width:8%}
 table.watchtbl .cw3{width:9%}  table.watchtbl .cw4{width:9%}
 table.watchtbl .cw5{width:9%}  table.watchtbl .cw6{width:9%}
 table.watchtbl .cw7{width:10%} table.watchtbl .cw8{width:14%}
+/* AND RESTATED FOR A PHONE, because three of these columns are hidden there and a <td> with
+   display:none is removed from its row -- so five cells then map to the first FIVE <col>
+   elements in order and every width lands on the wrong column. This is the renumbering trap the
+   available board avoids by keeping all nine columns; here Season, Season gain and Bank 3 really
+   are dropped, so the colgroup has to be restated instead. The five that survive are Team, 3-0,
+   Gain 3, Advice and Cmp, in that order. */
+@media (max-width:560px){
+  table.watchtbl{min-width:860px}
+  table.watchtbl .cw1{width:42%} table.watchtbl .cw2{width:10%}
+  table.watchtbl .cw3{width:12%} table.watchtbl .cw4{width:14%}
+  table.watchtbl .cw5{width:22%}
+}
 /* A NUMBER NEVER BREAKS, AT ANY WIDTH. These were nowrap only on a phone. A laptop window can be
    just as narrow as a phone is wide. Data cells only: a two-word HEADER is allowed its second
    line. */
@@ -1020,7 +1035,8 @@ td.c-then{white-space:nowrap}
   /* The roster table has four narrow columns and fits a phone, so it never scrolled -- which
      left ITS detail panel with 340px and nowhere to go. It gets the same floor as the panel it
      has to hold, so the one scroller in this stack is again the outer one. */
-  #pickBody table.rostertbl{min-width:600px}
+  /* 322px of team name, flag and DROP FIRST pill in a 275px column. Measured, same pass. */
+  #pickBody table.rostertbl{min-width:740px}
   #scout .scr table{min-width:560px}
   #pickBody table td.num, #scout table td.num{white-space:nowrap;overflow-wrap:normal}
   #pickBody table th, #scout table th{white-space:normal;overflow-wrap:break-word;hyphens:auto}
@@ -2786,7 +2802,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:14 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:17 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
