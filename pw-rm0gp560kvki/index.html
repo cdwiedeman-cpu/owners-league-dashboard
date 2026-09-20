@@ -2823,7 +2823,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:33 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:34 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4966,8 +4966,8 @@ function availTable(kind){
       <th class="num c-gain ${SH('gain3')}" onclick="setPSort('${kind}','gain3')" title="Bank 3 minus what ${inc.n} earns over THE SAME THREE WEEKS. Both sides start on ${from} and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.">Gain 3${AR('gain3')}</th>
       ${PICKMODE === 'keep'
         ? `<th class="num c-season hide-s ${SH('post')}" onclick="setPSort('${kind}','post')" title="Expected points after the regular season ends: the playoff ladder, a conference title, a bowl. Paid to whoever holds the team then, so it counts for a hold that runs to the end and for no shorter one. Recomputed every week from results, not read off the draft board.">Post${AR('post')}</th>
-           <th class="num c-sgain hide-s ${SH('keepgain')}" onclick="setPSort('${kind}','keepgain')" title="The whole rest of the season INCLUDING the postseason, minus what ${inc.n} earns over the same stretch including its own postseason. This is the number that separates a keeper from a team with a soft October.">Keep<br>gain${AR('keepgain')}</th>`
-        : `<th class="num c-season hide-s ${SH('run')}" onclick="setPSort('${kind}','run')" title="How many games from ${from} this team is favoured in, straight through, stopping at the first one it is not. Three is enough for the hold. More than three is a team you can keep a while without having to decide anything. A bye does not break the run and does not count toward it.">Easy<br>run${AR('run')}</th>
+           <th class="num c-sgain hide-s ${SH('keepgain')}" onclick="setPSort('${kind}','keepgain')" title="The whole rest of the season INCLUDING the postseason, minus what ${inc.n} earns over the same stretch including its own postseason. This is the number that separates a keeper from a team with a soft October.">Keep<br>Gain${AR('keepgain')}</th>`
+        : `<th class="num c-season hide-s ${SH('run')}" onclick="setPSort('${kind}','run')" title="How many games from ${from} this team is favoured in, straight through, stopping at the first one it is not. Three is enough for the hold. More than three is a team you can keep a while without having to decide anything. A bye does not break the run and does not count toward it.">Easy<br>Run${AR('run')}</th>
            <th class="num c-sgain hide-s ${SH('season')}" onclick="setPSort('${kind}','season')" title="Expected points from ${from} to the end of the regular season. The postseason is not in it — press Keepers for that.">Season<br>pts${AR('season')}</th>`}
       <th class="num c-ups hide-s ${SH('ups')}" onclick="setPSort('${kind}','ups')" title="How many games this team has won as an underdog, measured against the pre-game line. A team the market keeps getting wrong is a team that may be better than every projection on this page thinks. Tap to sort by it.">Upsets${AR('ups')}</th>
       <th class="c-then" title="How long to hold this team. AVOID means every length loses points against ${inc.n}. Otherwise it is the number of WEEKS where the gain over ${inc.n} peaks — the same weeks Gain 3 measures, so the shortest recommendation and Gain 3 are the same number. A team with a bye in its opening stretch needs 4 weeks to play its 3 games, so its minimum reads 4w. Recomputed when you change the team above.">Advice</th></tr></thead><tbody>` +
@@ -7787,8 +7787,16 @@ async function loadSeason(){
     if (cached){ SEASON = cached.map; SEASON_SRC = cached; }
     else { SEASON = bakedSeason(); SEASON_SRC = null; }
     SEASON_LIVE = false;
+    POST_CACHE.clear();
   } else {
     SEASON = pts;
+    /* THE POSTSEASON DEPENDS ON WINS ALREADY BANKED, so a value worked out before the results
+       arrived is wrong and must not be kept. The board renders once on load, which fills the
+       cache with SEASON still null -- every team read one win short, and Harvard's postseason
+       came out 1.73 instead of 2.39. Cleared the moment the results land, on both paths.
+       A CACHE IS ONLY SAFE WHEN EVERYTHING IT DEPENDS ON CLEARS IT. This one depends on two
+       things: the game prices, which applyRerate clears it for, and the results. */
+    POST_CACHE.clear();
     SEASON_LIVE = true;
     SEASON_SRC = null;
     /* A SHORT SWEEP IS NOT WORTH REMEMBERING. If any week-scoreboard failed these totals are
