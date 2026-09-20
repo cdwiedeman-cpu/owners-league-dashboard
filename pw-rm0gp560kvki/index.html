@@ -2820,7 +2820,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 1:00 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 10:59 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4365,8 +4365,8 @@ function ptsUpTo(team, from, through){
    changes is how many games that judgement may rest on. Harvard beat New Hampshire 31-7 on
    19 Sep, which is +0.54 clear of its billing in one game, and the board was reading 3w while
    the model had it at +3.13 over eight weeks. */
-const EVID_GAMES = 1;
-const EVID_EDGE  = 0.5;    // half a league point clear of billing, over those games
+/* WHAT A TEAM HAS DONE AGAINST ITS BILLING. Reported, never used as a brake -- see recommend().
+   `edge` is points banked minus points the model expected over the same games. */
 
 function form(t){
   const got = SEASON ? SEASON.get(t.n) : null;
@@ -4376,7 +4376,7 @@ function form(t){
   const expected = k ? cum[k - 1] : 0;
   const edge = got.pts - expected;
   return {games: got.n, actual: got.pts, expected, edge,
-          proven: got.n >= EVID_GAMES && edge >= EVID_EDGE};
+          edgePerGame: got.n ? Math.round((edge / got.n) * 100) / 100 : 0};
 }
 
 /* THREE LIKELY WINS IS NOT A LIKELY 3-0. Casey, 30 Aug 2026: "Why does Harvard only have a 36%
@@ -4513,41 +4513,39 @@ function recommend(t, inc, minEdge){
                + `${best ? (best.gain >= 0 ? '+' : '') + best.gain.toFixed(2) : '—'} over `
                + `${best ? span(best) : '?'}, so do not make it.`};
 
-  /* THE EVIDENCE GATE, unchanged in spirit: a hold longer than the legal minimum is a claim that
-     this team is better than its preseason rating, and only the season can support that. */
+  /* ---- NO EVIDENCE GATE. THE LABEL IS THE PROJECTION'S OWN ANSWER. ------------------------
+   * There WAS one, and it came from Casey, 30 Aug 2026: "There is no way I would take that team
+   * and keep them after the first three weeks of the season ... Only if an available team upsets
+   * a favored team or does it more than once would I consider that the preseason rankings were
+   * wrong." That was said in August, when the only thing behind a projection was a preseason
+   * rating and no team had played.
+   * He took it out on 20 Sep 2026, four weeks into the season: "Harvard still should have been
+   * showing up as a keep for the season, just given their projection. And then once a game is
+   * played, that can start adjusting, and it should adjust every week after games are played."
+   * WHY HE IS RIGHT, measured the same day: the gate was capping 100 of the 264 college teams,
+   * and among them were Ohio State, Georgia and LSU. Those three were held at the minimum for a
+   * perverse reason -- they were winning about as much as a high preseason rating said they
+   * would, so they never got half a point CLEAR of billing. A team meeting a strong billing was
+   * treated exactly like a team with no evidence at all.
+   * The projection is not a preseason rating any more. Every result re-rates the team and
+   * re-prices every game it has left (computeRerate / applyRerate), so the thing the gate was
+   * built to distrust now updates itself every Saturday. The label follows it. */
   const f = form(t);
   const longer = best.w > minW;
-  if (longer && !f.proven){
-    if (mand.gain <= 0)
-      return {label: 'AVOID', cls: 'v-avoid', gain: mand.gain, upside: best,
-              tip: `Over the ${span(mand)} you must hold it, this swap loses `
-                 + `${mand.gain.toFixed(2)} against ${inc.n}. Holding ${span(best)} turns positive `
-                 + `(+${best.gain.toFixed(2)}) on PRESEASON ratings alone, and this team has `
-                 + `${f.games ? `played ${f.games} and is ${f.edge >= 0 ? '+' : ''}${f.edge.toFixed(2)} `
-                    + `against its billing` : 'not played yet'} — no evidence for the longer bet.`};
-    return {label: `${minW}w`, cls: 'v-stream', gain: mand.gain, weeks: minW, upside: best,
-            capped: true,
-            tip: `Bank the ${span(mand)} you have to hold it anyway: ${mand.gain >= 0 ? '+' : ''}`
-               + `${mand.gain.toFixed(2)} over ${inc.n} — the same number as Gain 3 when there is `
-               + `no bye. Holding ${span(best)} projects +${best.gain.toFixed(2)}, but that rests `
-               + `on the SAME preseason rating stretched further out. `
-               + `${f.games ? `${f.games} game${f.games === 1 ? '' : 's'} played, `
-                  + `${f.edge >= 0 ? '+' : ''}${f.edge.toFixed(2)} against billing`
-                  : 'No games played yet'} — needs ${EVID_GAMES} game${
-                    EVID_GAMES === 1 ? '' : 's'} and +${EVID_EDGE.toFixed(2)} `
-               + `to be advised as a keeper.`};
-  }
   const last = best.w >= maxW;
   return {label: last ? 'KEEP' : `${best.w}w`, weeks: best.w,
           cls: last ? 'v-keep' : (best.w > minW ? 'v-hold' : 'v-stream'),
-          gain: best.gain, proven: longer,
+          gain: best.gain, proven: longer, upside: best,
           tip: `Hold it ${span(best)}` + (last ? ' — to the end of the regular season' : '')
              + `, where the gain over ${inc.n} peaks at +${best.gain.toFixed(2)}.`
-             + (longer ? ` Advised past the minimum because this team has EARNED it on the field: `
-                 + `${f.games} game${f.games === 1 ? '' : 's'} played, `
-                 + `${f.edge >= 0 ? '+' : ''}${f.edge.toFixed(2)} against what the model expected.`
+             + (longer ? ` Over the ${span(mand)} you have to hold it, the swap is worth `
+                 + `${mand.gain >= 0 ? '+' : ''}${mand.gain.toFixed(2)}.`
                : ` Both sides of that number are the same ${best.w} weeks, so it is the swap's `
-                 + `real worth over the stretch you are committed to.`)};
+                 + `real worth over the stretch you are committed to.`)
+             + ` It rests on ${f.games
+                 ? `${f.games} game${f.games === 1 ? '' : 's'} played and `
+                   + `${f.edge >= 0 ? '+' : ''}${f.edge.toFixed(2)} against what the model expected`
+                 : 'the preseason rating, with no games played yet'}.`};
 }
 
 function dropSelector(kind){
@@ -4885,13 +4883,12 @@ function availTable(kind){
         advice is the shortest legal hold and there is no bye, that number <b>is</b> Gain 3.
         A team with a bye in its opening stretch needs four weeks to play three games, so its
         shortest advice reads <b>4w</b> and its number covers four weeks rather than three.
-        <br><b>Longer holds have to be earned.</b> A recommendation past ${DATA.hold_games} games
-        is a claim that this team is better than its preseason rating, so it is only advised once
-        the team has played ${EVID_GAMES} game${EVID_GAMES === 1 ? '' : 's'} and banked at least
-        +${EVID_EDGE.toFixed(2)} more than the model expected of it. Until then you see
-        <b>${DATA.hold_games}g</b> and the longer figure sits in the tooltip as upside, not
-        advice — which is the whole reason a team with an easy October does not get recommended
-        as a keeper in August.`)
+        <br><b>The advice follows the projection.</b> It is the number of weeks where the gain
+        over ${inc.n} is largest. A team worth holding to the end of the regular season reads
+        <b>KEEP</b>, and nothing else caps it.
+        That projection is not a preseason rating. Every finished game re-rates the team and
+        re-prices every game it has left, so a team that starts beating its billing climbs here
+        on its own, week by week. Hover any advice for what it rests on.`)
       + explain(`What dropping ${inc.n} costs you`, ` Its slot frees up
         after its third game on ${inc.third_game.slice(5)}, so a replacement first plays for you
         on <b>${from.slice(5)}</b>. ${inc.n} would earn <b>${incB3.pts.toFixed(2)}</b> over the
