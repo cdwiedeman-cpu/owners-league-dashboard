@@ -3888,7 +3888,10 @@ function condRowsFor(c, i){
   var rs = (P && P.condRows) ? P.condRows(c) : [];
   var out = [];
   for (var k = 0; k < rs.length; k++) if (rs[k] >= 1 && rs[k] <= i) out.push(rs[k]);
-  if (!out.length && i >= 1) out = [1];
+  /* THE TRADE DIRECTLY ABOVE IS THE DEFAULT, not trade 1. It is the one somebody has just
+     finished, it is what Add a Backup Trade picks, and on a long list trade 1 is a trade they
+     may not even remember. A condition must name at least one row, so there is always a pick. */
+  if (!out.length && i >= 1) out = [i];
   return out;
 }
 /* A LIST OF TRADE NUMBERS, WRITTEN THE WAY SOMEBODY WOULD SAY IT. "1, 2 and 3", never "1,2,3". */
