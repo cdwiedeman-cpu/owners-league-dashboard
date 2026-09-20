@@ -2742,7 +2742,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 11:00 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 11:02 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6414,6 +6414,15 @@ function pickSearch(el){
 }
 
 function renderPick(){
+  /* THIS TAB DOES NOT EXIST ON THE ALL-OWNERS PAGE, and its data was removed from that payload
+     on purpose -- `stream_rate`, `p30`, the projections, all of it. `applyLiveToSeason()` calls
+     this whenever a live final changes the standings, so without this line the FIRST final score
+     of any session threw on the league page: DATA.stream_rate is undefined there, the throw
+     happened inside applyLiveToSeason, and the standings and the chips never repainted. Nobody
+     saw an error; they saw a page that had stopped keeping up.
+     The section element exists in both pages, so an early return keyed on the element is not
+     enough. It is keyed on whether this page HAS the tab. */
+  if (!PROJ_ON) return;
   const mine = DATA.teams.filter(t => t.owner === ME)
     .sort((a, b) => a.pool.localeCompare(b.pool) || a.n.localeCompare(b.n));
   /* WHAT EACH OF MY SLOTS IS PROJECTED TO EARN FROM THE WEEK IT COULD BE DROPPED.
