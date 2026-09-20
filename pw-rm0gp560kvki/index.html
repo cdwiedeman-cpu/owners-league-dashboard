@@ -2823,7 +2823,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 1:05 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 1:24 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3420,9 +3420,12 @@ function renderScores(){
     const when = g => g.nc ? 'NO CONTEST — abandoned, no win, no loss'
       : g.hs != null ? 'final'
       : g.done ? 'played — result not in this file' : 'scheduled';
+    /* SAME ORDER AS THE LIVE CARD, away first. Two cards showing the same fixture in opposite
+       orders would be worse than either choice on its own, and this one is seen exactly when
+       the reader has least to check it against. */
     const body = fx.length ? fx.map(g => `<div class="gm">
-        ${side(g.home, g.ho, g.hm, g.hs, g.won === g.home)}
         ${side(g.away, g.ao, g.am, g['as'], g.won === g.away)}
+        ${side(g.home, g.ho, g.hm, g.hs, g.won === g.home)}
         <div class="st"><span class="pill p-${g.pool.toLowerCase()}">${g.pool}</span>
           <span class="d">${g.wk?('Wk '+g.wk+' · '):''}${g.when} · ${when(g)}</span></div>
         <div class="st"><span class="notv" title="Broadcasters come from ESPN's live scoreboard, which this page cannot reach right now. They are not stored in the file.">TV — needs a connection</span></div></div>`).join('')
@@ -3483,7 +3486,15 @@ function renderScores(){
        on whichever fragment it happened to produce. So the card link wraps the teams and the
        status, and the network row sits beside it as a sibling with its own links in it. The
        Gamecast tap target is unchanged in size; only the TV line is no longer part of it. */
-    const body = `${t(g.home)}${t(g.away)}
+    /* AWAY ON TOP, HOME UNDERNEATH. Casey, 20 Sep 2026: "you have the home team on top and the
+       away team on bottom. That's not how ESPN shows it. The scoreboard always has the home team
+       on bottom."
+       He is right, and it matters more here than it looks: these two rows carry a NAME and a
+       SCORE and nothing else. There is no "at", no "vs", no marker of any kind -- the ORDER is
+       the only thing on the card that says which team is at home. So the order was not a
+       presentation choice, it was the whole statement, and it was the wrong way round against
+       the convention every scoreboard he has ever read uses. */
+    const body = `${t(g.away)}${t(g.home)}
       <div class="st"><span class="pill p-${g.pool.toLowerCase()}">${g.pool}</span>
         <span class="${cls}">${g.live?'● LIVE · ':''}${g.detail}</span>${
         url ? '<span class="gc">Gamecast ↗</span>' : ''}</div>`;
