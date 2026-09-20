@@ -578,7 +578,11 @@ table.standtbl td:nth-child(2){white-space:nowrap}
   table.standtbl .c-proj{width:52px}
   table.standtbl .c-q{width:44px}
   /* The YOU tag is a second line on its own rather than a thing that widens the name column. */
-  table.standtbl td.c-own .mytag{display:inline-block;margin-top:2px}
+  /* THE YOU TAG TAKES ITS OWN LINE. The cell stopped wrapping on 20 Sep 2026, and nowrap keeps
+     an inline tag on the same line as the name -- which put "Palma/Wiede YOU" 37px past the
+     column and into the division beside it. A block-level child starts a new line box whatever
+     the parent's white-space says, so the name stays on one line and the tag sits under it. */
+  table.standtbl td.c-own .mytag{display:block;width:max-content;margin-top:2px}
   table.standtbl .c-div .pill{padding:1px 5px;font-size:10px}
   table.standtbl .divlong{display:none}
   table.standtbl th, table.standtbl td{padding-left:5px;padding-right:5px}
@@ -2742,7 +2746,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 11:02 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 11:06 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
