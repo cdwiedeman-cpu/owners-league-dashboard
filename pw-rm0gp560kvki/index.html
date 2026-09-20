@@ -548,8 +548,15 @@ table.standtbl td:nth-child(2){white-space:nowrap}
   /* td.c-own, not .c-own: the base rule is `table.standtbl td:nth-child(2)`, whose specificity
      is (0,2,1), so a class-only override loses to it and the name kept overflowing into the
      division pill. Matching type+class ties the specificity and this rule is later. */
+  /* NOTHING IN THIS COLUMN WRAPS. Casey, 20 Sep 2026: "the team name or the owner name is
+     wrapping and it's kind of annoying ... I think it'd be better if it was just one line."
+     It used to wrap because the names did not fit in 116px. They fit now: an owner's name is
+     abbreviated on a narrow screen by `shortOwner()`, and the team columns on Weekly / Quarterly
+     and Season Summary sit in tables that already scroll sideways, so a long team name simply
+     takes the room it needs. */
   table.standtbl td.c-own, table.standtbl th.c-own{
-    width:116px;white-space:normal;line-height:1.2;overflow-wrap:break-word}
+    width:124px;white-space:nowrap;line-height:1.3}
+  table.standtbl.wide td.c-own, table.standtbl.wide th.c-own{width:auto;min-width:170px}
   table.standtbl .c-rank{width:24px}
   /* WIN% AND BEHIND STAY ON A PHONE, IN THE SWIPE. Casey, 20 Sep 2026: "why doesn't the phone
      version have the winning percentage on standings like the desktop version."
@@ -560,7 +567,11 @@ table.standtbl td:nth-child(2){white-space:nowrap}
      see all the necessary information that's on the desktop version." A table that already
      scrolls sideways gains nothing by hiding a column. */
   table.standtbl .hide-s{display:table-cell}
-  table.standtbl .c-pct{width:54px;font-variant-numeric:tabular-nums}
+  /* WIDE ENOUGH FOR THE TIEBREAKER CHIP. Two owners level on points carry a chip here saying
+     which rung separated them -- "college 77.8%" -- and in 54px that wrapped onto two more
+     lines and made the row three times as tall as its neighbours. The table scrolls sideways
+     anyway, so the room costs nothing. */
+  table.standtbl .c-pct{width:104px;font-variant-numeric:tabular-nums}
   table.standtbl .c-beh{width:54px}
   table.standtbl .c-div{width:42px}
   table.standtbl .c-tot{width:46px}
@@ -572,7 +583,8 @@ table.standtbl td:nth-child(2){white-space:nowrap}
   table.standtbl .divlong{display:none}
   table.standtbl th, table.standtbl td{padding-left:5px;padding-right:5px}
 }
-@media (min-width:561px){ table.standtbl .divshort{display:none} }
+@media (min-width:561px){ table.standtbl .divshort{display:none} .ownshort{display:none} }
+@media (max-width:560px){ .ownlong{display:none} }
 table.ownertbl{table-layout:auto}
 table.ownertbl td, table.ownertbl th{overflow-wrap:normal}
 table.ownertbl{min-width:600px}
@@ -2730,7 +2742,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 8:42 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 10:42 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4521,6 +4533,69 @@ function showAllTeams(kind, n){
   PMORE[kind] = n;
   const y = window.scrollY; renderPick(); window.scrollTo({top: y});
 }
+/* ---- TAKEN ELSEWHERE -----------------------------------------------------------------------
+   Casey, 20 Sep 2026: "I'd like to know what teams are owned in Scorpion and Viper that are not
+   owned in my Predator division ... if somebody drafted them and our division didn't, I want to
+   know that that happened and maybe that's something for me to consider."
+   Every team here is FREE TO HIM. The three divisions draft from one pool but separately, so a
+   team another division rates and his did not is a free agent with a second opinion attached.
+   IT RANKS, IT DOES NOT RECOMMEND. There is no incumbent on this tab, so there is nothing
+   honest to measure a gain against -- the College and NFL tabs are where a swap is priced
+   against the team he would actually drop. This one answers "who else wanted these". */
+/* THE COUNT IS ON THE TAB, for the same reason the Watch List carries one: a list you have to
+   open to find out whether it holds anything is one you stop opening. */
+function crossCount(){
+  return DATA.teams.filter(t => t.owner == null && (t.labels || []).length > 0).length;
+}
+function crossPanel(){
+  const rows = DATA.teams
+    .filter(t => t.owner == null && (t.labels || []).length > 0)
+    .map(t => ({t, b3: (t.pts3 == null ? null : t.pts3),
+                season: (t.pts_season == null ? null : t.pts_season),
+                ok: typeof canClaim === 'function' ? canClaim(t) : true}))
+    .sort((a, b) => (b.season == null ? -1 : b.season) - (a.season == null ? -1 : a.season));
+
+  if (!rows.length){
+    return `<div class="card"><h2>Taken Elsewhere</h2>
+      <div class="empty"><b>No team is owned in Scorpion or Viper and free in Predator right
+      now.</b> Every team those two divisions hold is held in yours as well. This list fills up
+      as the other divisions make their own pickups.</div></div>`;
+  }
+  const who = t => (t.labels || []).map(l =>
+    `<span class="dv">${esc(l.div)}</span> ${esc(l.owner)}`).join(' · ');
+  const body = rows.map(({t, b3, season, ok}) => `<tr>
+      <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span>
+        <button class="tlink" onclick="openScout(${jsStr(t.n)})"
+          title="${esc(t.n)}: every game, the score, and the games still to play">${esc(t.n)}</button>${
+        ok ? '' : ' <span class="pill v-no" title="It has too few games left to finish the three-game hold, so it cannot be claimed now.">Too late</span>'}</td>
+      <td class="d">${who(t)}</td>
+      <td class="num">${b3 == null ? '<span class="d">—</span>' : b3.toFixed(2)}</td>
+      <td class="num">${season == null ? '<span class="d">—</span>' : season.toFixed(2)}</td>
+    </tr>`).join('');
+
+  return `<div class="card"><h2>Taken Elsewhere</h2>
+    <div class="note"><b>${rows.length} team${rows.length === 1 ? ' is' : 's are'} owned in
+      Scorpion or Viper and free in Predator.</b> Another division rated them and yours did not,
+      so every one of them is yours to claim.</div>
+    <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
+    <div class="scr" data-avail="cross"><table>
+      <colgroup><col style="width:34%"><col style="width:36%"><col style="width:15%"><col style="width:15%"></colgroup>
+      <thead><tr><th class="c-team">Team</th>
+        <th title="Who holds this team in the other two divisions.">Held By</th>
+        <th class="num" title="Expected points over this team's next three games. The same measure the College and NFL tabs use.">Bank 3</th>
+        <th class="num" title="Expected points from here to the end of the regular season.">Season</th></tr></thead>
+      <tbody>${body}</tbody></table></div>
+    ${explain('What this list is for, and what it is not', `A team on this list is <b>free in
+    Predator</b>. Another division drafted or picked it up and yours did not, which is a second
+    opinion worth reading before you let it sit there.
+    <br><b>No swap is priced here.</b> These columns say what the team is expected to earn, not
+    what you would gain by taking it, because that depends on which of your own teams you would
+    drop. Take a name you like to <b>College</b> or <b>NFL</b> and it is ranked there against the
+    team you are actually dropping.
+    <br>A team marked <b>Too late</b> has too few games left to finish the three-game hold, so it
+    cannot be claimed now.`)}</div>`;
+}
+
 function availTable(kind){
   const want = kind === 'NFL' ? (t => t.pool === 'NFL') : (t => t.pool !== 'NFL');
   const inc = slotFor(kind);
@@ -6402,10 +6477,12 @@ function renderPick(){
     subTab('COL', 'College')}${subTab('NFL', 'NFL')}${
     subTab('plan', 'Plan' + (planCount() ? ' (' + planCount() + ')' : ''))}${
     subTab('watch', 'Watch List' + (WATCH.length ? ' (' + WATCH.length + ')' : ''))}${
+    subTab('cross', 'Taken Elsewhere' + (crossCount() ? ' (' + crossCount() + ')' : ''))}${
     rerateControl()}</div>`;
 
   const panels = {
     watch: watchPanel(),
+    cross: crossPanel(),
     plan: planPanel(),
     roster: `<div class="card"><h2>Your roster — what each slot earns from the week you could drop it</h2>
       <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
@@ -7435,7 +7512,7 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
   const row = `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')"
       title="${OPEN_OWNER === key ? 'Hide' : 'Show'} ${esc(o.owner)}'s eleven roster slots">
       <td class="num d c-rank">${rank}</td>
-      <td class="c-own">${o.owner}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
+      <td class="c-own">${ownerName(o.owner)}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
       ${showDiv ? `<td class="c-div"><span class="pill p-div${o.div === MY_DIV ? ' own' : ''}"
         title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
         ><span class="divshort">${o.div}</span></span></td>` : ''}
@@ -9612,6 +9689,35 @@ function spellTail(t, many){
   const span = grpSpan(t);
   return many ? span : (span ? span + ' · held this slot all season' : 'held this slot all season');
 }
+/* AN OWNER'S NAME, SHORT ENOUGH FOR A PHONE. Casey, 20 Sep 2026: "on some of the long names,
+   could you abbreviate on the mobile, so first initial last name for M Spielman, for
+   Palma/Wiedeman do P/W ... Twitchell/Fryer you could just do T/F."
+   TWO RULES, AND THE SECOND ONLY WHEN IT IS NEEDED:
+     * two owners sharing a seat, written with a slash, become their two initials: P/W, T/F.
+     * anything longer than fits becomes first initial plus last name: M Spielman.
+   A name that already fits is left exactly as it is, which is why 'Dos Pigs' and 'Tom Rush' are
+   not turned into 'D Pigs' and 'T Rush'. The full name is still in the row's hover text, and the
+   wide screen still shows it in full. */
+const OWN_FITS = 12;
+function shortOwner(name){
+  const s = String(name || '').trim();
+  if (!s) return s;
+  if (s.indexOf('/') > -1){
+    return s.split('/').map(x => x.trim().charAt(0).toUpperCase()).filter(Boolean).join('/');
+  }
+  if (s.length <= OWN_FITS) return s;
+  const bits = s.split(/\s+/);
+  if (bits.length < 2) return s;
+  return bits[0].charAt(0).toUpperCase() + ' ' + bits[bits.length - 1];
+}
+/* ONE CELL, BOTH SPELLINGS, chosen by width in the stylesheet -- the same shape as the division
+   column's long and short names. Doing it in CSS means no relayout when a phone is turned. */
+function ownerName(name){
+  const short = shortOwner(name);
+  if (short === name) return esc(name);
+  return `<span class="ownlong">${esc(name)}</span><span class="ownshort">${esc(short)}</span>`;
+}
+
 function grpHeadLabel(o, g){
   const open = OPEN_SLOT === grpKey(o, g);
   const n = g.spells.length;
