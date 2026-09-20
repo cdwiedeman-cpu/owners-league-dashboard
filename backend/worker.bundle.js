@@ -31,7 +31,13 @@
 'use strict';
 
 var MAX_ROWS  = 10;      // Casey, 9 Sep 2026: "I do think 10 rows is plenty."
-var MAX_DROPS = 4;       // "four drops each ... that should be enough."
+/* FIVE. Casey, 9 Sep 2026: "four drops each ... that should be enough." Then, 20 Sep 2026, after
+   building his own list: "maybe add a fifth drop option. We only have four. I think we need to
+   let it be five, just because I almost hit that limit of four." A list that runs out is a trade
+   that does not go through, and the only cost of a longer one is a line on the card.
+   THIS IS THE ONE STORE. The page reads P.MAX_DROPS, the settle reads it, and every sentence
+   that prints a number prints this one. */
+var MAX_DROPS = 5;
 
 /* ---------------------------------------------------------------------------------------------
  * A COIN FLIP THAT CANNOT BE RE-RUN IS NOT AUDITABLE.
