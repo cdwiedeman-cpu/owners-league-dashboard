@@ -2742,7 +2742,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 10:46 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 10:58 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9699,12 +9699,19 @@ function spellTail(t, many){
    not turned into 'D Pigs' and 'T Rush'. The full name is still in the row's hover text, and the
    wide screen still shows it in full. */
 const OWN_FITS = 12;
+/* TWO SEATS ARE SPELT OUT BY HAND, because initials do not name them. Casey, 20 Sep 2026: "I
+   only wanted you to shorten P/W and T/F, not B/D and J/G. Nobody knows who B/D and J/G is ...
+   for Palma/Wiedeman do Palma/Wiede, and for Twitchell/Fryer do Twitch/Fryer."
+   A first cut turned every shared seat into its two initials, which fitted and meant nothing.
+   Brian/Dave and Jason/Greg already fit, so they are left alone. */
+const OWN_SHORT = {
+  'Palma/Wiedeman': 'Palma/Wiede',
+  'Twitchell/Fryer': 'Twitch/Fryer',
+};
 function shortOwner(name){
   const s = String(name || '').trim();
   if (!s) return s;
-  if (s.indexOf('/') > -1){
-    return s.split('/').map(x => x.trim().charAt(0).toUpperCase()).filter(Boolean).join('/');
-  }
+  if (OWN_SHORT[s]) return OWN_SHORT[s];
   if (s.length <= OWN_FITS) return s;
   const bits = s.split(/\s+/);
   if (bits.length < 2) return s;
