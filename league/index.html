@@ -1251,10 +1251,6 @@ td.c-then{white-space:nowrap}
   <section id="race" hidden>
     <div id="raceBody"></div>
   </section>
-  <!-- CASEY'S PAGE ONLY. Read straight from ESPN when the tab is opened; see renderEspn(). -->
-  <section id="espn" hidden>
-    <div id="espnBody"></div>
-  </section>
   <!-- THE THREE ALL-OWNERS TABS. They are built by the same file as Casey's own dashboard and
        are shown only when the payload says mode:"league" (league_payload.py). One template, two
        builds: the alternative was a second copy of the scoring arithmetic, and two stores of the
@@ -1340,12 +1336,16 @@ const TABSETS = {
      list, not a port. What they need from the payload is `seats`, which build_season now writes
      for both. His page keeps its projections; the all-owners page still has none. */
   /* NO TRANSACTIONS TAB. Its three tables are sub-tabs of Trades now -- see buildTx(). */
-  /* ESPN IS LAST OF HIS OWN TABS AND IT IS NOT ON THE LEAGUE PAGE. Casey, 20 Sep 2026: "on the
-     Palma Wiedeman dashboard, can you create a tab called ESPN." Nothing on it is the league's
-     and nothing on it is a projection: it is ESPN's standings and ESPN's polls, read live. */
+  /* NO ESPN TAB. It had one for about an hour on 20 Sep 2026 and Casey moved it: "instead of
+     having the tab called ESPN, can we just change that ... I think you should put it in the
+     pickups tab as another one of those tabs within the pickups tab ... just have three tabs,
+     one for FBS standings, FCS standings, and then rankings."
+     He is right that it belongs there. Deciding who to pick up is the reason to look at a
+     conference table, and a top-level tab for somebody else's data sat oddly beside six tabs of
+     his own league. */
   personal: [['scores','Live Scores'],['stand','Standings'],['pick','Pickups'],
              ['slots','Slots'],['race','Race'],['weekly','Weekly / Quarterly'],
-             ['summary','Season Summary'],['espn','ESPN']],
+             ['summary','Season Summary']],
   league:   [['scores','Live Scores'],['stand','Standings'],['weekly','Weekly / Quarterly'],
              ['summary','Season Summary']],
 };
@@ -1453,7 +1453,7 @@ function composeTabs(){
     .concat(RULES_TAB);
 }
 let TABS = composeTabs();
-const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','espn','start','rules','guide']
+const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','start','rules','guide']
   .concat(COMMISH_SECTIONS);
 
 /* PUT THE TAB UP, OR TAKE IT DOWN, TO MATCH WHO THE LEAGUE SAYS THIS IS. */
@@ -1856,7 +1856,6 @@ function showTab(which){
   if (which === 'race') renderRace();
   if (which === 'weekly') renderWeekly();
   if (which === 'summary') renderSummary();
-  if (which === 'espn') openEspn();
   if (which === 'ctrades') renderTrades();
   else if (COMMISH_PAGE[which]){
     /* ---- RUN IT AND THE ACCESS LIST LIVE IN THE TRADES SECTION TOO ------------------------
@@ -2824,7 +2823,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 11:58 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:11 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6077,10 +6076,35 @@ function espnSign(v){
   return 'd';
 }
 
-function espnRanksHTML(){
+/* ONE POLL PER TAB. Casey, 20 Sep 2026: "you could just literally have one of the tabs, instead
+ * of calling it rankings, have one rankings tab be AP top 25, and then another rankings tab be
+ * FCS coaches poll."
+ * HE ASKED BECAUSE THE FCS POLL WAS NOT THERE, and it was not there because ESPN had not posted
+ * it. Both polls come back in ONE answer from ESPN and the AP one lands first each week: at
+ * 18:00 on 20 Sep the feed carried Week 4's AP and coaches polls and no FCS poll at all, while
+ * the same call six hours earlier carried Week 3's FCS poll. Asking for ?group=81 changes
+ * nothing; it is the same answer.
+ * So a tab of its own has to say that, rather than being empty or quietly showing last week's.
+ * ONE REQUEST STILL SERVES BOTH TABS. Refresh on either asks again for both, which is what the
+ * reader means by refresh and is one call rather than two. */
+const POLL_NAME = {ap: 'AP Top 25', fcs: 'FCS Coaches Poll'};
+function espnPollHTML(key){
   const d = ESPN_VIEW.rank;
-  if (!d || ESPN_STATE.rank !== 'ok') return espnGap('rank', 'the polls');
-  const cards = d.lists.map(l => `<div class="card"><h2>${esc(l.name)}</h2>
+  if (!d || ESPN_STATE.rank !== 'ok') return espnGap('rank', POLL_NAME[key]);
+  const l = (d.lists || []).find(x => x.key === key);
+  if (!l)
+    return `<div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
+        ${espnStamp('rank')}
+        <button class="f" onclick="espnLoad('rank', true)">Refresh</button></div>
+      <div class="card"><h2>${esc(POLL_NAME[key])}</h2><div class="empty">
+      <p><b>ESPN has not posted this poll yet for the current week.</b></p>
+      <p>Both polls arrive in the same answer from ESPN and they do not arrive together. The AP
+      Top 25 lands first each week and this one follows, usually a day later.</p>
+      <p>Nothing is wrong and nothing is missing from the rest of the page. Press Refresh when
+      you want to look again.</p>
+      <p><button class="f primary" onclick="espnLoad('rank', true)">Refresh</button></p>
+      </div></div>`;
+  const cards = [l].map(l => `<div class="card"><h2>${esc(l.name)}</h2>
     ${l.when ? `<div class="note">ESPN has this as <b>${esc(l.when)}</b>.</div>` : ''}
     <div class="scr"><table class="esptbl rnktbl">
       <colgroup><col class="cr1"><col class="cr2"><col class="cr3"><col class="cr4"><col class="cr5"></colgroup>
@@ -6095,22 +6119,19 @@ function espnRanksHTML(){
         <td class="num">${espnMove(r)}</td>
         <td class="num d">${r.pts == null ? '—' : r.pts}</td></tr>`).join('')}</tbody>
     </table></div></div>`).join('');
-  const gone = (d.missing || []).map(([, nm]) => nm);
   return `<div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
       ${espnStamp('rank')}
       <button class="f" onclick="espnLoad('rank', true)">Refresh</button></div>
     ${cards}
-    ${gone.length ? `<div class="card"><div class="note"><b class="y">Not in this answer:</b>
-      ${esc(gone.join(' and '))}. ESPN publishes a poll only once it has been voted. It will
-      appear here the week it does.</div></div>` : ''}
-    ${explain('Where these polls come from', `Both polls are ESPN's own and this page reads them
-      when you open the tab. The <b>AP Top 25</b> is the writers' poll for the top level of
-      college football. The <b>FCS Coaches Poll</b> is the coaches' poll for the level below it.
-      Neither has anything to do with the league's scoring, and neither is a projection.
+    ${explain('Where this poll comes from', `It is ESPN's own and this page reads it when you
+      open the tab. ${key === 'ap'
+        ? 'The <b>AP Top 25</b> is the writers\' poll for the top level of college football.'
+        : 'The <b>FCS Coaches Poll</b> is the coaches\' poll for the level below the top one.'}
+      It has nothing to do with the league's scoring and it is not a projection.
       <b>Prev</b> is where the team sat in the poll before this one. A team that was unranked
       last week shows a dash.
-      A team name you can press is one your league board carries. A team in a purple box is one
-      of your eleven.`)}`;
+      A team name you can press is one your league board carries, and pressing it opens that
+      team's own season. A team in a purple box is one of your eleven.`)}`;
 }
 
 /* A MOVE IS A DIFFERENT MESSAGE FROM A NUMBER. Unranked last week is not rank zero. */
@@ -6123,31 +6144,19 @@ function espnMove(r){
   return `<span class="d">${p}</span>${arrow}`;
 }
 
-function espnSub(k, label){
-  return `<button class="f${ESPNTAB === k ? ' on' : ''}" data-espntab="${k}"
-    onclick="setEspnTab('${k}')" aria-pressed="${ESPNTAB === k}">${label}</button>`;
-}
+/* WHICH PICKUPS SUB-TAB IS WHICH ESPN VIEW. One table, so the sub-tab names and the fetch keys
+   cannot drift apart. */
+const ESPN_OF = {espnfbs: 'fbs', espnfcs: 'fcs', espnap: 'rank', espncp: 'rank'};
 
-function setEspnTab(k){
-  ESPNTAB = k;
-  renderEspn();
-  espnLoad(k);
-}
-
+/* THESE LIVE INSIDE THE PICKUPS TAB NOW, so a finished fetch redraws that tab rather than a
+   section of its own. Guarded on the tab being on screen: a request that comes back after he has
+   moved on must not rewrite the panel he is looking at. */
 function renderEspn(){
-  const box = el('espnBody');
-  if (!box) return;
-  const bar = `<div class="tabs subtabs">${espnSub('fbs', 'FBS Standings')}${
-    espnSub('fcs', 'FCS Standings')}${espnSub('rank', 'Rankings')}</div>`;
-  const body = ESPNTAB === 'rank' ? espnRanksHTML() : espnStandingsHTML(ESPNTAB);
-  box.innerHTML = bar + body;
-}
-
-/* OPENED, NOT POLLED. These three change once a week at most, so they are read when he asks for
-   them and then left alone. The Refresh button is the way to ask again. */
-function openEspn(){
-  renderEspn();
-  espnLoad(ESPNTAB);
+  if (!PROJ_ON) return;
+  const sec = el('pick');
+  if (!sec || sec.hidden) return;
+  if (!ESPN_OF[PICKTAB]) return;
+  renderPick();
 }
 
 function openScoutFor(name, owner, fromW, toW){
@@ -6526,6 +6535,11 @@ function setPickTab(k){
      So: leave the scroll alone. The one exception is a tap made after scrolling down, where the
      strip itself has gone off the top -- then bring it back, and no further. */
   PICKTAB = k; OPEN = null; OPEN_MINE = null; OPEN_WATCH = null;
+  /* THE ESPN SUB-TABS READ ESPN WHEN THEY ARE OPENED, and not before. Three tables that change
+     once a week are not worth fetching on every page load. Each carries its own Refresh button
+     and its own "read at" time, because they are three separate requests and one of them can
+     fail while the others are fine. */
+  if (ESPN_OF[k]) espnLoad(ESPN_OF[k]);
   const before = window.scrollY;
   renderPick();
   window.scrollTo({top: before});          // restore first: a shorter panel can clamp the scroll
@@ -7042,17 +7056,25 @@ function renderPick(){
       aria-pressed="${PICKTAB === k}">${label}</button>`;
   /* THE COUNT IS ON THE TAB. A watch list you have to open to find out whether it has anything
      in it is one you stop opening. */
+  /* HIS OWN BOARD FIRST, THEN ESPN'S. The last three read ESPN live and carry no projection of
+     ours at all, so they sit after everything that does. */
   const bar = `<div class="tabs subtabs">${subTab('roster', 'My roster')}${
     subTab('COL', 'College')}${subTab('NFL', 'NFL')}${
     subTab('plan', 'Plan' + (planCount() ? ' (' + planCount() + ')' : ''))}${
     subTab('watch', 'Watch List' + (WATCH.length ? ' (' + WATCH.length + ')' : ''))}${
     subTab('cross', 'Taken Elsewhere' + (crossCount() ? ' (' + crossCount() + ')' : ''))}${
+    subTab('espnfbs', 'FBS Standings')}${subTab('espnfcs', 'FCS Standings')}${
+    subTab('espnap', 'AP Top 25')}${subTab('espncp', 'FCS Coaches Poll')}${
     rerateControl()}</div>`;
 
   const panels = {
     watch: watchPanel(),
     cross: crossPanel(),
     plan: planPanel(),
+    espnfbs: espnStandingsHTML('fbs'),
+    espnfcs: espnStandingsHTML('fcs'),
+    espnap: espnPollHTML('ap'),
+    espncp: espnPollHTML('fcs'),
     roster: `<div class="card"><h2>Your roster — what each slot earns from the week you could drop it</h2>
       <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
       <div class="scr"><table class="rostertbl">
