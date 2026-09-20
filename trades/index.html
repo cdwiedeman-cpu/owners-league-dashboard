@@ -565,15 +565,39 @@ function heldBy(league, div, team){
   return null;
 }
 
+/* WHICH EARLIER TRADES A CONDITION NAMES.
+   Casey, 20 Sep 2026: "I want to do it if I miss trade one, two, or three. So if I miss any one
+   of those trades, I still want to do it ... but if I get all three, I don't want to make this
+   fourth trade."
+   So a condition names a LIST, and it is satisfied when ANY trade on that list ended the named
+   way. The old shape stored a single `row`, and lists sent before this change still carry it, so
+   both are read here and nowhere else. ONE READER, OR THE PAGE AND THE SETTLE WILL DISAGREE. */
+function condRows(c){
+  if (!c) return [];
+  if (Object.prototype.toString.call(c.rows) === '[object Array]' && c.rows.length){
+    var out = [], seen = {};
+    for (var i = 0; i < c.rows.length; i++){
+      var n = +c.rows[i];
+      if (n >= 1 && !seen[n]){ seen[n] = 1; out.push(n); }
+    }
+    return out.sort(function(a, b){ return a - b; });
+  }
+  return (+c.row >= 1) ? [+c.row] : [];
+}
+
 function validateRow(row, rowNo){
   if (!row || !row.pickup) return 'a row with no team to pick up';
   var c = row.cond || {type: 'always'};
   if (['always', 'won', 'lost'].indexOf(c.type) === -1) return 'unknown condition "' + c.type + '"';
   if (c.type !== 'always'){
-    if (!(c.row >= 1)) return 'a condition with no row number';
+    var rs = condRows(c);
+    if (!rs.length) return 'a condition with no row number';
     /* A CONDITION CAN ONLY LOOK BACKWARDS. Row 2 asking about row 5 is not a rule, it is a loop:
        row 5 has not run yet, and making it run early would reorder the owner's own priorities. */
-    if (c.row >= rowNo) return 'row ' + rowNo + ' asks about row ' + c.row + ', which runs later';
+    for (var i = 0; i < rs.length; i++){
+      if (rs[i] >= rowNo)
+        return 'row ' + rowNo + ' asks about row ' + rs[i] + ', which runs later';
+    }
   }
   if ((row.drops || []).length > MAX_DROPS) return 'more than ' + MAX_DROPS + ' drops';
   return null;
@@ -703,13 +727,25 @@ function resolve(opts){
            skipped row silently freeze every row hanging off it. */
         var c = res.cond;
         if (c.type !== 'always'){
-          var earlier = out[key][c.row - 1];
-          var gotIt = !!(earlier && GOT[earlier.outcome]);
-          if ((c.type === 'won' && !gotIt) || (c.type === 'lost' && gotIt)){
+          /* ANY, NOT ALL. A condition naming several earlier rows is satisfied as soon as ONE of
+             them ended the named way. "Only if I lose trade 1, 2 or 3" runs when any of the three
+             was missed, and is skipped only when all three came through. */
+          var rs = condRows(c);
+          var hit = false;
+          for (var ri = 0; ri < rs.length; ri++){
+            var earlier = out[key][rs[ri] - 1];
+            var gotIt = !!(earlier && GOT[earlier.outcome]);
+            if (c.type === 'won' ? gotIt : !gotIt){ hit = true; break; }
+          }
+          if (!hit){
+            var which = rs.length === 1 ? 'row ' + rs[0]
+                      : 'any of rows ' + rs.slice(0, -1).join(', ') + ' or ' + rs[rs.length - 1];
             res.outcome = OUTCOME.SKIPPED;
             res.detail = c.type === 'won'
-              ? 'set to run only if row ' + c.row + ' came through, and it did not'
-              : 'set to run only if row ' + c.row + ' did not come through, and it did';
+              ? 'set to run only if ' + which + ' came through, and '
+                + (rs.length === 1 ? 'it did not' : 'none of them did')
+              : 'set to run only if ' + which + ' did not come through, and '
+                + (rs.length === 1 ? 'it did' : 'all of them did');
             out[key][idx] = res; return;
           }
         }
@@ -907,6 +943,7 @@ function claimRow(div, seat, res, opts){
 return {resolve: resolve, claim: claim, applyClaim: applyClaim, claimRow: claimRow,
         seatKey: seatKey, heldBy: heldBy,
         OUTCOME: OUTCOME, GOT: GOT, MAX_ROWS: MAX_ROWS, MAX_DROPS: MAX_DROPS,
+        condRows: condRows,
         sameSide: sameSide,
         _hash32: hash32, _mulberry32: mulberry32, _flipKey: flipKey};
 }));
@@ -3035,7 +3072,7 @@ function unsubmit(){
 function addRow(cond){
   var rows = myRows().slice();
   if (rows.length >= P.MAX_ROWS) return;
-  rows.push({pickup: '', drops: [''], cond: cond || {type: 'always', row: 1}});
+  rows.push({pickup: '', drops: [''], cond: cond || {type: 'always', rows: [1]}});
   setRows(rows); render();
 }
 /* A BACKUP TRADE IS ONE PRESS, NOT FOUR.
@@ -3047,7 +3084,7 @@ function addRow(cond){
 function addBackupRow(){
   var n = myRows().length;
   if (!n){ addRow(); return; }
-  addRow({type: 'lost', row: n});
+  addRow({type: 'lost', rows: [n]});
 }
 function delRow(i){
   var r = myRows().slice(); r.splice(i, 1);
@@ -3078,8 +3115,17 @@ function editRow(i, field, v, j){
   else if (field === 'drop'){ row.drops = row.drops.slice(); row.drops[j] = v;
     row.drops = row.drops.filter(function(x, k){ return x || k === 0; });
     if (row.drops.length < P.MAX_DROPS && row.drops[row.drops.length - 1]) row.drops.push(''); }
-  else if (field === 'condtype'){ row.cond = {type: v, row: (row.cond || {}).row || 1}; }
-  else if (field === 'condrow'){ row.cond = {type: (row.cond || {}).type || 'always', row: +v}; }
+  else if (field === 'condtype'){ row.cond = {type: v, rows: condRowsFor(row.cond, i)}; }
+  else if (field === 'condrow'){
+    /* TOGGLE, BECAUSE A CONDITION CAN NAME SEVERAL TRADES. Pressing a trade that is already
+       named takes it off the list, and the LAST one cannot be taken off -- a condition with
+       nothing to wait on is not a condition, and the three choices above are where somebody
+       says they no longer want one. */
+    var cur = condRowsFor(row.cond, i), n = +v, at = cur.indexOf(n);
+    if (at >= 0){ if (cur.length > 1) cur.splice(at, 1); }
+    else { cur.push(n); cur.sort(function(a, b){ return a - b; }); }
+    row.cond = {type: (row.cond || {}).type || 'always', rows: cur};
+  }
   rows[i] = row; setRows(rows); render();
 }
 
@@ -3211,9 +3257,15 @@ function viewTrades(){
       + 'the top.</li>'
       + '<li>From row 2 on, a trade can wait on an earlier one. <b>When to Try This Trade</b> '
       + 'gives you three choices. Try it no matter what, only if you win an earlier trade, or '
-      + 'only if you miss an earlier trade. That is how you say &ldquo;if I do get Navy, go '
-      + 'after Alabama as well&rdquo;, or &ldquo;if I miss out on Navy, try Alabama '
+      + 'only if you lose an earlier trade. That is how you say &ldquo;if I do get Navy, go '
+      + 'after Alabama as well&rdquo;, or &ldquo;if I lose out on Navy, try Alabama '
       + 'instead&rdquo;.</li>'
+      + '<li><b>A condition can name more than one earlier trade.</b> Under <b>Which Earlier '
+      + 'Trades</b>, tap every trade you want it to wait on. One is enough to set it off. So a '
+      + 'fourth trade set to wait on trades 1, 2 and 3 is tried if you lose any one of them, and '
+      + 'is skipped only if you win all three.</li>'
+      + '<li>Losing a trade means not getting the team, for any reason. Losing the coin flip '
+      + 'counts. So does running out of teams to drop.</li>'
       + '<li>A <b>backup trade</b> is the second kind. Press <b>Add a Backup Trade</b> and you '
       + 'get a new trade already set to wait on the one above it. It is only tried if that '
       + 'trade does not go through. You still choose the team you want and the teams you would '
@@ -3828,18 +3880,39 @@ function rows0(i, n){
   var r = rows && rows[n];
   return (r && r.pickup) ? r.pickup : '';
 }
+/* THE TRADES A CONDITION NAMES, CLAMPED TO ONES REALLY ABOVE THIS ROW.
+   `PEL.condRows` is the one reader of the stored shape and it is shared with the settle, so the
+   page and Monday cannot disagree about which trades a row is waiting on. `i` is the row's own
+   position: trades 1..i are above it and anything else is dropped. */
+function condRowsFor(c, i){
+  var rs = (P && P.condRows) ? P.condRows(c) : [];
+  var out = [];
+  for (var k = 0; k < rs.length; k++) if (rs[k] >= 1 && rs[k] <= i) out.push(rs[k]);
+  if (!out.length && i >= 1) out = [1];
+  return out;
+}
+/* A LIST OF TRADE NUMBERS, WRITTEN THE WAY SOMEBODY WOULD SAY IT. "1, 2 and 3", never "1,2,3". */
+function numList(rs, joiner){
+  if (rs.length === 1) return String(rs[0]);
+  return rs.slice(0, -1).join(', ') + ' ' + (joiner || 'and') + ' ' + rs[rs.length - 1];
+}
 /* WHAT A CONDITIONAL TRADE SAYS, IN ONE PLACE. The trade card, the read-back list of a sent
    list and the help text all print this same sentence, so the page cannot teach two different
-   things about one row. `i` is the row's own position, so the number it waits on is clamped to a
-   trade that really is above it. */
+   things about one row.
+   ANY, NOT ALL. Casey, 20 Sep 2026: "if I miss any one of those trades, I still want to do it ...
+   but if I get all three, I don't want to make this fourth trade." */
 function condLine(c, i){
   c = c || {type: 'always'};
   if (c.type !== 'won' && c.type !== 'lost') return null;
-  var top = Math.max(i, 1);
-  var n = Math.min(Math.max(+c.row || 1, 1), top);
+  var rs = condRowsFor(c, Math.max(i, 1));
+  var one = rs.length === 1;
   return c.type === 'lost'
-    ? {tag: 'Backup', text: 'Only tried if trade ' + n + ' does not go through.', row: n}
-    : {tag: 'Follow-Up', text: 'Only tried if trade ' + n + ' does go through.', row: n};
+    ? {tag: 'Backup', rows: rs,
+       text: one ? 'Only tried if trade ' + rs[0] + ' does not go through.'
+                 : 'Only tried if you lose at least one of trades ' + numList(rs) + '.'}
+    : {tag: 'Follow-Up', rows: rs,
+       text: one ? 'Only tried if trade ' + rs[0] + ' does go through.'
+                 : 'Only tried if you win at least one of trades ' + numList(rs) + '.'};
 }
 function rowForm(r, i, free, mine, k){
   var drops = (r.drops || ['']).slice();
@@ -3912,9 +3985,11 @@ function rowForm(r, i, free, mine, k){
    * IT STILL DOES NOT EXIST ON THE FIRST TRADE. Trade 1 has nothing above it to depend on.
    */
   if (i > 0){
-    /* CLAMPED TO A TRADE THAT IS REALLY ABOVE THIS ONE, exactly as condLine() clamps it. A label
-       and the sentence beside it are one fact, so they cannot be worked out two different ways. */
-    var above = Math.min(Math.max(+c.row || 1, 1), i);
+    /* THE SAME LIST condLine() READS. A label and the sentence beside it are one fact, so they
+       cannot be worked out two different ways. */
+    var picked = condRowsFor(c, i);
+    var many = picked.length > 1;
+    var says = many ? 'Any of Trades ' + numList(picked) : 'Trade ' + picked[0];
     var opt = function(val, label){
       return '<button class="' + (c.type === val ? 'on' : '') + '" '
         + 'onclick="editRow(' + i + ',\'condtype\',' + jq(val) + ')">' + label + '</button>';
@@ -3926,10 +4001,14 @@ function rowForm(r, i, free, mine, k){
          then which earlier trade -- those aren't really clear or easy to see." Half of that was
          the dropdown, which is gone. The other half is that "an earlier trade" is not a thing
          anybody can picture. "Only if I Miss Trade 1" is. */
+      /* LOSE, NOT MISS. Casey, 20 Sep 2026: "instead of saying only if I miss trade three, I
+         think you should say only if I lose trade three." The paragraph under the buttons still
+         says what losing covers, because the settle counts a trade as lost whenever it did not
+         come through -- the coin flip, standing aside, or running out of teams to drop. */
       + '<div class="opts">'
       + opt('always', 'Try It No Matter What')
-      + opt('won', 'Only if I Win Trade ' + above)
-      + opt('lost', 'Only if I Miss Trade ' + above)
+      + opt('won', 'Only if I Win ' + says)
+      + opt('lost', 'Only if I Lose ' + says)
       + '</div>';
     if (c.type === 'always'){
       /* SAY WHAT IS NOT THERE. Casey, 15 Sep 2026: "on my third trade, when I say always try
@@ -3942,22 +4021,40 @@ function rowForm(r, i, free, mine, k){
         + '<p class="note" style="margin:6px 0 0">There is no earlier trade to name here. The '
         + 'other two choices are the ones that ask you which earlier trade to follow.</p>';
     } else {
-      h += '<label class="lb" style="margin-top:10px">Which earlier trade?</label>'
+      /* ONE CONDITION, AS MANY EARLIER TRADES AS HE WANTS.
+         Casey, 20 Sep 2026: "I want to do it if I miss trade one, two, or three. So if I miss any
+         one of those trades, I still want to do it ... but if I get all three, I don't want to
+         make this fourth trade."
+         So these TOGGLE. Pressing a trade that is already on adds or removes it, and the rule is
+         ANY: one trade ending the named way is enough to run this one. The last one cannot be
+         switched off, because a condition with nothing to wait on is not a condition. */
+      var onOff = function(n){ return picked.indexOf(n) >= 0; };
+      h += '<label class="lb" style="margin-top:10px">Which Earlier Trades?</label>'
+        + '<p class="note" style="margin:2px 0 7px">Pick one, or pick several. Tap one again to '
+        + 'take it off.</p>'
         + '<div class="whichrow">'
         + Array.apply(null, {length: i}).map(function(_, n){
             var team = rows0(i, n);
-            return '<button class="' + (above === n + 1 ? 'on' : '') + '" '
+            return '<button class="' + (onOff(n + 1) ? 'on' : '') + '" '
               + 'onclick="editRow(' + i + ',\'condrow\',' + (n + 1) + ')">Trade ' + (n + 1)
               + (team ? ' \u2014 ' + esc(team) : '') + '</button>';
           }).join('')
         + '</div>'
         + '<p class="note" style="margin:8px 0 0">'
         + (c.type === 'lost'
-            ? 'This trade is only tried if you do <b>not</b> win trade ' + above
-              + '. If you do win that one, this trade is skipped.'
-            : 'This trade is only tried if you <b>do</b> win trade ' + above
-              + '. If you do not win that one, this trade is skipped.')
-        + '</p>';
+            ? (many
+                ? 'This trade is tried if you lose <b>any one</b> of trades ' + numList(picked)
+                  + '. If you win all ' + picked.length + ' of them, this trade is skipped.'
+                : 'This trade is only tried if you do <b>not</b> win trade ' + picked[0]
+                  + '. If you do win that one, this trade is skipped.')
+            : (many
+                ? 'This trade is tried if you win <b>any one</b> of trades ' + numList(picked)
+                  + '. If you lose all ' + picked.length + ' of them, this trade is skipped.'
+                : 'This trade is only tried if you <b>do</b> win trade ' + picked[0]
+                  + '. If you do not win that one, this trade is skipped.'))
+        + '</p>'
+        + '<p class="note" style="margin:6px 0 0">Losing a trade means not getting the team, for '
+        + 'any reason. Losing the coin flip counts. So does running out of teams to drop.</p>';
     }
   }
   h += '</div>';
