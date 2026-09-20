@@ -2820,7 +2820,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:59 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 1:00 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4492,6 +4492,17 @@ function recommend(t, inc, minEdge){
     const g = gainAt(w);
     if (best === null || g.gain > best.gain + minEdge) best = g;
   }
+  /* HOLDING IT TO THE END, WHENEVER THAT IS NOT MEASURABLY WORSE. Casey, 20 Sep 2026, on
+     Harvard: "that should absolutely show up as a keep." The gain peaked at 8 weeks on +3.13 and
+     the full nine weeks came to +3.10. Three hundredths is not a reason to plan on dropping a
+     team for the last week of the season, and printing 8w rather than KEEP made a difference
+     that small look like a decision.
+     This page already refuses to call one team better than another over a gap under the same
+     bar. Same bar here. A losing end is never swapped in: a hold that only just clears zero
+     must not be turned negative by this. */
+  const endw = gainAt(maxW);
+  if (best && endw.gain > 0 && endw.gain >= best.gain - minEdge) best = endw;
+
   const mand = gainAt(minW);
   const span = x => `${x.w} week${x.w === 1 ? '' : 's'}` +
     (x.byes ? ` (${x.games} game${x.games === 1 ? '' : 's'}, ${x.byes} bye)` : '');
@@ -4533,8 +4544,8 @@ function recommend(t, inc, minEdge){
           tip: `Hold it ${span(best)}` + (last ? ' — to the end of the regular season' : '')
              + `, where the gain over ${inc.n} peaks at +${best.gain.toFixed(2)}.`
              + (longer ? ` Advised past the minimum because this team has EARNED it on the field: `
-                 + `${f.games} games played, ${f.edge >= 0 ? '+' : ''}${f.edge.toFixed(2)} against `
-                 + `what the model expected.`
+                 + `${f.games} game${f.games === 1 ? '' : 's'} played, `
+                 + `${f.edge >= 0 ? '+' : ''}${f.edge.toFixed(2)} against what the model expected.`
                : ` Both sides of that number are the same ${best.w} weeks, so it is the swap's `
                  + `real worth over the stretch you are committed to.`)};
 }
