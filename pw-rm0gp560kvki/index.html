@@ -862,7 +862,15 @@ tr.clickable:hover td{background:rgba(96,165,250,.07)}
 .v-keep{color:var(--good);border-color:var(--goodline)}
 .v-no{color:var(--faint);border-color:var(--line)}
 .v-avoid{color:var(--bad);border-color:var(--badline);background:rgba(248,113,113,.08)}
-.recg{display:block;font-size:10px;font-variant-numeric:tabular-nums;margin-top:2px}
+/* THE SMALL NUMBER SITS BESIDE ITS PILL, NOT UNDER IT. Casey, 20 Sep 2026: "on the pickups tab,
+   when I'm looking at South Carolina State, it's wrapping the flag underneath upset, and there's
+   plenty of space. There's no reason it needs to wrap."
+   This was display:block. Inside the team cell that started UPSET on a line of its own and pushed
+   the plan flag and the watch star onto a third one. The same line stacked 3w over +1.04 in the
+   Advice column on EVERY row of the table, and 0% over BYE in 3-0. Inline, each of those is one
+   line and every row is shorter. */
+.recg{display:inline-block;font-size:10px;font-variant-numeric:tabular-nums;margin-left:5px;
+  white-space:nowrap;vertical-align:baseline}
 .empty{color:var(--dim);font-size:13px;line-height:1.55;padding:6px 0}
 /* Each team is a FULL-WIDTH row of the game block. Without grid-column:1/-1 the two .t
    children land in the grid's two columns side by side, and the away team renders inside the
@@ -918,8 +926,26 @@ details>summary::marker{color:var(--faint)}
 .cmphr{border:0;border-top:1px solid var(--line);margin:4px 0}
 /* The available-teams table at laptop width, where all eight cells render, so position N is
    column N: Cmp, Team, 3-0, Bank 3, Gain 3, Season, Gain, Do. */
-.cg1{width:46px} .cg2{width:20%} .cg3{width:10%} .cg4{width:11%}
-.cg5{width:11%} .cg6{width:12%} .cg7{width:11%} .cg8{width:8%} .cg9{width:15%}
+/* THE WIDTHS FOLLOW WHAT EACH COLUMN HOLDS. Casey, 20 Sep 2026: "on the pickups tab when you
+   filter on college or NFL, can we not tighten that up so that that doesn't wrap? On the laptop
+   there's plenty of space to squish the columns together."
+   Measured at 1440px: the whole table needs 685px of content and is given 1042px, and it still
+   wrapped -- because Team was handed 203px for 245px of words while each number column held a
+   five-character number in 112px. Team takes a third now and the numbers take what a number
+   needs. MEASURE, DO NOT GUESS: verify_pickcols.js drives the page at five widths and fails on
+   any wrapped cell. */
+.cg1{width:46px} .cg2{width:32%} .cg3{width:9%} .cg4{width:9%}
+.cg5{width:9%} .cg6{width:10%} .cg7{width:10%} .cg8{width:9%} .cg9{width:12%}
+/* ONE FLOOR, EVERY WIDTH. Percentages of a narrow window are narrower than the words in them, so
+   the table keeps a minimum and the box around it scrolls -- the gesture this page already uses
+   everywhere. It used to be set only inside the phone media query, which left a small laptop
+   window wrapping with no floor at all. */
+[data-avail] table{min-width:740px}
+/* A NUMBER NEVER BREAKS, AT ANY WIDTH. These were nowrap only on a phone. A laptop window can be
+   just as narrow as a phone is wide. Data cells only: a two-word HEADER is allowed its second
+   line. */
+td.c-p30, td.c-bank, td.c-gain, td.c-season, td.c-sgain, td.c-ups,
+td.c-then{white-space:nowrap}
 @media (max-width:560px){
   .hide-s{display:none}
   /* NO COLUMN-HIDING IN THE OWNER DRAWER. Casey, 31 Aug 2026, asked that this panel keep every
@@ -935,7 +961,7 @@ details>summary::marker{color:var(--faint)}
      A happy side effect: with no cells hidden, the eight <col> elements map one-to-one again, so
      the desktop widths apply unchanged and the column-RENUMBERING trap that hiding cells created
      (see START_HERE 2.34) simply does not arise on this table any more. */
-  [data-avail] table{min-width:660px}
+  /* The floor is in the base rules, above, so there is one of it. */
   [data-avail] .hide-s{display:table-cell}
   [data-avail] .c-bank{display:table-cell}
   main{padding:10px 10px 60px}
@@ -1155,6 +1181,9 @@ details>summary::marker{color:var(--faint)}
 <!-- WHAT'S NEW. Same in-page panel as the rest, for the same reason: this is read on a phone
      inside a third-party browser app that may not draw a native dialog. -->
 <div id="news" class="modal" hidden role="dialog" aria-modal="true" aria-label="What's new"></div>
+<!-- ITS OWN BOX, NOT A BORROWED ONE. The watch star can be pressed from inside the team panel,
+     so a question that reused #scout would wipe out the panel he pressed it from. -->
+<div id="ask" class="modal" hidden role="dialog" aria-modal="true" aria-label="Question"></div>
 <!-- FIRST RUN. The league page needs one thing from a reader before it can say "your teams", and
      a dropdown in a filter row is something you have to notice. This asks. Same in-page panel as
      the team detail -- never a native dialog, for the same reason alert() is banned here: this is
@@ -2749,7 +2778,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 11:52 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:13 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5091,10 +5120,15 @@ function watchPanel(){
     const q = String(t.n).replace(/'/g, "\\'");
     return `<tr class="clickable" onclick="toggleWatch('${q}')"
         title="Tap for every game this team has played and has left, with a win probability for each.">
+      <!-- NO SECOND LINE IN THIS CELL. Casey, 20 Sep 2026: "on the watch list I don't need to
+           know what other divisions own it. That's all that's needed is in the Taken Elsewhere
+           [tab]. And obviously I know it's free, because I put it on the watch list."
+           So the FREE badge and the other-division owner are both gone, and the row is one line
+           tall. TAKEN, TOO LATE and YOURS stay, inline beside the name: those say he CANNOT act
+           on the numbers in the row, and a team can go from free to taken while it sits here. -->
       <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
-        <span class="d" style="font-size:11px">▸</span>
-        <div style="margin-top:3px"><span class="pill ${st.cls}" title="${st.tip}">${st.label}</span>
-        ${t.owner === ME ? '' : ownerHTML(t.n)}</div></td>
+        <span class="d" style="font-size:11px">▸</span>${st.label === 'FREE' ? ''
+          : ` <span class="pill ${st.cls}" title="${st.tip}">${st.label}</span>`}</td>
       <td class="num c-p30 ${!b || b.p == null ? 'd' : b.p >= 0.5 ? 'g' : b.p >= 0.25 ? 'y' : 'b'}">${
         !b || b.p == null ? '<span class="d">—</span>' : (b.byes ? '0%' : pctP(b.p))}</td>
       <td class="num c-bank">${b ? b.pts.toFixed(2) : '—'}</td>
@@ -5152,13 +5186,13 @@ function watchPanel(){
       the same weeks, with points you have already scored left out of both sides.
       ${colInc ? `A college team is measured against <b>${colInc.n}</b>` : 'You hold no college team'}
       and ${nflInc ? `an NFL team against <b>${nflInc.n}</b>` : 'you hold no NFL team'}.
-      <br><b>The badge on each team is the part to read first.</b>
-      <b>FREE</b> means you could pick it up now.
-      <b>TAKEN</b> means another Predator owner holds it — the numbers are still true, but you
-      cannot act on them until that changes.
+      <br>A team with no badge beside its name is one you can pick up now.
+      <b>TAKEN</b> means another Predator owner holds it. The numbers in the row are still true.
+      You cannot act on them until that changes.
       <b>TOO LATE</b> means nobody holds it and it still cannot finish a
       ${DATA.hold_games}-game hold from the day your slot frees up, so it is not legal this week.
       <b>YOURS</b> is one of your own eleven.
+      <br>Who owns a team in Viper and Scorpion is on the <b>Taken Elsewhere</b> tab.
       <br>A team keeps earning its place here whatever the badge says. That is the reason to have
       the list: the College and NFL tabs only show teams you can take <b>this week</b>.`)}
   </div>` + compareCard('COL') + compareCard('NFL');
@@ -5346,16 +5380,64 @@ function planBtn(n, small){
 function watchSave(){ watchPush(); }
 const watching = n => WATCH.indexOf(n) >= 0;
 
-function watchToggle(n){
+function watchToggle(n, anyway){
   if (!n || !BY.get(n)) return;
   const i = WATCH.indexOf(n);
-  if (i >= 0) WATCH.splice(i, 1); else WATCH.push(n);
+  if (i >= 0){ WATCH.splice(i, 1); watchDrawn(); return; }
+  /* IT SAYS SO BEFORE IT ADDS A TEAM HE CANNOT TAKE. Casey, 20 Sep 2026: "if I put something on
+     the watch list and it's not free, you should give me a warning that I'm putting it on the
+     watch list and it's not available. And if I want to still put it on the watch list, then I
+     could say okay." Taking a team OFF the list never asks: there is nothing to warn about, and
+     the star is how he undoes this. */
+  const st = watchStatus(BY.get(n));
+  if (!anyway && st.label !== 'FREE' && st.label !== 'YOURS'){ askWatchAdd(n, st); return; }
+  WATCH.push(n);
+  watchDrawn();
+}
+/* REDRAW WHATEVER IS ACTUALLY IN FRONT OF HIM. The star can be pressed from three places and
+   each of them shows the state it just changed. */
+function watchDrawn(){
   watchSave();
-  /* REDRAW WHATEVER IS ACTUALLY IN FRONT OF HIM. The star can be pressed from three places and
-     each of them shows the state it just changed. */
   if (SCOUT) renderScout();
   if (PROJ_ON && !el('pick').hidden) renderPick();
 }
+
+/* THE QUESTION. Two buttons, both saying what they do -- never alert() or confirm(), which draw
+   nothing inside the browser apps this page is opened in. */
+let ASK_OVF = '';
+function askWatchAdd(n, st){
+  const box = el('ask');
+  if (!box) { watchToggle(n, true); return; }
+  const q = String(n).replace(/'/g, "\\'");
+  box.innerHTML = `<div class="modalbox"><div class="modalhd"><h2>${esc(n)} Is Not Available</h2>
+    <button class="modalx" onclick="closeAsk()" title="Close" aria-label="Close">&times;</button></div>
+    <div class="modalbody">
+    <p><b>${st.label === 'TAKEN' ? 'Another Predator owner holds ' + esc(n) + '.'
+        : esc(n) + ' cannot finish the ' + DATA.hold_games + '-game hold this week.'}</b>
+      You cannot pick it up right now.</p>
+    <p>${esc(st.tip)}</p>
+    <p>You can still watch it. The watch list prices a team against the one you would drop,
+      exactly the way the College and NFL lists do, so it is ready the day it does come free.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="f primary" onclick="closeAsk();watchToggle('${q}', true)">Watch It Anyway</button>
+      <button class="f" onclick="closeAsk()">Cancel</button></div>
+    </div></div>`;
+  ASK_OVF = document.body.style.overflow;
+  box.hidden = false;
+  document.body.style.overflow = 'hidden';
+  const x = box.querySelector('.modalx'); if (x) x.focus({preventScroll: true});
+}
+/* THE SCROLL LOCK IS PUT BACK THE WAY IT WAS FOUND, not cleared. This panel can open on top of
+   the team panel, which set the lock itself and still needs it when the question closes. */
+function closeAsk(){
+  const m = el('ask'); if (!m || m.hidden) return;
+  m.hidden = true; m.innerHTML = '';
+  document.body.style.overflow = ASK_OVF;
+}
+/* THE SAME THREE WAYS OUT every other panel gives: the X, the backdrop and Escape. */
+document.addEventListener('click', ev => { if (ev.target === el('ask')) closeAsk(); });
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && el('ask') && !el('ask').hidden) closeAsk(); });
 
 /* THE STAR. One control, two states, and its own words for each -- a toggle whose tooltip does
    not change is a toggle the reader cannot tell the state of. */
