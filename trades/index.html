@@ -2318,6 +2318,7 @@ function _planPut(){ if (_PLAN_PUT) _PLAN_PUT(); }
 var BAR_HOST = false;
 function barAct(act){
   if (act === 'add') return addRow();
+  if (act === 'addbk') return addBackupRow();
   if (act === 'submit') return submitList();
   if (act === 'unsubmit') return unsubmit();
 }
@@ -3519,9 +3520,22 @@ function viewTrades(){
    * nothing.
    */
   if (!sent){
+    /* THREE BUTTONS, ON EVERY SCREEN. Casey, 20 Sep 2026, asked for the backup button here and
+       then settled it: "actually just add it to both. iPhone and laptop."
+       WHAT IT COSTS, MEASURED before it was built: nothing on a tablet or a laptop, 46px of bar
+       on an iPhone, and 52px plus a third row of buttons below 360px. Nothing is HIDDEN by that,
+       because the page reserves room by measuring the bar rather than assuming its height -- see
+       the paddingBottom line in sendBar(), and the matching one in the dashboard.
+       THE STATUS TEXT IS STILL THE BOTTOM-MOST THING IN THE BAR whatever the buttons do, which is
+       the rule that keeps a button off the iPhone's curved corner.
+       It is switched off until there is a trade to back up, because the first trade cannot be a
+       backup of anything. */
     h += '<div class="stickybar" id="actbar"><div class="barrow">'
       + '<button class="add" data-act="add" ' + (rows.length >= P.MAX_ROWS ? 'disabled' : '')
       + ' onclick="addRow()">+ Add Another Trade</button>'
+      + '<button class="add bk" data-act="addbk" '
+      + (rows.length && rows.length < P.MAX_ROWS ? '' : 'disabled')
+      + ' onclick="addBackupRow()">+ Add a Backup Trade</button>'
       + '<button class="pri" data-act="submit" ' + (rows.length ? '' : 'disabled')
       + ' onclick="submitList()">Submit My Trades</button></div>'
       + '<span class="grow">' + rows.length + ' of ' + P.MAX_ROWS + ' trades &middot; not saved yet'
