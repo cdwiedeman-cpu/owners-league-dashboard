@@ -3072,7 +3072,7 @@ function unsubmit(){
 function addRow(cond){
   var rows = myRows().slice();
   if (rows.length >= P.MAX_ROWS) return;
-  rows.push({pickup: '', drops: [''], cond: cond || {type: 'always', rows: [1]}});
+  rows.push({pickup: '', drops: [''], cond: cond || {type: 'always'}});
   setRows(rows); render();
 }
 /* A BACKUP TRADE IS ONE PRESS, NOT FOUR.
@@ -3097,9 +3097,9 @@ function delRow(i){
     var c = row.cond;
     if (!c || c.type === 'always') return row;
     var n = +c.row || 1;
-    if (n === i + 1) return Object.assign({}, row, {cond: {type: 'always', row: 1}});
+    if (n === i + 1) return Object.assign({}, row, {cond: {type: 'always'}});
     if (n > i + 1) n -= 1;
-    if (n > k || n < 1) return Object.assign({}, row, {cond: {type: 'always', row: 1}});
+    if (n > k || n < 1) return Object.assign({}, row, {cond: {type: 'always'}});
     return Object.assign({}, row, {cond: {type: c.type, row: n}});
   });
   setRows(r); render();
@@ -3921,7 +3921,7 @@ function rowForm(r, i, free, mine, k){
   var drops = (r.drops || ['']).slice();
   if (drops.length < P.MAX_DROPS && drops[drops.length - 1]) drops.push('');
   if (!drops.length) drops = [''];
-  var c = r.cond || {type: 'always', row: 1};
+  var c = r.cond || {type: 'always'};
   /* THE DROPS FOLLOW THE PICKUP. Nothing decides the pool but the team chosen above, so there
      is no mode to set, nothing to clear, and no way to build a row the rules forbid. */
   var kind = r.pickup ? kindOf(r.pickup) : null;
