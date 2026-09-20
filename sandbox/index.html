@@ -372,18 +372,6 @@ body.hasbar{padding-bottom:104px}
  * outline — so it is impossible to miss and impossible to mistake for the button that ends the
  * job. Two filled buttons side by side is a fork in the road, and adding a row is not a fork.
  */
-/* ---- SENDING MY LIST TO THE PERSON I SHARE A SEAT WITH ---------------------------------------
-   One card, one note box, one button. The address box is only on screen until it is saved, and
-   after that it is a line of small text with a way to change it -- a setting, not a prompt. */
-.cmnote{width:100%;box-sizing:border-box;font:inherit;font-size:16px;line-height:1.4;
- padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--pan);
- color:var(--ink);resize:vertical;min-height:88px;margin:0 0 10px}
-.cmto{flex:1 1 220px;min-width:0;font:inherit;font-size:16px;padding:0 12px;min-height:44px;
- border:1px solid var(--line);border-radius:9px;background:var(--pan);color:var(--ink)}
-/* A BUTTON THAT READS AS A LINK, for the one that undoes a saved setting. It is not an action
-   anybody arrives wanting, so it does not compete with the one that writes the mail. */
-button.lnk{background:none;border:0;padding:0;min-height:0;color:var(--blue);font:inherit;
- font-size:inherit;text-decoration:underline;cursor:pointer}
 .addrow{margin:0 0 14px;align-items:center;gap:10px}
 button.add{background:var(--pan);color:var(--blue);border-color:var(--blue);border-width:2px;
  font-weight:700;min-height:46px;padding:0 18px;font-size:15px}
@@ -5151,22 +5139,23 @@ function addressesFor(div, seat){
 }
 /* ================= SENDING MY OWN LIST TO THE PERSON I SHARE A SEAT WITH ====================
  *
- * Casey, 20 Sep 2026: "create a button ... that lets me email the trades I have submitted to
- * Dominic. This would only be for me and dominic on our dashboard and not for everyone else. I
- * want to be able to send him an email to explain what I am thinking."
+ * Casey, 20 Sep 2026: "I just want a button that creates this email for me in Gmail. Then I can
+ * add to it and send." And, correcting the first build: "The emails are in the access list so you
+ * should be able to pull from there ... The email just needs to copy the trades I have submitted.
+ * You don't need to add any other takes other than at the top say this is what I am thinking for
+ * this week."
  *
- * TWO THINGS KEEP THIS HONEST.
- *   1. NO ADDRESS IS PUBLISHED. Nobody's email address is on this site, and this does not put one
- *      there. The address is typed once on the device that sends and kept in that browser, the
- *      same way the choice of mail app already is. A different phone asks again.
- *   2. NOTHING HERE SENDS MAIL. The page hands a finished message to whatever the reader writes
- *      mail in, through the same `openMail()` the Access List uses. There is one mail app setting
- *      on this page and this shares it, rather than keeping a second copy of the same fact.
+ * So: no address to type, no note box, no extra sentences. One line at the top, the list, and a
+ * button. He writes the rest in Gmail.
  *
- * A COMMISSIONER ENTERING FOR SOMEBODY ELSE DOES NOT GET IT. The list on screen is then not their
- * list, and mailing it to their own co-owner would be sending somebody else's trades.
+ * WHERE THE ADDRESS COMES FROM, AND WHY THAT IS SAFE. It is in the access list, which the back
+ * end serves to the COMMISSIONER HALF ONLY -- `view`, which every owner calls, returns no address
+ * and no member list at all. So the address never touches the published file and no other owner's
+ * page can reach one. It arrives at run time, to the one person who already holds it.
+ *
+ * A SEAT HAS MEMBERS, and the co-owner is the member of my own seat who is not me. `me.email`
+ * comes back with the sign-in, so nobody has to be named in the file to be found.
  */
-var COMAIL_TO = 'rfl_comail_to';
 function coMail(){
   var a = actingSeat();
   if (!a || a.onBehalf) return null;
@@ -5175,25 +5164,44 @@ function coMail(){
   for (var i = 0; i < list.length; i++) if (list[i].seat === key) return list[i];
   return null;
 }
-function coMailTo(){
-  try { return localStorage.getItem(COMAIL_TO) || ''; } catch (e) { return ''; }
+/* THREE ANSWERS, NOT TWO. 'ok' with an address, 'none' when the list is there and holds nobody
+   else on this seat, and 'nolist' when the access list could not be reached at all. They need
+   different sentences: one is a fact about the seat, the other is a fact about the connection. */
+function coMailWho(){
+  var a = actingSeat(); if (!a) return {how: 'nolist'};
+  var rows = S.access || [];
+  if (!rows.length) return {how: 'nolist'};
+  /* WHO I AM, IN BOTH MODES. `whoIsThis()` already answers this from the back end on the real
+     page and from the sandbox's own sign-in on the practice copy, so there is no second way of
+     working it out here. Without it, the practice copy would offer to mail Casey himself. */
+  var meRow = whoIsThis() || {};
+  var mine = String(meRow.email || '').toLowerCase();
+  /* TWO SHAPES, ONE ANSWER. The back end returns a seat once with a `members` list; the practice
+     copy keeps ONE ROW PER PERSON and repeats the seat. Reading only one of them would give an
+     empty answer on the other page and look like "nobody else is on this seat". */
+  var out = [], seen = {}, found = false;
+  for (var i = 0; i < rows.length; i++){
+    var r = rows[i];
+    if (r.div !== a.div || r.seat !== a.seat) continue;
+    found = true;
+    if (r.status === 'inactive') continue;
+    var ms = r.members || [{email: r.email, role: r.role}];
+    for (var k = 0; k < ms.length; k++){
+      var e = String((ms[k] || {}).email || '').trim();
+      if (!e) continue;
+      if (mine && e.toLowerCase() === mine) continue;
+      if (seen[e.toLowerCase()]) continue;
+      seen[e.toLowerCase()] = 1; out.push(e);
+    }
+  }
+  if (!found) return {how: 'nolist'};
+  if (!out.length) return {how: 'none'};
+  return {how: 'ok', to: out};
 }
-function setCoMailTo(v){
-  try { localStorage.setItem(COMAIL_TO, String(v || '').trim()); } catch (e) {}
-  render();
-}
-function saveCoMailTo(){
-  var b = el('comail_to');
-  setCoMailTo(b ? b.value : '');
-}
-function forgetCoMailTo(){ setCoMailTo(''); }
-/* THE LIST, WRITTEN THE WAY HE WOULD SAY IT DOWN THE PHONE. Not a table, because a mail app on a
-   phone will wrap any table into nonsense, and not the page's own wording either -- "Trade 1"
-   means nothing to somebody who is not looking at the page. */
-function coMailBody(note){
+/* THE LIST AND NOTHING ELSE, under the one line he asked for. */
+function coMailBody(){
   var rows = myRows(), out = [];
-  out.push('Here is the list I sent in for week ' + playWeek() + '.');
-  out.push('It is tried in this order on Monday at 4:00pm AZ.');
+  out.push('This is what I am thinking for this week.');
   out.push('');
   rows.forEach(function(r, i){
     var drops = (r.drops || []).filter(Boolean);
@@ -5203,71 +5211,39 @@ function coMailBody(note){
     if (cl) line += ' ' + cl.text;
     out.push(line);
   });
-  out.push('');
-  out.push('Only one team is given up per trade. It is the first one on that line I still hold '
-           + 'and am still allowed to drop.');
-  if (note && String(note).trim()){
-    out.push('');
-    out.push('What I am thinking:');
-    out.push(String(note).trim());
-  }
   return out.join('\n');
 }
-function coMailSubject(){
-  return 'My trades for week ' + playWeek() + ', games starting ' + playWeekStarts();
-}
+function coMailSubject(){ return 'My trades for week ' + playWeek(); }
+/* GMAIL, BECAUSE HE ASKED FOR GMAIL. This is the one button on the page that does not follow the
+   mail app setting: that setting exists for Bob sending 27 codes, and this is Casey sending one
+   message to one person in the thing he actually writes mail in. */
 function sendCoMail(){
   var c = coMail(); if (!c) return;
-  var to = coMailTo();
-  var n = el('comail_note');
-  var note = n ? n.value : '';
-  if (!to){
-    showHelp('An Address First',
-      '<p>Put ' + esc(c.name) + '&rsquo;s email address in the box and press '
-      + '<b>Save the Address</b>. This phone or computer remembers it, so you only do it '
-      + 'once.</p><p>It is kept in this browser and nowhere else. It is not on the website and '
-      + 'nobody else can see it.</p>');
-    return;
-  }
-  openMail([to], coMailSubject(), coMailBody(note), c.name);
+  var w = coMailWho();
+  if (w.how !== 'ok') return;
+  window.open(composeURL('gmail', w.to.join(','), coMailSubject(), coMailBody()),
+              '_blank', 'noopener');
 }
-function copyCoMail(btn){
-  var n = el('comail_note');
-  copyPlain(coMailSubject() + '\n\n' + coMailBody(n ? n.value : ''), btn, 'Copied',
-            'Copy the Message');
-}
-/* THE CARD ONLY EXISTS ONCE THE LIST IS IN. Sending a draft would be telling him something that
-   is not true yet, and the card sits under the list it is about so there is nothing to hunt for. */
 function coMailCard(){
   var c = coMail(); if (!c) return '';
-  var to = coMailTo();
-  return '<div class="card"><h2>Send This List to ' + esc(c.name) + '</h2>'
-    + '<p class="note">This writes the message for you and opens it in your mail. '
-    + 'Nothing is sent until you press send yourself.</p>'
-    + '<label class="lb" for="comail_note">Anything You Want to Tell '
-    + esc(c.name) + '</label>'
-    + '<textarea id="comail_note" class="cmnote" rows="4" placeholder="Why you went after these '
-    + 'teams, what you would do differently, anything at all."></textarea>'
-    + (to
-        /* THE SAME REASSURANCE AFTER IT IS SAVED AS BEFORE. It used to appear only while the box
-           was on screen, so the one sentence that says the address is private disappeared the
-           moment it became true of a real address. A fact about somebody's privacy is not a
-           prompt to be dismissed. */
-        ? '<p class="note">Sending to <b>' + esc(to) + '</b>. It is kept in this browser and '
-          + 'nowhere else. It is not on the website and nobody else can see it. '
-          + '<button class="lnk" onclick="forgetCoMailTo()">Use a Different Address</button></p>'
-        : '<label class="lb" for="comail_to">' + esc(c.name) + '&rsquo;s Email Address</label>'
-          + '<p class="note">Typed once and kept in this browser. It is not on the website and '
-          + 'nobody else can see it.</p>'
-          + '<div class="row"><input id="comail_to" class="cmto" type="email" '
-          + 'autocomplete="off" placeholder="name@example.com">'
-          + '<button onclick="saveCoMailTo()">Save the Address</button></div>')
-    + mailPicker()
-    + '<div class="row" style="margin-top:10px">'
-    + '<button class="pri" onclick="sendCoMail()">Write the Email</button>'
-    + '<button onclick="copyCoMail(this)">Copy the Message</button></div>'
-    + '<p class="note">If the button does not open your mail, use <b>Copy the Message</b> and '
-    + 'paste it in yourself.</p></div>';
+  var w = coMailWho();
+  var head = '<div class="card"><h2>Send This List to ' + esc(c.name) + '</h2>';
+  if (w.how === 'nolist'){
+    /* AN ABSENCE IS NEVER AN ANSWER. Say which of the two things is missing, because they are
+       fixed in different places. */
+    return head + '<p class="note">The league&rsquo;s address list has not loaded, so there is '
+      + 'no address to write to. Open the <b>Access List</b> tab once and come back.</p></div>';
+  }
+  if (w.how === 'none'){
+    return head + '<p class="note">There is no email address on the access list for anybody else '
+      + 'on this seat, so there is nothing to write to. Put one in on the <b>Access List</b> '
+      + 'tab.</p></div>';
+  }
+  return head
+    + '<p class="note">This opens Gmail with your list already in it. Add whatever you want to '
+    + 'say and send it yourself.</p>'
+    + '<div class="row"><button class="pri" onclick="sendCoMail()">Write the Email in Gmail'
+    + '</button></div></div>';
 }
 
 function openMail(to, subject, body, whoFor){
@@ -6608,6 +6584,22 @@ function seedAccess(){
     return {div: s.div, seat: s.owner, email: practiceEmail(s.owner),
             code: code6(), status: 'active', validAfter: '',
             role: mine ? 'commissioner' : 'owner'};
+  }).concat(sharedSeatRows());
+}
+/* A SHARED SEAT HAS TWO PEOPLE ON IT, AND THE PRACTICE COPY HAS TO SHOW THAT.
+   Every seat was seeded as one person, so Send This List to Dominic had nobody to send to and
+   read "there is nobody else on this seat" -- correct about the practice data and useless for
+   rehearsing the thing. The real Palma/Wiedeman seat is two people, and ONE ROW PER PERSON is
+   the shape this list already uses.
+   THE ADDRESS IS A MADE-UP ONE at example.com, like every other address in the practice copy.
+   Nobody's real address is in this file. */
+function sharedSeatRows(){
+  return (DATA.co_owner_mail || []).map(function(c){
+    var b = String(c.seat).split('|');
+    return {div: b[0], seat: b[1],
+            email: String(c.name || 'co.owner').toLowerCase().replace(/[^a-z0-9]+/g, '.')
+                   + '@example.com',
+            code: code6(), status: 'active', validAfter: '', role: 'owner'};
   });
 }
 function blank(){
