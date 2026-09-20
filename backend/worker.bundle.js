@@ -129,15 +129,39 @@ function heldBy(league, div, team){
   return null;
 }
 
+/* WHICH EARLIER TRADES A CONDITION NAMES.
+   Casey, 20 Sep 2026: "I want to do it if I miss trade one, two, or three. So if I miss any one
+   of those trades, I still want to do it ... but if I get all three, I don't want to make this
+   fourth trade."
+   So a condition names a LIST, and it is satisfied when ANY trade on that list ended the named
+   way. The old shape stored a single `row`, and lists sent before this change still carry it, so
+   both are read here and nowhere else. ONE READER, OR THE PAGE AND THE SETTLE WILL DISAGREE. */
+function condRows(c){
+  if (!c) return [];
+  if (Object.prototype.toString.call(c.rows) === '[object Array]' && c.rows.length){
+    var out = [], seen = {};
+    for (var i = 0; i < c.rows.length; i++){
+      var n = +c.rows[i];
+      if (n >= 1 && !seen[n]){ seen[n] = 1; out.push(n); }
+    }
+    return out.sort(function(a, b){ return a - b; });
+  }
+  return (+c.row >= 1) ? [+c.row] : [];
+}
+
 function validateRow(row, rowNo){
   if (!row || !row.pickup) return 'a row with no team to pick up';
   var c = row.cond || {type: 'always'};
   if (['always', 'won', 'lost'].indexOf(c.type) === -1) return 'unknown condition "' + c.type + '"';
   if (c.type !== 'always'){
-    if (!(c.row >= 1)) return 'a condition with no row number';
+    var rs = condRows(c);
+    if (!rs.length) return 'a condition with no row number';
     /* A CONDITION CAN ONLY LOOK BACKWARDS. Row 2 asking about row 5 is not a rule, it is a loop:
        row 5 has not run yet, and making it run early would reorder the owner's own priorities. */
-    if (c.row >= rowNo) return 'row ' + rowNo + ' asks about row ' + c.row + ', which runs later';
+    for (var i = 0; i < rs.length; i++){
+      if (rs[i] >= rowNo)
+        return 'row ' + rowNo + ' asks about row ' + rs[i] + ', which runs later';
+    }
   }
   if ((row.drops || []).length > MAX_DROPS) return 'more than ' + MAX_DROPS + ' drops';
   return null;
@@ -267,13 +291,25 @@ function resolve(opts){
            skipped row silently freeze every row hanging off it. */
         var c = res.cond;
         if (c.type !== 'always'){
-          var earlier = out[key][c.row - 1];
-          var gotIt = !!(earlier && GOT[earlier.outcome]);
-          if ((c.type === 'won' && !gotIt) || (c.type === 'lost' && gotIt)){
+          /* ANY, NOT ALL. A condition naming several earlier rows is satisfied as soon as ONE of
+             them ended the named way. "Only if I lose trade 1, 2 or 3" runs when any of the three
+             was missed, and is skipped only when all three came through. */
+          var rs = condRows(c);
+          var hit = false;
+          for (var ri = 0; ri < rs.length; ri++){
+            var earlier = out[key][rs[ri] - 1];
+            var gotIt = !!(earlier && GOT[earlier.outcome]);
+            if (c.type === 'won' ? gotIt : !gotIt){ hit = true; break; }
+          }
+          if (!hit){
+            var which = rs.length === 1 ? 'row ' + rs[0]
+                      : 'any of rows ' + rs.slice(0, -1).join(', ') + ' or ' + rs[rs.length - 1];
             res.outcome = OUTCOME.SKIPPED;
             res.detail = c.type === 'won'
-              ? 'set to run only if row ' + c.row + ' came through, and it did not'
-              : 'set to run only if row ' + c.row + ' did not come through, and it did';
+              ? 'set to run only if ' + which + ' came through, and '
+                + (rs.length === 1 ? 'it did not' : 'none of them did')
+              : 'set to run only if ' + which + ' did not come through, and '
+                + (rs.length === 1 ? 'it did' : 'all of them did');
             out[key][idx] = res; return;
           }
         }
@@ -471,6 +507,7 @@ function claimRow(div, seat, res, opts){
 return {resolve: resolve, claim: claim, applyClaim: applyClaim, claimRow: claimRow,
         seatKey: seatKey, heldBy: heldBy,
         OUTCOME: OUTCOME, GOT: GOT, MAX_ROWS: MAX_ROWS, MAX_DROPS: MAX_DROPS,
+        condRows: condRows,
         sameSide: sameSide,
         _hash32: hash32, _mulberry32: mulberry32, _flipKey: flipKey};
 }));
