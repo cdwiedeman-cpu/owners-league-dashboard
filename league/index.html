@@ -2823,7 +2823,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:11 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:20 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5926,6 +5926,62 @@ async function espnGet(url){
   return r.json();
 }
 
+/* ---- THE NEWEST FCS POLL ESPN HAS ACTUALLY PUBLISHED ---------------------------------------
+ * Casey, 20 Sep 2026: "even though week four is not published yet, I still want you to show week
+ * three. So you should always be showing the most current coaches poll, and the refresh would
+ * then pull in the current one once it's available later this week."
+ * WHY THIS NEEDS A SECOND ENDPOINT. The feed the rest of this tab uses carries whatever polls
+ * have been voted for the CURRENT week and nothing else, and it ignores a week parameter
+ * entirely -- asking it for week 3 returns week 4. ESPN's other API addresses one poll in one
+ * week directly, answers 200 when it exists and 404 when it does not, so walking back from the
+ * current week finds the newest one that has been published. Checked from a third-party origin
+ * before this was built: it allows cross-origin reads, which the hosted page needs.
+ * BOUNDED, AND IT STOPS AT THE FIRST ANSWER. Four weeks back at most, so a poll that is never
+ * published costs four failed calls once rather than a walk to week one.
+ * THE POLL SAYS WHICH WEEK IT IS. Showing last week's poll as though it were this week's would
+ * be the worst outcome of the three, so the card prints the week ESPN stamped on it. */
+const FCS_POLL_ID = 20;
+const POLL_WALK_BACK = 4;
+function espnCoreURL(season, week){
+  return `https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/${
+    season}/types/2/weeks/${week}/rankings/${FCS_POLL_ID}`;
+}
+/* ESPN id -> the board's name, built from the FCS standings, which list every team in the
+   division. Loaded on demand: this is the only thing that needs it. */
+async function espnIdMap(){
+  if (ESPN_STATE.fcs !== 'ok') await espnLoad('fcs');
+  const m = new Map();
+  for (const c of ((ESPN_VIEW.fcs || {}).confs || []))
+    for (const r of c.rows) if (r.id) m.set(String(r.id), r.board || r.espn);
+  return m;
+}
+async function espnOlderFcsPoll(season, week){
+  if (!season || !week) return null;
+  for (let w = week; w > Math.max(0, week - POLL_WALK_BACK); w--){
+    let j = null;
+    try {
+      const r = await fetch(espnCoreURL(season, w), {cache: 'no-store'});
+      if (!r.ok) continue;                 // 404 means that week's poll is not out
+      j = await r.json();
+    } catch (e) { continue; }
+    if (!j || !(j.ranks || []).length) continue;
+    const ids = await espnIdMap();
+    const rows = [];
+    for (const x of j.ranks){
+      const ref = ((x.team || {}).$ref) || '';
+      const id = (/\/teams\/(\d+)/.exec(ref) || [])[1] || null;
+      const nm = id ? ids.get(id) : null;
+      rows.push({n: x.current, prev: x.previous, rec: (x.record || {}).summary || '',
+                 pts: x.points == null ? null : x.points,
+                 espn: nm || ('ESPN team ' + (id || '?')),
+                 board: nm && BY.get(nm) ? nm : null});
+    }
+    return {key: 'fcs', name: j.name || 'FCS Coaches Poll',
+            when: (j.occurrence || {}).displayValue || ('Week ' + w), rows: rows};
+  }
+  return null;
+}
+
 async function espnLoad(view, again){
   if (ESPN_STATE[view] === 'busy') return;
   if (ESPN_STATE[view] === 'ok' && !again) return;
@@ -5933,7 +5989,13 @@ async function espnLoad(view, again){
   renderEspn();
   try {
     if (view === 'rank'){
-      ESPN_VIEW.rank = espnReadRanks(await espnGet(ESPN_RANK_URL));
+      const d = espnReadRanks(await espnGet(ESPN_RANK_URL));
+      /* THE CURRENT WEEK FIRST, AND LAST WEEK'S ONLY IF THERE IS NO CURRENT ONE. */
+      if (!d.lists.some(l => l.key === 'fcs')){
+        const older = await espnOlderFcsPoll(d.season, d.week);
+        if (older) d.lists.push(older);
+      }
+      ESPN_VIEW.rank = d;
     } else {
       ESPN_VIEW[view] = espnReadStandings(
         await espnGet(ESPN_STAND_URL(view === 'fbs' ? 80 : 81)), view === 'fbs' ? 'FBS' : 'FCS');
@@ -5962,6 +6024,10 @@ function espnReadStandings(j, pool){
       const t = e.team || {};
       return {espn: t.shortDisplayName || t.displayName || t.location || '?',
               board: resolve(t, 'COL'),
+              /* ESPN'S OWN ID. The rankings feed used below names a team ONLY by a link ending
+                 in its id, and this is the one place a complete id-to-name table can be had for
+                 free: the standings list every team in the division. */
+              id: t.id ? String(t.id) : null,
               conf: val(e, 'vsconf'),
               all: val(e, 'total'),
               pf: val(e, 'pointsfor'),
@@ -5991,7 +6057,9 @@ function espnReadRanks(j){
                 board: resolve(t, 'COL')};
       })});
   }
-  return {lists: lists, missing: ESPN_POLLS.filter(([k]) => !lists.some(l => l.key === k))};
+  return {lists: lists, season: (j.requestedSeason || j.season || {}).year || null,
+          week: (j.latestWeek || {}).number || null,
+          missing: ESPN_POLLS.filter(([k]) => !lists.some(l => l.key === k))};
 }
 
 /* THE NAME, AND WHETHER IT IS ONE OF HIS. */
