@@ -2820,7 +2820,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:54 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:59 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4352,7 +4352,20 @@ function ptsUpTo(team, from, through){
    hold is not extra information, it is the same guess extended over more weeks, where it is
    least reliable. This compares points actually banked against what the model expected of the
    same games. Positive means the season has said something the preseason did not. */
-const EVID_GAMES = 2;      // one upset is a game; two is a pattern, and he said so
+/* ONE GAME IS ENOUGH, AND IT WAS NEVER HIS RULE THAT TWO WERE. Casey, 20 Sep 2026: "I don't
+   recall ever saying that you had to have two games in the books. I would take that out. There's
+   one game in the books that tells you a lot, and you have the preseason rankings of what Harvard
+   should be."
+   He is right on the history as well as the substance. The line here used to read "two is a
+   pattern, and he said so", and he never did -- exactly the failure this project has a rule
+   about: a note that argues for a design hides who asked for it, and every later reading took
+   the argument for a requirement.
+   THE EDGE TEST IS THE ONE HE DESCRIBED and it stays. What a team DID is measured against what
+   the preseason said it should do, and half a league point clear of billing is the bar. What
+   changes is how many games that judgement may rest on. Harvard beat New Hampshire 31-7 on
+   19 Sep, which is +0.54 clear of its billing in one game, and the board was reading 3w while
+   the model had it at +3.13 over eight weeks. */
+const EVID_GAMES = 1;
 const EVID_EDGE  = 0.5;    // half a league point clear of billing, over those games
 
 function form(t){
@@ -4509,7 +4522,8 @@ function recommend(t, inc, minEdge){
                + `on the SAME preseason rating stretched further out. `
                + `${f.games ? `${f.games} game${f.games === 1 ? '' : 's'} played, `
                   + `${f.edge >= 0 ? '+' : ''}${f.edge.toFixed(2)} against billing`
-                  : 'No games played yet'} — needs ${EVID_GAMES}+ games and +${EVID_EDGE.toFixed(2)} `
+                  : 'No games played yet'} — needs ${EVID_GAMES} game${
+                    EVID_GAMES === 1 ? '' : 's'} and +${EVID_EDGE.toFixed(2)} `
                + `to be advised as a keeper.`};
   }
   const last = best.w >= maxW;
@@ -4855,14 +4869,14 @@ function availTable(kind){
         can be well above 3-0 would suggest: you score for each win separately, and a team can be
         likely to win two of three without being likely to win all three.
         <b>Gain 3</b> is Bank 3 minus what ${inc.n} earns over the same stretch.
-        <b>Advice</b> is how long to hold it, in <b>weeks</b>, and the small number under it is
-        the gain over exactly those weeks — both teams measured over the same ones. When the
+        <b>Advice</b> is how long to hold it, in <b>weeks</b>, and the small number beside it is
+        the gain over exactly those weeks. Both teams are measured over the same ones. When the
         advice is the shortest legal hold and there is no bye, that number <b>is</b> Gain 3.
         A team with a bye in its opening stretch needs four weeks to play three games, so its
         shortest advice reads <b>4w</b> and its number covers four weeks rather than three.
         <br><b>Longer holds have to be earned.</b> A recommendation past ${DATA.hold_games} games
         is a claim that this team is better than its preseason rating, so it is only advised once
-        the team has played at least ${EVID_GAMES} games and banked at least
+        the team has played ${EVID_GAMES} game${EVID_GAMES === 1 ? '' : 's'} and banked at least
         +${EVID_EDGE.toFixed(2)} more than the model expected of it. Until then you see
         <b>${DATA.hold_games}g</b> and the longer figure sits in the tooltip as upside, not
         advice — which is the whole reason a team with an easy October does not get recommended
