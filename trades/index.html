@@ -5249,7 +5249,12 @@ function coMailCard(){
     + '<textarea id="comail_note" class="cmnote" rows="4" placeholder="Why you went after these '
     + 'teams, what you would do differently, anything at all."></textarea>'
     + (to
-        ? '<p class="note">Sending to <b>' + esc(to) + '</b>. '
+        /* THE SAME REASSURANCE AFTER IT IS SAVED AS BEFORE. It used to appear only while the box
+           was on screen, so the one sentence that says the address is private disappeared the
+           moment it became true of a real address. A fact about somebody's privacy is not a
+           prompt to be dismissed. */
+        ? '<p class="note">Sending to <b>' + esc(to) + '</b>. It is kept in this browser and '
+          + 'nowhere else. It is not on the website and nobody else can see it. '
           + '<button class="lnk" onclick="forgetCoMailTo()">Use a Different Address</button></p>'
         : '<label class="lb" for="comail_to">' + esc(c.name) + '&rsquo;s Email Address</label>'
           + '<p class="note">Typed once and kept in this browser. It is not on the website and '
