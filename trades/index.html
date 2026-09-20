@@ -3077,11 +3077,32 @@ function unsubmit(){
   var r = myReq(); if (!r) return;
   r.submitted = null; save(); render();
 }
-function addRow(cond){
+function addRow(cond, drops){
   var rows = myRows().slice();
   if (rows.length >= P.MAX_ROWS) return;
-  rows.push({pickup: '', drops: [''], cond: cond || {type: 'always'}});
+  rows.push({pickup: '', drops: (drops && drops.length) ? drops.slice() : [''],
+             cond: cond || {type: 'always'}});
   setRows(rows); render();
+}
+/* THE TEAMS THE TRADES IT IS BACKING UP WERE ALREADY WILLING TO GIVE UP.
+   Casey, 20 Sep 2026: "if you're adding a backup trade, then you'd automatically want the drops
+   to default to what you're backing up. They shouldn't have to go put in the drops that they
+   already put in before."
+   Taken in the owner's own order -- the first trade's list first, then anything new from the
+   second, and so on -- because that order is his priority and the settle drops the FIRST team on
+   the list he still holds. A team named twice is listed once. */
+function dropsFrom(rowNums){
+  var rows = myRows(), out = [], seen = {};
+  for (var i = 0; i < rowNums.length; i++){
+    var r = rows[rowNums[i] - 1];
+    if (!r) continue;
+    var ds = (r.drops || []).filter(Boolean);
+    for (var j = 0; j < ds.length; j++){
+      if (seen[ds[j]] || out.length >= P.MAX_DROPS) continue;
+      seen[ds[j]] = 1; out.push(ds[j]);
+    }
+  }
+  return out;
 }
 /* A BACKUP TRADE IS ONE PRESS, NOT FOUR.
    Casey, 20 Sep 2026: "I'm getting feedback from the owners that when they make a trade, they're
@@ -3096,7 +3117,7 @@ function addBackupRow(){
      same thing must make the same thing. */
   var all = [];
   for (var j = 1; j <= n; j++) all.push(j);
-  addRow({type: 'lost', rows: all});
+  addRow({type: 'lost', rows: all}, dropsFrom(all));
 }
 function delRow(i){
   var r = myRows().slice(); r.splice(i, 1);
@@ -3133,11 +3154,31 @@ function editRow(i, field, v, j){
      index and leave it on the list. */
   if (!rows[i]) return;
   var row = Object.assign({}, rows[i]);
-  if (field === 'pickup') row.pickup = v;
+  if (field === 'pickup'){
+    row.pickup = v;
+    /* THE DROPS FOLLOW THE PICKUP'S POOL. A college team cannot be dropped for an NFL team, and
+       a copied drop list can arrive holding the wrong kind. Leaving one there shows a team the
+       picker does not even offer, and Submit would refuse the row later for a reason nobody can
+       see on screen. Only the ones that cannot be used are removed. */
+    if (v){
+      var k2 = kindOf(v);
+      row.drops = (row.drops || []).filter(function(x){ return !x || kindOf(x) === k2; });
+      if (!row.drops.length) row.drops = [''];
+    }
+  }
   else if (field === 'drop'){ row.drops = row.drops.slice(); row.drops[j] = v;
     row.drops = row.drops.filter(function(x, k){ return x || k === 0; });
     if (row.drops.length < P.MAX_DROPS && row.drops[row.drops.length - 1]) row.drops.push(''); }
-  else if (field === 'condtype'){ row.cond = {type: v, rows: condRowsFor(row.cond, i)}; }
+  else if (field === 'condtype'){
+    row.cond = {type: v, rows: condRowsFor(row.cond, i)};
+    /* THE SAME PREFILL THE BUTTON DOES, for somebody who added an ordinary trade and then
+       decided it should wait on the ones above it. Only on a row with NO drops typed in yet, so
+       it can never overwrite a choice somebody made. */
+    if (v !== 'always' && !(row.drops || []).filter(Boolean).length){
+      var pre = dropsFrom(row.cond.rows);
+      if (pre.length) row.drops = pre;
+    }
+  }
   else if (field === 'condrow'){
     /* TOGGLE, BECAUSE A CONDITION CAN NAME SEVERAL TRADES. Pressing a trade that is already
        named takes it off the list, and the LAST one cannot be taken off -- a condition with
@@ -3289,9 +3330,9 @@ function viewTrades(){
       + '<li>Losing a trade means not getting the team, for any reason. Losing the coin flip '
       + 'counts. So does running out of teams to drop.</li>'
       + '<li>A <b>backup trade</b> is the second kind. Press <b>Add a Backup Trade</b> and you '
-      + 'get a new trade already set to wait on the one above it. It is only tried if that '
-      + 'trade does not go through. You still choose the team you want and the teams you would '
-      + 'give up.</li>'
+      + 'get a new trade already set to wait on every trade above it. It arrives with the teams '
+      + 'you would give up already filled in, copied from those trades, so the only thing left '
+      + 'to choose is the team you want. Change any of it if you would rather.</li>'
       + '<li>Press <b>Submit My Trades</b>. Until you press it, your trades are only on this '
       + 'device &mdash; it is not in Monday&rsquo;s coin flips.</li></ol>'
       + '<p class="note">Up to ' + P.MAX_ROWS + ' trades. You can change and re-send as often as '
