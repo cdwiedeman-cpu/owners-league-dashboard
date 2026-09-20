@@ -947,6 +947,16 @@ details>summary::marker{color:var(--faint)}
 /* THE WATCH LIST HAD NO WIDTHS AT ALL, so its eight columns were sized one-eighth each: 130px
    for a team name that needs 206 and 130 for a number that needs 57. Measured on 20 Sep 2026,
    same pass as the available board above. Same floor, same scrolling box. */
+/* THE ESPN TABLES. Same rule as every other table on this page: real widths, a floor, and the
+   box scrolls rather than the words wrapping. verify_espncols.js measures them. */
+table.esptbl{min-width:660px}
+table.esptbl .ce1{width:32%} table.esptbl .ce2{width:11%} table.esptbl .ce3{width:12%}
+table.esptbl .ce4{width:10%} table.esptbl .ce5{width:10%} table.esptbl .ce6{width:12%}
+table.esptbl .ce7{width:13%}
+table.rnktbl{min-width:600px}
+table.rnktbl .cr1{width:8%}  table.rnktbl .cr2{width:40%} table.rnktbl .cr3{width:14%}
+table.rnktbl .cr4{width:22%} table.rnktbl .cr5{width:16%}
+table.esptbl td.num, table.esptbl td.c-team{white-space:nowrap}
 table.watchtbl{min-width:800px}
 table.watchtbl .cw1{width:32%} table.watchtbl .cw2{width:8%}
 table.watchtbl .cw3{width:9%}  table.watchtbl .cw4{width:9%}
@@ -1237,6 +1247,10 @@ td.c-then{white-space:nowrap}
   <section id="race" hidden>
     <div id="raceBody"></div>
   </section>
+  <!-- CASEY'S PAGE ONLY. Read straight from ESPN when the tab is opened; see renderEspn(). -->
+  <section id="espn" hidden>
+    <div id="espnBody"></div>
+  </section>
   <!-- THE THREE ALL-OWNERS TABS. They are built by the same file as Casey's own dashboard and
        are shown only when the payload says mode:"league" (league_payload.py). One template, two
        builds: the alternative was a second copy of the scoring arithmetic, and two stores of the
@@ -1322,9 +1336,12 @@ const TABSETS = {
      list, not a port. What they need from the payload is `seats`, which build_season now writes
      for both. His page keeps its projections; the all-owners page still has none. */
   /* NO TRANSACTIONS TAB. Its three tables are sub-tabs of Trades now -- see buildTx(). */
+  /* ESPN IS LAST OF HIS OWN TABS AND IT IS NOT ON THE LEAGUE PAGE. Casey, 20 Sep 2026: "on the
+     Palma Wiedeman dashboard, can you create a tab called ESPN." Nothing on it is the league's
+     and nothing on it is a projection: it is ESPN's standings and ESPN's polls, read live. */
   personal: [['scores','Live Scores'],['stand','Standings'],['pick','Pickups'],
              ['slots','Slots'],['race','Race'],['weekly','Weekly / Quarterly'],
-             ['summary','Season Summary']],
+             ['summary','Season Summary'],['espn','ESPN']],
   league:   [['scores','Live Scores'],['stand','Standings'],['weekly','Weekly / Quarterly'],
              ['summary','Season Summary']],
 };
@@ -1432,7 +1449,7 @@ function composeTabs(){
     .concat(RULES_TAB);
 }
 let TABS = composeTabs();
-const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','start','rules','guide']
+const ALL_SECTIONS = ['scores','stand','pick','slots','race','weekly','summary','espn','start','rules','guide']
   .concat(COMMISH_SECTIONS);
 
 /* PUT THE TAB UP, OR TAKE IT DOWN, TO MATCH WHO THE LEAGUE SAYS THIS IS. */
@@ -1835,6 +1852,7 @@ function showTab(which){
   if (which === 'race') renderRace();
   if (which === 'weekly') renderWeekly();
   if (which === 'summary') renderSummary();
+  if (which === 'espn') openEspn();
   if (which === 'ctrades') renderTrades();
   else if (COMMISH_PAGE[which]){
     /* ---- RUN IT AND THE ACCESS LIST LIVE IN THE TRADES SECTION TOO ------------------------
@@ -2802,7 +2820,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:27 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:53 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5550,8 +5568,19 @@ function teamPanel(t, inc, mode, opts){
     /* A BYE HAS NO KICKOFF DATE, because there is no kickoff. Every other NFL row now shows a
        real date, so this one says the WEEK and says why on hover -- a week number sitting in a
        column of dates has to explain itself or it reads as a row the fix missed. */
-    if (g.bye) return `<tr><td class="d" title="A bye has no date — there is no game. This is the NFL week it falls in.">${when(g, t.pool)}</td>
-      <td colspan="4"><span class="pill v-hold">BYE</span> <span class="d">no game — costs a week of the slot without advancing the hold</span></td></tr>`;
+    if (g.bye){
+      /* A BYE THAT HAS ALREADY GONE BY IS HISTORY TOO. Casey, 20 Sep 2026: "under college for
+         Idaho State, they had a bye this week. That day has passed, so it should be grayed out,
+         because it's essentially a completed game."
+         The played-game fix on this same table earlier the same day covered every row that has
+         a SCORE in it and missed this one, which has no score and no opponent. What a row's
+         colour answers is whether it is still ahead of you. That is a question about the date,
+         not about whether anybody played. */
+      const gone = g.d && g.d < azToday();
+      return `<tr class="${gone ? 'g-past' : ''}"><td class="d" title="A bye has no date — there is no game. This is the league week it falls in.">${when(g, t.pool)}</td>
+        <td colspan="4"><span class="pill v-hold">BYE</span> <span class="d">no game — costs a week of the slot without advancing the hold</span>${
+          gone ? ' <span class="gtag t-past">PAST</span>' : ''}</td></tr>`;
+    }
     const yours = !from || g.d > from;
     if (yours) owned++;
     const inHold = yours && owned <= DATA.hold_games;
@@ -5757,6 +5786,267 @@ function needSeason(redraw){
  */
 let SCOUT_SPELL = null;
 function jsStr(v){ return "'" + String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
+/* ---- THE ESPN TAB ---------------------------------------------------------------------------
+ * Casey, 20 Sep 2026: "on the Palma Wiedeman dashboard, can you create a tab called ESPN. And
+ * under that tab, I want to have a tab for FBS standings, another tab for FCS standings, and
+ * another tab for rankings, which would have the AP poll as well as the FCS coaches poll within
+ * that rankings." And, a minute later: "you should be able to pull that from those pages within
+ * ESPN, because they're available."
+ *
+ * NOTHING ON THIS TAB IS BUILT AND NOTHING ON IT IS PROJECTED. Every figure is ESPN's own and
+ * this page fetches it when the tab is opened. The build sandbox has no route to ESPN, so these
+ * could not be baked in even if that were the right idea, and a standings table baked in August
+ * would be wrong by the second Saturday.
+ *
+ * ONE NAME TABLE, AS EVERYWHERE ELSE. Joining ESPN's spelling to the board goes through
+ * `resolve()`, the same function the scoreboard uses. A team on the board becomes a link into
+ * its own season and one of his eleven gets the purple box. A team the board does not carry is
+ * plain text, because a link that opens nothing is worse than no link.
+ *
+ * HIS PAGE ONLY. `TABSETS.league` does not list it. The all-owners page is deliberately thin.
+ */
+const ESPN_STAND_URL = g =>
+  `https://site.api.espn.com/apis/v2/sports/football/college-football/standings?group=${g}`;
+const ESPN_RANK_URL =
+  'https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings';
+
+let ESPNTAB = 'fbs';
+const ESPN_VIEW  = {fbs: null, fcs: null, rank: null};
+/* FOUR STATES, NOT TWO. "Never asked" and "asked and it failed" need opposite handling: one
+   should fetch, the other should show what went wrong and offer to try again. */
+const ESPN_STATE = {fbs: 'idle', fcs: 'idle', rank: 'idle'};
+const ESPN_WHY   = {fbs: null, fcs: null, rank: null};
+const ESPN_WHEN  = {fbs: null, fcs: null, rank: null};
+
+async function espnGet(url){
+  const r = await fetch(url, {cache: 'no-store'});
+  if (!r.ok) throw new Error('ESPN answered HTTP ' + r.status + '.');
+  return r.json();
+}
+
+async function espnLoad(view, again){
+  if (ESPN_STATE[view] === 'busy') return;
+  if (ESPN_STATE[view] === 'ok' && !again) return;
+  ESPN_STATE[view] = 'busy'; ESPN_WHY[view] = null;
+  renderEspn();
+  try {
+    if (view === 'rank'){
+      ESPN_VIEW.rank = espnReadRanks(await espnGet(ESPN_RANK_URL));
+    } else {
+      ESPN_VIEW[view] = espnReadStandings(
+        await espnGet(ESPN_STAND_URL(view === 'fbs' ? 80 : 81)), view === 'fbs' ? 'FBS' : 'FCS');
+    }
+    ESPN_WHEN[view] = new Date();
+    ESPN_STATE[view] = 'ok';
+  } catch (e) {
+    ESPN_STATE[view] = 'error';
+    ESPN_WHY[view] = String((e && e.message) || e);
+  }
+  renderEspn();
+}
+
+/* ESPN HANDS BACK ABOUT NINETY FIGURES PER TEAM and seven of them are worth a column. The rest
+   are the same seven again for home games, away games, conference games and games against
+   ranked teams. They are picked by `type`, never by position. */
+function espnReadStandings(j, pool){
+  const pick = (e, t) => ((e.stats || []).find(s => s.type === t) || {});
+  const val = (e, t) => {
+    const s = pick(e, t);
+    return s.summary || s.displayValue || null;
+  };
+  const confs = (j.children || []).map(c => ({
+    name: c.name || c.abbreviation || 'Conference',
+    rows: (((c.standings || {}).entries) || []).map(e => {
+      const t = e.team || {};
+      return {espn: t.shortDisplayName || t.displayName || t.location || '?',
+              board: resolve(t, 'COL'),
+              conf: val(e, 'vsconf'),
+              all: val(e, 'total'),
+              pf: val(e, 'pointsfor'),
+              pa: val(e, 'pointsagainst'),
+              diff: val(e, 'pointdifferential'),
+              streak: val(e, 'streak')};
+    })
+  })).filter(c => c.rows.length);
+  return {pool: pool, season: (j.season || {}).year || null, confs: confs};
+}
+
+/* THE TWO POLLS HE NAMED, AND NO OTHERS. The same answer carries the FBS coaches poll and two
+   Division II and III polls; none of those were asked for. */
+const ESPN_POLLS = [['ap', 'AP Top 25'], ['fcs', 'FCS Coaches Poll']];
+function espnReadRanks(j){
+  const lists = [];
+  for (const [key, fallback] of ESPN_POLLS){
+    const l = (j.rankings || []).find(x => x.type === key);
+    if (!l) continue;
+    lists.push({key: key, name: l.name || fallback,
+      when: (l.occurrence || {}).displayValue || '',
+      rows: (l.ranks || []).map(r => {
+        const t = r.team || {};
+        return {n: r.current, prev: r.previous, rec: r.recordSummary || '',
+                pts: r.points == null ? null : r.points,
+                espn: t.location || t.displayName || t.nickname || '?',
+                board: resolve(t, 'COL')};
+      })});
+  }
+  return {lists: lists, missing: ESPN_POLLS.filter(([k]) => !lists.some(l => l.key === k))};
+}
+
+/* THE NAME, AND WHETHER IT IS ONE OF HIS. */
+function espnName(row){
+  const nm = row.board;
+  const shown = nm || row.espn;
+  const inner = nm
+    ? `<button class="tlink" onclick="openScout(${jsStr(nm)})"
+         title="Open ${esc(nm)}'s own season on this page">${esc(shown)}</button>`
+    : esc(shown);
+  return nm && isMine(nm)
+    ? `<span class="mebox" title="One of your eleven.">${inner}</span>`
+    : inner;
+}
+
+function espnStamp(view){
+  const d = ESPN_WHEN[view];
+  if (!d) return '';
+  return `<span class="chip">Read From ESPN at ${d.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}</span>`;
+}
+
+/* AN EMPTY PANEL SAYS WHY IT IS EMPTY AND WHAT CAN BE DONE INSTEAD. */
+function espnGap(view, what){
+  if (ESPN_STATE[view] === 'busy')
+    return `<div class="card"><div class="empty"><p><b>Reading ${what} from ESPN.</b></p></div></div>`;
+  if (ESPN_STATE[view] === 'error')
+    return `<div class="card"><div class="empty">
+      <p><b>ESPN did not answer.</b> ${esc(ESPN_WHY[view] || '')}</p>
+      <p>This tab reads ESPN live, so it needs a connection. Nothing else on the page depends on
+      it. Press Try Again when you are back on the network.</p>
+      <p><button class="f primary" onclick="espnLoad('${view}', true)">Try Again</button></p>
+      </div></div>`;
+  return `<div class="card"><div class="empty"><p><b>Not read yet.</b></p>
+    <p><button class="f primary" onclick="espnLoad('${view}', true)">Read It Now</button></p>
+    </div></div>`;
+}
+
+function espnStandingsHTML(view){
+  const d = ESPN_VIEW[view];
+  if (!d || ESPN_STATE[view] !== 'ok')
+    return espnGap(view, view === 'fbs' ? 'the FBS standings' : 'the FCS standings');
+  const label = view === 'fbs' ? 'FBS' : 'FCS';
+  const cards = d.confs.map(c => `<div class="card"><h2>${esc(c.name)}</h2>
+    <div class="scr"><table class="esptbl">
+      <colgroup><col class="ce1"><col class="ce2"><col class="ce3"><col class="ce4">
+        <col class="ce5"><col class="ce6"><col class="ce7"></colgroup>
+      <thead><tr><th class="c-team">Team</th>
+        <th class="num" title="Record against teams in this conference.">Conf</th>
+        <th class="num" title="Record against everybody, in and out of conference.">Overall</th>
+        <th class="num" title="Points this team has scored this season.">PF</th>
+        <th class="num" title="Points scored against this team this season.">PA</th>
+        <th class="num" title="Points scored minus points allowed.">Diff</th>
+        <th class="num" title="Wins or losses in a row, as ESPN counts them.">Streak</th></tr></thead>
+      <tbody>${c.rows.map(r => `<tr>
+        <td class="c-team">${espnName(r)}</td>
+        <td class="num">${esc(r.conf || '—')}</td>
+        <td class="num">${esc(r.all || '—')}</td>
+        <td class="num d">${esc(r.pf || '—')}</td>
+        <td class="num d">${esc(r.pa || '—')}</td>
+        <td class="num"><span class="${espnSign(r.diff)}">${esc(r.diff || '—')}</span></td>
+        <td class="num d">${esc(r.streak || '—')}</td></tr>`).join('')}</tbody>
+    </table></div></div>`).join('');
+  return `<div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
+      ${espnStamp(view)}
+      <button class="f" onclick="espnLoad('${view}', true)">Refresh</button></div>
+    ${cards}
+    ${explain('Where these numbers come from', `Every figure on this tab is ESPN's own, read
+      by this page when you opened the tab. Nothing here is a projection and nothing here uses
+      the league's scoring.
+      <b>Conf</b> is the record against ${label} teams in the same conference.
+      <b>Overall</b> counts every game.
+      <b>Diff</b> is points scored minus points allowed.
+      The order inside each conference is the order ESPN publishes.
+      A team name you can press is one your league board carries, and pressing it opens that
+      team's own season. A team in a purple box is one of your eleven.`)}`;
+}
+
+function espnSign(v){
+  const s = String(v || '');
+  if (s.charAt(0) === '+') return 'g';
+  if (s.charAt(0) === '-') return 'b';
+  return 'd';
+}
+
+function espnRanksHTML(){
+  const d = ESPN_VIEW.rank;
+  if (!d || ESPN_STATE.rank !== 'ok') return espnGap('rank', 'the polls');
+  const cards = d.lists.map(l => `<div class="card"><h2>${esc(l.name)}</h2>
+    ${l.when ? `<div class="note">ESPN has this as <b>${esc(l.when)}</b>.</div>` : ''}
+    <div class="scr"><table class="esptbl rnktbl">
+      <colgroup><col class="cr1"><col class="cr2"><col class="cr3"><col class="cr4"><col class="cr5"></colgroup>
+      <thead><tr><th class="num">#</th><th class="c-team">Team</th>
+        <th class="num" title="Record as the poll lists it.">Record</th>
+        <th class="num" title="Where this team sat in the previous poll.">Prev</th>
+        <th class="num" title="Total voting points.">Points</th></tr></thead>
+      <tbody>${l.rows.map(r => `<tr>
+        <td class="num"><b>${r.n}</b></td>
+        <td class="c-team">${espnName(r)}</td>
+        <td class="num d">${esc(r.rec || '—')}</td>
+        <td class="num">${espnMove(r)}</td>
+        <td class="num d">${r.pts == null ? '—' : r.pts}</td></tr>`).join('')}</tbody>
+    </table></div></div>`).join('');
+  const gone = (d.missing || []).map(([, nm]) => nm);
+  return `<div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
+      ${espnStamp('rank')}
+      <button class="f" onclick="espnLoad('rank', true)">Refresh</button></div>
+    ${cards}
+    ${gone.length ? `<div class="card"><div class="note"><b class="y">Not in this answer:</b>
+      ${esc(gone.join(' and '))}. ESPN publishes a poll only once it has been voted. It will
+      appear here the week it does.</div></div>` : ''}
+    ${explain('Where these polls come from', `Both polls are ESPN's own and this page reads them
+      when you open the tab. The <b>AP Top 25</b> is the writers' poll for the top level of
+      college football. The <b>FCS Coaches Poll</b> is the coaches' poll for the level below it.
+      Neither has anything to do with the league's scoring, and neither is a projection.
+      <b>Prev</b> is where the team sat in the poll before this one. A team that was unranked
+      last week shows a dash.
+      A team name you can press is one your league board carries. A team in a purple box is one
+      of your eleven.`)}`;
+}
+
+/* A MOVE IS A DIFFERENT MESSAGE FROM A NUMBER. Unranked last week is not rank zero. */
+function espnMove(r){
+  const p = Number(r.prev);
+  if (!p) return '<span class="d" title="Not ranked in the previous poll.">—</span>';
+  const move = p - Number(r.n);
+  const arrow = move > 0 ? `<span class="recg g">up ${move}</span>`
+              : move < 0 ? `<span class="recg b">down ${-move}</span>` : '';
+  return `<span class="d">${p}</span>${arrow}`;
+}
+
+function espnSub(k, label){
+  return `<button class="f${ESPNTAB === k ? ' on' : ''}" data-espntab="${k}"
+    onclick="setEspnTab('${k}')" aria-pressed="${ESPNTAB === k}">${label}</button>`;
+}
+
+function setEspnTab(k){
+  ESPNTAB = k;
+  renderEspn();
+  espnLoad(k);
+}
+
+function renderEspn(){
+  const box = el('espnBody');
+  if (!box) return;
+  const bar = `<div class="tabs subtabs">${espnSub('fbs', 'FBS Standings')}${
+    espnSub('fcs', 'FCS Standings')}${espnSub('rank', 'Rankings')}</div>`;
+  const body = ESPNTAB === 'rank' ? espnRanksHTML() : espnStandingsHTML(ESPNTAB);
+  box.innerHTML = bar + body;
+}
+
+/* OPENED, NOT POLLED. These three change once a week at most, so they are read when he asks for
+   them and then left alone. The Refresh button is the way to ask again. */
+function openEspn(){
+  renderEspn();
+  espnLoad(ESPNTAB);
+}
+
 function openScoutFor(name, owner, fromW, toW){
   SCOUT_SPELL = {team: name, owner: owner, from: fromW, to: toW};
   openLeagueScout(name);
