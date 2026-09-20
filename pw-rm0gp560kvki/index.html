@@ -544,14 +544,24 @@ table.standtbl td:nth-child(2){white-space:nowrap}
      BY CLASS because the division column is absent on a division table, so every nth-child rule
      on this table is off by one there -- the renumbering trap in START_HERE 2.34, which this
      project has already been bitten by once. */
-  table.standtbl{min-width:456px;table-layout:fixed}
+  table.standtbl{min-width:564px;table-layout:fixed}
   /* td.c-own, not .c-own: the base rule is `table.standtbl td:nth-child(2)`, whose specificity
      is (0,2,1), so a class-only override loses to it and the name kept overflowing into the
      division pill. Matching type+class ties the specificity and this rule is later. */
   table.standtbl td.c-own, table.standtbl th.c-own{
     width:116px;white-space:normal;line-height:1.2;overflow-wrap:break-word}
   table.standtbl .c-rank{width:24px}
+  /* WIN% AND BEHIND STAY ON A PHONE, IN THE SWIPE. Casey, 20 Sep 2026: "why doesn't the phone
+     version have the winning percentage on standings like the desktop version."
+     They were dropped when this table was first made to fit, on the reasoning that Total was
+     what he needed without swiping. Total still lands without swiping; these two simply sit
+     further right with the quarters. He had already settled the principle on 31 Aug 2026, about
+     the pickup tables: "even if I had to scroll to the right, I would be fine with doing that to
+     see all the necessary information that's on the desktop version." A table that already
+     scrolls sideways gains nothing by hiding a column. */
+  table.standtbl .hide-s{display:table-cell}
   table.standtbl .c-pct{width:54px;font-variant-numeric:tabular-nums}
+  table.standtbl .c-beh{width:54px}
   table.standtbl .c-div{width:42px}
   table.standtbl .c-tot{width:46px}
   table.standtbl .c-proj{width:52px}
@@ -2720,7 +2730,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '18 Sep 2026, 10:09 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 8:42 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7376,7 +7386,7 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       <td class="num c-tot">${ptsCell}</td>
       ${PROJ_ON ? '<td class="num d c-proj"></td>' : ''}
       <td class="num d c-pct hide-s"></td>
-      <td class="num d hide-s"></td>
+      <td class="num d c-beh hide-s"></td>
       <td class="num d c-q">—</td>
       ${QKEYS().map(q => `<td class="num d c-q">${qOf(q)}</td>`).join('')}
       <td class="num d c-q">—</td></tr>`;
@@ -7394,7 +7404,7 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td>
       ${projCell(g)}
       <td class="num d c-pct hide-s"></td>
-      <td class="num d hide-s"></td>
+      <td class="num d c-beh hide-s"></td>
       <td class="num d c-q">—</td>
       ${QKEYS().map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
       ${postCell(postOfSlot(g))}</tr>`;
@@ -7434,7 +7444,7 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
           title="${proj ? `${o.pts.toFixed(1)} banked + ${(proj.rest).toFixed(1)} from the games still to play + ${(proj.post).toFixed(1)} postseason. Tap for the breakdown.` : 'This build ships no postseason vectors, so there is nothing to project from.'}"
         >${proj ? proj.total.toFixed(1) : '<span class="d">—</span>'}</td>` : ''}
       ${pctCell(o, tsep)}
-      <td class="num d hide-s">${lead == null ? '—' : (lead === 0 ? '—' : '−' + lead.toFixed(1))}</td>
+      <td class="num d c-beh hide-s">${lead == null ? '—' : (lead === 0 ? '—' : '−' + lead.toFixed(1))}</td>
       ${undecidedCell('bonus')}
       ${QKEYS().map(q => `<td class="num d c-q ${SORTBY === q ? 'sorted' : ''}">${
         ((o.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
@@ -7775,7 +7785,7 @@ function standTable(rows, title, note, showDiv){
              and Proj to be the two numbers a phone shows without scrolling; a column inserted
              between them would undo that. It is hide-s for the same reason. -->
         <th class="num c-pct hide-s" title="THE TIEBREAKER, and nothing else. Wins plus half a tie, over games played — blowout and shutout halves are NOT in it. It settles a payout only when two owners are level on the column being ranked; level on that too and the pot is split.">Win%</th>
-        <th class="num hide-s" title="Points behind whoever leads the column this page is sorted by.">Behind</th>
+        <th class="num c-beh hide-s" title="Points behind whoever leads the column this page is sorted by.">Behind</th>
         <th class="num c-q">Bonus ${helpQM('stand', 'bonus')}</th>
         ${qs.map(q => th(q, q, `Points earned in ${q} — ${wk(q)} of the league season.`)).join('')}
         <th class="num c-q">Post ${helpQM('stand', 'post')}</th>
@@ -9605,7 +9615,16 @@ function spellTail(t, many){
 function grpHeadLabel(o, g){
   const open = OPEN_SLOT === grpKey(o, g);
   const n = g.spells.length;
-  return `<span class="pill p-${g.cur.pool.toLowerCase()}">${g.cur.pool}</span> ${esc(g.cur.team)}
+  /* THE NAME IS THE LINK, ON THE SLOT ROW ITSELF. Casey, 20 Sep 2026: "the phone does not have
+     the new feature where you can click on a team in the standings and get their schedule."
+     It did have it, and so did the laptop, but only after opening the slot first: the name on
+     THIS row was plain text and the row's tap opened the slot's history. On a laptop the row's
+     hover text says what it does. A phone has no hover, so the only thing telling a reader there
+     was anything behind it did not exist for the reader who asked.
+     One tap on the name opens the schedule now. The rest of the row still opens the history, the
+     same two actions the child rows already carry. */
+  return `<span class="pill p-${g.cur.pool.toLowerCase()}">${g.cur.pool}</span> ${
+    teamLink(g.cur.team, o.owner, g.cur.from_week, g.cur.to_week)}
     <span class="caret">${open ? '▾' : '▸'}</span>${
     n > 1 ? ` <span class="gtag t-yours" title="${n} teams have held this roster slot. Its points are all of theirs added together — tap to see each one and the weeks it was held.">${n - 1} before it</span>` : ''}${
     g.unplaced ? ' <span class="gtag t-hold" title="This team could not be matched to a roster slot from the ownership history — two moves in the same week cannot be told apart. Its points are shown on their own rather than dropped.">SLOT UNKNOWN</span>' : ''}`;
