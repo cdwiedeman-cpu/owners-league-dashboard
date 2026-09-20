@@ -391,10 +391,11 @@ ol li,ul li{margin:0 0 7px}
    each trade, and the page calls them <b>Try It No Matter What</b>, <b>Only if I Win Trade
    1</b> and <b>Only if I Lose Trade 1</b>. The trade numbers in the last two follow whichever
    earlier trades the owner taps.</p>
-<p><b>A condition can name several earlier trades, and one of them is enough to set it off.</b>
-   A fourth trade set to wait on trades 1, 2 and 3 is tried if the owner loses any one of the
-   three, and is skipped only if all three came through. The settle reports a skipped row with
-   the rows it was waiting on named, so an owner can always see why it did not run.</p>
+<p><b>A condition names every earlier trade to start with, and one of them is enough to set it
+   off.</b> A fourth trade set to wait on trades 1, 2 and 3 is tried if the owner loses any one
+   of the three, and is skipped only if all three came through. Owners can untick the trades they
+   do not want it waiting on, but they rarely need to. The settle reports a skipped row with the
+   rows it was waiting on named, so an owner can always see why it did not run.</p>
 <p>A <b>backup trade</b> is the third one. It is only tried if the earlier trade did not come
    through. That is how an owner says &ldquo;if I miss out on Navy, try Alabama instead&rdquo;.
    There is a button on the list called <b>Add a Backup Trade</b> that builds one in a single
