@@ -941,6 +941,14 @@ details>summary::marker{color:var(--faint)}
    everywhere. It used to be set only inside the phone media query, which left a small laptop
    window wrapping with no floor at all. */
 [data-avail] table{min-width:740px}
+/* THE WATCH LIST HAD NO WIDTHS AT ALL, so its eight columns were sized one-eighth each: 130px
+   for a team name that needs 206 and 130 for a number that needs 57. Measured on 20 Sep 2026,
+   same pass as the available board above. Same floor, same scrolling box. */
+table.watchtbl{min-width:740px}
+table.watchtbl .cw1{width:32%} table.watchtbl .cw2{width:8%}
+table.watchtbl .cw3{width:9%}  table.watchtbl .cw4{width:9%}
+table.watchtbl .cw5{width:9%}  table.watchtbl .cw6{width:9%}
+table.watchtbl .cw7{width:10%} table.watchtbl .cw8{width:14%}
 /* A NUMBER NEVER BREAKS, AT ANY WIDTH. These were nowrap only on a phone. A laptop window can be
    just as narrow as a phone is wide. Data cells only: a two-word HEADER is allowed its second
    line. */
@@ -2778,7 +2786,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:13 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:14 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5164,13 +5172,15 @@ function watchPanel(){
   return `<div class="card"><h2>Watch List</h2>
     ${syncNote}
     <div class="scrhint"><b>Swipe</b> the table sideways to see Season pts and Season gain.</div>
-    <div class="scr"><table>
+    <div class="scr"><table class="watchtbl">
+      <colgroup><col class="cw1"><col class="cw2"><col class="cw3"><col class="cw4">
+        <col class="cw5"><col class="cw6"><col class="cw7"><col class="cw8"></colgroup>
       <thead><tr><th class="c-team">Team</th>
         <th class="num c-p30" title="The chance this team wins all three games of the hold.">3-0</th>
         <th class="num c-bank" title="Points those same three games are worth on average.">Bank 3</th>
         <th class="num c-gain" title="Bank 3 minus what the team you would drop earns over the same three weeks.">Gain 3</th>
         <th class="num c-season hide-s">Season</th>
-        <th class="num c-sgain hide-s">Season gain</th>
+        <th class="num c-sgain hide-s">Season<br>gain</th>
         <th class="c-then">Advice</th>
         <th class="c-cmp" title="Add this team to Side by Side, below. Two at a time per pool; tap again to remove.">Cmp</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
