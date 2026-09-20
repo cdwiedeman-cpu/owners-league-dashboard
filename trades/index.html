@@ -3096,11 +3096,21 @@ function delRow(i){
   r = r.map(function(row, k){
     var c = row.cond;
     if (!c || c.type === 'always') return row;
-    var n = +c.row || 1;
-    if (n === i + 1) return Object.assign({}, row, {cond: {type: 'always'}});
-    if (n > i + 1) n -= 1;
-    if (n > k || n < 1) return Object.assign({}, row, {cond: {type: 'always'}});
-    return Object.assign({}, row, {cond: {type: c.type, row: n}});
+    /* EVERY ROW THE CONDITION NAMES, not just the first. A condition can name several trades
+       now, so renumbering has to walk the whole list: the removed trade drops OUT of it, every
+       trade below it moves up one, and a list left with nothing to wait on goes back to being
+       tried no matter what. Reading `c.row` here was the old shape and it quietly turned a
+       working backup into an unconditional trade. */
+    var out = [];
+    var rs = (P && P.condRows) ? P.condRows(c) : [];
+    for (var q = 0; q < rs.length; q++){
+      var n = rs[q];
+      if (n === i + 1) continue;                    // the trade it was waiting on is gone
+      if (n > i + 1) n -= 1;
+      if (n >= 1 && n <= k && out.indexOf(n) < 0) out.push(n);
+    }
+    if (!out.length) return Object.assign({}, row, {cond: {type: 'always'}});
+    return Object.assign({}, row, {cond: {type: c.type, rows: out}});
   });
   setRows(r); render();
 }
