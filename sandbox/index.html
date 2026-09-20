@@ -305,12 +305,20 @@ td.num,th.num{text-align:right}
 .whichrow{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
 .whichrow button{min-height:44px;font-size:14px;padding:0 12px 0 34px;position:relative;
  background:var(--pan2);color:var(--ink)}
+/* ---- A TICK BOX, NOT A RADIO DOT ------------------------------------------------------------
+   Casey, 20 Sep 2026: "I just don't think it's intuitive to know that you've got to pick on
+   these other buttons. You'd uncheck trade four and check trade one, two, and three."
+   THE PAGE WAS TEACHING THE WRONG THING. These drew the same round dot as the three choices
+   above them, and a round dot is the one control everybody reads as PICK EXACTLY ONE. The code
+   had allowed several since the morning; the picture said otherwise, so nobody tried. Square box
+   and a tick, which is the control that means as many as you like. */
 .whichrow button::before{content:'';position:absolute;left:11px;top:50%;margin-top:-8px;
- width:16px;height:16px;border-radius:50%;border:2px solid var(--faint);background:var(--pan)}
+ width:16px;height:16px;border-radius:4px;border:2px solid var(--faint);background:var(--pan)}
 .whichrow button.on{background:var(--pick);border-color:var(--brandhd);color:var(--brandhd);
  font-weight:700}
-.whichrow button.on::before{border-color:var(--brandhd);
- background:radial-gradient(circle at 50% 50%,var(--brandhd) 0 4px,var(--pan) 4.5px)}
+.whichrow button.on::before{border-color:var(--brandhd);background:var(--brandhd)}
+.whichrow button.on::after{content:'\2713';position:absolute;left:11px;top:50%;margin-top:-9px;
+ width:16px;line-height:18px;text-align:center;font-size:12px;font-weight:900;color:#fff}
 /* ---- THE TWO BUTTONS THAT MATTER ARE ALWAYS ON SCREEN ---------------------------------------
    He kept scrolling up and down hunting for Add Another Trade and Send My List. On a page this
    tall that is not a labelling problem, it is a position problem. */
@@ -3084,7 +3092,11 @@ function addRow(cond){
 function addBackupRow(){
   var n = myRows().length;
   if (!n){ addRow(); return; }
-  addRow({type: 'lost', rows: [n]});
+  /* WATCHING EVERY TRADE ABOVE IT, exactly like a condition set by hand. Two ways of making the
+     same thing must make the same thing. */
+  var all = [];
+  for (var j = 1; j <= n; j++) all.push(j);
+  addRow({type: 'lost', rows: all});
 }
 function delRow(i){
   var r = myRows().slice(); r.splice(i, 1);
@@ -3898,10 +3910,15 @@ function condRowsFor(c, i){
   var rs = (P && P.condRows) ? P.condRows(c) : [];
   var out = [];
   for (var k = 0; k < rs.length; k++) if (rs[k] >= 1 && rs[k] <= i) out.push(rs[k]);
-  /* THE TRADE DIRECTLY ABOVE IS THE DEFAULT, not trade 1. It is the one somebody has just
-     finished, it is what Add a Backup Trade picks, and on a long list trade 1 is a trade they
-     may not even remember. A condition must name at least one row, so there is always a pick. */
-  if (!out.length && i >= 1) out = [i];
+  /* EVERY EARLIER TRADE IS THE DEFAULT.
+     Casey, 20 Sep 2026: "it defaults to only losing trade four ... it wouldn't be for me to do
+     trade four. It would be like if I don't want to do trades one, two, and three. As you're
+     starting to add more trades, it's the earlier trades that you want that option on."
+     He is right and the old default was mine, argued for and never asked for. A backup exists
+     BECAUSE the trades above it might not land, so it starts out watching all of them. Untick
+     the ones it should ignore. On trade 2 this is the same single trade either way, so there is
+     one rule and no special case. */
+  if (!out.length && i >= 1){ for (var j = 1; j <= i; j++) out.push(j); }
   return out;
 }
 /* A LIST OF TRADE NUMBERS, WRITTEN THE WAY SOMEBODY WOULD SAY IT. "1, 2 and 3", never "1,2,3". */
@@ -4043,8 +4060,8 @@ function rowForm(r, i, free, mine, k){
          switched off, because a condition with nothing to wait on is not a condition. */
       var onOff = function(n){ return picked.indexOf(n) >= 0; };
       h += '<label class="lb" style="margin-top:10px">Which Earlier Trades?</label>'
-        + '<p class="note" style="margin:2px 0 7px">Pick one, or pick several. Tap one again to '
-        + 'take it off.</p>'
+        + '<p class="note" style="margin:2px 0 7px">Every trade above this one is ticked to '
+        + 'start with. Tap one to untick it if this trade should not wait on it.</p>'
         + '<div class="whichrow">'
         + Array.apply(null, {length: i}).map(function(_, n){
             var team = rows0(i, n);
