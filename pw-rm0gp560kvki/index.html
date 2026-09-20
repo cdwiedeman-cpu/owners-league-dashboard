@@ -646,6 +646,11 @@ td.cmpg{vertical-align:top;font-size:12.5px;line-height:1.45;white-space:normal}
  border:1px solid var(--line);background:var(--pan);color:var(--ink);cursor:pointer}
 #rflbar button.add{border-color:var(--blue);color:var(--blue);font-weight:700;
  background:var(--pan)}
+/* THREE BUTTONS SHARE THE LINE NOW -- Add Another Trade, Add a Backup Trade, Submit. Submit still
+   takes the right-hand end through margin-left:auto, so the two that add a row stay together on
+   the left and the one that ENDS the job stays on its own. On a narrow screen the row wraps and
+   the count still sits underneath, which is what keeps a button off the curved corner. */
+#rflbar button.add.bk{font-size:14px}
 #rflbar button.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
 #rflbar button[disabled]{opacity:.45;cursor:default}
 #rflbar .g{color:var(--good)}
@@ -2823,7 +2828,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 1:35 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 4:12 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
