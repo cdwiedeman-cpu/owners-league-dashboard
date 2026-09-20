@@ -567,22 +567,18 @@ table.standtbl td:nth-child(2){white-space:nowrap}
      see all the necessary information that's on the desktop version." A table that already
      scrolls sideways gains nothing by hiding a column. */
   table.standtbl .hide-s{display:table-cell}
-  /* WIDE ENOUGH FOR THE TIEBREAKER CHIP. Two owners level on points carry a chip here saying
-     which rung separated them -- "college 77.8%" -- and in 54px that wrapped onto two more
-     lines and made the row three times as tall as its neighbours. The table scrolls sideways
-     anyway, so the room costs nothing. */
-  table.standtbl .c-pct{width:104px;font-variant-numeric:tabular-nums}
+  /* NO WIDER THAN THE NUMBER IN IT. Casey, 20 Sep 2026: "why do you have such a large space in
+     the table between total and win percentage? Those could be much closer together."
+     It was widened to 104px so a tiebreaker chip would sit on one line, which bought one tidy
+     row for two owners and a gap on all twenty-seven. The chip goes back under the percentage,
+     where it makes those two rows taller and leaves everybody else's alone. */
+  table.standtbl .c-pct{width:62px;font-variant-numeric:tabular-nums}
   table.standtbl .c-beh{width:54px}
   table.standtbl .c-div{width:42px}
   table.standtbl .c-tot{width:46px}
   table.standtbl .c-proj{width:52px}
   table.standtbl .c-q{width:44px}
   /* The YOU tag is a second line on its own rather than a thing that widens the name column. */
-  /* THE YOU TAG TAKES ITS OWN LINE. The cell stopped wrapping on 20 Sep 2026, and nowrap keeps
-     an inline tag on the same line as the name -- which put "Palma/Wiede YOU" 37px past the
-     column and into the division beside it. A block-level child starts a new line box whatever
-     the parent's white-space says, so the name stays on one line and the tag sits under it. */
-  table.standtbl td.c-own .mytag{display:block;width:max-content;margin-top:2px}
   table.standtbl .c-div .pill{padding:1px 5px;font-size:10px}
   table.standtbl .divlong{display:none}
   table.standtbl th, table.standtbl td{padding-left:5px;padding-right:5px}
@@ -701,6 +697,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .mytag{display:inline-block;font:700 9px inherit;letter-spacing:.06em;padding:1px 5px;
   border-radius:3px;border:1px solid var(--mine);color:var(--mine);margin-left:5px;
   vertical-align:1px}
+/* YOUR OWN ROW IS OUTLINED, NOT LABELLED. Casey, 20 Sep 2026: "I don't like how the YOU is
+   hidden underneath the PFD division. What if instead of saying YOU next to Palma/Wiedeman, you
+   just outline Palma/Wiedeman in that purple outline, a box around it."
+   The tag was a second thing in a column that had no room for it, and on a phone it sat on its
+   own line under the name. The box says the same thing in the space the name already takes. */
+.mebox{display:inline-block;border:1px solid var(--mine);border-radius:4px;
+  padding:0 5px;line-height:1.5;color:var(--mine);font-weight:800}
 .own{font-size:11px;color:var(--faint);display:block;margin-top:1px}
 .own b{color:var(--dim);font-weight:600}
 .own .dv{display:inline-block;min-width:2.1em;color:var(--faint)}
@@ -2746,7 +2749,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 11:06 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 11:08 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7548,7 +7551,9 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
   const row = `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')"
       title="${OPEN_OWNER === key ? 'Hide' : 'Show'} ${esc(o.owner)}'s eleven roster slots">
       <td class="num d c-rank">${rank}</td>
-      <td class="c-own" data-owner="${esc(o.owner)}">${ownerName(o.owner)}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
+      <td class="c-own" data-owner="${esc(o.owner)}">${mine
+        ? `<span class="mebox" title="This is you.">${ownerName(o.owner)}</span>`
+        : ownerName(o.owner)} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
       ${showDiv ? `<td class="c-div"><span class="pill p-div${o.div === MY_DIV ? ' own' : ''}"
         title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
         ><span class="divshort">${o.div}</span></span></td>` : ''}
