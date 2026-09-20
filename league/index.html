@@ -548,8 +548,15 @@ table.standtbl td:nth-child(2){white-space:nowrap}
   /* td.c-own, not .c-own: the base rule is `table.standtbl td:nth-child(2)`, whose specificity
      is (0,2,1), so a class-only override loses to it and the name kept overflowing into the
      division pill. Matching type+class ties the specificity and this rule is later. */
+  /* NOTHING IN THIS COLUMN WRAPS. Casey, 20 Sep 2026: "the team name or the owner name is
+     wrapping and it's kind of annoying ... I think it'd be better if it was just one line."
+     It used to wrap because the names did not fit in 116px. They fit now: an owner's name is
+     abbreviated on a narrow screen by `shortOwner()`, and the team columns on Weekly / Quarterly
+     and Season Summary sit in tables that already scroll sideways, so a long team name simply
+     takes the room it needs. */
   table.standtbl td.c-own, table.standtbl th.c-own{
-    width:116px;white-space:normal;line-height:1.2;overflow-wrap:break-word}
+    width:124px;white-space:nowrap;line-height:1.3}
+  table.standtbl.wide td.c-own, table.standtbl.wide th.c-own{width:auto;min-width:170px}
   table.standtbl .c-rank{width:24px}
   /* WIN% AND BEHIND STAY ON A PHONE, IN THE SWIPE. Casey, 20 Sep 2026: "why doesn't the phone
      version have the winning percentage on standings like the desktop version."
@@ -572,7 +579,8 @@ table.standtbl td:nth-child(2){white-space:nowrap}
   table.standtbl .divlong{display:none}
   table.standtbl th, table.standtbl td{padding-left:5px;padding-right:5px}
 }
-@media (min-width:561px){ table.standtbl .divshort{display:none} }
+@media (min-width:561px){ table.standtbl .divshort{display:none} .ownshort{display:none} }
+@media (max-width:560px){ .ownlong{display:none} }
 table.ownertbl{table-layout:auto}
 table.ownertbl td, table.ownertbl th{overflow-wrap:normal}
 table.ownertbl{min-width:600px}
@@ -2730,7 +2738,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 8:42 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 10:38 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7435,7 +7443,7 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
   const row = `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')"
       title="${OPEN_OWNER === key ? 'Hide' : 'Show'} ${esc(o.owner)}'s eleven roster slots">
       <td class="num d c-rank">${rank}</td>
-      <td class="c-own">${o.owner}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
+      <td class="c-own">${ownerName(o.owner)}${mine ? ' <span class="mytag">YOU</span>' : ''} <span class="d">${OPEN_OWNER === key ? '▾' : '▸'}</span></td>
       ${showDiv ? `<td class="c-div"><span class="pill p-div${o.div === MY_DIV ? ' own' : ''}"
         title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
         ><span class="divshort">${o.div}</span></span></td>` : ''}
@@ -9612,6 +9620,35 @@ function spellTail(t, many){
   const span = grpSpan(t);
   return many ? span : (span ? span + ' · held this slot all season' : 'held this slot all season');
 }
+/* AN OWNER'S NAME, SHORT ENOUGH FOR A PHONE. Casey, 20 Sep 2026: "on some of the long names,
+   could you abbreviate on the mobile, so first initial last name for M Spielman, for
+   Palma/Wiedeman do P/W ... Twitchell/Fryer you could just do T/F."
+   TWO RULES, AND THE SECOND ONLY WHEN IT IS NEEDED:
+     * two owners sharing a seat, written with a slash, become their two initials: P/W, T/F.
+     * anything longer than fits becomes first initial plus last name: M Spielman.
+   A name that already fits is left exactly as it is, which is why 'Dos Pigs' and 'Tom Rush' are
+   not turned into 'D Pigs' and 'T Rush'. The full name is still in the row's hover text, and the
+   wide screen still shows it in full. */
+const OWN_FITS = 12;
+function shortOwner(name){
+  const s = String(name || '').trim();
+  if (!s) return s;
+  if (s.indexOf('/') > -1){
+    return s.split('/').map(x => x.trim().charAt(0).toUpperCase()).filter(Boolean).join('/');
+  }
+  if (s.length <= OWN_FITS) return s;
+  const bits = s.split(/\s+/);
+  if (bits.length < 2) return s;
+  return bits[0].charAt(0).toUpperCase() + ' ' + bits[bits.length - 1];
+}
+/* ONE CELL, BOTH SPELLINGS, chosen by width in the stylesheet -- the same shape as the division
+   column's long and short names. Doing it in CSS means no relayout when a phone is turned. */
+function ownerName(name){
+  const short = shortOwner(name);
+  if (short === name) return esc(name);
+  return `<span class="ownlong">${esc(name)}</span><span class="ownshort">${esc(short)}</span>`;
+}
+
 function grpHeadLabel(o, g){
   const open = OPEN_SLOT === grpKey(o, g);
   const n = g.spells.length;
