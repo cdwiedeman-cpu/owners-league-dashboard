@@ -2824,7 +2824,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 11:31 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 11:37 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4526,10 +4526,33 @@ function recommend(t, inc, minEdge){
     return {w, gain: Math.round((a.pts - b.pts) * 100) / 100,
             games: a.games, byes: a.byes};
   };
-  let best = null;
-  for (let w = minW; w <= maxW; w++){
-    const g = gainAt(w);
-    if (best === null || g.gain > best.gain + minEdge) best = g;
+  /* ---- A LONGER HOLD HAS TO BE WORTH SOMETHING -------------------------------------------
+   * Casey, 30 Aug 2026, describing the fault: teams were reading as keepers that "weren't a team
+   * that would have even been drafted in our draft ... they weren't drafted for a reason, because
+   * they're not top teams." He asked for evidence from a team like that before being told to keep
+   * it. That was read at the time as a games counter, which was the wrong mechanism and never
+   * addressed what he was pointing at.
+   * WHAT HE WAS POINTING AT, measured 20 Sep 2026: of 120 KEEPs, 51 were teams nobody drafted in
+   * any of the three divisions. The bottom of the list was Valparaiso at +0.02 over nine weeks,
+   * Albany at +0.03, South Alabama at +0.15. The word KEEP was being handed to a coin flip.
+   * THE FAULT WAS NEVER EVIDENCE. It was that a hold six weeks longer than the one you are forced
+   * into only had to beat it by `minEdge`, which is 0.15 -- a bar built for "is this team better
+   * than that one", not for "is it worth committing a roster slot until December".
+   * So a hold longer than the minimum must clear LONG_FLOOR in total gain. The minimum hold has
+   * no floor, because it is not a recommendation: take the team at all and you are holding it for
+   * ${DATA.hold_games} games, so that number is the cost of entry.
+   * THE NUMBER IS HIS. Shown 1.0, 1.5, 2.0 and 2.5 against the teams he named, Casey chose 2.0 on
+   * 20 Sep 2026: "I think showing Lamar as eight weeks probably makes more sense, actually."
+   * At 2.0: Harvard KEEP +3.10, Idaho St KEEP +2.99, Alabama St KEEP +2.19, Lamar 8w +2.13,
+   * Marist back to 3w, Valparaiso and Albany AVOID. KEEPs fall from 120 to 52. */
+  const LONG_FLOOR = 2.0;
+  const ladder = [];
+  for (let w = minW; w <= maxW; w++) ladder.push(gainAt(w));
+  const mand = ladder[0];
+  let best = mand;
+  for (const g of ladder){
+    if (g.w === minW) continue;
+    if (g.gain >= LONG_FLOOR && g.gain > best.gain + minEdge) best = g;
   }
   /* HOLDING IT TO THE END, WHENEVER THAT IS NOT MEASURABLY WORSE. Casey, 20 Sep 2026, on
      Harvard: "that should absolutely show up as a keep." The gain peaked at 8 weeks on +3.13 and
@@ -4537,12 +4560,10 @@ function recommend(t, inc, minEdge){
      team for the last week of the season, and printing 8w rather than KEEP made a difference
      that small look like a decision.
      This page already refuses to call one team better than another over a gap under the same
-     bar. Same bar here. A losing end is never swapped in: a hold that only just clears zero
-     must not be turned negative by this. */
-  const endw = gainAt(maxW);
-  if (best && endw.gain > 0 && endw.gain >= best.gain - minEdge) best = endw;
-
-  const mand = gainAt(minW);
+     bar. Same bar here. It clears the floor like any other long hold, and a losing end is never
+     swapped in: a hold that only just clears zero must not be turned negative by this. */
+  const endw = ladder[ladder.length - 1];
+  if (endw.gain > 0 && endw.gain >= LONG_FLOOR && endw.gain >= best.gain - minEdge) best = endw;
   const span = x => `${x.w} week${x.w === 1 ? '' : 's'}` +
     (x.byes ? ` (${x.games} game${x.games === 1 ? '' : 's'}, ${x.byes} bye)` : '');
 
@@ -4924,10 +4945,16 @@ function availTable(kind){
         shortest advice reads <b>4w</b> and its number covers four weeks rather than three.
         <br><b>The advice follows the projection.</b> It is the number of weeks where the gain
         over ${inc.n} is largest. A team worth holding to the end of the regular season reads
-        <b>KEEP</b>, and nothing else caps it.
+        <b>KEEP</b>.
+        <br><b>A hold longer than ${DATA.hold_games} games has to be worth at least
+        2.00 points.</b> Below that it is a coin flip, not a plan, so the advice falls back to the
+        ${DATA.hold_games} games you are obliged to hold anyway. The ${DATA.hold_games}-game hold
+        itself has no such bar, because it is the cost of taking the team at all rather than a
+        recommendation about length.
         That projection is not a preseason rating. Every finished game re-rates the team and
         re-prices every game it has left, so a team that starts beating its billing climbs here
-        on its own, week by week. Hover any advice for what it rests on.`)
+        on its own, week by week. A game a book has priced in the last 10 days is taken from that
+        line instead, and its row is tagged BOOK. Hover any advice for what it rests on.`)
       + explain(`What dropping ${inc.n} costs you`, ` Its slot frees up
         after its third game on ${inc.third_game.slice(5)}, so a replacement first plays for you
         on <b>${from.slice(5)}</b>. ${inc.n} would earn <b>${incB3.pts.toFixed(2)}</b> over the
