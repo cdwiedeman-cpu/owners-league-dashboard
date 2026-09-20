@@ -2823,7 +2823,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 1:24 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 1:27 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6135,7 +6135,26 @@ function espnReadStandings(j, pool){
     const s = pick(e, t);
     return s.summary || s.displayValue || null;
   };
-  const confs = (j.children || []).map(c => ({
+  /* A CONFERENCE WITH DIVISIONS KEEPS ITS ROWS ONE LEVEL DOWN. Casey, 20 Sep 2026: "I don't
+     understand why you don't have the SWAC in the standings. It's clearly in the ESPN standings
+     under Southwestern Athletic Conference. And they have Jackson State and all those teams
+     there."
+     He was right and this was the cause. ESPN returns the Southwestern Athletic Conference as a
+     child with ZERO entries of its own and TWO children under it, East and West, carrying six
+     teams each. Reading only `c.standings.entries` found nothing and drew no card at all, so the
+     conference simply was not on the page -- the silent kind of missing, with nothing to say it
+     had happened.
+     Flattened the way ESPN's own site shows it: a division is its own card, under ESPN's name
+     for it. Any conference that splits later gets the same treatment for free. */
+  const branches = [];
+  for (const c of (j.children || [])){
+    const own = ((c.standings || {}).entries) || [];
+    if (own.length){ branches.push(c); continue; }
+    const kids = (c.children || []).filter(k => (((k.standings || {}).entries) || []).length);
+    if (kids.length) branches.push(...kids);
+    else branches.push(c);          // genuinely empty: kept, so it can be SEEN to be empty
+  }
+  const confs = branches.map(c => ({
     name: c.name || c.abbreviation || 'Conference',
     rows: (((c.standings || {}).entries) || []).map(e => {
       const t = e.team || {};
@@ -6152,8 +6171,12 @@ function espnReadStandings(j, pool){
               diff: val(e, 'pointdifferential'),
               streak: val(e, 'streak')};
     })
-  })).filter(c => c.rows.length);
-  return {pool: pool, season: (j.season || {}).year || null, confs: confs};
+  }));
+  /* AN EMPTY CONFERENCE IS REPORTED, NEVER DROPPED. Dropping one is how the SWAC went missing
+     without anybody noticing for a day. */
+  const empty = confs.filter(c => !c.rows.length).map(c => c.name);
+  return {pool: pool, season: (j.season || {}).year || null,
+          confs: confs.filter(c => c.rows.length), empty: empty};
 }
 
 /* THE TWO POLLS HE NAMED, AND NO OTHERS. The same answer carries the FBS coaches poll and two
@@ -6243,6 +6266,9 @@ function espnStandingsHTML(view){
       ${espnStamp(view)}
       <button class="f" onclick="espnLoad('${view}', true)">Refresh</button></div>
     ${cards}
+    ${(d.empty || []).length ? `<div class="card"><div class="note"><b class="y">No rows
+      published:</b> ${esc(d.empty.join(', '))}. ESPN lists the conference and has no standings
+      in it yet.</div></div>` : ''}
     ${explain('Where these numbers come from', `Every figure on this tab is ESPN's own, read
       by this page when you opened the tab. Nothing here is a projection and nothing here uses
       the league's scoring.
