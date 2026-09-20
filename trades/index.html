@@ -2245,7 +2245,7 @@ function takePlan(rows){
       var drops = (r.drops || []).slice(0, P.MAX_DROPS);
       if (!drops.length) drops = [''];
       if (drops.length < P.MAX_DROPS) drops = drops.concat(['']);
-      return {pickup: r.pickup, drops: drops, cond: {type: 'always', row: 1}};
+      return {pickup: r.pickup, drops: drops, cond: {type: 'always'}};
     });
   if (!clean.length) return;
   var cur = myReq();
