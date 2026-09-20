@@ -2749,7 +2749,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 11:08 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 11:27 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5428,7 +5428,7 @@ function teamPanel(t, inc, mode, opts){
     const vg = g.vg == null ? '<span class="nolink">not posted</span>'
       : `<span class="vg">${g.vg > 0 ? '−' : '+'}${Math.abs(g.vg).toFixed(1)}</span>`;
     return `<tr class="g-past"><td>${when(g, t.pool)}</td>
-      <td>${g.loc === 'Home' ? 'vs' : g.loc === 'Away' ? 'at' : 'vs'} ${g.opp}
+      <td>${g.loc === 'Home' ? 'vs' : g.loc === 'Away' ? 'at' : 'vs'} ${oppLink(g.opp)}
         <span class="gtag t-past">PLAYED</span></td>
       <td class="num" title="${g.pre_p != null
         ? `The model gave them ${pctP(g.pre_p)} beforehand. This column holds the FINAL SCORE once a game is played and the win probability before it.`
@@ -5465,7 +5465,7 @@ function teamPanel(t, inc, mode, opts){
     return `<tr class="gline ${scout ? 'g-none' : yours ? 'g-yours' : 'g-before'}"
         onclick="event.stopPropagation();toggleWhy('${t.n.replace(/'/g,"\\'")}',${i})">
       <td class="d">${when(g, t.pool)}</td>
-      <td>${g.loc === 'Home' ? 'vs' : g.loc === 'Away' ? 'at' : 'vs'} ${g.opp} <span class="d">▸</span>${scout ? '' : tag}${
+      <td>${g.loc === 'Home' ? 'vs' : g.loc === 'Away' ? 'at' : 'vs'} ${oppLink(g.opp)} <span class="d">▸</span>${scout ? '' : tag}${
         scout ? ''
           : own ? (holdEnds ? '<span class="gtag t-hold" title="This team\'s third game. You must let it play this one; you can drop it afterwards.">HOLD ENDS</span>' : '')
                 : (inHold ? '<span class="gtag t-hold" title="One of the three games you are obliged to hold this team for once you pick it up.">MUST HOLD</span>' : '')}</td>
@@ -5654,6 +5654,24 @@ function teamLink(name, owner, fromW, toW){
   return `<button class="tlink" onclick="event.stopPropagation();openScoutFor(${a})"
     title="${esc(name)}: every game, the score, and what ${esc(owner || 'this slot')} earned from
     it">${esc(name)}</button>`;
+}
+
+/* THE OPPONENT'S NAME OPENS THE OPPONENT. Casey, 20 Sep 2026: he opened Richmond from Live
+   Scores, tapped Villanova inside Richmond's schedule, and the panel stayed on Richmond while
+   the table "changed the order of things".
+   It was doing what it was built to do. Tapping that row opens a line explaining what the model
+   makes of THAT GAME, and the line is inserted directly underneath it -- so every row below
+   shifts down, which is exactly what a reorder looks like. The panel never moved.
+   What he expected is what a team name does everywhere else on this page now: it opens that
+   team. So the NAME is a link and the rest of the row still opens the explanation, which is the
+   same pair of actions the roster rows carry.
+   ONLY WHEN THE BOARD HAS THAT TEAM. A non-Division-I opponent has no season to open, and a
+   link that opens nothing is worse than plain text. */
+function oppLink(name){
+  const s = String(name || '');
+  if (!s || typeof BY === 'undefined' || !BY.get(s)) return esc(s);
+  return `<button class="tlink" onclick="event.stopPropagation();openScout(${jsStr(s)})"
+    title="Open ${esc(s)}'s own season">${esc(s)}</button>`;
 }
 
 function openScout(n){
@@ -10415,7 +10433,7 @@ function openLeagueScout(n){
      of numbers is read down its digits. */
   const scoreCls = '';
   const rows = played.filter(x => x.s).map(({g, s}) => `<tr>
-    <td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
+    <td class="d">${gwhen(g)}</td><td>${oppLink(g.opp)}</td>
     <td class="${scoreCls}${s.pf > s.pa ? 'g' : 'b'}">${s.pf}–${s.pa}</td>
     ${ptsCell(g, s)}</tr>`).join('');
   /* THE COLUMNS FOLLOW. A colgroup that still lists four widths for a three column table is the
@@ -10445,7 +10463,7 @@ function openLeagueScout(n){
      schedule instead?" There is no reason. A cap on a list nobody can page through is a dead
      end, and eighteen rows is not a lot to scroll. */
   const left = upcoming.map(g =>
-    `<tr><td class="d">${gwhen(g)}</td><td>${esc(g.opp || '')}</td>
+    `<tr><td class="d">${gwhen(g)}</td><td>${oppLink(g.opp)}</td>
      <td class="d">${esc(g.loc || '')}</td></tr>`).join('');
   const url = espnTeamURL(n);
   /* THE LINK IS OFFERED ONLY WHEN IT IS KNOWN TO WORK. ESPN's id for a team is learned from the
