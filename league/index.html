@@ -567,7 +567,11 @@ table.standtbl td:nth-child(2){white-space:nowrap}
      see all the necessary information that's on the desktop version." A table that already
      scrolls sideways gains nothing by hiding a column. */
   table.standtbl .hide-s{display:table-cell}
-  table.standtbl .c-pct{width:54px;font-variant-numeric:tabular-nums}
+  /* WIDE ENOUGH FOR THE TIEBREAKER CHIP. Two owners level on points carry a chip here saying
+     which rung separated them -- "college 77.8%" -- and in 54px that wrapped onto two more
+     lines and made the row three times as tall as its neighbours. The table scrolls sideways
+     anyway, so the room costs nothing. */
+  table.standtbl .c-pct{width:104px;font-variant-numeric:tabular-nums}
   table.standtbl .c-beh{width:54px}
   table.standtbl .c-div{width:42px}
   table.standtbl .c-tot{width:46px}
@@ -2738,7 +2742,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 10:38 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 10:40 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
