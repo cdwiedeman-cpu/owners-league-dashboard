@@ -2823,7 +2823,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 1:27 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 1:34 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4605,6 +4605,25 @@ function recommend(t, inc, minEdge){
    * Marist back to 3w, Valparaiso and Albany AVOID. KEEPs fall from 120 to 52. */
   const ladder = [];
   for (let w = minW; w <= maxW; w++) ladder.push(gainAt(w));
+  /* ---- THE POSTSEASON RIDES ON THE LAST RUNG AND NOWHERE ELSE ----------------------------
+   * Casey, 20 Sep 2026: "if this is a keepers tab, one thing that stands out is you have
+   * Virginia Tech as advice for three weeks, but they're the number four rated team on the
+   * keepers board ... their keep gain total is 3.15, which is higher than East Carolina which
+   * is 3.11, and you say to keep them."
+   * He caught a contradiction I had just built. The Keepers list was ranked on the season PLUS
+   * the postseason, and the Advice beside it was worked out from the regular season alone. Two
+   * numbers about the same decision, three inches apart, disagreeing.
+   * The postseason is paid to whoever holds the team at the END, so it belongs to the hold that
+   * runs to the end and to no shorter one. Added to the last rung, the ladder answers the same
+   * question the column does, and the KEEP rung's gain IS the Keep Gain -- one quantity, not
+   * two. A team with a real playoff run now reads KEEP because of it, which is the whole point
+   * of telling a keeper from a streamer.
+   * BOTH SIDES OR NEITHER. If either team's postseason is unknown the rung is left alone,
+   * because a one-sided credit would flatter every candidate against the incumbent. */
+  const _tp = postOf(t.n), _ip = postOf(inc.n);
+  if (ladder.length && _tp != null && _ip != null)
+    ladder[ladder.length - 1].gain =
+      Math.round((ladder[ladder.length - 1].gain + _tp - _ip) * 100) / 100;
   const mand = ladder[0];
   let best = mand;
   for (const g of ladder){
@@ -4892,7 +4911,15 @@ function availTable(kind){
       const post = postOf(t.n);
       const keepGain = (r.games >= DATA.hold_games && post != null && incPost != null)
         ? (r.pts + post) - (incRest.pts + incPost) : null;
-      return {t, b, r, p30: b.p, post: post, keepGain: keepGain,
+      /* POST GAIN, NOT POST. Casey, 20 Sep 2026, asked for "gain three, season gain, then post
+         season, and then the keep gain would be season plus post added together". They only add
+         up if the postseason column is a GAIN like the two beside it -- this team's postseason
+         minus the incumbent's. Showing the raw number would put three figures in a row where the
+         first two add to the third and the middle one does not, which is the worst of the three
+         options. The raw number is in the tooltip. */
+      const postGain = (post != null && incPost != null) ? Math.round((post - incPost) * 100) / 100
+                                                         : null;
+      return {t, b, r, p30: b.p, post: post, postGain: postGain, keepGain: keepGain,
               run: easyRun(t, from),
               gain3: b.weeks ? b.pts - incB3.pts : null,
               gainR: r.games >= DATA.hold_games ? r.pts - incRest.pts : null,
@@ -4918,6 +4945,7 @@ function availTable(kind){
     ups:    x => { const w = upsetWins(x.t);
                    return w.length * 1000 - (w.length ? Math.min(...w.map(u => u.line)) : 0); },
     post:   x => (x.post == null ? -1 : x.post),
+    postgain: x => (x.postGain == null ? -Infinity : x.postGain),
     keepgain: x => (x.keepGain == null ? -Infinity : x.keepGain),
     run:    x => x.run,
   }[ps.key] || (x => (PICKMODE === 'keep' ? (x.keepGain == null ? -Infinity : x.keepGain)
@@ -4976,11 +5004,13 @@ function availTable(kind){
       <th class="num c-bank ${SH('bank')}" onclick="setPSort('${kind}','bank')" title="Expected league points over the THREE WEEKS from ${from} that the hold occupies your roster slot. A bye inside them contributes nothing, so a team with one banks only the games it actually plays — that is the cost of the bye. Games it plays before ${from} belong to its current owner and are not counted.">Bank 3${AR('bank')}</th>
       <th class="num c-gain ${SH('gain3')}" onclick="setPSort('${kind}','gain3')" title="Bank 3 minus what ${inc.n} earns over THE SAME THREE WEEKS. Both sides start on ${from} and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.">Gain 3${AR('gain3')}</th>
       ${PICKMODE === 'keep'
-        ? `<th class="num c-season hide-s ${SH('post')}" onclick="setPSort('${kind}','post')" title="Expected points after the regular season ends: the playoff ladder, a conference title, a bowl. Paid to whoever holds the team then, so it counts for a hold that runs to the end and for no shorter one. Recomputed every week from results, not read off the draft board.">Post${AR('post')}</th>
-           <th class="num c-sgain hide-s ${SH('keepgain')}" onclick="setPSort('${kind}','keepgain')" title="The whole rest of the season INCLUDING the postseason, minus what ${inc.n} earns over the same stretch including its own postseason. This is the number that separates a keeper from a team with a soft October.">Keep<br>Gain${AR('keepgain')}</th>`
+        ? `<th class="num c-season hide-s ${SH('sgain')}" onclick="setPSort('${kind}','sgain')" title="The whole rest of the regular season, minus what ${inc.n} earns over the same stretch. The postseason is NOT in this one — the column beside it holds that, and the two add up to Keep Gain.">Season<br>Gain${AR('sgain')}</th>
+           <th class="num c-sgain hide-s ${SH('postgain')}" onclick="setPSort('${kind}','postgain')" title="This team's expected postseason points minus ${inc.n}'s — the playoff ladder, a conference title, a bowl. Paid to whoever holds the team at the end, so it counts for a hold that runs to the end and for no shorter one. Recomputed every week from results, never read off the draft board.">Post<br>Gain${AR('postgain')}</th>`
         : `<th class="num c-season hide-s ${SH('run')}" onclick="setPSort('${kind}','run')" title="How many games from ${from} this team is favoured in, straight through, stopping at the first one it is not. Three is enough for the hold. More than three is a team you can keep a while without having to decide anything. A bye does not break the run and does not count toward it.">Easy<br>Run${AR('run')}</th>
            <th class="num c-sgain hide-s ${SH('season')}" onclick="setPSort('${kind}','season')" title="Expected points from ${from} to the end of the regular season. The postseason is not in it — press Keepers for that.">Season<br>pts${AR('season')}</th>`}
-      <th class="num c-ups hide-s ${SH('ups')}" onclick="setPSort('${kind}','ups')" title="How many games this team has won as an underdog, measured against the pre-game line. A team the market keeps getting wrong is a team that may be better than every projection on this page thinks. Tap to sort by it.">Upsets${AR('ups')}</th>
+      ${PICKMODE === 'keep'
+        ? `<th class="num c-ups hide-s ${SH('keepgain')}" onclick="setPSort('${kind}','keepgain')" title="Season Gain plus Post Gain. The whole rest of the season including the postseason, measured against ${inc.n} over the same stretch. This is the number the Keepers board is ranked on, and it is the gain the Advice column reports when it says KEEP.">Keep<br>Gain${AR('keepgain')}</th>`
+        : `<th class="num c-ups hide-s ${SH('ups')}" onclick="setPSort('${kind}','ups')" title="How many games this team has won as an underdog, measured against the pre-game line. A team the market keeps getting wrong is a team that may be better than every projection on this page thinks. Tap to sort by it.">Upsets${AR('ups')}</th>`}
       <th class="c-then" title="How long to hold this team. AVOID means every length loses points against ${inc.n}. Otherwise it is the number of WEEKS where the gain over ${inc.n} peaks — the same weeks Gain 3 measures, so the shortest recommendation and Gain 3 are the same number. A team with a bye in its opening stretch needs 4 weeks to play its 3 games, so its minimum reads 4w. Recomputed when you change the team above.">Advice</th></tr></thead><tbody>` +
     shown.map(x => {
       const t = x.t, rec = recommend(t, inc);
@@ -5020,17 +5050,23 @@ function availTable(kind){
         <td class="num c-bank">${x.b.pts.toFixed(2)}</td>
         <td class="num c-gain"><b class="${g3 > 0.3 ? 'g' : g3 < 0 ? 'b' : 'y'}">${g3 >= 0 ? '+' : ''}${g3.toFixed(2)}</b></td>
         ${PICKMODE === 'keep'
-          ? `<td class="num c-season hide-s"><span class="${x.post == null ? 'd'
-                : x.post >= 2 ? 'g' : x.post >= 0.75 ? 'y' : 'd'}">${
-              x.post == null ? '—' : x.post.toFixed(2)}</span></td>
-             <td class="num c-sgain hide-s"><b class="${kg == null ? 'd'
-                : kg > 0.5 ? 'g' : kg < 0 ? 'b' : 'y'}">${
-              kg == null ? '—' : (kg >= 0 ? '+' : '') + kg.toFixed(2)}</b></td>`
+          ? `<td class="num c-season hide-s"><span class="${gr == null ? 'd'
+                : gr > 0.5 ? 'g' : gr < 0 ? 'b' : 'd'}">${
+              gr == null ? '—' : (gr >= 0 ? '+' : '') + gr.toFixed(2)}</span></td>
+             <td class="num c-sgain hide-s" title="${x.post == null ? 'Not known.'
+                : esc(t.n + ' is worth ' + x.post.toFixed(2) + ' after the regular season and '
+                      + inc.n + ' ' + (incPost == null ? '?' : incPost.toFixed(2)) + '.')}"><span class="${
+              x.postGain == null ? 'd' : x.postGain > 0.25 ? 'g' : x.postGain < -0.25 ? 'b' : 'd'}">${
+              x.postGain == null ? '—' : (x.postGain >= 0 ? '+' : '') + x.postGain.toFixed(2)}</span></td>`
           : `<td class="num c-season hide-s"><span class="${x.run >= 5 ? 'g' : x.run >= 3 ? 'y' : 'd'}">${x.run}</span></td>
              <td class="num d c-sgain hide-s">${x.r.pts.toFixed(2)}</td>`}
-        <td class="num c-ups hide-s">${(() => { const w = upsetWins(t);
-          return w.length ? `<b class="g" title="${esc(w.map(upsetSay).join('\n'))}">${w.length}</b>`
-                          : '<span class="d">0</span>'; })()}</td>
+        ${PICKMODE === 'keep'
+          ? `<td class="num c-ups hide-s"><b class="${kg == null ? 'd'
+                : kg > 0.5 ? 'g' : kg < 0 ? 'b' : 'y'}">${
+              kg == null ? '—' : (kg >= 0 ? '+' : '') + kg.toFixed(2)}</b></td>`
+          : `<td class="num c-ups hide-s">${(() => { const w = upsetWins(t);
+              return w.length ? `<b class="g" title="${esc(w.map(upsetSay).join('\n'))}">${w.length}</b>`
+                              : '<span class="d">0</span>'; })()}</td>`}
         <td class="c-then"><span class="pill ${rec.cls}" title="${rec.tip}">${rec.label}</span>${
           rec.gain != null && rec.label !== 'AVOID' && rec.label !== '—'
             ? `<span class="recg ${rec.gain > 0 ? 'g' : 'b'}" title="LEAGUE POINTS — what the swap is worth over ${inc.n} across the weeks named above, counting both teams over the SAME weeks. Not a percentage and not a rating. When the advice is the minimum hold and there is no bye, this is Gain 3 exactly.">${rec.gain >= 0 ? '+' : ''}${rec.gain.toFixed(2)}</span>`
