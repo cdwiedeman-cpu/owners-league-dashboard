@@ -2820,7 +2820,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 12:39 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 12:53 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5568,8 +5568,19 @@ function teamPanel(t, inc, mode, opts){
     /* A BYE HAS NO KICKOFF DATE, because there is no kickoff. Every other NFL row now shows a
        real date, so this one says the WEEK and says why on hover -- a week number sitting in a
        column of dates has to explain itself or it reads as a row the fix missed. */
-    if (g.bye) return `<tr><td class="d" title="A bye has no date — there is no game. This is the NFL week it falls in.">${when(g, t.pool)}</td>
-      <td colspan="4"><span class="pill v-hold">BYE</span> <span class="d">no game — costs a week of the slot without advancing the hold</span></td></tr>`;
+    if (g.bye){
+      /* A BYE THAT HAS ALREADY GONE BY IS HISTORY TOO. Casey, 20 Sep 2026: "under college for
+         Idaho State, they had a bye this week. That day has passed, so it should be grayed out,
+         because it's essentially a completed game."
+         The played-game fix on this same table earlier the same day covered every row that has
+         a SCORE in it and missed this one, which has no score and no opponent. What a row's
+         colour answers is whether it is still ahead of you. That is a question about the date,
+         not about whether anybody played. */
+      const gone = g.d && g.d < azToday();
+      return `<tr class="${gone ? 'g-past' : ''}"><td class="d" title="A bye has no date — there is no game. This is the league week it falls in.">${when(g, t.pool)}</td>
+        <td colspan="4"><span class="pill v-hold">BYE</span> <span class="d">no game — costs a week of the slot without advancing the hold</span>${
+          gone ? ' <span class="gtag t-past">PAST</span>' : ''}</td></tr>`;
+    }
     const yours = !from || g.d > from;
     if (yours) owned++;
     const inHold = yours && owned <= DATA.hold_games;
