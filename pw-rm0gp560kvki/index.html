@@ -2742,7 +2742,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Sep 2026, 10:58 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Sep 2026, 11:00 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -2955,6 +2955,7 @@ async function setWeekView(v){
      never worse, because applyLiveToSeason only ever ADDS a game it has not already counted. */
   renderFilters(); renderScores();
   if (applyLiveToSeason()){ renderStandings(); lRepaint(); }
+  refreshScout();
 }
 
 /* WHAT THE SCOREBOARD IS SHOWING RIGHT NOW. */
@@ -3004,6 +3005,7 @@ async function loadScores(){
   LAST_FETCH = new Date();
   renderFilters(); renderScores();
   if (applyLiveToSeason()){ renderStandings(); lRepaint(); }
+  refreshScout();
 }
 
 /* Casey, 30 Aug 2026: "Do I have to refresh the page to see the scores update or is it live
@@ -5651,6 +5653,7 @@ function openScout(n){
   if (LEAGUE) return openLeagueScout(n);
   if (!n) return;
   SCOUT = n; WHY = null;
+  SCOUT_SEEN = LIVE_SCORES.size;
   renderScout();
   needSeason(() => { if (SCOUT) renderScout(); });
   /* Focus moves into the panel so the keyboard and a screen reader follow the eye, and so
@@ -5658,8 +5661,28 @@ function openScout(n){
   const x = document.querySelector('#scout .modalx');
   if (x) x.focus({preventScroll: true});
 }
+/* AN OPEN PANEL FOLLOWS THE SCORES IN. Casey, 20 Sep 2026: Live Scores showed Virginia Tech
+   final; the team panel still had the game as scheduled until he reloaded the whole page. "I
+   thought this stuff was live, and every few minutes it was refreshing on its own."
+   The scoreboard refreshes itself every minute and the standings are folded in with it. The team
+   panel was the one thing left out: it is drawn once when it is opened and nothing redrew it, so
+   a game that went final while it was on screen stayed a fixture until the page was reloaded.
+   ONLY WHEN SOMETHING ACTUALLY ARRIVED, and the reading position is put back afterwards.
+   Redrawing a panel somebody is half way down, for no change, is its own defect. */
+let SCOUT_SEEN = -1;
+function refreshScout(){
+  if (!SCOUT) { SCOUT_SEEN = -1; return; }
+  const have = LIVE_SCORES.size;
+  if (have === SCOUT_SEEN) return;
+  SCOUT_SEEN = have;
+  const box = el('scout');
+  const keep = box ? box.scrollTop : 0;
+  if (LEAGUE) openLeagueScout(SCOUT); else renderScout();
+  if (box) box.scrollTop = keep;
+}
+
 function closeScout(){
-  SCOUT = null; WHY = null; SCOUT_SPELL = null;
+  SCOUT = null; WHY = null; SCOUT_SPELL = null; SCOUT_SEEN = -1;
   const m = el('scout'); m.hidden = true; m.innerHTML = '';
   document.body.style.overflow = '';
 }
@@ -10276,7 +10299,8 @@ function openLeagueScout(n){
      Everything that asks "is a panel open" therefore answered no: the redraw when the season
      landed never fired, which is why the scores were in `LIVE_SCORES` and not on the page, and
      Escape had nothing to close either. */
-  SCOUT = n; 
+  SCOUT = n;
+  SCOUT_SEEN = LIVE_SCORES.size;
   needSeason(() => { if (SCOUT === n) openLeagueScout(n); });
   const got = SEASON ? SEASON.get(n) : null;
   /* A DATE IS NOT ALWAYS IN THE SAME FIELD. For a college team `when` IS the date; for an NFL
