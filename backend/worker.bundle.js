@@ -202,9 +202,39 @@ function pickDrop(league, key, row, used){
 }
 
 /* ---------------------------------------------------------------------------------------------
- * THE RUN. One division at a time, one ROW INDEX at a time: every owner's row 1 is contested
- * before any owner's row 2, because a row list is a priority order and resolving one owner's
- * whole list first would hand them the board.
+ * THE RUN. One division at a time. A TEAM IS SETTLED AT THE MOMENT THE LAST OWNER WHO WANTS IT
+ * REACHES IT IN THEIR OWN LIST.
+ *
+ * Casey, 21 Sep 2026, after the first real test: "Twitchofrier and myself both put in for Yale.
+ * I put it in as a no matter what, and it was their first pick. However, it was my third
+ * priority pick. If this worked properly, I should have won Harvard because no one else put in
+ * for them. I should have won Idaho State because no one else put in for them. And then when it
+ * came to Yale, Twitchofrier and myself should have flipped off for that. But the system says
+ * that nobody put in for Yale and he automatically won it."
+ *
+ * IT USED TO RUN ONE ROW INDEX AT A TIME -- every owner's row 1 before anyone's row 2. Under
+ * that, a team somebody wanted at row 1 and somebody else at row 3 was never one contest: the
+ * row 1 took it alone and the log recorded it as unopposed, which is the sentence he read. The
+ * argument for it was that resolving one owner's whole list first would hand them the board.
+ * That argument was mine and he never asked for it.
+ *
+ * SO EACH OWNER WORKS DOWN THEIR OWN LIST IN THEIR OWN ORDER, and a team waits until everyone
+ * who has it on a list has arrived at it. Casey's list reaches Harvard, then Idaho State, then
+ * Yale; Twitchofrier is sitting on Yale the whole time; and Yale is settled -- as a coin flip
+ * between the two of them -- when Casey gets there. His priorities are still spent in his order,
+ * so a drop goes to his first choice before his third.
+ *
+ * A ROW ONLY JOINS A CONTEST IF IT IS LIVE. Casey, same day: "I only flip with Twitchofrier if I
+ * have teams still available to drop. And of course you have to apply the three toggle trade
+ * rules as well." A row whose condition failed, or that has no team left it is allowed to drop,
+ * is answered where it stands and the owner moves on. It never reaches the team, so the flip
+ * happens without them.
+ *
+ * TWO OWNERS CAN WAIT ON EACH OTHER. I want your first choice and you have mine third; you want
+ * my first choice and I have yours third. Neither list can move. Casey, 21 Sep 2026: "if the
+ * owners end up waiting on each other then the team somebody ranked highest settles first." So
+ * when nothing can move, the team with the lowest row number on anyone's list is settled with
+ * whoever has reached it, and the lists start moving again.
  *
  * THE STAND-ASIDE RULE IS BETWEEN TWO OWNERS, NOT ACROSS THE WHOLE WEEK.
  * Casey, 10 Sep 2026: "I only get excluded if I won and I'm going up against one of the owners
@@ -280,17 +310,46 @@ function resolve(opts){
 
     reqs.forEach(function (r){ out[seatKey(div, r.seat)] = []; used[r.seat] = {}; });
 
-    for (var idx = 0; idx < MAX_ROWS; idx++){
+    /* WHERE EACH OWNER HAS GOT TO IN THEIR OWN LIST. A row is answered where it stands and the
+       pointer moves on; a row that wants a team the owner can actually have WAITS there until
+       everybody else who wants that team has arrived. */
+    var ptr = {};
+    reqs.forEach(function (r){ ptr[r.seat] = 0; });
+
+    /* Does this seat still have team T ahead of it? Conservatively yes if any row from its
+       pointer onward names T -- a row that turns out to be skipped or undroppable simply passes
+       by, and the contest then happens without it. Reading it any other way would need to know
+       the answer to a later row before settling an earlier one. */
+    var canReach = function (r, team){
+      var rows = r.rows || [];
+      for (var j = ptr[r.seat]; j < MAX_ROWS; j++){
+        if (rows[j] && rows[j].pickup === team) return true;
+      }
+      return false;
+    };
+
+    /* A LOOP THAT MOVES SOMETHING EVERY TIME ROUND, OR SAYS SO. Each pass either answers a row,
+       settles a team, or breaks a deadlock. The guard is a claim about that, not a hope. */
+    var passes = 0, maxPasses = MAX_ROWS * reqs.length + reqs.length + 10;
+    while (true){
+      if (++passes > maxPasses) break;
       var live = [];
 
       reqs.forEach(function (r){
         var key = seatKey(div, r.seat);
+        /* WALK THIS SEAT FORWARD until it is either finished or waiting on a team. */
+        while (ptr[r.seat] < MAX_ROWS){
+        var idx = ptr[r.seat];
         var row = (r.rows || [])[idx];
-        if (!row) return;
+        /* A HOLE IS NOT THE END OF THE LIST. A list can have an empty row 1 and a real row 2 --
+           the page allows it and the old run, which took one row index at a time, handled it by
+           simply having nothing to do that round. Reading a hole as the end threw away every row
+           after it, and a seat whose first row was empty came back with no result at all. */
+        if (!row){ ptr[r.seat]++; continue; }
         var res = {row: idx + 1, pickup: row.pickup, drop: null, cond: row.cond || {type: 'always'}};
 
         var bad = validateRow(row, idx + 1);
-        if (bad){ res.outcome = OUTCOME.INVALID; res.detail = bad; out[key][idx] = res; return; }
+        if (bad){ res.outcome = OUTCOME.INVALID; res.detail = bad; out[key][idx] = res; { ptr[r.seat]++; continue; } }
 
         /* THE CONDITION. "lost" means DID NOT GET IT, for any reason -- lost the flip, stood
            aside, never ran, ran out of drops. Reading it as "contested and lost" would let a
@@ -316,27 +375,27 @@ function resolve(opts){
                 + (rs.length === 1 ? 'it did not' : 'none of them did')
               : 'set to run only if ' + which + ' did not come through, and '
                 + (rs.length === 1 ? 'it did' : 'all of them did');
-            out[key][idx] = res; return;
+            out[key][idx] = res; { ptr[r.seat]++; continue; }
           }
         }
 
         var already = out[key].some(function (p){ return p && GOT[p.outcome] && p.pickup === row.pickup; });
-        if (already){ res.outcome = OUTCOME.DUPLICATE; out[key][idx] = res; return; }
+        if (already){ res.outcome = OUTCOME.DUPLICATE; out[key][idx] = res; { ptr[r.seat]++; continue; } }
 
         if ((rosters[key] || []).indexOf(row.pickup) !== -1){
-          res.outcome = OUTCOME.HAVE_IT; out[key][idx] = res; return;
+          res.outcome = OUTCOME.HAVE_IT; out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
         var holder = heldBy(work, div, row.pickup);
-        if (holder){ res.outcome = OUTCOME.OWNED; res.detail = holder; out[key][idx] = res; return; }
+        if (holder){ res.outcome = OUTCOME.OWNED; res.detail = holder; out[key][idx] = res; { ptr[r.seat]++; continue; } }
         if ((league.claimOK || {})[row.pickup] === false){
-          res.outcome = OUTCOME.NOT_CLAIMABLE; out[key][idx] = res; return;
+          res.outcome = OUTCOME.NOT_CLAIMABLE; out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
         if (dropped[row.pickup]){
           /* DROPPED THIS WEEK. From the commissioner's rules: a dropped team is frozen for a
              game before anybody can pick it up. Inside one Monday that is absolute -- nothing
              has been played between the two rows. */
           res.outcome = OUTCOME.JUST_DROPPED; res.detail = dropped[row.pickup];
-          out[key][idx] = res; return;
+          out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
         var pick = pickDrop(work, key, row, used[r.seat]);
         if (!pick.drop){
@@ -347,21 +406,57 @@ function resolve(opts){
             && pick.why.every(function(w){ return /not the same kind of team/.test(w); });
           res.outcome = onlyPool ? OUTCOME.WRONG_POOL : OUTCOME.NO_DROP;
           res.detail = pick.why.join('; ');
-          out[key][idx] = res; return;
+          out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
         var drop = pick.drop;
 
         res.drop = drop;
+        /* THIS SEAT IS NOW WAITING ON THIS TEAM. It does not move again until the team is
+           settled, which is what lets a later row meet an earlier one. */
         live.push({seat: r.seat, key: key, res: res, idx: idx});
         out[key][idx] = res;
+        break;
+        }
       });
 
-      /* Group this round's live rows by the team they want. Sorted, so the order of contests is
-         the same on every machine that runs this. */
+      if (!live.length) break;                       // every list is finished
+
+      /* Group the waiting rows by the team they want. Sorted, so the order of contests is the
+         same on every machine that runs this. */
       var byTeam = {};
       live.forEach(function (e){ (byTeam[e.res.pickup] = byTeam[e.res.pickup] || []).push(e); });
-      Object.keys(byTeam).sort().forEach(function (team){
+
+      /* WHICH TEAMS ARE READY. A team is ready when everybody who still has it ahead of them is
+         waiting on it right now. Anyone else with that team further down their list holds it up
+         until they arrive, which is the whole rule. */
+      var teams = Object.keys(byTeam).sort();
+      var ready = teams.filter(function (team){
+        return reqs.every(function (r){
+          if (!canReach(r, team)) return true;                       // it is not on their list
+          return byTeam[team].some(function (e){ return e.seat === r.seat; });
+        });
+      });
+
+      /* NOBODY CAN MOVE. Casey, 21 Sep 2026: "if the owners end up waiting on each other then
+         the team somebody ranked highest settles first." Lowest row number wins, and the team
+         name breaks a tie so every machine breaks it the same way. */
+      var deadlock = false;
+      if (!ready.length){
+        deadlock = true;
+        var best = null;
+        teams.forEach(function (team){
+          var lowest = Math.min.apply(null, byTeam[team].map(function (e){ return e.res.row; }));
+          if (!best || lowest < best.row || (lowest === best.row && team < best.team)){
+            best = {team: team, row: lowest};
+          }
+        });
+        ready = [best.team];
+      }
+
+      ready.forEach(function (team){
         var entrants = byTeam[team];
+        entrants.forEach(function (e){ ptr[e.seat] = e.idx + 1; });   // these lists move on
+        if (deadlock) entrants.forEach(function (e){ e.res.deadlock = true; });
         var award = function (e, outcome, entrantNames){
           e.res.outcome = outcome;
           e.res.entrants = entrantNames;
@@ -426,7 +521,11 @@ function resolve(opts){
         var lapsed = false;
         if (!eligible.length){ eligible = entrants; lapsed = true; held = {}; }
 
-        var rnd = mulberry32(hash32(flipKey(seed, week, div, team, idx + 1)));
+        /* A TEAM IS CONTESTED AT MOST ONCE A WEEK NOW, so the team names the contest on its own
+           and the draw does not move when an unrelated row is added somewhere else in the week.
+           Casey, 10 Sep 2026, on a counter that coupled contests: "a contest he did NOT touch
+           should come out the same." */
+        var rnd = mulberry32(hash32(flipKey(seed, week, div, team, 0)));
         var winner = eligible[Math.floor(rnd() * eligible.length)] || eligible[0];
 
         var drawn = eligible.map(function (e){ return e.seat; });
