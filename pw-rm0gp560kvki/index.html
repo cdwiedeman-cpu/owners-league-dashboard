@@ -986,8 +986,11 @@ table.watchtbl .cw7{width:10%} table.watchtbl .cw8{width:14%}
 /* A NUMBER NEVER BREAKS, AT ANY WIDTH. These were nowrap only on a phone. A laptop window can be
    just as narrow as a phone is wide. Data cells only: a two-word HEADER is allowed its second
    line. */
+/* NOTHING WRAPS IN A FIGURE COLUMN. `c-post` and `c-keep` joined the list on 21 Sep 2026 when the
+   Plan tab's swap table gained the postseason, and a number that wraps is the complaint Casey
+   raised about the Pickups board. */
 td.c-p30, td.c-bank, td.c-gain, td.c-season, td.c-sgain, td.c-ups,
-td.c-then{white-space:nowrap}
+td.c-post, td.c-keep, td.c-then{white-space:nowrap}
 @media (max-width:560px){
   .hide-s{display:none}
   /* NO COLUMN-HIDING IN THE OWNER DRAWER. Casey, 31 Aug 2026, asked that this panel keep every
@@ -2828,7 +2831,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Sep 2026, 10:35 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Sep 2026, 10:52 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5196,9 +5199,28 @@ function planPairs(){
       if (cmpPool(t) !== cmpPool(mine)) continue;          // a slot takes its own kind only
       const b = weekWindow(t, from, DATA.hold_games);
       const r = windowPts(t, from, null);
+      /* THE SAME THREE NUMBERS THE PICKUPS BOARD USES, WORKED OUT THE SAME WAY.
+         Casey, 21 Sep 2026: "it's not including the changes we made from the other pickups tab
+         where it's got the postseason ... I don't see it including any postseason."
+         He is right, and it was two faults rather than one. There was no postseason here at all,
+         and the season gain was measured with `windowPts(..., null)` -- every game each side has
+         left -- which is the very thing that came out 0.47 under the Advice figure on 20 Sep,
+         because an FCS season ends before an FBS one. Both sides are held to the CANDIDATE'S own
+         remaining weeks now, exactly as Pickups does it, so Season gain means one thing on this
+         page and not two. */
+      const post = postOf(t.n), incPost = postOf(mine.n);
+      const mW = weeksLeft(t, from);
+      const rw = mW ? weekWindow(t, from, mW) : null;
+      const irw = mW ? weekWindow(mine, from, mW) : null;
+      const seasonGain = (rw && irw && r.games >= DATA.hold_games)
+        ? Math.round((rw.pts - irw.pts) * 100) / 100 : null;
+      const postGain = (post != null && incPost != null)
+        ? Math.round((post - incPost) * 100) / 100 : null;
+      const keepGain = (seasonGain != null && postGain != null)
+        ? Math.round((seasonGain + postGain) * 100) / 100 : null;
       out.push({drop: mine, get: t, from: from,
                 gain3: b.weeks ? b.pts - incB.pts : null,
-                gainR: r.games >= DATA.hold_games ? r.pts - incR.pts : null,
+                gainR: seasonGain, postGain: postGain, keepGain: keepGain,
                 bank: b.pts, season: r.pts, incBank: incB.pts, incSeason: incR.pts,
                 /* THE TEAM BEING DROPPED HAS A 3-0 FIGURE TOO, and it is the figure the
                    candidates have to beat. Casey, 15 Sep 2026: "the team that's on my roster
@@ -5308,6 +5330,8 @@ function planPanel(){
         <td class="num c-season hide-s"><b>${b.season.toFixed(2)}</b></td>
         <td class="num c-gain"><span class="d">—</span></td>
         <td class="num c-sgain hide-s"><span class="d">—</span></td>
+        <td class="num c-post hide-s"><span class="d">—</span></td>
+        <td class="num c-keep"><span class="d">—</span></td>
         <td class="c-then"><span class="d">what you give up</span></td></tr>
       ${b.gets.map(x => `<tr>
         <td class="c-team" style="padding-left:16px"><span class="d">↳</span>
@@ -5320,6 +5344,10 @@ function planPanel(){
           : `<b class="${x.gain3 > 0.3 ? 'g' : x.gain3 < 0 ? 'b' : 'y'}">${x.gain3 >= 0 ? '+' : ''}${x.gain3.toFixed(2)}</b>`}</td>
         <td class="num c-sgain hide-s">${x.gainR == null ? '<span class="d">—</span>'
           : `<span class="${x.gainR > 0.5 ? 'g' : x.gainR < 0 ? 'b' : 'd'}">${x.gainR >= 0 ? '+' : ''}${x.gainR.toFixed(2)}</span>`}</td>
+        <td class="num c-post hide-s">${x.postGain == null ? '<span class="d">—</span>'
+          : `<span class="${x.postGain > 0.2 ? 'g' : x.postGain < 0 ? 'b' : 'd'}">${x.postGain >= 0 ? '+' : ''}${x.postGain.toFixed(2)}</span>`}</td>
+        <td class="num c-keep">${x.keepGain == null ? '<span class="d">—</span>'
+          : `<b class="${x.keepGain > 0.5 ? 'g' : x.keepGain < 0 ? 'b' : 'y'}">${x.keepGain >= 0 ? '+' : ''}${x.keepGain.toFixed(2)}</b>`}</td>
         <td class="c-then">${x.legal
           ? '<span class="pill v-keep">Yes</span>'
           : x.free ? '<span class="pill v-no" title="It cannot finish the hold from the day this slot frees up.">Too late</span>'
@@ -5334,16 +5362,27 @@ function planPanel(){
         <th class="num c-bank" title="Expected league points over the three weeks of the hold, starting the day this slot frees up. The same three weeks for every row in the block.">Bank 3</th>
         <th class="num c-season hide-s" title="Expected points from the day the slot frees up to the end of the regular season.">Season<br>pts</th>
         <th class="num c-gain" title="Bank 3 minus what the team you are dropping earns over those same three weeks.">Gain 3</th>
-        <th class="num c-sgain hide-s" title="Season points minus what the team you are dropping earns over the same stretch.">Season<br>gain</th>
+        <th class="num c-sgain hide-s" title="Points from the day the slot frees up to the end of the regular season, minus what the team you are dropping earns over those same weeks. Both sides are measured over the weeks the team coming IN has left, so the two figures can be read against each other.">Season<br>gain</th>
+        <th class="num c-post hide-s" title="What this team is worth in the postseason, minus what the team you are dropping is worth. It is paid to whoever holds the team at the end, so it belongs to a hold that runs to the end of the season and to no shorter one.">Post</th>
+        <th class="num c-keep" title="Season gain plus Post. What the swap is worth if you pick this team up and hold it for the rest of the season. It is the same figure the Keepers view on Pickups shows.">Keep<br>gain</th>
         <th class="c-then">Can you do it</th></tr></thead>
       ${blocks}</table></div>
     <div class="note">Every figure is <b>league points</b>, and every row in a block is measured
       over the same weeks, starting the day that slot frees up. Points either team has already
       scored are in none of these columns — they are yours or theirs already, and a decision you
-      are making today cannot change them.</div></div>`
+      are making today cannot change them.</div>
+    <div class="note"><b>Gain 3</b> is what the swap is worth if you hold the team for the three
+      games you have to. <b>Keep gain</b> is what it is worth if you hold it to the end, and it is
+      Season gain plus Post. They answer different questions, so a team can be ahead on one and
+      behind on the other.</div></div>`
     : `<div class="card"><h2>How Each Swap Looks</h2><div class="empty">${why()}</div></div>`;
 
-  return lists + table + compareCard('COL') + compareCard('NFL') + planSendCard(pairs);
+  /* SIDE BY SIDE COMES FIRST, because Compare is at the top of this tab and its answer belongs
+     under it. Casey, 21 Sep 2026: "it also puts that at the very, very bottom and the compare is
+     up near the top. So I would assume when I would have done the compare, it would show me the
+     compare right underneath." How Each Swap Looks is about the whole plan, not about the two
+     teams he just asked about, so it follows. */
+  return lists + compareCard('COL') + compareCard('NFL') + table + planSendCard(pairs);
 }
 
 /* ---- HANDING IT TO THE TRADES TAB ----------------------------------------------------------
@@ -6850,7 +6889,15 @@ function cmpPick(name){
   else if (P.b === name){ P.b = null; }
   else if (!P.a) P.a = name;
   else if (!P.b) P.b = name;
-  else P.b = name;                   // both full: replace the second, keep the first
+  /* BOTH FULL: KEEP THE TWO MOST RECENTLY TAPPED, dropping the oldest.
+     Casey, 21 Sep 2026: "the two teams I'm selecting is Tennessee and Prairie View A&M, but the
+     two teams it shows me is Nebraska and Prairie View."
+     Exactly what the old line did. Nebraska was still sitting in slot 1 from earlier, so his
+     Tennessee tap went into slot 2 and his Prairie View tap OVERWROTE it -- two taps, one slot.
+     "Replace the second, keep the first" is only the right rule if the reader knows which one is
+     first, and nothing on screen says. A ROLLING PAIR NEEDS NO SUCH KNOWLEDGE: whatever two
+     teams you tapped last are the two you are comparing. */
+  else { P.a = P.b; P.b = name; }
   /* Repaint ONLY the buttons and the tray. A full renderPick() here is what moved the page.
      A pool switch is the exception: it changes which rows carry a + at all, so it has to redraw
      -- and it happens once, on the first cross-pool tap, not on every pick. */
