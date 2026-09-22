@@ -145,6 +145,24 @@ th,td{text-align:left;padding:6px 7px;border-bottom:1px solid var(--line);font-s
 th{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
 td.num,th.num{text-align:right}
 .scr{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* THE ACCESS LIST IS AN ADMIN TABLE AND IT DOES NOT FIT A PHONE. Casey, 22 Sep 2026: "that whole
+   table looks terrible on the phone ... I don't want their names to wrap ... I would think you
+   just make it a scrollable table and make it look cleaner."
+   MEASURED BEFORE CHANGING IT, at 390px: five columns shared 340px. `overflow-wrap:anywhere` --
+   which every cell on this page carries, and which is right for a long email in a narrow box --
+   broke Jay LaBenz into "Jay LaBen" with a lone z beneath it, and "Predator" after seven letters.
+   Each row stood 184px tall and the Role dropdown was a 54px sliver.
+   SO THIS TABLE STOPS PRETENDING TO FIT. It states a width per column in pixels, comes to about
+   800px, and the box scrolls sideways -- the same answer the standings tables use. Nothing in it
+   breaks mid-word any more: a name, an email address and a status are each one line. */
+table.accessgrid{min-width:800px}
+table.accessgrid th, table.accessgrid td{overflow-wrap:normal;word-break:normal;
+  white-space:nowrap;vertical-align:top}
+/* The one thing allowed to wrap is a button's own label, because a button is not a name. */
+table.accessgrid button{white-space:normal}
+table.accessgrid .mono{word-break:normal}
+/* The division under a seat name, and the "no address" note, are quieter and never break. */
+table.accessgrid td .f{white-space:nowrap}
 .note{font-size:12px;color:var(--dim);line-height:1.55}
 .empty{color:var(--dim);font-size:13px;padding:14px 4px;text-align:center}
 .trow{border:1px solid var(--line);border-radius:9px;padding:9px;margin:0 0 8px;
@@ -5640,7 +5658,17 @@ function accSections(rows, headHTML, cols, seatRows){
       + ' <span class="f" style="font-weight:400;text-transform:none;letter-spacing:0" id="'
       + accSecId(d) + '-n" data-all="' + esc(count) + '">' + esc(count) + '</span></h2>'
       + '<div id="' + accSecId(d) + '"' + (mine ? '' : ' hidden') + '>'
-      + '<div class="scr"><table>' + cols + headHTML
+      /* THE TABLE IS WIDER THAN A PHONE AND THE BOX SCROLLS. Casey, 22 Sep 2026: "that whole
+         table looks terrible on the phone ... I don't want their names to wrap. A whole bunch of
+         stuff is wrapping ... I would think you just make it a scrollable table and make it look
+         cleaner."
+         Measured at 390px before changing it: five columns shared 340px, so Jay LaBenz rendered
+         as "Jay LaBen" with a lone z beneath, "Predator" broke after seven letters, the Role
+         dropdown was a 54px sliver and every row stood 184px tall. Squeezing five columns of
+         admin controls into a phone was never going to read.
+         `accessgrid` states a width per column in PIXELS, so the table is as wide as it needs to
+         be and the reader swipes -- the same answer the standings tables use. */
+      + '<div class="scr"><table class="accessgrid">' + cols + headHTML
       + list.map(function(r){
           var hay = [r.seat, r.div, DATA.div_names[r.div] || '', r.email || '',
                      (r.members || []).map(function(m){ return m.email || ''; }).join(' ')]
@@ -5725,11 +5753,13 @@ function liveAccessTable(){
     + '<th title="How many sign-ins this person has stored. One is written every time '
     + 'they type their code in a browser, and nothing removes one on its own.">'
     + 'Sign-Ins</th></tr></thead>',
-    /* THE CODE COLUMN IS SIZED TO THE CODE. Six characters at 12px with a letter of spacing
-       need about 62px, and 22% of this table on a phone was 75px minus padding -- which is why
-       they wrapped. The room comes from Seat and Person, both of which already wrap happily. */
-    '<colgroup><col style="width:16%"><col style="width:21%"><col style="width:27%">'
-    + '<col style="width:16%"><col style="width:20%"></colgroup>',
+    /* EVERY COLUMN SIZED TO THE WIDEST THING IN IT, in pixels, because this table scrolls
+       rather than fits. Seat holds a name and a division; Person an email address and a button;
+       Code six characters and two buttons, the longer of which is Create an Email Copy; Role a
+       dropdown; Sign-Ins a pill and Retire and Issue a New Code, which is the longest label on
+       the table and sets that column. */
+    '<colgroup><col style="width:150px"><col style="width:190px"><col style="width:160px">'
+    + '<col style="width:120px"><col style="width:180px"></colgroup>',
     seatRows);
 }
 
@@ -5918,11 +5948,10 @@ function practiceAccessTable(rows){
         '<thead><tr><th>Seat</th><th>Person</th><th>Code</th><th>Role</th>'
         + '<th title="How many devices can use the page as this seat right now.">Signed In</th>'
         + '</tr></thead>',
-        /* THE SAME WIDTHS AS THE LIVE TABLE, for the same reason: six characters at 12px with a
-           letter of spacing need about 62px, and 22% of this table on a phone was 75px minus
-           padding. The room comes from Seat and Person, both of which wrap happily. */
-        '<colgroup><col style="width:16%"><col style="width:21%"><col style="width:27%">'
-        + '<col style="width:16%"><col style="width:20%"></colgroup>',
+        /* THE SAME WIDTHS AS THE LIVE TABLE. Two renderers of one table, so they are stated
+           the same way in both; they drifted once already over the code column. */
+        '<colgroup><col style="width:150px"><col style="width:190px"><col style="width:160px">'
+        + '<col style="width:120px"><col style="width:180px"></colgroup>',
         seatRows);
 }
 /* THE PRACTICE COPY'S OWN VERSIONS OF THE LIVE ACTIONS. Same panels, same words, same result --
