@@ -5310,18 +5310,16 @@ function composeURL(kind, to, subject, body){
      covers every mail button on the page rather than each one remembering. */
   var t = encodeURIComponent(to || ''), s = encodeURIComponent(subject || '');
   var txt = String(body == null ? '' : body).replace(/\r\n|\r|\n/g, '\r\n');
-  /* TWO OF THESE FOUR BUILD THE MESSAGE AS A WEB PAGE, AND A LINE BREAK MEANS NOTHING THERE.
-     Casey, 22 Sep 2026: "I am testing opening the email in yahoo and it looks like one
-     continuous paragraph" -- after the CRLF fix, which is the right answer for the other two.
-     Gmail and a mail program take the body as plain text and honour CRLF. Yahoo and Outlook drop
-     it into a rich-text editor, where the only thing that starts a new line is a break tag. So
-     the body is escaped and the breaks are converted, and only for those two. Sending a break
-     tag to the other two would show the reader the tag itself. */
-  if (kind === 'yahoo' || kind === 'outlook'){
-    txt = txt.replace(/[&<>]/g, function (c){
-             return {'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]; })
-           .replace(/\r\n/g, '<br>');
-  }
+  /* YAHOO CANNOT BE MADE TO DO THIS FROM A LINK, AND THAT WAS WORTH FINDING OUT RATHER THAN
+     GUESSING AT A THIRD TIME.
+     Casey, 22 Sep 2026: "I am testing opening the email in yahoo and it looks like one continuous
+     paragraph", and then, asked what he could see: "There is no br in the yahoo text." So Yahoo
+     is not collapsing the breaks and showing the tags -- it is throwing BOTH away. A break tag
+     was tried here for one build and did nothing except escape the body, which risked turning
+     Texas A&M into Texas A&amp;M the day Yahoo stopped stripping entities too.
+     SO EVERY SERVICE GETS CRLF, which is what `mailto:` is defined in terms of and what Gmail and
+     a mail program honour. The Copy button is the path that works everywhere, and the Run It tab
+     has one beside every message. */
   var b = encodeURIComponent(txt);
   if (kind === 'gmail')  return 'https://mail.google.com/mail/?view=cm&fs=1&to=' + t + '&su=' + s + '&body=' + b;
   if (kind === 'yahoo')  return 'https://compose.mail.yahoo.com/?to=' + t + '&subject=' + s + '&body=' + b;
