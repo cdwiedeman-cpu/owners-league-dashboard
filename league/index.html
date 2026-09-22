@@ -805,10 +805,16 @@ table.wide th.c-cat .cp{display:block;font-size:11px;font-weight:700;color:var(-
    takes the row's own type and marks itself with a dotted underline. It is a real control: a
    <button>, so the keyboard and a screen reader find it, and it clears the 12x12 floor on its own
    height. `text-align:left` because a button centres its label and these sit in a text column. */
-.tlink{appearance:none;background:none;border:0;padding:0 1px;margin:0;font:inherit;color:inherit;
-  cursor:pointer;text-align:left;text-decoration:underline;text-decoration-style:dotted;
-  text-underline-offset:2px;text-decoration-color:var(--line)}
-.tlink:hover,.tlink:focus-visible{color:var(--blue);text-decoration-color:var(--blue)}
+/* IT HAS TO LOOK LIKE A LINK BEFORE YOU TOUCH IT. Casey, 22 Sep 2026: "it is not clear that a
+   team can be clicked on in the slots because it looks like text unless you hover over it."
+   It was the row's own colour with a dotted underline in the line colour, which is close enough
+   to plain text to be plain text. A solid underline in the link colour, at rest, on a phone with
+   no hover at all. The reason it was understated -- that a table full of buttons reads as a form
+   -- was a real concern and the wrong trade: a control nobody can see is not restraint. */
+.tlink{appearance:none;background:none;border:0;padding:0 1px;margin:0;font:inherit;
+  color:var(--blue);cursor:pointer;text-align:left;text-decoration:underline;
+  text-underline-offset:2px;text-decoration-thickness:1px;text-decoration-color:var(--blue)}
+.tlink:hover,.tlink:focus-visible{text-decoration-thickness:2px}
 .qm{appearance:none;background:var(--pan2);border:1px solid var(--line);color:var(--dim);
   border-radius:50%;width:18px;height:18px;line-height:1;padding:0;margin-left:4px;
   font:700 11px inherit;cursor:pointer;vertical-align:middle}
@@ -2872,7 +2878,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '21 Sep 2026, 6:59 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '21 Sep 2026, 7:19 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10912,20 +10918,19 @@ function ownerName(name){
 function grpHeadLabel(o, g){
   const open = OPEN_SLOT === grpKey(o, g);
   const n = g.spells.length;
-  /* THE WHOLE ROW EXPANDS, INCLUDING THE NAME. Casey, 22 Sep 2026: "I thought clicking on the
-     team expanded it and then I would have to select that team in the slot to see the results
-     and schedule of that team. Instead, clicking on the team doesn't expand and it directly
-     opens the schedule."
-     THIS REVERSES A DECISION OF HIS FROM 20 SEP 2026, and that is worth saying plainly rather
-     than leaving the older note above to contradict this one. Then, the name on this row was
-     plain text and he asked for one tap on it to reach a schedule from a phone. It became a
-     link. Now the name and the row did two different things, and the name was the obvious
-     target doing the less expected one. Asked which he wanted, he chose: clicking anywhere
-     expands, and the schedule is reached by picking the team inside.
-     A SCHEDULE IS STILL ONE TAP AWAY FROM THE OPEN SLOT: every row inside is a `teamLink`, and a
-     slot that has only ever held one team opens to that one row. So it is two taps from the
-     standings rather than one, which is the cost he accepted. */
-  return `<span class="pill p-${g.cur.pool.toLowerCase()}">${g.cur.pool}</span> ${esc(g.cur.team)}
+  /* THE NAME OPENS THE SCHEDULE. THE REST OF THE ROW OPENS THE SLOT. Two actions, and they are
+     both meant to be here.
+     THE HISTORY MATTERS BECAUSE IT WENT BOTH WAYS. Casey, 20 Sep 2026, asked for one tap on the
+     name to reach a schedule from a phone. On 22 Sep 2026 he said the row was not intuitive, and
+     chose to make the whole row expand instead. Trying it, he changed his mind the same day: "I
+     do still want to be able to click on the team and see the schedule without having to click
+     into the slots first."
+     SO THE ANSWER WAS NEVER WHICH ACTION WINS. It was that neither of them looked like anything.
+     The name now reads as a link without being hovered, and the expand cue is a control rather
+     than a character. Two actions that both announce themselves are not the same problem as two
+     actions hiding in a row of plain text. */
+  return `<span class="pill p-${g.cur.pool.toLowerCase()}">${g.cur.pool}</span> ${
+    teamLink(g.cur.team, o.owner, g.cur.from_week, g.cur.to_week)}
     <button class="caret" tabindex="-1" aria-hidden="true">${open ? '▾' : '▸'}</button>${
     n > 1 ? ` <span class="gtag t-yours" title="${n} teams have held this roster slot. Its points are all of theirs added together — tap to see each one and the weeks it was held.">${n - 1} before it</span>` : ''}${
     g.unplaced ? ' <span class="gtag t-hold" title="This team could not be matched to a roster slot from the ownership history — two moves in the same week cannot be told apart. Its points are shown on their own rather than dropped.">SLOT UNKNOWN</span>' : ''}`;
