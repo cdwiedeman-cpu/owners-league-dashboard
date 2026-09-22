@@ -5300,8 +5300,16 @@ function welcomeText(seat, code, email){
  * he uses is one press.
  */
 function composeURL(kind, to, subject, body){
+  /* LINE BREAKS GO ACROSS AS CRLF, NOT AS A BARE NEWLINE.
+     Casey, 22 Sep 2026: "the create email button ... doesn't have any formatting ... can you not
+     separate out each trade to a separate row with spaces in between instead of it being one
+     continual paragraph."
+     The body was built with real line breaks in it and they arrived as one paragraph. A compose
+     address carries its body as an encoded query value, and `mailto:` is defined in terms of
+     CRLF; a lone newline is what several of these services quietly drop. One conversion here
+     covers every mail button on the page rather than each one remembering. */
   var t = encodeURIComponent(to || ''), s = encodeURIComponent(subject || ''),
-      b = encodeURIComponent(body || '');
+      b = encodeURIComponent(String(body == null ? '' : body).replace(/\r\n|\r|\n/g, '\r\n'));
   if (kind === 'gmail')  return 'https://mail.google.com/mail/?view=cm&fs=1&to=' + t + '&su=' + s + '&body=' + b;
   if (kind === 'yahoo')  return 'https://compose.mail.yahoo.com/?to=' + t + '&subject=' + s + '&body=' + b;
   if (kind === 'outlook') return 'https://outlook.live.com/mail/0/deeplink/compose?to=' + t + '&subject=' + s + '&body=' + b;
@@ -5447,8 +5455,12 @@ function coMailBody(){
     var cl = condLine(r.cond, i);
     if (cl) line += ' ' + cl.text;
     out.push(line);
+    /* ONE TRADE, ONE ROW, WITH A GAP AFTER IT. Asked for outright on 22 Sep 2026. A blank line
+       also survives a mail service that collapses a single break, so the trades stay apart even
+       where the formatting does not carry. */
+    out.push('');
   });
-  return out.join('\n');
+  return out.join('\n').replace(/\n+$/, '');
 }
 function coMailSubject(){ return 'My trades for week ' + playWeek(); }
 /* GMAIL, BECAUSE HE ASKED FOR GMAIL. This is the one button on the page that does not follow the
