@@ -273,8 +273,19 @@ main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
    stepped in and dimmed a little further, so depth is visible without a second table. */
 tr.own-kid>td{background:var(--pan2)}
 tr.own-kid .c-own{padding-left:10px}
-tr.slot-kid>td{background:var(--pan2);opacity:.86}
+/* NO BLANKET FADE ON A ROW OF REAL NUMBERS. Casey, 22 Sep 2026: "when expanding to slots part of
+   the row is greyed out." It was `opacity:.86` over the whole row, which dimmed the points as
+   well as the label and, laid under text that was overflowing its cell, read as a smear. The
+   step in is carried by the indent and the smaller type, which is what it was always for. */
+tr.slot-kid>td{background:var(--pan2)}
 tr.slot-kid .c-own{padding-left:22px}
+/* THE MERGED LABEL CELL ON AN EXPANDED ROW. It starts at the table's left edge because it has
+   taken the rank column, so the step in that shows the nesting is its own padding. */
+tr.own-kid td.kidcell{padding-left:26px}
+tr.slot-kid td.kidcell{padding-left:38px}
+/* THE TAIL OF AN EXPANDED LABEL -- the record, and the weeks a team held the slot. It sits on
+   the same line where there is room for it and takes a line of its own where there is not. */
+.kidtail{font-size:11px;color:var(--dim)}
 tr.note-kid>td{background:var(--pan2);padding-top:8px;padding-bottom:10px}
 tr.own-kid.clickable{cursor:pointer}
 tr.own-kid.clickable:hover>td{background:var(--pan)}
@@ -573,8 +584,36 @@ table.standtbl td:nth-child(2){white-space:nowrap}
      abbreviated on a narrow screen by `shortOwner()`, and the team columns on Weekly / Quarterly
      and Season Summary sit in tables that already scroll sideways, so a long team name simply
      takes the room it needs. */
+  /* 132px, NOT 124px. The expand cue grew from a 12px character to a 20px button on 22 Sep 2026
+     and the longest owner names no longer fitted beside it -- "Rob O'Conner" ran 5px past the
+     end of its cell and into the division pill. Total's right edge lands at 288px in a 340px box,
+     so this is room the table had. */
   table.standtbl td.c-own, table.standtbl th.c-own{
-    width:124px;white-space:nowrap;line-height:1.3}
+    width:132px;white-space:nowrap;line-height:1.3}
+  /* AN EXPANDED ROW WRAPS INSIDE ITS OWN CELL. This is the other half of the fix above: the
+     merged cell gives it about 200px, and `white-space:normal` makes it use those 200px instead
+     of drawing straight through the columns beside it. The tail goes on its own line, so the
+     first line is the pool tag, the team name and the plus, and nothing else. */
+  /* IT WRAPS WHERE IT HAS TO AND NOWHERE ELSE. Forcing the record onto a line of its own made
+     every slot three lines tall and eleven slots a very long page. Ordinary wrapping keeps a
+     short name, its plus and its record on one line and only breaks the ones that cannot fit. */
+  table.standtbl tr.own-kid td.c-own, table.standtbl tr.slot-kid td.c-own{
+    white-space:normal;line-height:1.5;font-size:13px}
+  table.standtbl tr.own-kid .pill, table.standtbl tr.slot-kid .pill{padding:0 4px;font-size:9px}
+  table.standtbl tr.own-kid td.kidcell{padding-left:16px}
+  table.standtbl tr.slot-kid td.kidcell{padding-left:26px}
+  table.standtbl tr.own-kid .caret, table.standtbl tr.slot-kid .caret{margin-left:4px}
+  /* THE NESTING ARROW GIVES ITS ROOM TO THE NAME. On a narrow screen the indent, the shaded
+     background and the smaller type already say this row sits under the one above it, and the
+     18px the arrow takes is the difference between "North Dakota State +" on one line and the
+     plus falling onto a line of its own. */
+  table.standtbl .kidarrow{display:none}
+  /* THE SLOT ROWS ON WEEKLY / QUARTERLY AND SEASON SUMMARY GET THE SAME TREATMENT. Their team
+     column is 34% of a 564px table, which is 192px, and "New England Patriots" with its pool tag
+     and its plus comes to 206px. It was drawing the plus on top of that week's score. The owner
+     row on Standings is deliberately NOT in this rule: `shortOwner()` already makes a person's
+     name fit on one line and Casey asked for it to stay on one. */
+  table.standtbl td.slotcell{white-space:normal;line-height:1.5}
   table.standtbl.wide td.c-own, table.standtbl.wide th.c-own{width:auto;min-width:170px}
   table.standtbl .c-rank{width:24px}
   /* WIN% AND BEHIND STAY ON A PHONE, IN THE SWIPE. Casey, 20 Sep 2026: "why doesn't the phone
@@ -847,7 +886,8 @@ table.wide th.c-cat .cp{display:block;font-size:11px;font-weight:700;color:var(-
 .tname{appearance:none;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;
   cursor:pointer;text-align:left;min-height:22px}
 .tname:hover{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
-.tname .caret{font-size:10px;color:var(--faint);margin-left:3px}
+.tname .caret{font:inherit;font-size:10px;color:var(--faint);margin-left:3px;
+  min-width:0;min-height:0;border:0;background:none}
 /* A scouting view owns nothing, so its rows get no green "yours" edge and no red "before
    pickup" edge -- both are statements about a swap that is not being made here. */
 tr.g-none td:first-child{border-left:3px solid transparent}
@@ -877,24 +917,24 @@ tr.g-before td{opacity:.72}
 .t-book{color:var(--tv);border-color:var(--tv)}
 .fin{font-variant-numeric:tabular-nums;font-weight:700}
 tr.slot-head td{border-bottom:none}
-/* THE CUE FOR "THIS OPENS" IS A CONTROL, NOT A MARK. Casey, 22 Sep 2026: "it is not easy to see
-   how to expand the team selection so it shows the slots ... I see the little arrow to the right
-   of the team that does this, but it is not intuitive." It was a 10px character in the faintest
-   colour on the page. It is at least 12x12px now, in the ordinary text colour, with a border and
-   a background, so it reads as a thing to press. The ROW is still what carries the click -- this
-   is inside it and does not take the tap for itself, which is why it is not focusable and is
+/* THE CUE FOR "THIS OPENS" IS A PLUS, AND IT TURNS INTO A MINUS. Casey, 22 Sep 2026: "it is
+   not easy to see how to expand the team selection so it shows the slots ... I see the little
+   arrow to the right of the team that does this, but it is not intuitive." Then, choosing
+   between the options: "What about a larger + button that changes to a minus when it expands."
+   An arrow beside a team name reads as a pointer at the number on its right. A plus does not:
+   everybody has pressed one to open something. The ROW is still what carries the click. This
+   sits inside it and does not take the tap for itself, which is why it is not focusable and is
    hidden from a screen reader that is already being told what the row does. */
-.caret{color:var(--fg);font-size:11px;line-height:1;margin-left:3px;margin-right:0;
+.caret{color:var(--blue);font:700 14px/1 inherit;margin-left:6px;margin-right:0;
   display:inline-flex;align-items:center;justify-content:center;
-  min-width:14px;min-height:14px;padding:0;vertical-align:middle;
-  border:0;border-radius:4px;background:var(--pan);
+  min-width:20px;min-height:20px;padding:0;vertical-align:middle;
+  border:1px solid var(--blue);border-radius:5px;background:var(--pan);
   pointer-events:none}
-/* ON THE NARROWEST SCREENS THE OWNER COLUMN HAS NOTHING TO GIVE. The cue keeps its 12px, which
-   is this project's floor for anything you press, and gives back the padding either side rather
-   than pushing a name into the division column. `test_season_ui.js` measures that overflow and
-   went red on the first version of this at 365px. */
-@media (max-width:420px){ .caret{min-width:12px;min-height:12px;margin-left:1px;font-size:10px} }
-tr.clickable:hover .caret{border-color:var(--blue);color:var(--blue)}
+/* ON THE NARROWEST SCREENS IT GIVES BACK ITS MARGIN, NOT ITS SIZE. 18px is still well over this
+   project's 12px floor for anything you press. `test_season_ui.js` measures the overflow this
+   column can cause and went red on an earlier version of this at 365px. */
+@media (max-width:420px){ .caret{min-width:18px;min-height:18px;margin-left:4px;font-size:13px} }
+tr.clickable:hover .caret{background:var(--blue);color:#fff}
 tr.slot-head:hover td{background:rgba(96,165,250,.06)}
 tr.slot-kid td{font-size:12px;padding-top:1px;padding-bottom:3px;border-bottom:none}
 /* A COLLAPSED slot has no child rows, so its head row has to close its own border. The old
@@ -2878,7 +2918,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '21 Sep 2026, 7:19 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '21 Sep 2026, 8:29 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8637,10 +8677,17 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
     return r ? `<td class="num c-proj" title="${g.cur.team}: ${r.banked.toFixed(1)} banked + ${r.rest.toFixed(1)} from the games still to play${r.post == null ? '' : ` + ${r.post.toFixed(1)} postseason`}.">${r.total.toFixed(1)}</td>`
              : '<td class="num d c-proj">—</td>';
   };
+  /* THE LABEL SPANS THE EMPTY CELLS TO ITS LEFT. Casey, 22 Sep 2026, on a phone: "expanding the
+     owners shows overlapping text on top of the team names ... there is something like blurred
+     text behind the slot row."
+     Both were one defect. The Owner column is 124px on a narrow screen and every cell in this
+     table is one line that does not wrap, so an expanded row -- an arrow, a pool tag, a whole
+     team name, the plus and a record -- ran to 242px and painted itself over Total and Win%.
+     The rank and division cells on these rows were always empty, so the label takes them and
+     wraps inside what it has instead of spilling out of it. */
+  const kidSpan = showDiv ? 3 : 2;
   const kidRow = (label, cls, ptsCell, qOf, tip) => `<tr class="${cls}"${tip ? ` title="${esc(tip)}"` : ''}>
-      <td class="num d c-rank"></td>
-      <td class="c-own">${label}</td>
-      ${showDiv ? '<td></td>' : ''}
+      <td class="c-own kidcell" colspan="${kidSpan}">${label}</td>
       <td class="num c-tot">${ptsCell}</td>
       ${PROJ_ON ? '<td class="num d c-proj"></td>' : ''}
       <td class="num d c-pct hide-s"></td>
@@ -8655,10 +8702,8 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
     const head = `<tr class="own-kid clickable" data-team="${esc(g.cur.team)}"
         title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
         onclick="event.stopPropagation();toggleSlotRow('${esc(sk).replace(/'/g,"\\'")}')">
-      <td class="num d c-rank"></td>
-      <td class="c-own">↳ ${grpHeadLabel(o, g)}
-        <span class="d" style="font-size:11px">${rec}</span></td>
-      ${showDiv ? '<td></td>' : ''}
+      <td class="c-own kidcell" colspan="${kidSpan}"><span class="kidarrow">↳</span> ${grpHeadLabel(o, g)}
+        <span class="kidtail">${rec}</span></td>
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td>
       ${projCell(g)}
       <td class="num d c-pct hide-s"></td>
@@ -8667,9 +8712,9 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       ${QKEYS().map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
       ${postCell(postOfSlot(g))}</tr>`;
     const lin = (!open) ? '' : g.spells.slice().reverse().map(t => kidRow(
-      `<span class="d">↳↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
+      `<span class="kidarrow d">↳↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
        teamLink(t.team, o.owner, t.from_week, t.to_week)}
-       <span class="d" style="font-size:11px">${spellTail(t, many)} · ${lRec(t)}</span>${
+       <span class="kidtail">${spellTail(t, many)} · ${lRec(t)}</span>${
        t.held === false ? ' <span class="gtag t-before">TRADED AWAY</span>' : ''}`,
       'slot-kid' + (t.held === false ? ' g-before' : ''),
       `<span class="d">${(t.pts || 0).toFixed(1)}</span>`,
@@ -8696,7 +8741,7 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       <td class="c-own" data-owner="${esc(o.owner)}">${mine
         ? `<span class="mebox" title="This is you.">${ownerName(o.owner)}</span>`
         : ownerName(o.owner)} <button class="caret" tabindex="-1" aria-hidden="true"
-        >${OPEN_OWNER === key ? '▾' : '▸'}</button></td>
+        >${OPEN_OWNER === key ? '−' : '+'}</button></td>
       ${showDiv ? `<td class="c-div"><span class="pill p-div${o.div === MY_DIV ? ' own' : ''}"
         title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
         ><span class="divshort">${o.div}</span></span></td>` : ''}
@@ -10607,7 +10652,7 @@ function weeklyCard(o, weeks){
     const head = `<tr class="clickable"
         title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
         onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')">
-      <td class="c-own">${grpHeadLabel(o, g)}</td>
+      <td class="c-own slotcell">${grpHeadLabel(o, g)}</td>
       ${weeks.map(wk => {
         const own = g.spells.find(t => ((t.wk || {})[wk]) != null);
         return own ? `<td class="num g">${((own.wk || {})[wk]).toFixed(1)}</td>` : cell(g.cur, wk);
@@ -10615,9 +10660,9 @@ function weeklyCard(o, weeks){
       <td class="num"><b>${weeks.reduce((a, wk) => a + slotWeek(g, wk), 0).toFixed(1)}</b></td></tr>`;
     const kids = !open ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
         t.held === false ? ' g-before' : ''}">
-      <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
+      <td class="c-own d"><span class="kidarrow">↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
         teamLink(t.team, o.owner, t.from_week, t.to_week)}
-        <span class="d" style="font-size:11px">${spellTail(t, many)}</span></td>
+        <span class="kidtail">${spellTail(t, many)}</span></td>
       ${weeks.map(wk => cell(t, wk)).join('')}
       <td class="num d">${qTot(t).toFixed(1)}</td></tr>`).join('');
     return head + kids;
@@ -10931,7 +10976,7 @@ function grpHeadLabel(o, g){
      actions hiding in a row of plain text. */
   return `<span class="pill p-${g.cur.pool.toLowerCase()}">${g.cur.pool}</span> ${
     teamLink(g.cur.team, o.owner, g.cur.from_week, g.cur.to_week)}
-    <button class="caret" tabindex="-1" aria-hidden="true">${open ? '▾' : '▸'}</button>${
+    <button class="caret" tabindex="-1" aria-hidden="true">${open ? '−' : '+'}</button>${
     n > 1 ? ` <span class="gtag t-yours" title="${n} teams have held this roster slot. Its points are all of theirs added together — tap to see each one and the weeks it was held.">${n - 1} before it</span>` : ''}${
     g.unplaced ? ' <span class="gtag t-hold" title="This team could not be matched to a roster slot from the ownership history — two moves in the same week cannot be told apart. Its points are shown on their own rather than dropped.">SLOT UNKNOWN</span>' : ''}`;
 }
@@ -11004,7 +11049,7 @@ function summaryCard(o){
     const head = `<tr class="clickable"
         title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
         onclick="toggleSlotRow('${esc(k).replace(/'/g,"\\'")}')">
-      <td class="c-own">${grpHeadLabel(o, g)}</td>
+      <td class="c-own slotcell">${grpHeadLabel(o, g)}</td>
       ${headCells}
       ${bonusCell()}
       ${qs.map(q => `<td class="num d c-q">${grpQ(g, q).toFixed(1)}</td>`).join('')}
@@ -11012,9 +11057,9 @@ function summaryCard(o){
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td></tr>`;
     const kids = !open ? '' : g.spells.slice().reverse().map(t => `<tr class="slot-kid${
         t.held === false ? ' g-before' : ''}">
-      <td class="c-own d">↳ <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
+      <td class="c-own d"><span class="kidarrow">↳</span> <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> ${
         teamLink(t.team, o.owner, t.from_week, t.to_week)}
-        <span class="d" style="font-size:11px">${spellTail(t, many)}</span></td>
+        <span class="kidtail">${spellTail(t, many)}</span></td>
       ${cats.map(c => catCell(t, c)).join('')}
       ${bonusCell()}
       ${qs.map(q => `<td class="num d c-q">${((t.q || {})[q] || 0).toFixed(1)}</td>`).join('')}
