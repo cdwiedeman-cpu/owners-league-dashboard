@@ -2053,7 +2053,82 @@ function asideTail(r, seat){
       + (nameList(owed) || 'another owner') + ' in an earlier coin flip this week.';
   }).join(' ');
 }
+/* ---- BOB'S VOICE ----------------------------------------------------------------------------
+ *
+ * Casey, 23 Sep 2026: "whenever he sends an email, he usually always starts it with the word
+ * yo ... or he'll start off emails with Casey yo. So whoever the owner's name is, comma, yo ...
+ * I've seen him also start something out with dude, comma ... maybe if we can mix up those
+ * responses ... just so it looks like kind of natural, like he was naturally trying to write
+ * this instead of it just being system generated."
+ *
+ * SO IT HAS TO VARY, AND IT HAS TO BE THE SAME EVERY TIME THE SAME ROW IS DRAWN. A greeting
+ * picked at random would change on every repaint, which reads as a page glitching rather than
+ * as a person writing, and no test could ever pin it down. The opener is chosen by a hash of
+ * the row itself -- the row number, the team and the owner -- so row 2 always opens the same
+ * way and row 3 opens differently.
+ *
+ * THE HEAD ONLY TAKES ONE WHEN IT IS ADDRESSED TO THE READER. "Harvard, dropping Minnesota:
+ * Yo, you won it" is Bob talking to somebody. "Harvard: dude, lost the coin flip" is a label
+ * with a greeting stuck on it, and it reads like one. So the head is greeted only when what
+ * follows the colon starts with "you", and the reason underneath always gets one.
+ *
+ * LOWERCASING THE NEXT WORD IS NOT SAFE IN GENERAL. "Yo, harvard is held by..." is wrong, so
+ * only a word from a short list of ordinary sentence openers is lowered; anything else keeps
+ * its capital, which still reads correctly after a comma.
+ */
+var BOB_OPENERS = [
+  {lead: 'Yo, ',                       cap: false},
+  {lead: 'Dude, ',                     cap: false},
+  {lead: '{who}, yo, ',                cap: false},
+  {lead: '{who}, ',                    cap: false},
+  {lead: 'Yo {who}, ',                 cap: false},
+  {lead: '{who}, yo, what\u2019s up? ', cap: true}
+];
+var BOB_LOWER = {you: 1, your: 1, yours: 1, every: 1, everyone: 1, nothing: 1, it: 1, the: 1,
+                 this: 1, that: 1, anything: 1, a: 1, an: 1, all: 1, we: 1, college: 1,
+                 first: 1, there: 1, both: 1, no: 1, one: 1, whatever: 1, they: 1, none: 1};
+function bobHash(s){
+  var h = 2166136261, i;
+  for (i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h;
+}
+/* The owner's first name, because "Palma Wiedeman, yo," is not how anybody greets anybody. */
+function bobWho(seat){
+  var w = String(seat || '').trim().split(/[\s\/]+/)[0];
+  return w || 'dude';
+}
+function bobSay(seed, text, seat, skip){
+  if (!text) return text;
+  var n = BOB_OPENERS.length;
+  var i = bobHash(seed) % n;
+  if (skip != null && i === skip) i = (i + 1) % n;
+  var o = BOB_OPENERS[i];
+  var lead = o.lead.replace('{who}', bobWho(seat));
+  var body = text;
+  if (!o.cap){
+    var first = (text.match(/^[A-Za-z']+/) || [''])[0];
+    if (BOB_LOWER[first.toLowerCase()]) body = text.charAt(0).toLowerCase() + text.slice(1);
+  }
+  return {text: lead + body, pick: i};
+}
+/* Both halves of one row, greeted, and never with the same opener twice in a row. */
+function bobbed(sen, r, seat){
+  if (!sen) return sen;
+  var seed = String(r && r.row) + '|' + String(r && r.pickup) + '|' + String(seat);
+  var head = sen.head, pick = null;
+  var cut = head.indexOf(': ');
+  if (cut > 0 && /^you\b/i.test(head.slice(cut + 2))){
+    var h = bobSay(seed + '|h', head.slice(cut + 2), seat);
+    head = head.slice(0, cut + 2) + h.text;
+    pick = h.pick;
+  }
+  var b = bobSay(seed + '|b', sen.body, seat, pick);
+  return {kind: sen.kind, head: head, body: b.text};
+}
 function sentence(r, seat){
+  return bobbed(plainSentence(r, seat), r, seat);
+}
+function plainSentence(r, seat){
   var O = P.OUTCOME, t = r.pickup, others;
   var drawn = r.entrants || [];                    // who was actually IN the coin flip
   var asked = r.asked || drawn;                    // who put the team on a list
