@@ -1121,6 +1121,15 @@ table.rnktbl{min-width:600px}
 table.rnktbl .cr1{width:8%}  table.rnktbl .cr2{width:40%} table.rnktbl .cr3{width:14%}
 table.rnktbl .cr4{width:22%} table.rnktbl .cr5{width:16%}
 table.esptbl td.num, table.esptbl td.c-team{white-space:nowrap}
+/* THE SLOTS TABLE SCROLLS RATHER THAN WRAPPING, like every other wide table here. It had no
+   floor at all, so on a 390px phone the name column was 172px and "Cincinnati Bengals" took two
+   lines -- before the injury flag was ever added to it. Casey, 22 Sep 2026, on the sibling
+   tables: "we've got tables that can scroll across and you now have them wrapping."
+   The floor holds the widest thing the cell can carry: a long name, the pool tag, the plus, a
+   trades tag and the flag. */
+table.slottbl{min-width:660px}
+table.slottbl tr.slot-head>td:nth-child(2), table.slottbl tr.slot-kid>td:nth-child(2),
+table.slottbl thead th{white-space:nowrap}
 table.watchtbl{min-width:800px}
 table.watchtbl .cw1{width:32%} table.watchtbl .cw2{width:8%}
 table.watchtbl .cw3{width:9%}  table.watchtbl .cw4{width:9%}
@@ -3081,7 +3090,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '22 Sep 2026, 5:03 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '22 Sep 2026, 5:19 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10875,7 +10884,8 @@ function renderSlots(){
       allOpen ? 'Collapse all' : 'Expand all'}</button>
       <span class="d" style="align-self:center;font-size:12px">Tap a slot to see the teams that
       have held it.</span></div>
-    <div class="scr"><table>
+    <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
+    <div class="scr"><table class="slottbl">
       <colgroup><col style="width:8%"><col style="width:44%"><col style="width:14%"><col style="width:16%"><col style="width:18%"></colgroup>
       <thead><tr><th class="num">#</th><th>Who has held it</th>
         <th class="num" title="Points this SLOT has earned — each team counted only for the weeks it actually occupied the slot.">Pts</th>
