@@ -2078,12 +2078,18 @@ function asideTail(r, seat){
  */
 var BOB_OPENERS = [
   {lead: 'Yo, ',                       cap: false},
-  {lead: 'Dude, ',                     cap: false},
   {lead: '{who}, yo, ',                cap: false},
   {lead: '{who}, ',                    cap: false},
   {lead: 'Yo {who}, ',                 cap: false},
   {lead: '{who}, yo, what\u2019s up? ', cap: true}
 ];
+/* DUDE IS FOR BAD NEWS AND NOTHING ELSE. Casey, 23 Sep 2026: "I think when you say you lost a
+   flip, that's where you put in dude. Dude, you lost the coin flip, right?" Keeping it out of
+   the ordinary rotation gives the word a job: seeing it means the row went against you, before
+   you have read the sentence. A losing row therefore carries ONE greeting rather than two -- on
+   the heading, which is where the loss is stated, and on the reason only when the heading is
+   not addressed to the reader. */
+var BOB_LOSS = [{lead: 'Dude, ', cap: false}];
 var BOB_LOWER = {you: 1, your: 1, yours: 1, every: 1, everyone: 1, nothing: 1, it: 1, the: 1,
                  this: 1, that: 1, anything: 1, a: 1, an: 1, all: 1, we: 1, college: 1,
                  first: 1, there: 1, both: 1, no: 1, one: 1, whatever: 1, they: 1, none: 1};
@@ -2092,17 +2098,29 @@ function bobHash(s){
   for (i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
   return h;
 }
-/* The owner's first name, because "Palma Wiedeman, yo," is not how anybody greets anybody. */
+/* WHAT BOB CALLS THIS SEAT.
+   One owner gets their first name. A seat with TWO owners gets their initials, because half of
+   a shared seat is not who he is writing to. Casey, 23 Sep 2026: "for me and Palma, you always
+   use the word Palma ... when they have multiple owners, maybe just do like, yo, PW, yo, TF."
+   Four seats are shared this year and every one of them is written with a slash:
+   Palma/Wiedeman, Twitchell/Fryer, Jason/Greg and Brian/Dave. The ampersand and the word "and"
+   are read the same way, because these names come from the commissioner's workbook and he is
+   under no obligation to keep typing a slash. */
 function bobWho(seat){
-  var w = String(seat || '').trim().split(/[\s\/]+/)[0];
-  return w || 'dude';
+  var s = String(seat || '').trim();
+  if (!s) return 'dude';
+  var parts = s.split(/\s*(?:\/|&|\band\b)\s*/i).filter(function(x){ return x.trim(); });
+  if (parts.length > 1)
+    return parts.map(function(x){ return x.trim().charAt(0).toUpperCase(); }).join('');
+  return s.split(/\s+/)[0] || 'dude';
 }
-function bobSay(seed, text, seat, skip){
+function bobSay(seed, text, seat, skip, loss){
   if (!text) return text;
-  var n = BOB_OPENERS.length;
+  var bank = loss ? BOB_LOSS : BOB_OPENERS;
+  var n = bank.length;
   var i = bobHash(seed) % n;
-  if (skip != null && i === skip) i = (i + 1) % n;
-  var o = BOB_OPENERS[i];
+  if (skip != null && i === skip && n > 1) i = (i + 1) % n;
+  var o = bank[i];
   var lead = o.lead.replace('{who}', bobWho(seat));
   var body = text;
   if (!o.cap){
@@ -2111,17 +2129,23 @@ function bobSay(seed, text, seat, skip){
   }
   return {text: lead + body, pick: i};
 }
-/* Both halves of one row, greeted, and never with the same opener twice in a row. */
+/* One row, greeted. A win or a message carries a greeting on both halves and never the same
+   one twice; a loss carries exactly one, and it is "Dude,". */
 function bobbed(sen, r, seat){
   if (!sen) return sen;
   var seed = String(r && r.row) + '|' + String(r && r.pickup) + '|' + String(seat);
-  var head = sen.head, pick = null;
+  var loss = sen.kind === 'lost';
+  var head = sen.head, pick = null, greetedHead = false;
   var cut = head.indexOf(': ');
   if (cut > 0 && /^you\b/i.test(head.slice(cut + 2))){
-    var h = bobSay(seed + '|h', head.slice(cut + 2), seat);
+    var h = bobSay(seed + '|h', head.slice(cut + 2), seat, null, loss);
     head = head.slice(0, cut + 2) + h.text;
     pick = h.pick;
+    greetedHead = true;
   }
+  if (loss)
+    return {kind: sen.kind, head: head,
+            body: greetedHead ? sen.body : bobSay(seed + '|b', sen.body, seat, null, true).text};
   var b = bobSay(seed + '|b', sen.body, seat, pick);
   return {kind: sen.kind, head: head, body: b.text};
 }
@@ -2149,7 +2173,7 @@ function plainSentence(r, seat){
         body: 'You were the only owner who asked for ' + t + ', so there was no coin flip. '
               + r.drop + ' goes back into the pool.'};
     case O.LOST:
-      return {kind: 'lost', head: t + ': lost the coin flip.',
+      return {kind: 'lost', head: t + ': you lost the coin flip.',
         body: asked.length + ' owners asked for ' + t + '. '
               + (drawn.length > 1
                   ? 'The coin flip was between ' + nameList(drawn) + ', and it went to '
