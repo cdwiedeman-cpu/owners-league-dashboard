@@ -1075,6 +1075,7 @@ a.tvl .tvgo{font-size:9px;opacity:.75}
    anybody opens this tab, so they are the biggest text on the card. */
 .gm .t .s{font-size:16.5px}
 .gm .s{font-variant-numeric:tabular-nums;font-weight:700;min-width:2.2em;text-align:right}
+.gm .s.nos{color:var(--dim);font-weight:400}
 .gm .st{grid-column:1/-1;font-size:11px;color:var(--faint)}
 .win{color:var(--good)}
 /* THE NETWORK GETS ITS OWN COLOUR because it answers a different question from anything else on
@@ -3100,7 +3101,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '25 Sep 2026, 12:42 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '25 Sep 2026, 1:05 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3744,13 +3745,26 @@ function renderScores(){
     lastRank = r;
     /* The NAME carries ownership, the SCORE carries the result. Never the same element, which
        is what makes it safe for ownership to be a colour again. */
+    /* A GAME THAT HAS NOT KICKED OFF HAS NO SCORE, AND 0-0 IS NOT ONE. Casey, 25 Sep 2026:
+       "you can't really tell that the game is if the game is actually started, and it's zero
+       zero, or if it's not started and it's zero zero." ESPN sends a 0 for both sides of every
+       game on the board, hours before kick-off, so the card printed a real-looking result for a
+       game nobody had played. The score holds a dash until the game is under way, and the dash
+       carries the kick-off time on hover. A dash rather than an empty cell, for two reasons: the
+       column stays lined up, and an empty cell reads as a score that failed to load. UNKNOWN IS
+       NOT ZERO, and neither is NOT YET PLAYED. */
+    const started = g.live || g.done;
     const t = s => {
       const w = g.done && s.winner;
       const nm = s.name || s.espn;
+      const cell = started
+        ? `<span class="s ${w?'win':''}" ${w?'title="Winner."':''}>${s.score==null?'':s.score}</span>`
+        : `<span class="s nos" title="This game has not started. ${
+             esc(g.detail || 'Kick-off time not set yet.')}">&ndash;</span>`;
       return `<div class="t">
         <span>${teamNameHTML(nm, isMine(s.name))}
           ${s.name ? ownerHTML(s.name) : '<span class="own nolink">not matched to the board</span>'}</span>
-        <span class="s ${w?'win':''}" ${w?'title="Winner."':''}>${s.score==null?'':s.score}</span></div>`;
+        ${cell}</div>`;
     };
     const cls = g.live ? 'y' : (g.done ? 'd' : 'd');
     /* THE WHOLE CARD IS THE LINK. A small "gamecast" word would be a 30px tap target on a
