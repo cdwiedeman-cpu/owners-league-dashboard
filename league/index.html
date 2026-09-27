@@ -1209,7 +1209,12 @@ table.esptbl td.num, table.esptbl td.c-team{white-space:nowrap}
    block, which left every other width with no widths at all and the roster cells wrapping.
    `verify_pickcols.js` went red at four widths and was right. A width a phone overrides still
    has to exist for everything else. */
-.rt-team{width:52%}.rt-hold{width:18%}.rt-n3{width:15%}.rt-rest{width:15%}
+/* FIVE COLUMNS SINCE 27 SEP 2026. Keep is the one the drop order is decided on, so it has to
+   be on the table and not only in a tooltip. */
+/* THE TABLE IS NO WIDER FOR THE FIFTH COLUMN. Team and Hold Through keep the pixels they had,
+   because a narrower name column breaks names, and Casey has twice said he would rather swipe
+   than read a broken name. The three number columns share what is left. */
+.rt-team{width:52%}.rt-hold{width:18%}.rt-n3{width:10%}.rt-rest{width:10%}.rt-keep{width:10%}
 table.slottbl{min-width:660px}
 /* ---- THE NUMBER, THE TEAM AND THE POINTS FIT THE PHONE; THE REST IS THE SWIPE ---------------
  * Casey, 27 Sep 2026: "I can get the slot number, the team, and the points across those without
@@ -3335,7 +3340,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '27 Sep 2026, 12:43 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '27 Sep 2026, 1:09 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4503,21 +4508,31 @@ function freeByNextWindow(x){
   return !(w && x.third_game) || x.third_game <= w;
 }
 
+/* KEEP IS THE REST OF THE REGULAR SEASON PLUS THE POSTSEASON, and the postseason is the half
+   that does the work. Ordered on the regular season alone, all four college teams Casey can drop
+   this week sit inside 0.36 of a point of each other, so they are all level and the three-game
+   tie-break decides every one of them. That puts South Dakota St first to drop, and South Dakota
+   St is his strongest college keeper. The postseason is what separates a team that will still be
+   playing in December from one that will not, and it is paid to whoever holds the team at the
+   end. It is also what this page already means by KEEP on the pickup board, so a second meaning
+   of the word on the same tab was never an option. */
 function slotNums(x){
   const t = BY.get(x.n), from = pickFrom(x);
   const w3 = (t && from) ? weekWindow(t, from, DATA.hold_games).pts : (x.bank3 || 0);
   const r = (t && from) ? windowPts(t, from, null) : {pts: x.rest || 0, games: 0};
-  return {x: x, n: x.n, w3: w3, rest: r.pts, games: r.games, free: freeByNextWindow(x)};
+  const post = postOf(x.n);
+  return {x: x, n: x.n, w3: w3, rest: r.pts, post: (post == null ? 0 : post),
+          keep: r.pts + (post == null ? 0 : post), games: r.games, free: freeByNextWindow(x)};
 }
 
-/* Weakest first over the rest of the regular season. Teams within the gate of the weakest are
-   level over the season, so those are ordered on the next three games instead. */
+/* Weakest first on the keep number. Teams within the gate of the weakest are level over the rest
+   of the year, so those are ordered on the next three games instead. */
 function dropRank(grp){
   if (!grp.length) return [];
-  const g = grp.slice().sort((a, b) => a.rest - b.rest || a.w3 - b.w3);
+  const g = grp.slice().sort((a, b) => a.keep - b.keep || a.w3 - b.w3);
   const gate = CLOSE_PER_GAME * Math.max(1, g[0].games);
-  const level = g.filter(z => z.rest - g[0].rest <= gate);
-  level.sort((a, b) => a.w3 - b.w3 || a.rest - b.rest);
+  const level = g.filter(z => z.keep - g[0].keep <= gate);
+  level.sort((a, b) => a.w3 - b.w3 || a.keep - b.keep);
   return level.concat(g.filter(z => level.indexOf(z) < 0));
 }
 
@@ -5628,12 +5643,12 @@ function dropSelector(kind){
       onchange="setDrop('${kind}', this.value)"
       aria-label="Choose which of your teams to compare against">
       ${list.map(z => { const x = z.x, t = BY.get(x.n);
-        const b3 = z.w3, rs = z.rest;
+        const b3 = z.w3, rs = z.keep;
         /* A TEAM WHOSE REGULAR SEASON IS OVER CANNOT BE TRADED AWAY AT ALL. It stays in the list
            and says so rather than disappearing — it is still on the roster, and a reader looking
            for it needs to know why it cannot be moved, not merely that it is gone. */
         const stuck = !canTradeAway(t);
-        return `<option value="${x.n}" ${sel && sel.n === x.n ? 'selected' : ''} ${stuck ? 'disabled' : ''}>${x.n} — ${stuck ? 'cannot be traded away — its regular season is over' : `${z.free ? 'free after' : 'held until'} ${x.third_game.slice(5)} · rest: ${rs.toFixed(2)} · next 3: ${b3.toFixed(2)}`}</option>`; }).join('')}
+        return `<option value="${x.n}" ${sel && sel.n === x.n ? 'selected' : ''} ${stuck ? 'disabled' : ''}>${x.n} — ${stuck ? 'cannot be traded away — its regular season is over' : `${z.free ? 'free after' : 'held until'} ${x.third_game.slice(5)} · keep: ${rs.toFixed(2)} · next 3: ${b3.toFixed(2)}`}</option>`; }).join('')}
     </select>${list.some(x => !canTradeAway(BY.get(x.n)))
       ? `<div class="note" style="flex-basis:100%">A team whose regular season is finished cannot
          be traded away — league rules — so it is greyed out here. It stays on your roster to
@@ -5657,26 +5672,28 @@ function dropOrderNote(list){
   const held = list.filter(z => !z.free);
   const bits = [];
   bits.push(`<b>${esc(first.n)}</b> is first because this list is ordered on <b>the rest of the
-    regular season</b>. That is the team you would rather keep from here, which is the question a
-    drop asks.`);
+    year</b>, the regular season and the postseason together. That is the team you would rather
+    keep from here, which is the question a drop asks. ${esc(first.n)} is projected
+    ${first.keep.toFixed(2)} points, made of ${first.rest.toFixed(2)} in the regular season and
+    ${first.post.toFixed(2)} after it.`);
   /* A TENTH OF A POINT IS NOT AN ORDER. Numbering two teams that are level is precision nobody
      earned, and it is what makes a list like this look wrong to somebody who knows the teams.
      Where they ARE level the next three games decide it, so the note has to say which rule
      actually chose the team at the top. */
   if (list.length > 1){
     const gate = CLOSE_PER_GAME * Math.max(1, first.games);
-    if (list[1].rest - first.rest <= gate){
-      bits.push(`<b>${esc(first.n)}</b> and <b>${esc(list[1].n)}</b> are level over the season,
-        within ${gate.toFixed(2)} of a point. The <b>next three games</b> separate them, because
-        those are the games the slot is committed to. ${esc(first.n)} is projected
+    if (list[1].keep - first.keep <= gate){
+      bits.push(`<b>${esc(first.n)}</b> and <b>${esc(list[1].n)}</b> are level over the rest of
+        the year, within ${gate.toFixed(2)} of a point. The <b>next three games</b> separate them,
+        because those are the games the slot is committed to. ${esc(first.n)} is projected
         ${first.w3.toFixed(2)} over them against ${esc(list[1].n)} at ${list[1].w3.toFixed(2)}.`);
     }
   }
   if (by3 && by3.n !== first.n){
     bits.push(`Over the next three games alone the weakest is <b>${esc(by3.n)}</b>, at
       ${by3.w3.toFixed(2)} points. That is a real choice rather than a mistake in the order. The
-      season figure is the one that decides a keep, and the three-game figure is what the slot
-      earns while you are committed to it.`);
+      rest of the year is what decides a keep, and the three-game figure is what the slot earns
+      while you are committed to it.`);
   }
   if (held.length){
     bits.push(`${held.map(z => '<b>' + esc(z.n) + '</b>').join(', ')}
@@ -8551,9 +8568,11 @@ function renderPick(){
     const top = dropOrder(k)[0];
     worst[k] = top ? top.n : null;
     worstWhy[k] = top ? `Your weakest team to keep from ${pretty(top.x.drop_from)}: `
-      + `${top.rest.toFixed(2)} points over the rest of the regular season, the lowest of your `
-      + `${k === 'NFL' ? 'NFL' : 'college'} teams you can drop. Where two are level over the `
-      + `season, the next three games break the tie.` : '';
+      + `${top.keep.toFixed(2)} points over the rest of the year, which is `
+      + `${top.rest.toFixed(2)} in the regular season and ${top.post.toFixed(2)} in the `
+      + `postseason. That is the lowest of your ${k === 'NFL' ? 'NFL' : 'college'} teams you are `
+      + `free to drop. Where two are level over the year, the next three games break the tie.`
+      : '';
   }
   const rosterRows = mine.map(t => {
     const sl = bySlot.get(t.n);
@@ -8567,6 +8586,9 @@ function renderPick(){
     const from = sl ? pickFrom(sl) : null;
     const w3 = from ? weekWindow(t, from, DATA.hold_games).pts : null;
     const wr = from ? windowPts(t, from, null).pts : null;
+    /* THE SAME SUM `dropOrder()` RANKS ON, read from the same two functions, so the column and
+       the pill can never be two different numbers. */
+    const kp = (wr == null) ? null : wr + (postOf(t.n) == null ? 0 : postOf(t.n));
     const isWorst = sl && (worst[t.pool === 'NFL' ? 'NFL' : 'COL'] === t.n);
     return `<tr class="clickable ${isWorst ? 'g-before' : ''}"
         onclick="toggleMine('${t.n.replace(/'/g, "\\'")}')"
@@ -8595,6 +8617,7 @@ function renderPick(){
           : ` <span class="pill v-stream" title="It still owes you ${sl.need} of the ${DATA.hold_games} games you must hold it for. You can drop it once the game on ${pretty(sl.third_game)} has been played, and a replacement first plays for you on ${pretty(sl.drop_from)}.">${sl.need} to go</span>`}</td>
       <td class="num">${w3 == null ? '—' : w3.toFixed(2)}</td>
       <td class="num"><b>${wr == null ? '—' : wr.toFixed(2)}</b></td>
+      <td class="num"><b>${kp == null ? '—' : kp.toFixed(2)}</b></td>
     </tr>` + (OPEN_MINE === t.n
       ? `<tr><td colspan="4">${teamPanel(t, null, 'mine')}</td></tr>` : '');
   }).join('');
@@ -8676,11 +8699,12 @@ function renderPick(){
       <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
       <div class="scr"><table class="rostertbl">
         <colgroup><col class="rt-team"><col class="rt-hold"><col class="rt-n3"
-          ><col class="rt-rest"></colgroup>
+          ><col class="rt-rest"><col class="rt-keep"></colgroup>
         <thead><tr><th class="c-team">Team</th>
           <th title="Keep this team THROUGH this date. It is the day of its third game and you must let it play that game; you can drop it afterwards, and a replacement first plays for you in the game after it.">Hold Through</th>
           <th class="num" title="Expected points over this team's next three games after it becomes droppable — what you would give up in the near term.">Next 3</th>
-          <th class="num" title="Expected points from that point to the end of the regular season. Points already banked are excluded — you keep those whether you swap or not.">Rest</th></tr></thead>
+          <th class="num" title="Expected points from that point to the end of the regular season. Points already banked are excluded — you keep those whether you swap or not.">Rest</th>
+          <th class="num" title="Rest plus the points this team is projected to earn in the postseason, which are paid to whoever is holding it at the end of the year. This is the column the drop order is decided on.">Keep</th></tr></thead>
         <tbody>${rosterRows}</tbody></table></div>
       ${gate}
       ${injBoardNote('roster')}
@@ -8693,10 +8717,13 @@ function renderPick(){
       <br><b>Hold Through</b> also says how many games a team still owes you. <b>NOW</b> means
       the three are played and you can drop it in the window now open. <b>2 to go</b> means it
       owes you two more games first.
-      <br>The row marked <b class="b">DROP FIRST</b> is the team you would rather keep least
-      <b>over the rest of the regular season</b>, out of the teams you are free to drop. Where two
-      of them are level over the season, the next three games break the tie. It is also the team
-      every pickup below is measured against. The hold is <b>${DATA.hold_games} games</b>,
+      <br><b>Keep</b> is Rest plus the postseason this team is projected to earn, and the
+      postseason is paid to whoever is holding the team at the end of the year. It is the column
+      that decides the order.
+      <br>The row marked <b class="b">DROP FIRST</b> is the team you would rather keep least over
+      the rest of the year, out of the teams you are free to drop. Where two of them are level on
+      Keep, the next three games break the tie. It is also the team every pickup below is measured
+      against. The hold is <b>${DATA.hold_games} games</b>,
       not three weeks: a bye week does not advance it, so a slot with a bye in it is tied up for
       four weeks instead of three.
       <br><b>Tap any team</b> for its full season — games played with the score, games to come
