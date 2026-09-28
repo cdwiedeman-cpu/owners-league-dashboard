@@ -2285,12 +2285,44 @@ function isMine(name){
    need to change owner, I don't see what the point of that would be." On 18 Sep 2026 the way IN
    went too, for the same reason: "the code we put in already ties them to everything else on the
    screen." Who you are comes from the seat you signed in as, and nothing else sets it. */
-function ownerHTML(name){
-  const ls = labelsOf(name);
+/* ---- WHO HELD A TEAM IN A GIVEN WEEK, WHICH IS NOT WHO HOLDS IT NOW ----------------------
+ * Casey, 28 Sep 2026: "on the live scoring page, if I look at week two, it is showing me with
+ * Prairie View A&M and Miami (OH) as my teams. I didn't own those teams during week two."
+ * He is right. `labelsOf()` answers one question and one only: who holds this team today. The
+ * live board printed that answer under a game played three weeks ago, so a finished week was
+ * labelled with this morning's rosters.
+ * The ownership snapshots already record who held what in each week, and the standings have read
+ * them all season. This is the same reading, for the board.
+ * A WEEK OF `null` MEANS NOW, and that is a different question, not a missing answer -- it goes
+ * straight to today's labels. With no snapshot history at all there is nothing to read, so today's
+ * labels are the only answer there is, and every week gets the same one. */
+function labelsAtWeek(name, w){
+  if (w == null) return labelsOf(name);
+  const snaps = ((DATA.owner_history || {}).snapshots || [])
+    .slice().sort((a, b) => (a.week - b.week)
+      || (a.asof ? String(a.asof) : '9999-12-31').localeCompare(b.asof ? String(b.asof) : '9999-12-31'));
+  if (!snaps.length) return labelsOf(name);
+  /* THE LAST SNAPSHOT AT OR BEFORE THAT WEEK. Nothing later can describe it. */
+  let hit = null;
+  for (const sn of snaps){ if (sn.week <= w) hit = sn; else break; }
+  if (!hit) return [];
+  return ((hit.labels || {})[name] || []).map(l => ({div: l[0], owner: l[1]}));
+}
+function ownerHTML(name, w){
+  const ls = labelsAtWeek(name, w);
   if (!ls.length) return '<span class="own nolink">free agent in all three divisions</span>';
   return '<span class="own">' + ls.map(l =>
     `<span class="dv">${l.div}</span> <b class="${l.div===MY_DIV && l.owner===meName() ? 'isme':''}">${l.owner}</b>`
   ).join(' · ') + '</span>';
+}
+/* THE PURPLE NAME AND THE MY-TEAMS FILTER ASK THE SAME QUESTION AS THE LABEL, so they read the
+   same week. Highlighting a team he did not own that week, or filtering the board down to it, is
+   the same mistake in two more places. */
+function isMineAt(name, w){
+  if (w == null) return isMine(name);
+  const who = LEAGUE ? VIEWER : (meName() ? {div: MY_DIV, owner: meName()} : null);
+  if (!who || !who.owner) return false;
+  return labelsAtWeek(name, w).some(l => l.div === who.div && l.owner === who.owner);
 }
 
 function showTab(which){
@@ -3347,7 +3379,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 12:17 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 1:40 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3967,7 +3999,8 @@ function renderScores(){
   const src = shownGames();
   if (src === null){ b.innerHTML = `<div class="card"><div class="empty">Loading scores from ESPN…</div></div>`; return; }
   let list = src.slice();
-  if (FILTER === 'ME') list = list.filter(g => isMine(g.home.name) || isMine(g.away.name));
+  if (FILTER === 'ME') list = list.filter(g => isMineAt(g.home.name, WEEK_VIEW)
+                                             || isMineAt(g.away.name, WEEK_VIEW));
   else if (FILTER !== 'ALL') list = list.filter(g => g.pool === FILTER);
   list = list.filter(g => matchQ([g.home.name || g.home.espn, g.away.name || g.away.espn]));
   /* Newest first inside the two FINAL groups, soonest first inside the other two. */
@@ -4021,7 +4054,8 @@ function renderScores(){
      scoreboard that has stopped updating. */
   let head = WEEK_VIEW === null ? '' : `<div class="card"><div class="note">
     Showing <b>${esc(weekLabel(WEEK_VIEW))}</b> — ${list.length} game${list.length === 1 ? '' : 's'}
-    as ESPN has them. These are finished results, so this view does <b>not</b> refresh itself;
+    as ESPN has them. The owners under each team are whoever held it <b>that week</b>, not
+    whoever holds it now. These are finished results, so this view does <b>not</b> refresh itself;
     choose <b>This week (live)</b> to go back to live scores.</div></div>`;
   if (!list.length){
     b.innerHTML = head + `<div class="card"><div class="empty">${emptyWhy(true)}${escapeHatch()}</div></div>`;
@@ -4065,8 +4099,8 @@ function renderScores(){
              esc(kick ? 'It starts ' + kick + '.' : 'The kick-off time is not set yet.')
            }">&ndash;</span>`;
       return `<div class="t">
-        <span>${teamNameHTML(nm, isMine(s.name))}
-          ${s.name ? ownerHTML(s.name) : '<span class="own nolink">not matched to the board</span>'}</span>
+        <span>${teamNameHTML(nm, isMineAt(s.name, WEEK_VIEW))}
+          ${s.name ? ownerHTML(s.name, WEEK_VIEW) : '<span class="own nolink">not matched to the board</span>'}</span>
         ${cell}</div>`;
     };
     const cls = g.live ? 'y' : (g.done ? 'd' : 'd');
