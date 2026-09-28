@@ -3383,7 +3383,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 2:32 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 2:35 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7196,7 +7196,7 @@ function teamPanel(t, inc, mode, opts){
     return `<tr class="gline ${fin ? 'g-past' : scout ? 'g-none' : yours ? 'g-yours' : 'g-before'}"
         onclick="event.stopPropagation();toggleWhy('${t.n.replace(/'/g,"\\'")}',${i})">
       <td class="d">${when(g, t.pool)}</td>
-      <td>${g.loc === 'Home' ? 'vs' : g.loc === 'Away' ? 'at' : 'vs'} ${oppLink(g.opp)} <span class="d">▸</span>${bookTag}${scout ? '' : tag}${
+      <td>${g.loc === 'Home' ? 'vs' : g.loc === 'Away' ? 'at' : 'vs'} ${oppLink(g.opp)}${bookTag}${scout ? '' : tag}${
         scout ? ''
           : own ? (holdEnds ? '<span class="gtag t-hold" title="This team\'s third game. You must let it play this one; you can drop it afterwards.">HOLD ENDS</span>' : '')
                 : (inHold ? '<span class="gtag t-hold" title="One of the three games you are obliged to hold this team for once you pick it up.">MUST HOLD</span>' : '')}</td>
@@ -7973,11 +7973,13 @@ function teamOpenHTML(name, tip){
     ><b>${esc(s)}</b><span class="caret">▸</span></button>`;
 }
 
+/* THE OPPONENT IN A SCHEDULE IS A TEAM NAME TOO, so it is the same control and the same look.
+   It kept its own blue markup after the boards were unified, which left the one style Casey asked
+   to be rid of sitting inside every team panel -- and made the "only place it is written" note
+   above untrue. One store, again. A non-Division-I opponent has no season to open and stays
+   plain text, which is what teamOpenHTML() returns for a name the board does not carry. */
 function oppLink(name){
-  const s = String(name || '');
-  if (!s || typeof BY === 'undefined' || !BY.get(s)) return esc(s);
-  return `<button class="tlink" onclick="event.stopPropagation();openScout(${jsStr(s)})"
-    title="Open ${esc(s)}'s own season">${esc(s)}</button>`;
+  return teamOpenHTML(name, `Open ${String(name || '')}'s own season`);
 }
 
 function openScout(n){
