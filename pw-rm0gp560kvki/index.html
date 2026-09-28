@@ -3347,7 +3347,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 1:47 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 1:52 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5617,13 +5617,18 @@ function recommend(t, inc, minEdge){
    * roster slot bought for no game, and it is the thing LONG_FLOOR exists to price. The floor never
    * saw it, because it was measured against THIS TEAM'S minimum instead of the LEAGUE'S: a
    * four-week mandate was this team's minimum, so it escaped the floor by definition.
-   * Measured from the league's three weeks, a four-week mandate IS a longer hold, and it has to be
-   * worth the same 2.00 points any other longer hold does.
+   * WHAT AN EXTRA WEEK COSTS IS A NUMBER THIS PAGE ALREADY HAS. `stream_rate` is what a week of
+   * that roster slot earns by streaming it -- 0.66 a week in FBS, 0.73 in FCS, 0.27 in the NFL --
+   * so a swap that ties the slot up one week longer than the league forces has to beat one week of
+   * streaming before it is worth making. That is proportionate in a way LONG_FLOOR is not: the
+   * 2.00-point floor was chosen for holding a team into December, and charging all of it for one
+   * extra week would label every team with a bye AVOID whatever its numbers said.
    * AND IT MAKES THE TWO NUMBERS AGREE. Gain 3 for North Texas reads -0.04, because three weeks
    * buys two of its games and a bye, while the Advice column said 4w and +0.25 three inches away.
    * A label that contradicts the arithmetic beside it is worse than either alone. */
   const leagueW = DATA.hold_games;
-  const mandOK = mand.w <= leagueW || mand.gain >= LONG_FLOOR;
+  const weekCost = ((DATA.stream_rate || {})[t.pool] || 0) * Math.max(0, mand.w - leagueW);
+  const mandOK = mand.w <= leagueW || mand.gain >= weekCost;
   let best = mandOK ? mand : null;
   for (const g of ladder){
     if (g.w === mand.w) continue;
@@ -5647,11 +5652,12 @@ function recommend(t, inc, minEdge){
      gains a little and still is not worth making. */
   if (!best && !mandOK)
     return {label: 'AVOID', cls: 'v-avoid', gain: mand.gain,
-            tip: `Its ${DATA.hold_games} games take ${span(mand)}, so the slot is tied up a week `
-               + `longer than the league forces you to. Over those ${mand.w} weeks the swap is `
-               + `worth ${mand.gain >= 0 ? '+' : ''}${mand.gain.toFixed(2)} against ${inc.n}, `
-               + `under the ${LONG_FLOOR.toFixed(2)} points a hold longer than `
-               + `${DATA.hold_games} weeks has to be worth. No longer hold clears it either.`};
+            tip: `Its ${DATA.hold_games} games take ${span(mand)}, so the slot is tied up `
+               + `${mand.w - leagueW} week${mand.w - leagueW === 1 ? '' : 's'} longer than the `
+               + `league forces you to. Over those ${mand.w} weeks the swap is worth `
+               + `${mand.gain >= 0 ? '+' : ''}${mand.gain.toFixed(2)} against ${inc.n}, and a week `
+               + `of that slot is worth about ${weekCost.toFixed(2)} on its own, so the extra week `
+               + `costs more than the swap gains. No longer hold is worth it either.`};
   if (!best || best.gain <= 0)
     return {label: 'AVOID', cls: 'v-avoid', gain: mand.gain,
             tip: `Every length loses points against ${inc.n}. The best this swap ever gets is `
