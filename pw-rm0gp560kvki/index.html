@@ -3379,7 +3379,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 2:07 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 2:10 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3490,6 +3490,34 @@ const WEEK_CACHE = new Map();         // league week -> games[], fetched once
 function lastPlayedWeek(){
   const w = weekOf(null, azToday());
   return Math.max(0, Math.min(w, 18));
+}
+
+/* ---- THE WEEK THE BOARD IS SHOWING, WHICH IS NEVER "TODAY" -------------------------------
+ * Casey, 28 Sep 2026: "when we make trades today you are still going to have This Week as week 3,
+ * but the new teams received in the trade is for games in week 4."
+ * He is right, and this is the half the first fix missed. Browsing an earlier week was made to
+ * read that week's owners; THIS week was left reading today's. They are the same answer on almost
+ * every day of the season and they come apart on exactly one: Monday evening, after the lists have
+ * settled and before the week rolls over. A league week runs Tuesday to Monday, so a trade settled
+ * at four o'clock on Monday takes effect the next day while Monday night's game is still being
+ * played in the week before it. For those few hours the board would have labelled a team he had
+ * just traded for as his, over a game that scores for the owner who is losing it.
+ * SO THE BOARD ALWAYS LABELS FOR THE WEEK IT IS DRAWING. There is no "now" on a scoreboard: every
+ * game on it belongs to a week, and so does every owner beside it.
+ * THIS ROLLS OVER ON ITS OWN. `lastPlayedWeek()` is worked out from the Arizona date, so the board
+ * moves to week 4 on Tuesday morning with nothing rebuilt and nobody asked. */
+function boardWeek(){ return WEEK_VIEW === null ? lastPlayedWeek() : WEEK_VIEW; }
+
+/* Does labelling for the board's week actually say anything different from labelling for today?
+   Only worth a sentence on screen when it does -- which is the Monday evening above, and the
+   days after a trade until the reader stops looking at the week before it. */
+function ownersMovedSince(w){
+  for (const t of (DATA.teams || [])){
+    const then = labelsAtWeek(t.n, w).map(l => l.div + '|' + l.owner).sort().join(',');
+    const now = labelsOf(t.n).map(l => l.div + '|' + l.owner).sort().join(',');
+    if (then !== now) return true;
+  }
+  return false;
 }
 
 /* ---- "THIS WEEK" IS THE LEAGUE'S WEEK, NOT WHATEVER EACH ESPN BOARD IS SHOWING -------------
@@ -3999,8 +4027,8 @@ function renderScores(){
   const src = shownGames();
   if (src === null){ b.innerHTML = `<div class="card"><div class="empty">Loading scores from ESPN…</div></div>`; return; }
   let list = src.slice();
-  if (FILTER === 'ME') list = list.filter(g => isMineAt(g.home.name, WEEK_VIEW)
-                                             || isMineAt(g.away.name, WEEK_VIEW));
+  if (FILTER === 'ME') list = list.filter(g => isMineAt(g.home.name, boardWeek())
+                                             || isMineAt(g.away.name, boardWeek()));
   else if (FILTER !== 'ALL') list = list.filter(g => g.pool === FILTER);
   list = list.filter(g => matchQ([g.home.name || g.home.espn, g.away.name || g.away.espn]));
   /* Newest first inside the two FINAL groups, soonest first inside the other two. */
@@ -4020,7 +4048,7 @@ function renderScores(){
   if (FETCH_ERR && WEEK_VIEW === null){
     const fx = fallbackList();
     const side = (nm, ow, mine, score, won) => `<div class="t">
-        <span>${teamNameHTML(nm, mine)}${ownerHTML(nm)}</span>
+        <span>${teamNameHTML(nm, mine)}${ownerHTML(nm, boardWeek())}</span>
         <span class="s ${won?'win':''} ${score==null?'d':''}">${score==null?'—':score}</span></div>`;
     /* A game with a score is FINAL, a past game with no score is played-but-unknown here, and
        a future game is scheduled. Three different statements, never collapsed into one. */
@@ -4052,11 +4080,19 @@ function renderScores(){
   }
   /* SAY WHAT YOU ARE LOOKING AT. A board of finals with no live games and no label reads as a
      scoreboard that has stopped updating. */
-  let head = WEEK_VIEW === null ? '' : `<div class="card"><div class="note">
+  /* SAY WHOSE WEEK THE OWNERS ARE, and only when that is not the same as saying nothing. On an
+     ordinary day the two answers match and the sentence would be noise. */
+  const moved = ownersMovedSince(boardWeek());
+  const ownLine = moved
+    ? ` The owners under each team are whoever held it in <b>${esc(weekLabel(boardWeek()))}</b>.
+        A team traded for since then is listed under its new owner from the week the trade takes
+        effect.` : '';
+  let head = WEEK_VIEW === null
+    ? (moved ? `<div class="card"><div class="note">${ownLine}</div></div>` : '')
+    : `<div class="card"><div class="note">
     Showing <b>${esc(weekLabel(WEEK_VIEW))}</b> — ${list.length} game${list.length === 1 ? '' : 's'}
-    as ESPN has them. The owners under each team are whoever held it <b>that week</b>, not
-    whoever holds it now. These are finished results, so this view does <b>not</b> refresh itself;
-    choose <b>This week (live)</b> to go back to live scores.</div></div>`;
+    as ESPN has them.${ownLine} These are finished results, so this view does <b>not</b> refresh
+    itself; choose <b>This week (live)</b> to go back to live scores.</div></div>`;
   if (!list.length){
     b.innerHTML = head + `<div class="card"><div class="empty">${emptyWhy(true)}${escapeHatch()}</div></div>`;
     return;
@@ -4099,8 +4135,8 @@ function renderScores(){
              esc(kick ? 'It starts ' + kick + '.' : 'The kick-off time is not set yet.')
            }">&ndash;</span>`;
       return `<div class="t">
-        <span>${teamNameHTML(nm, isMineAt(s.name, WEEK_VIEW))}
-          ${s.name ? ownerHTML(s.name, WEEK_VIEW) : '<span class="own nolink">not matched to the board</span>'}</span>
+        <span>${teamNameHTML(nm, isMineAt(s.name, boardWeek()))}
+          ${s.name ? ownerHTML(s.name, boardWeek()) : '<span class="own nolink">not matched to the board</span>'}</span>
         ${cell}</div>`;
     };
     const cls = g.live ? 'y' : (g.done ? 'd' : 'd');
@@ -4222,7 +4258,8 @@ function emptyWhy(live){
 }
 
 function fallbackList(){
-  let fx = (DATA.fixtures||[]).map(g => ({...g, hm: isMine(g.home), am: isMine(g.away)}));
+  let fx = (DATA.fixtures||[]).map(g => ({...g, hm: isMineAt(g.home, boardWeek()),
+                                          am: isMineAt(g.away, boardWeek())}));
   if (FILTER === 'ME') fx = fx.filter(g => g.hm || g.am);
   else if (FILTER !== 'ALL') fx = fx.filter(g => g.pool === FILTER);
   fx = fx.filter(g => matchQ([g.home, g.away]));
@@ -4464,8 +4501,11 @@ function weekPicker(){
 function matchQ(names){
   if (Q){ const q = Q.toLowerCase();
     if (!names.some(n => n && n.toLowerCase().includes(q))) return false; }
+  /* THE SAME WEEK AS THE LABELS BESIDE THE NAMES. Searching for an owner and getting a game
+     whose card does not list him would be the two answers disagreeing on one screen. */
   if (OWNQ){ const [dv, ow] = OWNQ.split(' · ');
-    if (!names.some(n => labelsOf(n).some(l => l.div === dv && l.owner === ow))) return false; }
+    if (!names.some(n => labelsAtWeek(n, boardWeek())
+                           .some(l => l.div === dv && l.owner === ow))) return false; }
   return true;
 }
 
