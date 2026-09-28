@@ -3347,7 +3347,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 9:19 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 9:21 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9856,17 +9856,20 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
   const kids = OPEN_OWNER !== key ? '' : slotGroups(o).map(g => {
     const sk = grpKey(o, g), open = OPEN_SLOT === sk, many = g.spells.length > 1;
     const rec = lRec(g.cur);
+    /* jsStr, NOT esc THEN A QUOTE SWAP. Casey, 28 Sep 2026: "the plus sign for Colorado State
+       doesn't actually open. It does for every other one that we've checked."
+       Colorado State is Rob O'Conner's, and his name has an apostrophe in it. esc() turns that into
+       a numeric entity, so the quote swap that followed found nothing to escape -- and the browser
+       then decoded the entity back to a bare apostrophe INSIDE the JavaScript string literal, which
+       ended the string early and threw. Every one of his eleven rows was broken; Colorado State was
+       the only one with a lineage to open, so it was the only one where anything was visibly
+       missing. jsStr() is the page's own quoter and is used everywhere else.
+       AND A COMMENT DOES NOT GO INSIDE A START TAG. The first attempt at this fix put an HTML
+       comment between two attributes of the <tr>, which ends the tag at the first > in the comment
+       and throws the onclick away entirely -- so the row stopped opening for EVERYBODY. A note about
+       markup belongs in the code around it, not in the markup. */
     const head = `<tr class="own-kid clickable" data-team="${esc(g.cur.team)}"
         title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
-        <!-- jsStr, NOT esc THEN A QUOTE SWAP. Casey, 28 Sep 2026: "the plus sign for Colorado
-             State doesn't actually open. It does for every other one that we've checked."
-             Colorado State is Rob O'Conner's, and his name has an apostrophe in it. The esc
-             function turns that into a numeric entity, so the quote swap that follows finds nothing
-             to escape -- and the browser then decodes the entity back to a bare apostrophe INSIDE
-             the JavaScript string literal, which ends the string early and throws. Every one of his
-             eleven rows was broken; Colorado State was the only one with a lineage to open, so it
-             was the only one where anything was visibly missing. jsStr is the page's own quoter and
-             is used everywhere else. -->
         onclick="event.stopPropagation();toggleSlotRow(${esc(jsStr(sk))})">
       <td class="c-own kidcell" colspan="${kidSpan}"><span class="kidarrow">↳</span> ${grpHeadLabel(o, g)}
         <span class="kidtail">${rec}</span></td>
