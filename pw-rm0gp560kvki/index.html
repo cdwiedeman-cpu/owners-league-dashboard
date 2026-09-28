@@ -3347,7 +3347,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 12:03 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 1:14 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7909,16 +7909,29 @@ function renderScout(){
   /* THREE STATES, NOT TWO. "OWNED IN PREDATOR" in warning red beside a "YOURS" badge is a
      label contradicting the one next to it — true, and read as a problem. His own team gets its
      own line. */
+  /* OWNED BY ANOTHER PREDATOR OWNER, which is the one case where neither side of the plan can
+     take this team: he cannot drop what he does not hold and he cannot pick up what somebody in
+     his own division has. Worked out once, here, and used for the pill AND for the plan flag, so
+     the badge and the button can never say different things about the same team. */
+  const takenHere = !isMine && labelsOf(t.n).some(l => l.div === MY_DIV);
   const avail = isMine
     ? `<span class="pill v-hold" title="This is one of your eleven. The Pickups tab is where you decide how long to keep it.">ON YOUR ROSTER</span>`
-    : labelsOf(t.n).some(l => l.div === MY_DIV)
+    : takenHere
     ? `<span class="pill v-avoid" title="Another Predator owner has this team, so you cannot pick it up. Only Predator decides that — the other two divisions draft the same teams separately, which is why the owner line below can show three names.">OWNED IN PREDATOR</span>`
     : `<span class="pill v-stream" title="Nobody in Predator owns this team, so it can be picked up. Whether it is worth picking up depends on which of your teams you would drop — that is the Pickups tab.">FREE IN PREDATOR</span>`;
   m.innerHTML = `<div class="modalbox">
     <div class="modalhd">
       <div><h2>${t.n} <span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span>
         ${isMine ? '<span class="mytag">YOURS</span>' : ''}
-        ${PROJ_ON ? watchBtn(t.n) : ''}</h2>
+        <!-- THE PLAN FLAG BELONGS HERE TOO. Casey, 28 Sep 2026: "when I open the live scoring and
+             I go to a team and click on their schedule, you currently have the star available to
+             add to the watch list, but you should also have the flag to be able to add to the
+             plan." Every other place a team is named on this page carries both, in this order.
+             The flag knows which side of the plan it is: one of his own teams goes on as a DROP,
+             anything free in Predator as a PICK UP. It is left off only for a team another
+             Predator owner holds, because neither side of the plan can take that team and the
+             pill beside it already says why. -->
+        ${PROJ_ON && !takenHere ? planBtn(t.n) : ''}${PROJ_ON ? watchBtn(t.n) : ''}</h2>
         <div style="margin-top:4px">${avail}</div>
         <div style="margin-top:4px">${ownerHTML(t.n)}</div></div>
       <button class="modalx" onclick="closeScout()" title="Close and go back to the scoreboard"
