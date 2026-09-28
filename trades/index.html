@@ -160,13 +160,14 @@ td.num,th.num{text-align:right}
    It is what broke "Jay LaBenz" into "Jay LaBen" with a lone z beneath it in the access list, and
    this table holds nothing but names. Measured at 390px with two trades in a seat's list: the two
    list columns had 112px each and the row stood 91px tall.
-   SO NAMES WRAP BETWEEN WORDS AND NEVER INSIDE ONE, and the table asks for 560px so each column
+   SO NAMES WRAP BETWEEN WORDS AND NEVER INSIDE ONE, and the table asks for 760px so each column
    has room for a name on a line of its own. The box scrolls sideways below that, the same answer
-   the access list and the standings tables use.
+   the access list and the standings tables use. It was 560px with four columns and grew when the
+   Rule column arrived on 28 Sep 2026.
    THE LINES ARE NUMBERED WHERE A SEAT HAS MORE THAN ONE TRADE, because that is what pairs a team
    with what is being given up for it. Wrapping makes any pairing by position a lie: a drop that
    takes two lines pushes everything under it down one. A number on each line survives that. */
-table.waittbl{min-width:560px}
+table.waittbl{min-width:760px}
 table.waittbl th, table.waittbl td{overflow-wrap:normal;word-break:normal;vertical-align:top}
 table.accessgrid{min-width:800px}
 table.accessgrid th, table.accessgrid td{overflow-wrap:normal;word-break:normal;
@@ -4268,6 +4269,23 @@ function condLine(c, i){
        text: one ? 'Only tried if trade ' + rs[0] + ' does go through.'
                  : 'Only tried if you win at least one of trades ' + numList(rs) + '.'};
 }
+/* THE SAME RULE IN THREE WORDS, for a table cell rather than a card. Casey, 28 Sep 2026: "you
+   should also print the trade rule next to the trade (e.g. Always, only if I win, only if I
+   lose)."
+   condLine() above writes it as a sentence for the trade card and the read-back of a sent list.
+   Both read the type and `condRowsFor()` and nothing else, so which trades a rule watches is
+   still worked out in one place. The words are the ones printed on the three buttons an owner
+   chooses between, shortened: Try It No Matter What is Always here, because a column is not a
+   button. */
+function condShort(c, i){
+  c = c || {type: 'always'};
+  if (c.type !== 'won' && c.type !== 'lost') return 'Always';
+  var rs = condRowsFor(c, Math.max(i, 1));
+  var one = rs.length === 1;
+  var verb = c.type === 'won' ? (one ? 'wins' : 'win') : (one ? 'loses' : 'lose');
+  return one ? 'Only if trade ' + rs[0] + ' ' + verb
+             : 'Only if any of trades ' + numList(rs, 'or') + ' ' + verb;
+}
 function rowForm(r, i, free, mine, k){
   var drops = (r.drops || ['']).slice();
   if (drops.length < P.MAX_DROPS && drops[drops.length - 1]) drops.push('');
@@ -4577,10 +4595,10 @@ function viewRun(){
     };
     h += '<div class="card"><h2>Waiting to Be Settled</h2><div class="scr">'
       + '<table class="waittbl">'
-      + '<colgroup><col style="width:24%"><col style="width:10%"><col style="width:33%">'
-      + '<col style="width:33%"></colgroup>'
+      + '<colgroup><col style="width:20%"><col style="width:8%"><col style="width:24%">'
+      + '<col style="width:24%"><col style="width:24%"></colgroup>'
       + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th>'
-      + '<th>Drops</th></tr></thead><tbody>'
+      + '<th>Drops</th><th>Rule</th></tr></thead><tbody>'
       + reqs.map(function(r){
           return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
             + '<td class="d">' + r.rows.map(function(x, i){
@@ -4592,10 +4610,20 @@ function viewRun(){
                 return ds.length ? esc(wline(r, i, ds.join(' or ')))
                                  : esc(wline(r, i, '')) + '<span class="b">nothing named</span>';
               }).join('<br>')
+            + '</td>'
+            /* WHEN THE SEAT WANTS THIS TRADE TRIED. A list of four trades where three are
+               backups is a very different list from four that are all being tried, and until now
+               the two read the same here. */
+            + '<td class="d">' + r.rows.map(function(x, i){
+                return esc(wline(r, i, condShort(x.cond, i)));
+              }).join('<br>')
             + '</td></tr>';
         }).join('') + '</tbody></table></div>'
       + '<p class="note">Where a trade names more than one team to drop, only one of them goes. '
       + 'It is the first of those teams the seat still holds when the week is settled.</p>'
+      + '<p class="note"><b>Rule</b> is when the seat wants that trade tried. <b>Always</b> means '
+      + 'on Monday whatever happens. The other two wait on an earlier trade of that seat\'s own '
+      + 'list, and a trade is lost whenever it does not come through.</p>'
       /* A TESTING INSTRUCTION, AND IT HAS TO SAY SO -- and it is not printed at all on the real
          page. A paragraph that ends by saying it does not apply here should not be here. */
       + (Store.live() ? ''
