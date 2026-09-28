@@ -3347,7 +3347,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 2:06 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 9:19 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9858,7 +9858,16 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
     const rec = lRec(g.cur);
     const head = `<tr class="own-kid clickable" data-team="${esc(g.cur.team)}"
         title="${open ? 'Hide' : 'Show'} every team that has held this roster slot"
-        onclick="event.stopPropagation();toggleSlotRow('${esc(sk).replace(/'/g,"\\'")}')">
+        <!-- jsStr, NOT esc THEN A QUOTE SWAP. Casey, 28 Sep 2026: "the plus sign for Colorado
+             State doesn't actually open. It does for every other one that we've checked."
+             Colorado State is Rob O'Conner's, and his name has an apostrophe in it. The esc
+             function turns that into a numeric entity, so the quote swap that follows finds nothing
+             to escape -- and the browser then decodes the entity back to a bare apostrophe INSIDE
+             the JavaScript string literal, which ends the string early and throws. Every one of his
+             eleven rows was broken; Colorado State was the only one with a lineage to open, so it
+             was the only one where anything was visibly missing. jsStr is the page's own quoter and
+             is used everywhere else. -->
+        onclick="event.stopPropagation();toggleSlotRow(${esc(jsStr(sk))})">
       <td class="c-own kidcell" colspan="${kidSpan}"><span class="kidarrow">↳</span> ${grpHeadLabel(o, g)}
         <span class="kidtail">${rec}</span></td>
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td>
@@ -10668,8 +10677,12 @@ function slotKind(name){
 }
 
 function ownerLineage(div, owner){
+  /* CHRONOLOGICAL, AND TWO SNAPSHOTS CAN SHARE A WEEK. Sorting on the week alone left the pair
+     inside one week in whatever order they were stored, which on 28 Sep 2026 put the 27th ahead of
+     the 23rd. The date breaks the tie. */
   const snaps = ((DATA.owner_history || {}).snapshots || [])
-    .slice().sort((a, b) => a.week - b.week);
+    .slice().sort((a, b) => (a.week - b.week)
+      || String(a.asof || '').localeCompare(String(b.asof || '')));
   if (!snaps.length) return null;
   const rosterAt = s => Object.keys(s.labels || {})
     .filter(t => (s.labels[t] || []).some(l => l[0] === div && l[1] === owner));
@@ -10681,13 +10694,55 @@ function ownerLineage(div, owner){
     ({spells: [{team: t, from_week: snaps[0].week, to_week: null}]}));
   const last = sl => sl.spells[sl.spells.length - 1];
 
+  /* ---- WHICH ARRIVAL REPLACED WHICH DEPARTURE IS WRITTEN DOWN, SO ASK ----------------------
+   * Casey, 28 Sep 2026: "the trade results tab properly has Berner traded San Diego State for
+   * Harvard and Missouri for Yale, but the standings and weekly quarterly show it opposite. It has
+   * Yale on the San Diego State line and Missouri with Harvard. The seats are incorrect. This also
+   * happened on one of my trades, Idaho State for Miami."
+   * He is right, and the cause was that this function never used the trade log. It worked the
+   * lineage out from SET DIFFERENCES between two weekly snapshots -- who left, who arrived -- and
+   * then paired the two lists by sorting both ALPHABETICALLY and zipping them. With one trade in a
+   * week that is always right; with two it is a coin flip, and it came up wrong for both of them.
+   * Casey's four trades came out as Minnesota-Harvard, Nebraska-Idaho St, South Carolina-Miami (OH)
+   * and Tennessee-Prairie View, which is the alphabetical zip exactly.
+   * THE PAIRING IS A FACT, NOT AN INFERENCE. `transactions.trades` carries `old_team` and
+   * `new_team` on the same row, and it is what the Transactions tab prints -- the tab Casey checked
+   * it against. So the log is asked first and the alphabetical zip is left as the fallback for
+   * anything it cannot account for, which is the only case that was ever a guess. */
+  const tradePairs = (snap) => {
+    const m = new Map();
+    for (const t of (((DATA.transactions || {}).trades) || [])){
+      if (t.div !== div || t.owner !== owner) continue;
+      const gone = t.old_team || t.old, got = t.new_team || t.new;
+      if (!gone || !got) continue;
+      /* THE SNAPSHOT IT BELONGS TO. A trade takes effect on one date and the snapshot carries the
+         date it was taken, so they are compared directly; with no date on either, the week. */
+      if (t.effective && snap.asof){ if (t.effective !== snap.asof) continue; }
+      else if (t.effective && weekOf(null, t.effective) !== snap.week) continue;
+      m.set(gone, got);
+    }
+    return m;
+  };
+
   for (const s of snaps.slice(1)){
     const now = rosterAt(s);
     const held = new Set(now);
     const cur = slots.map(sl => last(sl).team);
-    const out = slots.map((sl, i) => [i, cur[i]])
+    let out = slots.map((sl, i) => [i, cur[i]])
       .filter(([, t]) => t != null && !held.has(t));
-    const inn = now.filter(t => !cur.includes(t));
+    let inn = now.filter(t => !cur.includes(t));
+    /* THE LOG FIRST. Every departure the trade log can name an arrival for is settled here, and
+       only what is left over goes to the fallback below. */
+    const pairs = tradePairs(s);
+    for (const [i, gone] of out.slice()){
+      const got = pairs.get(gone);
+      if (!got || inn.indexOf(got) < 0) continue;
+      const sl = slots[i];
+      last(sl).to_week = s.week;
+      sl.spells.push({team: got, from_week: s.week, to_week: null});
+      out = out.filter(x => x[0] !== i);
+      inn = inn.filter(x => x !== got);
+    }
     for (const kind of ['NFL', 'COL']){
       const o = out.filter(([, t]) => slotKind(t) === kind)
         .sort((a, b) => String(a[1]).localeCompare(String(b[1])));
