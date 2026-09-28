@@ -3347,7 +3347,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 1:14 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 1:47 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5603,10 +5603,31 @@ function recommend(t, inc, minEdge){
     ladder[ladder.length - 1].gain =
       Math.round((ladder[ladder.length - 1].gain + _tp - _ip) * 100) / 100;
   const mand = ladder[0];
-  let best = mand;
+  /* ---- A MANDATE LONGER THAN THE LEAGUE'S IS A LONGER HOLD, AND IS PRICED LIKE ONE ---------
+   * Casey, 28 Sep 2026, on North Texas: "the next four games are at Tulsa, which is 44% ... they
+   * play Charlotte, okay that's good, then there's a bye, so that's essentially a loss, then at
+   * Navy, 28% ... two of their next four they're not favored in, and one of them is a bye. So
+   * that's three likely losses out of four. And you're saying hold them for four weeks. That is
+   * terrible advice ... the fact that there's just a bye in there should not tell you to hold them
+   * for four weeks."
+   * THE ARITHMETIC WAS NOT THE PROBLEM. Over those four weeks North Texas came to 1.72 against
+   * Penn State's 1.47, both sides over the same four weeks, so +0.25 is a real number. THE PROBLEM
+   * IS THAT NOTHING CHARGED FOR THE FOURTH WEEK. The league forces three GAMES, which is three
+   * weeks for a team with no bye and four for a team with one. That fourth week is a week of the
+   * roster slot bought for no game, and it is the thing LONG_FLOOR exists to price. The floor never
+   * saw it, because it was measured against THIS TEAM'S minimum instead of the LEAGUE'S: a
+   * four-week mandate was this team's minimum, so it escaped the floor by definition.
+   * Measured from the league's three weeks, a four-week mandate IS a longer hold, and it has to be
+   * worth the same 2.00 points any other longer hold does.
+   * AND IT MAKES THE TWO NUMBERS AGREE. Gain 3 for North Texas reads -0.04, because three weeks
+   * buys two of its games and a bye, while the Advice column said 4w and +0.25 three inches away.
+   * A label that contradicts the arithmetic beside it is worse than either alone. */
+  const leagueW = DATA.hold_games;
+  const mandOK = mand.w <= leagueW || mand.gain >= LONG_FLOOR;
+  let best = mandOK ? mand : null;
   for (const g of ladder){
-    if (g.w === minW) continue;
-    if (g.gain >= LONG_FLOOR && g.gain > best.gain + minEdge) best = g;
+    if (g.w === mand.w) continue;
+    if (g.gain >= LONG_FLOOR && g.gain > (best ? best.gain : 0) + minEdge) best = g;
   }
   /* HOLDING IT TO THE END, WHENEVER THAT IS NOT MEASURABLY WORSE. Casey, 20 Sep 2026, on
      Harvard: "that should absolutely show up as a keep." The gain peaked at 8 weeks on +3.13 and
@@ -5617,10 +5638,20 @@ function recommend(t, inc, minEdge){
      bar. Same bar here. It clears the floor like any other long hold, and a losing end is never
      swapped in: a hold that only just clears zero must not be turned negative by this. */
   const endw = ladder[ladder.length - 1];
-  if (endw.gain > 0 && endw.gain >= LONG_FLOOR && endw.gain >= best.gain - minEdge) best = endw;
+  if (endw.gain > 0 && endw.gain >= LONG_FLOOR
+      && (!best || endw.gain >= best.gain - minEdge)) best = endw;
   const span = x => `${x.w} week${x.w === 1 ? '' : 's'}` +
     (x.byes ? ` (${x.games} game${x.games === 1 ? '' : 's'}, ${x.byes} bye)` : '');
 
+  /* THE BYE CASE SAYS WHY, because "every length loses points" would be false here: this swap
+     gains a little and still is not worth making. */
+  if (!best && !mandOK)
+    return {label: 'AVOID', cls: 'v-avoid', gain: mand.gain,
+            tip: `Its ${DATA.hold_games} games take ${span(mand)}, so the slot is tied up a week `
+               + `longer than the league forces you to. Over those ${mand.w} weeks the swap is `
+               + `worth ${mand.gain >= 0 ? '+' : ''}${mand.gain.toFixed(2)} against ${inc.n}, `
+               + `under the ${LONG_FLOOR.toFixed(2)} points a hold longer than `
+               + `${DATA.hold_games} weeks has to be worth. No longer hold clears it either.`};
   if (!best || best.gain <= 0)
     return {label: 'AVOID', cls: 'v-avoid', gain: mand.gain,
             tip: `Every length loses points against ${inc.n}. The best this swap ever gets is `
@@ -5781,8 +5812,12 @@ let PSORT = {COL: {key: PICK_DEFAULT[PICKMODE], dir: -1},
 let PMORE = {COL: 25, NFL: 8};
 let PUPSET = false;
 const PSTEP = {COL: 25, NFL: 8};
+/* THE DEFAULT COLUMN IS PER TABLE. The two boards open on the mode's own column; the watch list
+   opens on Gain 3 and Taken Elsewhere on Season, which is the order each has always come in. */
+const SORT_DEFAULT = {watch: 'gain3', cross: 'season'};
 function setPSort(kind, key){
-  const cur = PSORT[kind] || {key: PICK_DEFAULT[PICKMODE], dir: -1};
+  const cur = PSORT[kind]
+    || {key: SORT_DEFAULT[kind] || PICK_DEFAULT[PICKMODE], dir: -1};
   /* A SECOND TAP TURNS IT ROUND. A first tap on a new column opens on the useful end: biggest
      first for every number, A to Z for the name. */
   PSORT[kind] = (cur.key === key) ? {key: key, dir: -cur.dir}
@@ -5827,8 +5862,23 @@ function crossPanel(){
     .filter(t => t.owner == null && (t.labels || []).length > 0)
     .map(t => ({t, b3: (t.pts3 == null ? null : t.pts3),
                 season: (t.pts_season == null ? null : t.pts_season),
-                ok: typeof canClaim === 'function' ? canClaim(t) : true}))
-    .sort((a, b) => (b.season == null ? -1 : b.season) - (a.season == null ? -1 : a.season));
+                ok: typeof canClaim === 'function' ? canClaim(t) : true}));
+  /* SORTABLE, THE SAME WAY THE BOARDS ABOVE ARE. Casey asked for it on 28 Sep 2026; see the note
+     in watchPanel(). It opens on Season, which is the order this list has always come in. */
+  const xps = PSORT.cross || (PSORT.cross = {key: 'season', dir: -1});
+  const xval = {team: x => x.t.n,
+                held: x => (x.t.labels || []).map(l => l.div + ' ' + l.owner).sort().join(', '),
+                bank: x => x.b3, season: x => x.season}[xps.key] || (x => x.season);
+  rows.sort((a, b) => {
+    const va = xval(a) == null ? -Infinity : xval(a);
+    const vb = xval(b) == null ? -Infinity : xval(b);
+    const c = (typeof va === 'string') ? String(va).localeCompare(String(vb))
+                                       : (va === vb ? 0 : (va < vb ? -1 : 1));
+    return c * xps.dir || String(a.t.n).localeCompare(String(b.t.n));
+  });
+  const XSH = k => (xps.key === k ? 'sorted ' : '') + 'c-q';
+  const XAR = k => xps.key === k
+    ? `<span class="sarr">${xps.dir < 0 ? '\u25be' : '\u25b4'}</span>` : '';
 
   if (!rows.length){
     return `<div class="card"><h2>Taken Elsewhere</h2>
@@ -5855,10 +5905,10 @@ function crossPanel(){
     <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
     <div class="scr" data-avail="cross"><table>
       <colgroup><col style="width:34%"><col style="width:36%"><col style="width:15%"><col style="width:15%"></colgroup>
-      <thead><tr><th class="c-team">Team</th>
-        <th title="Who holds this team in the other two divisions.">Held By</th>
-        <th class="num" title="Expected points over this team's next three games. The same measure the College and NFL tabs use.">Bank 3</th>
-        <th class="num" title="Expected points from here to the end of the regular season.">Season</th></tr></thead>
+      <thead><tr><th class="c-team ${XSH('team')}" onclick="setPSort('cross','team')">Team${XAR('team')}</th>
+        <th class="${XSH('held')}" onclick="setPSort('cross','held')" title="Who holds this team in the other two divisions.">Held By${XAR('held')}</th>
+        <th class="num ${XSH('bank')}" onclick="setPSort('cross','bank')" title="Expected points over this team's next three games. The same measure the College and NFL tabs use.">Bank 3${XAR('bank')}</th>
+        <th class="num ${XSH('season')}" onclick="setPSort('cross','season')" title="Expected points from here to the end of the regular season.">Season${XAR('season')}</th></tr></thead>
       <tbody>${body}</tbody></table></div>
     ${explain('What this list is for, and what it is not', `A team on this list is <b>free in
     Predator</b>. Another division drafted or picked it up and yours did not, which is a second
@@ -6520,7 +6570,15 @@ function watchPanel(){
     time this week. Those never appear on the College or NFL tabs, and this is where you keep an
     eye on them.</p></div></div>`;
 
-  const rows = WATCH.map(n => BY.get(n)).filter(Boolean).map(t => {
+  /* ---- SORTABLE, LIKE THE TWO LISTS ABOVE IT ----------------------------------------------
+   * Casey, 28 Sep 2026: "within the watch list, taken elsewhere, both of those, I'm not able to
+   * sort by the columns of like bank three, season, advice, season gain. I should be able to sort
+   * by those columns."
+   * The College and NFL boards have had sortable headers since 15 Sep; these two were built as
+   * fixed lists and never got them. Same `PSORT`, same `setPSort`, same mark on the header, so
+   * there is one way to sort a table on this page rather than two. The rows are built first and
+   * sorted afterwards, on the RAW figures rather than on what the cell prints. */
+  const wlist = WATCH.map(n => BY.get(n)).filter(Boolean).map(t => {
     const kind = t.pool === 'NFL' ? 'NFL' : 'COL';
     const inc = slotFor(kind);
     const from = inc ? pickFrom(inc) : null;
@@ -6534,7 +6592,7 @@ function watchPanel(){
     const st = watchStatus(t);
     const rec = inc ? recommend(t, inc) : null;
     const q = String(t.n).replace(/'/g, "\\'");
-    return `<tr class="clickable" onclick="toggleWatch('${q}')"
+    const html = `<tr class="clickable" onclick="toggleWatch('${q}')"
         title="Tap for every game this team has played and has left, with a win probability for each.">
       <!-- NO SECOND LINE IN THIS CELL. Casey, 20 Sep 2026: "on the watch list I don't need to
            know what other divisions own it. That's all that's needed is in the Taken Elsewhere
@@ -6566,7 +6624,28 @@ function watchPanel(){
           ? `<tr><td colspan="8">${teamPanel(t, slotFor(t.pool === 'NFL' ? 'NFL' : 'COL'),
               t.owner === ME ? 'mine' : 'scout')}</td></tr>`
           : '');
-  }).join('');
+    /* A BYE MAKES A SWEEP IMPOSSIBLE, so 3-0 sorts as zero rather than as unknown -- the same
+       rule the College and NFL boards use for that column. */
+    return {t: t, html: html,
+            p30: (b && b.p != null) ? (b.byes ? 0 : b.p) : null,
+            bank: b ? b.pts : null, gain3: g3,
+            season: r ? r.pts : null, sgain: gr,
+            adv: (rec && rec.weeks != null) ? rec.weeks : -1};
+  });
+  const wps = PSORT.watch || (PSORT.watch = {key: 'gain3', dir: -1});
+  const wval = {team: x => x.t.n, p30: x => x.p30, bank: x => x.bank, gain3: x => x.gain3,
+                season: x => x.season, sgain: x => x.sgain, advice: x => x.adv
+               }[wps.key] || (x => x.gain3);
+  const rows = wlist.slice().sort((a, b) => {
+    const va = wval(a) == null ? -Infinity : wval(a);
+    const vb = wval(b) == null ? -Infinity : wval(b);
+    const c = (typeof va === 'string') ? String(va).localeCompare(String(vb))
+                                       : (va === vb ? 0 : (va < vb ? -1 : 1));
+    return c * wps.dir || String(a.t.n).localeCompare(String(b.t.n));
+  }).map(x => x.html).join('');
+  const WSH = k => (wps.key === k ? 'sorted ' : '') + 'c-q';
+  const WAR = k => wps.key === k
+    ? `<span class="sarr">${wps.dir < 0 ? '\u25be' : '\u25b4'}</span>` : '';
 
   const colInc = slotFor('COL'), nflInc = slotFor('NFL');
   const syncNote = WATCH_ERR
@@ -6583,13 +6662,13 @@ function watchPanel(){
     <div class="scr"><table class="watchtbl">
       <colgroup><col class="cw1"><col class="cw2"><col class="cw3"><col class="cw4">
         <col class="cw5"><col class="cw6"><col class="cw7"><col class="cw8"></colgroup>
-      <thead><tr><th class="c-team">Team</th>
-        <th class="num c-p30" title="The chance this team wins all three games of the hold.">3-0</th>
-        <th class="num c-bank" title="Points those same three games are worth on average.">Bank 3</th>
-        <th class="num c-gain" title="Bank 3 minus what the team you would drop earns over the same three weeks.">Gain 3</th>
-        <th class="num c-season hide-s">Season</th>
-        <th class="num c-sgain hide-s">Season<br>gain</th>
-        <th class="c-then">Advice</th>
+      <thead><tr><th class="c-team ${WSH('team')}" onclick="setPSort('watch','team')">Team${WAR('team')}</th>
+        <th class="num c-p30 ${WSH('p30')}" onclick="setPSort('watch','p30')" title="The chance this team wins all three games of the hold.">3-0${WAR('p30')}</th>
+        <th class="num c-bank ${WSH('bank')}" onclick="setPSort('watch','bank')" title="Points those same three games are worth on average.">Bank 3${WAR('bank')}</th>
+        <th class="num c-gain ${WSH('gain3')}" onclick="setPSort('watch','gain3')" title="Bank 3 minus what the team you would drop earns over the same three weeks.">Gain 3${WAR('gain3')}</th>
+        <th class="num c-season hide-s ${WSH('season')}" onclick="setPSort('watch','season')">Season${WAR('season')}</th>
+        <th class="num c-sgain hide-s ${WSH('sgain')}" onclick="setPSort('watch','sgain')">Season<br>gain${WAR('sgain')}</th>
+        <th class="c-then ${WSH('advice')}" onclick="setPSort('watch','advice')" title="Sorts on how long the advice says to hold the team: KEEP first, then the longer holds, then the three-game minimum, with AVOID last.">Advice${WAR('advice')}</th>
         <th class="c-cmp" title="Add this team to Side by Side, below. Two at a time per pool; tap again to remove.">Cmp</th></tr></thead>
       <tbody>${rows}</tbody></table></div>
     <!-- TWO TRAYS, BECAUSE THIS LIST HOLDS BOTH POOLS. A college team can only be compared
