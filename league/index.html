@@ -3347,7 +3347,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 9:27 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 12:17 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10683,9 +10683,13 @@ function ownerLineage(div, owner){
   /* CHRONOLOGICAL, AND TWO SNAPSHOTS CAN SHARE A WEEK. Sorting on the week alone left the pair
      inside one week in whatever order they were stored, which on 28 Sep 2026 put the 27th ahead of
      the 23rd. The date breaks the tie. */
+  /* AN UNDATED SNAPSHOT WAS TAKEN NOW, SO IT IS THE NEWEST THING IN ITS WEEK, NOT THE OLDEST.
+     A snapshot written by the trades page carries no `asof`, and `String(null || '')` sorts ahead
+     of every real date. That put the live roster in front of the baked ones that still showed the
+     week before it. Two stores of one fact, read in the wrong order. */
+  const stampOf = s => s.asof ? String(s.asof) : '9999-12-31';
   const snaps = ((DATA.owner_history || {}).snapshots || [])
-    .slice().sort((a, b) => (a.week - b.week)
-      || String(a.asof || '').localeCompare(String(b.asof || '')));
+    .slice().sort((a, b) => (a.week - b.week) || stampOf(a).localeCompare(stampOf(b)));
   if (!snaps.length) return null;
   const rosterAt = s => Object.keys(s.labels || {})
     .filter(t => (s.labels[t] || []).some(l => l[0] === div && l[1] === owner));
@@ -10721,7 +10725,11 @@ function ownerLineage(div, owner){
       /* THE SNAPSHOT IT BELONGS TO. A trade takes effect on one date and the snapshot carries the
          date it was taken, so they are compared directly; with no date on either, the week. */
       if (t.effective && snap.asof){ if (t.effective !== snap.asof) continue; }
-      else if (t.effective && weekOf(null, t.effective) !== snap.week) continue;
+      else if (t.effective){ if (weekOf(null, t.effective) !== snap.week) continue; }
+      /* THE LIVE ROWS CARRY NO DATE AT ALL -- the back end returns `effective: null` on every one
+         of them -- so they are filed by the week they take effect in. A trade cannot be undone, so
+         it still explains a departure seen in a later week. */
+      else if (t.week != null && +t.week > snap.week) continue;
       m.set(gone, got);
     }
     return m;
@@ -13254,6 +13262,20 @@ function applyLiveTrades(list){
     /* Every trade settled in one week takes effect in the same later week, so one stamp covers
        the group -- worked out from the first of them, which carries the same date as the rest. */
     const ew = effWeek(byWeek.get(w)[0], w);
+    /* A LIVE SNAPSHOT IS BUILT FROM THE NEWEST BAKED ONE, SO IT CANNOT DESCRIBE AN EARLIER WEEK.
+     * Casey, 28 Sep 2026: "under Harvard in the standings, you now have Harvard and Minnesota
+     * listed twice."
+     * `labels` starts as a copy of the LAST baked snapshot, which is the newest roster there is,
+     * and the live trades are applied on top of it. So whatever comes out describes the league as
+     * it stands now. Stamping that with an earlier week is a statement about the past made out of
+     * the present, and the walk in ownerLineage() then reads the newest roster arriving early,
+     * the baked snapshots putting the old roster back, and the newest roster arriving a second
+     * time. One trade came out as three.
+     * It happened because the back end returns `effective: null` and the SETTLED week, so a trade
+     * settled in week 1 is stamped week 2 while the build has already baked week 3.
+     * The trade ROW keeps its own true week -- that is what the Transactions tab prints -- and
+     * only the snapshot is floored, because the snapshot is the thing built from newer data. */
+    const snapW = Math.max(ew, last.week || 0);
     for (const t of byWeek.get(w)){
       const div = t.div, owner = t.owner;
       if (t.out && labels[t.out])
@@ -13282,7 +13304,7 @@ function applyLiveTrades(list){
     }
     /* THE MOVE TAKES EFFECT IN THE WEEK IT WAS SETTLED, so the snapshot is stamped with that
        week and everything before it keeps the old owner. */
-    hist.snapshots.push({asof: null, week: ew, source: 'trades page',
+    hist.snapshots.push({asof: null, week: snapW, source: 'trades page',
                          labels: _copyLabels(labels)});
     for (const t of byWeek.get(w)) applyLiveSlot(t, ew);
   }
