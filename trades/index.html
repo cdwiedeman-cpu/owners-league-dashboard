@@ -169,6 +169,13 @@ td.num,th.num{text-align:right}
    takes two lines pushes everything under it down one. A number on each line survives that. */
 table.waittbl{min-width:760px}
 table.waittbl th, table.waittbl td{overflow-wrap:normal;word-break:normal;vertical-align:top}
+/* THE DIVISION A GROUP OF SEATS BELONGS TO, as a band across the table rather than a column
+   repeating itself down it. A coin flip only ever happens between owners in the SAME division, so
+   the division is the group the settle works in and the table is read a group at a time. Drawn
+   like a column head, because that is what it is: the head of a group of rows. */
+table.waittbl td.divband{font-size:11px;color:var(--blue);text-transform:uppercase;
+  letter-spacing:.04em;font-weight:600;padding-top:14px}
+table.waittbl tbody tr:first-child td.divband{padding-top:6px}
 table.accessgrid{min-width:800px}
 table.accessgrid th, table.accessgrid td{overflow-wrap:normal;word-break:normal;
   white-space:nowrap;vertical-align:top}
@@ -4481,6 +4488,36 @@ function doClaim(){
 
 /* ---- TAB: run it ------------------------------------------------------------------------------ */
 function pendingRequests(){ return B_.pending(S.requests, weekNo()); }
+/* ---- THE WEEK, A DIVISION AT A TIME ---------------------------------------------------------
+ * Casey, 28 Sep 2026: "you also need to separate the table by division."
+ * A COIN FLIP ONLY EVER HAPPENS BETWEEN OWNERS IN THE SAME DIVISION, so the division is the group
+ * the settle works in, and a list that runs the three of them together hides the only grouping
+ * that decides anything. Read a division at a time, two owners asking for the same team is a coin
+ * flip; read all 27 together, it is not a question that can be answered.
+ * IN THE LEAGUE'S OWN ORDER, and only the divisions that have somebody waiting. Seats are sorted
+ * by name inside each one: `pending()` hands them back in whatever order the entries were stored,
+ * which is not an order a reader can learn.
+ */
+function byDivision(reqs){
+  var out = [];
+  (DATA.divisions || []).forEach(function(d){
+    var seats = reqs.filter(function(r){ return r.div === d; })
+      .slice().sort(function(a, b){ return a.seat.localeCompare(b.seat); });
+    if (seats.length) out.push({div: d, name: (DATA.div_names || {})[d] || d, seats: seats});
+  });
+  /* A DIVISION THE PAGE DOES NOT KNOW IS STILL SHOWN, under its own code. Dropping a seat because
+     its division is unfamiliar would take it out of the week silently, and a seat missing from the
+     week is the one thing this card exists to prevent. */
+  var known = {};
+  out.forEach(function(g){ known[g.div] = 1; });
+  reqs.forEach(function(r){
+    if (known[r.div]) return;
+    known[r.div] = 1;
+    out.push({div: r.div, name: (DATA.div_names || {})[r.div] || r.div,
+              seats: reqs.filter(function(x){ return x.div === r.div; })});
+  });
+  return out;
+}
 /* Typed but never sent. Shown on the Run tab so an owner missing from a week is explained on
    the screen rather than found by reading the code. */
 function draftSeats(){
@@ -4599,7 +4636,9 @@ function viewRun(){
       + '<col style="width:24%"><col style="width:24%"></colgroup>'
       + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th>'
       + '<th>Drops</th><th>Rule</th></tr></thead><tbody>'
-      + reqs.map(function(r){
+      + byDivision(reqs).map(function(g){
+        return '<tr><td class="divband" colspan="5">' + esc(g.name) + '</td></tr>'
+          + g.seats.map(function(r){
           return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
             + '<td class="d">' + r.rows.map(function(x, i){
                 return esc(wline(r, i, x.pickup));
@@ -4618,7 +4657,10 @@ function viewRun(){
                 return esc(wline(r, i, condShort(x.cond, i)));
               }).join('<br>')
             + '</td></tr>';
-        }).join('') + '</tbody></table></div>'
+        }).join('');
+      }).join('') + '</tbody></table></div>'
+      + '<p class="note">The seats are grouped by division. A coin flip only happens between '
+      + 'owners in the same division, so that is the group a week is read in.</p>'
       + '<p class="note">Where a trade names more than one team to drop, only one of them goes. '
       + 'It is the first of those teams the seat still holds when the week is settled.</p>'
       + '<p class="note"><b>Rule</b> is when the seat wants that trade tried. <b>Always</b> means '
