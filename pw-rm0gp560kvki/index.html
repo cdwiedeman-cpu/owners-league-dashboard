@@ -3379,7 +3379,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 2:10 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 2:12 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4045,6 +4045,16 @@ function renderScores(){
      environment cannot reach ESPN either and a baked score would be an invented one. Saying
      which of those two things you are looking at is the whole point — a schedule presented as
      a scoreboard is worse than no scoreboard. */
+  /* SAY WHOSE WEEK THE OWNERS ARE, and only when that is not the same as saying nothing. On an
+     ordinary day the two answers match and the sentence would be noise.
+     ABOVE THE FALLBACK, NOT BELOW IT. The offline card draws owners too and returns early, so a
+     sentence defined after it reached only half the readers -- and the offline card is the one a
+     phone with no signal gets, which is the reader with least else to go on. */
+  const moved = ownersMovedSince(boardWeek());
+  const ownLine = moved
+    ? ` The owners under each team are whoever held it in <b>${esc(weekLabel(boardWeek()))}</b>.
+        A team traded for since then is listed under its new owner from the week the trade takes
+        effect.` : '';
   if (FETCH_ERR && WEEK_VIEW === null){
     const fx = fallbackList();
     const side = (nm, ow, mine, score, won) => `<div class="t">
@@ -4073,6 +4083,7 @@ function renderScores(){
       score for every game whose result was verified at build time. A past game showing dashes
       is one this file does not have the result for — the build cannot reach ESPN either, and an
       invented score is worse than a dash. Reload once you are online.</p>
+      ${ownLine ? '<p>' + ownLine + '</p>' : ''}
       </div></div>
       <div class="card"><div class="games">${body}</div>
       ${ownerKey()}</div>`;
@@ -4080,13 +4091,6 @@ function renderScores(){
   }
   /* SAY WHAT YOU ARE LOOKING AT. A board of finals with no live games and no label reads as a
      scoreboard that has stopped updating. */
-  /* SAY WHOSE WEEK THE OWNERS ARE, and only when that is not the same as saying nothing. On an
-     ordinary day the two answers match and the sentence would be noise. */
-  const moved = ownersMovedSince(boardWeek());
-  const ownLine = moved
-    ? ` The owners under each team are whoever held it in <b>${esc(weekLabel(boardWeek()))}</b>.
-        A team traded for since then is listed under its new owner from the week the trade takes
-        effect.` : '';
   let head = WEEK_VIEW === null
     ? (moved ? `<div class="card"><div class="note">${ownLine}</div></div>` : '')
     : `<div class="card"><div class="note">
