@@ -998,6 +998,10 @@ table.wide th.c-cat .cp{display:block;font-size:11px;font-weight:700;color:var(-
 .tname:hover{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 .tname .caret{font:inherit;font-size:10px;color:var(--faint);margin-left:3px;
   min-width:0;min-height:0;border:0;background:none}
+/* The same control inside a TABLE row rather than on a scoreboard card: no minimum height, so it
+   does not stretch a dense row, and the name keeps the row's own weight. */
+.tnamerow{min-height:0;vertical-align:baseline}
+.tnamerow b{font-weight:700}
 /* A scouting view owns nothing, so its rows get no green "yours" edge and no red "before
    pickup" edge -- both are statements about a swap that is not being made here. */
 tr.g-none td:first-child{border-left:3px solid transparent}
@@ -3379,7 +3383,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 2:23 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 2:32 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5995,8 +5999,7 @@ function crossPanel(){
     `<span class="dv">${esc(l.div)}</span> ${esc(l.owner)}`).join(' · ');
   const body = rows.map(({t, b3, season, ok}) => `<tr>
       <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span>
-        <button class="tlink" onclick="openScout(${jsStr(t.n)})"
-          title="${esc(t.n)}: every game, the score, and the games still to play">${esc(t.n)}</button>${
+        ${teamOpenHTML(t.n)}${
         ok ? '' : ' <span class="pill v-no" title="It has too few games left to finish the three-game hold, so it cannot be claimed now.">Too late</span>'}</td>
       <td class="d">${who(t)}</td>
       <td class="num">${b3 == null ? '<span class="d">—</span>' : b3.toFixed(2)}</td>
@@ -6480,8 +6483,11 @@ function planPanel(){
     const t = BY.get(n);
     if (!t) return '';
     const q = String(n).replace(/'/g, "\\'");
+    /* THE NAME OPENS THE TEAM. Casey, 28 Sep 2026: "on my Plan tab ... can you make it so I can
+       click on those teams and see their schedules like I can on the watch list and Taken
+       Elsewhere." It was the one list of teams on this page whose names did nothing. */
     return `<tr><td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span>
-        <b>${esc(n)}</b>${side === 'get' && t.owner != null
+        ${teamOpenHTML(n)}${side === 'get' && t.owner != null
           ? ' <span class="gtag t-hold" title="Another owner in your division holds this team, so you cannot claim it until they let it go.">TAKEN</span>'
           : ''}${side === 'get' && t.owner == null && !canClaim(t)
           ? ` <span class="gtag t-before" title="It cannot finish a ${DATA.hold_games}-game hold from the day your slot frees up, so it is not legal to claim this week.">TOO LATE</span>` : ''}</td>
@@ -7571,8 +7577,7 @@ function espnName(row){
   const nm = row.board;
   const shown = nm || row.espn;
   const inner = nm
-    ? `<button class="tlink" onclick="openScout(${jsStr(nm)})"
-         title="Open ${esc(nm)}'s own season on this page">${esc(shown)}</button>`
+    ? teamOpenHTML(nm, `Open ${nm}'s own season on this page`)
     : esc(shown);
   return nm && isMine(nm)
     ? `<span class="mebox" title="One of your eleven.">${inner}</span>`
@@ -7948,6 +7953,26 @@ function teamLink(name, owner, fromW, toW){
    same pair of actions the roster rows carry.
    ONLY WHEN THE BOARD HAS THAT TEAM. A non-Division-I opponent has no season to open, and a
    link that opens nothing is worse than plain text. */
+/* ---- ONE LOOK FOR A TEAM NAME YOU CAN OPEN --------------------------------------------
+ * Casey, 28 Sep 2026: "your Taken Elsewhere, FBS standings, FCS standings, AP Top 25 ... the
+ * links are different than what you have on the Plan and the NFL tabs. They're like a blue
+ * hyperlink versus a bolded row with just a little arrow on the right side. It'd be good just to
+ * make those consistent."
+ * There were two looks because the two were built months apart, not because they mean different
+ * things -- both open the same panel. The boards, the watch list and the roster all use the bold
+ * name with a small arrow after it, so that is the one that wins and this is the only place it is
+ * written. A blue underline in a table of nine numeric columns also shouts louder than the numbers
+ * it sits beside, which is the other reason.
+ * IT IS A BUTTON, not an anchor: some of these rows are already inside something clickable, and
+ * an anchor inside an anchor is reflowed by the parser into something nobody designed. */
+function teamOpenHTML(name, tip){
+  const s = String(name || '');
+  if (!s || typeof BY === 'undefined' || !BY.get(s)) return `<b>${esc(s)}</b>`;
+  return `<button class="tname tnamerow" onclick="event.stopPropagation();openScout(${jsStr(s)})"
+    title="${esc(tip || (s + ': every game, the score, and the games still to play'))}"
+    ><b>${esc(s)}</b><span class="caret">▸</span></button>`;
+}
+
 function oppLink(name){
   const s = String(name || '');
   if (!s || typeof BY === 'undefined' || !BY.get(s)) return esc(s);
