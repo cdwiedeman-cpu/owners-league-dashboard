@@ -155,6 +155,19 @@ td.num,th.num{text-align:right}
    SO THIS TABLE STOPS PRETENDING TO FIT. It states a width per column in pixels, comes to about
    800px, and the box scrolls sideways -- the same answer the standings tables use. Nothing in it
    breaks mid-word any more: a name, an email address and a status are each one line. */
+/* ---- WAITING TO BE SETTLED: A TEAM NAME IS NEVER BROKEN IN HALF -----------------------------
+   `overflow-wrap:anywhere` is right for a long email in a narrow box and wrong for a team name.
+   It is what broke "Jay LaBenz" into "Jay LaBen" with a lone z beneath it in the access list, and
+   this table holds nothing but names. Measured at 390px with two trades in a seat's list: the two
+   list columns had 112px each and the row stood 91px tall.
+   SO NAMES WRAP BETWEEN WORDS AND NEVER INSIDE ONE, and the table asks for 560px so each column
+   has room for a name on a line of its own. The box scrolls sideways below that, the same answer
+   the access list and the standings tables use.
+   THE LINES ARE NUMBERED WHERE A SEAT HAS MORE THAN ONE TRADE, because that is what pairs a team
+   with what is being given up for it. Wrapping makes any pairing by position a lie: a drop that
+   takes two lines pushes everything under it down one. A number on each line survives that. */
+table.waittbl{min-width:560px}
+table.waittbl th, table.waittbl td{overflow-wrap:normal;word-break:normal;vertical-align:top}
 table.accessgrid{min-width:800px}
 table.accessgrid th, table.accessgrid td{overflow-wrap:normal;word-break:normal;
   white-space:nowrap;vertical-align:top}
@@ -4556,18 +4569,28 @@ function viewRun(){
        A TRADE CAN NAME SEVERAL TEAMS TO DROP and only one of them goes, so they are joined with
        "or" here exactly as they are in the message an owner mails to a co-owner. The sentence
        under the table says which one it will be. */
-    h += '<div class="card"><h2>Waiting to Be Settled</h2><div class="scr"><table>'
+    /* NUMBERED WHERE THERE IS MORE THAN ONE, and the number is the owner's own trade number.
+       Pairing by position alone does not survive wrapping: a drop that takes two lines pushes
+       everything under it down one, and then line 2 of Wants sits beside line 3 of Drops. */
+    var wline = function(r, i, txt){
+      return (r.rows.length > 1 ? (i + 1) + '. ' : '') + txt;
+    };
+    h += '<div class="card"><h2>Waiting to Be Settled</h2><div class="scr">'
+      + '<table class="waittbl">'
       + '<colgroup><col style="width:24%"><col style="width:10%"><col style="width:33%">'
       + '<col style="width:33%"></colgroup>'
       + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th>'
       + '<th>Drops</th></tr></thead><tbody>'
       + reqs.map(function(r){
           return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
-            + '<td class="d">' + r.rows.map(function(x){ return esc(x.pickup); }).join('<br>')
+            + '<td class="d">' + r.rows.map(function(x, i){
+                return esc(wline(r, i, x.pickup));
+              }).join('<br>')
             + '</td>'
-            + '<td class="d">' + r.rows.map(function(x){
+            + '<td class="d">' + r.rows.map(function(x, i){
                 var ds = (x.drops || []).filter(Boolean);
-                return ds.length ? esc(ds.join(' or ')) : '<span class="b">nothing named</span>';
+                return ds.length ? esc(wline(r, i, ds.join(' or ')))
+                                 : esc(wline(r, i, '')) + '<span class="b">nothing named</span>';
               }).join('<br>')
             + '</td></tr>';
         }).join('') + '</tbody></table></div>'
