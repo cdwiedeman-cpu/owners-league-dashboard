@@ -3379,7 +3379,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 1:40 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 2:07 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9572,11 +9572,19 @@ function bakedSeason(){
    Right, and the old code could not do it: it multiplied CURRENT ownership by WHOLE-SEASON
    points, so the first trade would both delete the points an owner had already earned with the
    team he sent away and credit him with points somebody else earned with the team he got. */
+/* ONE STORE OF "WHO HELD THIS TEAM IN WEEK W", and this used to be the second one.
+ * The standings scope every owner's points through here, and the live board's labels go through
+ * `labelsAtWeek()`. Both walked the snapshots and both picked a winner when two snapshots share a
+ * week -- this one took the last in array order, that one takes the latest date with an undated
+ * snapshot last. They happen to agree on today's data. They would stop agreeing the first time a
+ * build wrote a week's two snapshots in a different order, and then the points and the label
+ * beside them would disagree with nothing on the page to show why.
+ * So there is one rule now and this asks it. The null is kept: no history at all is a different
+ * answer from "nobody held it", and the caller can tell them apart. */
 function ownersInWeek(team, wk){
   const snaps = (DATA.owner_history || {}).snapshots || [];
-  let best = null;
-  for (const s of snaps) if (s.week <= wk && (best === null || s.week >= best.week)) best = s;
-  return best ? (best.labels[team] || []) : null;
+  if (!snaps.length) return null;
+  return labelsAtWeek(team, wk).map(l => [l.div, l.owner]);
 }
 
 /* WHICH QUARTER IS THIS WEEK IN? The definition is the league's, read off the workbook's
