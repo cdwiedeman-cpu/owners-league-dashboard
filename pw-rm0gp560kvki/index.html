@@ -3347,7 +3347,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '27 Sep 2026, 11:31 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 12:03 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3460,24 +3460,26 @@ function lastPlayedWeek(){
   return Math.max(0, Math.min(w, 18));
 }
 
-/* ---- WHICH LEAGUE WEEK THE LIVE BOARD IS ACTUALLY SHOWING --------------------------------
- * Casey, 28 Sep 2026: "this week shows next week's games. When I go to the drop to pick a
- * different week, I can pick week two, September 15th to September 21st, which is a week ago's
- * games. You don't have this past week's games listed anywhere ... I should still be able to see
- * week three."
- * He is right, and the two facts that made it happen are both true at once. "This week" asks ESPN
- * for now, and ESPN rolls its board forward to the next slate as soon as the last game of a
- * weekend is final. The picker meanwhile left the current league week off the numbered list, on
- * purpose, because that week IS "This week" -- which it stopped being the moment ESPN moved on.
- * So on Sunday night league week 3 was on neither list.
- * THE ANSWER IS TO ASK THE BOARD, NOT THE CLOCK. This returns the earliest league week among the
- * games ESPN just handed back. When that is later than the league week we are in, the week we are
- * in is not on the live board and has to be offered by number. Null while nothing has been
- * fetched yet; `renderFilters()` runs again the moment it has. */
-function liveWeekShown(){
-  if (!GAMES || !GAMES.length) return null;
-  const ws = GAMES.map(g => weekOf(g.pool, g.date)).filter(w => typeof w === 'number');
-  return ws.length ? Math.min(...ws) : null;
+/* ---- "THIS WEEK" IS THE LEAGUE'S WEEK, NOT WHATEVER EACH ESPN BOARD IS SHOWING -------------
+ * Casey, 28 Sep 2026, first: "this week shows next week's games ... you don't have this past
+ * week's games listed anywhere ... I should still be able to see week three." Then, once the NFL
+ * half was right: "you have the NFL week three correct under live scoring for this week, but you
+ * don't have college. College still shows this week as week four ... They should all be aligned
+ * under the same week, and you're entirely missing college week three altogether."
+ * EACH POOL HAS ITS OWN BOARD AND EACH ROLLS FORWARD ON ITS OWN. Asked for "now", ESPN's NFL
+ * board still held the weekend because Monday night had not been played, while its college board
+ * had already moved to next Saturday. One scoreboard showing two different league weeks, and the
+ * college half of the week just played was on no list at all.
+ * SO THE LIVE BOARD ASKS FOR DAYS, exactly as browsing an earlier week does: the days of the
+ * league week we are in, and only the pools that play on each of them. A league week runs Tuesday
+ * through Monday, so Monday night's game belongs to it and shows as scheduled until it kicks off.
+ * The two pools cannot drift apart, because neither of them is being asked what week it is.
+ * NOTHING HERE IS CACHED. These are the games whose scores can still change, which is the whole
+ * reason this path exists and is polled. */
+function liveDayPools(){
+  const w = lastPlayedWeek();
+  const dp = weekDayPools(w);
+  return dp.length ? dp : weekDates(w).map(d => [d, Object.keys(EP)]);
 }
 
 /* Every date the SCHEDULE says has a game in this league week, and WHICH POOLS play on it,
@@ -3605,20 +3607,20 @@ function allFetchedGames(){
 
 async function loadScores(){
   const out = [], errs = [], unmatched = new Set();
-  await Promise.all(Object.entries(EP).map(async ([pool, url]) => {
-    try {
-      const r = await fetch(url, {cache:'no-store'});
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const j = await r.json();
-      /* NO `mine` FIELD ON A GAME, DELIBERATELY -- see ingestEvents. It used to be stamped on at
-         fetch time, and on the league page the reader says who they are AFTER the scoreboard has
-         loaded, so every game carried `mine: false` from before there was a "me" and My-teams came
-         back empty until the next poll. Casey, 6 Sep 2026: "it did eventually, but it didn't right
-         away." A fact that can change while the data sits still is asked at render time, from the
-         one definition (isMine). ESPN's event id rides along so a game can open its Gamecast. */
-      ingestEvents(pool, j, out, unmatched);
-    } catch (e) { errs.push(`${pool}: ${e.message}`); }
-  }));
+  /* NO `mine` FIELD ON A GAME, DELIBERATELY -- see ingestEvents. It used to be stamped on at
+     fetch time, and on the league page the reader says who they are AFTER the scoreboard has
+     loaded, so every game carried `mine: false` from before there was a "me" and My-teams came
+     back empty until the next poll. Casey, 6 Sep 2026: "it did eventually, but it didn't right
+     away." A fact that can change while the data sits still is asked at render time, from the
+     one definition (isMine). ESPN's event id rides along so a game can open its Gamecast. */
+  const jobs = [];
+  for (const [d, pools] of liveDayPools())
+    for (const pool of pools)
+      jobs.push(fetch(espnDayURL(pool, d), {cache: 'no-store'})
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(j => ingestEvents(pool, j, out, unmatched))
+        .catch(e => errs.push(`${pool} ${d}: ${e.message}`)));
+  await Promise.all(jobs);
   const deduped = dedupeGames(out);
   /* A team that failed to resolve in one listing but succeeded in the other is NOT unmatched. */
   for (const g of deduped)
@@ -4392,12 +4394,7 @@ function weekPicker(){
     return blockSpan(new Date(Date.parse(w1 + 'T00:00:00Z') + (w - 1) * 6048e5)
                        .toISOString().slice(0, 10));
   };
-  /* THE WEEK ON THE LIVE BOARD IS THE ONE THAT IS NEVER ALSO A NUMBER. It used to be the week
-     the calendar says we are in, which is the same thing right up until the last game of a
-     weekend goes final and ESPN moves on. See liveWeekShown(). */
-  const shown = liveWeekShown();
-  const top = (shown !== null && shown > last) ? last : last - 1;
-  for (let w = top; w >= 0; w--){
+  for (let w = last - 1; w >= 0; w--){
     const ds = weekDates(w);
     const span = weekSpan(w) || (ds.length ? ' · ' + segLabel(ds) : '');
     const pieces = weekPieces(w);
