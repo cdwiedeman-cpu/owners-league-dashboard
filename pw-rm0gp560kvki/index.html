@@ -3383,7 +3383,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 3:07 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 3:50 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5603,6 +5603,94 @@ function p30Why(t, from, x){
    THE LEGAL MINIMUM IS STILL THREE GAMES. A bye does not advance the hold, so a team with one in
    its opening stretch needs FOUR weeks to complete three games -- that is the shortest span this
    may recommend for that team, and the label says how many weeks it is. */
+/* ---- HOW FAR AHEAD THE BOARD IS LOOKING -------------------------------------------------
+ * Casey, 28 Sep 2026: "there's literally no teams that are going to give you a solid three and
+ * O. And so at that point I need to expand the search to, okay, what if I expanded that to the
+ * next four games ... what's their likelihood of going three and one over four games ... I can
+ * either do the season or I can do keepers or I can do streamers for three games, but I can't do
+ * anything in between."
+ * So the board gets a horizon. THREE IS THE LEAGUE'S OWN WINDOW and is left exactly as it was:
+ * three WEEKS of the roster slot, a bye inside them costing the candidate a week. That is not an
+ * accident of the code, it is what he asked for on 2 Sep 2026 and the note above `HOLD_WKS`
+ * records him rejecting the games version of it.
+ * FOUR AND UP ARE A DIFFERENT QUESTION, the one he is asking here: how many GAMES do I get, and
+ * how many weeks do they take. He chose that on 28 Sep. The candidate's window runs until it has
+ * played N games, and THE INCUMBENT IS MEASURED OVER THE SAME WEEKS -- the trap the 2 Sep note
+ * describes is giving a bye team an extra week to earn in that the other side does not get. */
+const PICK_NS = [3, 4, 5, 6];
+let PICKN = (() => {
+  try { const v = +localStorage.getItem('rfl_pickn'); if (PICK_NS.indexOf(v) >= 0) return v; }
+  catch (e) {}
+  return 3;
+})();
+function setPickN(n){
+  n = +n;
+  if (PICKN === n || PICK_NS.indexOf(n) < 0) return;
+  PICKN = n;
+  try { localStorage.setItem('rfl_pickn', String(n)); } catch (e) {}
+  renderPick();
+}
+function horizonBar(){
+  const opt = n => `<button class="tab rrbtn${PICKN === n ? ' on' : ''}" data-pickn="${n}"
+      onclick="setPickN(${n})" aria-pressed="${PICKN === n}"
+      title="${n === DATA.hold_games
+        ? 'The hold the league forces: ' + n + ' weeks of your roster slot. A bye inside them banks nothing, which is what it costs you.'
+        : 'The next ' + n + ' games this team actually plays, and however many weeks they take. Your own team is measured over those same weeks, so the two are like for like.'}"
+      >${n}</button>`;
+  return `<span class="rrgroup">
+    <span class="rrlab" title="How far ahead every number on this board looks. Three is the hold the league forces you to take. Four and up are that many games, with the weeks they take shown beside them.">Games Ahead</span>
+    ${PICK_NS.map(opt).join('')}</span>`;
+}
+
+/* How many WEEKS this team needs from `from` to play `n` games. Null when it runs out of season
+   first, which is a real answer and not a zero. */
+function weeksForGames(t, from, n){
+  let games = 0;
+  const w0 = ownWeek0(t.pool, from);
+  for (let wk = 0; wk < 26; wk++){
+    games += (t.sched || []).filter(g => g.d && !g.bye && g.ep != null && g.d > from
+                                      && gwOf(g.d) === w0 + wk).length;
+    if (games >= n) return wk + 1;
+  }
+  return null;
+}
+
+/* The window the board is currently asking about, for one team. At the league's own number this
+   is the hold, unchanged. Above it, the weeks that many games take. */
+function pickWindow(t, from){
+  if (!from) return null;
+  if (PICKN <= DATA.hold_games) return {w: DATA.hold_games, n: null};
+  const w = weeksForGames(t, from, PICKN);
+  return w == null ? null : {w: w, n: PICKN};
+}
+
+/* The margins of the games inside a week window, in order -- what the record odds are built on. */
+function windowMargins(t, from, nWeeks){
+  const w0 = ownWeek0(t.pool, from), out = [];
+  for (const g of (t.sched || [])){
+    if (g.bye || g.m == null || !g.d || g.d <= from) continue;
+    const k = gwOf(g.d) - w0;
+    if (k >= 0 && k < nWeeks) out.push(g.m);
+  }
+  return out;
+}
+
+/* -> {n, sweep, k, p, dist} : the most likely record over these games and how likely, plus the
+   chance of losing none of them. Casey, 28 Sep 2026: "what's their likelihood of going three and
+   one over four games ... that would be a valuable thing to see", after pointing out that the
+   best sweep on the board was 39% and the column was therefore telling him nothing.
+   NULL, NOT ZERO, when the page cannot price the games -- an unrated opponent has no margin and
+   must not be folded in as a coin flip. */
+function recordOdds(t, from, nWeeks){
+  const ms = windowMargins(t, from, nWeeks);
+  if (!ms.length) return null;
+  const d = winDist(t.pool, ms);
+  if (!d) return null;
+  let k = 0;
+  for (let i = 1; i < d.length; i++) if (d[i] > d[k]) k = i;
+  return {n: ms.length, sweep: d[d.length - 1], k: k, p: d[k], dist: d};
+}
+
 function minHoldWeeks(t, from){
   let games = 0, wk = 0;
   const w0 = ownWeek0(t.pool, from);
@@ -6082,6 +6170,7 @@ function availTable(kind){
      a bye inside them is a week that banks nothing and cannot be won, and it must cost the
      candidate rather than being waited out. */
   const HOLD_WKS = DATA.hold_games;       // three games' worth of roster slot = three weeks
+  const WIDE = PICKN > DATA.hold_games;
   const incB3 = mine ? weekWindow(mine, from, HOLD_WKS)
                      : {pts: 0, games: 0, byes: 0, weeks: 0, p: null};
   const incRest = mine ? windowPts(mine, from, null) : {pts: 0, games: 0};
@@ -6135,8 +6224,18 @@ function availTable(kind){
          options. The raw number is in the tooltip. */
       const postGain = (post != null && incPost != null) ? Math.round((post - incPost) * 100) / 100
                                                          : null;
+      /* ---- THE HORIZON, WHEN IT IS WIDER THAN THE HOLD -----------------------------------
+         Both sides over the SAME weeks -- the weeks this team needs to play PICKN games. The
+         incumbent is re-measured over them rather than left on its three, which is the point of
+         the note above `HOLD_WKS`: a wider window has to cost both sides equally, or a bye team
+         is quietly handed an extra week to earn in that the other side never gets. */
+      const pw = PICKN > DATA.hold_games ? pickWindow(t, from) : null;
+      const hb = pw ? weekWindow(t, from, pw.w) : null;
+      const hinc = (pw && mine) ? weekWindow(mine, from, pw.w) : null;
+      const odds = recordOdds(t, from, pw ? pw.w : HOLD_WKS);
       return {t, b, r, p30: b.p, post: post, postGain: postGain, keepGain: keepGain,
-              seasonGain: seasonGain,
+              seasonGain: seasonGain, hb: hb, hinc: hinc, hw: pw ? pw.w : null, odds: odds,
+              hgain: (hb && hinc) ? Math.round((hb.pts - hinc.pts) * 100) / 100 : null,
               run: easyRun(t, from),
               gain3: b.weeks ? b.pts - incB3.pts : null,
               gainR: r.games >= DATA.hold_games ? r.pts - incRest.pts : null,
@@ -6152,9 +6251,15 @@ function availTable(kind){
   const ps = PSORT[kind] || {key: PICK_DEFAULT[PICKMODE], dir: -1};
   const val = {
     team:   x => x.t.n,
-    p30:    x => (x.b.byes ? 0 : (x.p30 == null ? -1 : x.p30)),
-    bank:   x => x.b.pts,
-    gain3:  x => x.gain3,
+    /* THE SORT READS THE COLUMN ON SCREEN. With a wider horizon these three cells hold
+       different quantities, and ranking a visible column by a hidden one is the fault this
+       page has been bitten by before. */
+    p30:    x => (PICKN > DATA.hold_games
+                    ? (x.odds ? x.odds.sweep : -1)
+                    : (x.b.byes ? 0 : (x.p30 == null ? -1 : x.p30))),
+    bank:   x => (PICKN > DATA.hold_games ? (x.hb ? x.hb.pts : -Infinity) : x.b.pts),
+    gain3:  x => (PICKN > DATA.hold_games
+                    ? (x.hgain == null ? -Infinity : x.hgain) : x.gain3),
     season: x => x.r.pts,
     sgain:  x => (PICKMODE === 'keep'
                     ? (x.seasonGain == null ? -Infinity : x.seasonGain)
@@ -6205,7 +6310,7 @@ function availTable(kind){
      it was meant to explain. It sits ahead of the scroll container so it does not scroll
      sideways with the table it is describing. */
   return `${pickFromNote(kind, from)}${FROZEN_NOTE}${SHORT_NOTE}${injBoardNote(kind)}<div class="row" style="margin:0 0 10px;align-items:center;gap:10px">${
-      pickModeBar()}</div>
+      pickModeBar()}${horizonBar()}</div>
     <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
     <div class="scr" data-avail="${kind}"><table>
     <!-- The Cmp column is a FIXED pixel width, not a percentage: it holds a 26px control and a
@@ -6226,9 +6331,18 @@ function availTable(kind){
     <thead><tr><th class="c-cmp" title="Add this team to Side by side, above. Two at a time; tap again to remove.">Cmp</th>
       <th class="c-team ${SH('team')}" onclick="setPSort('${kind}','team')"
         title="Sort by team name. Tap again to turn it round.">Team${AR('team')}</th>
-      <th class="num c-p30 ${SH('p30')}" onclick="setPSort('${kind}','p30')" title="Probability it wins EVERY game in the three weeks the hold occupies your roster slot, starting from ${from} — the day ${inc.n}'s slot frees up. Those are the same three weeks Bank 3 adds up. A BYE inside them is a week that banks nothing and cannot be won, so it makes a sweep impossible and the figure reads 0% with BYE beside it. Changing the team above changes this.">3-0${AR('p30')}</th>
-      <th class="num c-bank ${SH('bank')}" onclick="setPSort('${kind}','bank')" title="Expected league points over the THREE WEEKS from ${from} that the hold occupies your roster slot. A bye inside them contributes nothing, so a team with one banks only the games it actually plays — that is the cost of the bye. Games it plays before ${from} belong to its current owner and are not counted.">Bank 3${AR('bank')}</th>
-      <th class="num c-gain ${SH('gain3')}" onclick="setPSort('${kind}','gain3')" title="Bank 3 minus what ${inc.n} earns over THE SAME THREE WEEKS. Both sides start on ${from} and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.">Gain 3${AR('gain3')}</th>
+      <th class="num c-p30 ${SH('p30')}" onclick="setPSort('${kind}','p30')" title="${WIDE
+        ? 'The record this team is most likely to post over its next ' + PICKN + ' games from ' + from + ', and how likely that is. The second figure is the chance it loses none of them. Hover a row for every record from a clean sweep down. Sorting uses the sweep.'
+        : 'Probability it wins EVERY game in the three weeks the hold occupies your roster slot, starting from ' + from + ' — the day ' + inc.n + '\'s slot frees up. Those are the same three weeks Bank 3 adds up. A BYE inside them is a week that banks nothing and cannot be won, so it makes a sweep impossible and the figure reads 0% with BYE beside it. Changing the team above changes this.'}">${
+        WIDE ? 'Likely<br>Record' : '3-0'}${AR('p30')}</th>
+      <th class="num c-bank ${SH('bank')}" onclick="setPSort('${kind}','bank')" title="${WIDE
+        ? 'Expected league points over the weeks it takes this team to play its next ' + PICKN + ' games from ' + from + '. A bye inside them is a week of your roster slot that banks nothing, and the cell says how many weeks the ' + PICKN + ' games take.'
+        : 'Expected league points over the THREE WEEKS from ' + from + ' that the hold occupies your roster slot. A bye inside them contributes nothing, so a team with one banks only the games it actually plays — that is the cost of the bye. Games it plays before ' + from + ' belong to its current owner and are not counted.'}">${
+        WIDE ? 'Bank ' + PICKN + '<br>games' : 'Bank 3'}${AR('bank')}</th>
+      <th class="num c-gain ${SH('gain3')}" onclick="setPSort('${kind}','gain3')" title="${WIDE
+        ? 'Bank minus what ' + inc.n + ' earns over THE SAME WEEKS. The window is however long this team needs to play ' + PICKN + ' games, and your own team is measured over exactly those weeks, so a bye on either side costs its own owner and the difference is like for like.'
+        : 'Bank 3 minus what ' + inc.n + ' earns over THE SAME THREE WEEKS. Both sides start on ' + from + ' and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.'}">${
+        WIDE ? 'Gain ' + PICKN + '<br>games' : 'Gain 3'}${AR('gain3')}</th>
       ${PICKMODE === 'keep'
         ? `<th class="num c-season hide-s ${SH('sgain')}" onclick="setPSort('${kind}','sgain')" title="The whole rest of the regular season, minus what ${inc.n} earns over the same stretch. The postseason is NOT in this one — the column beside it holds that, and the two add up to Keep Gain.">Season<br>Gain${AR('sgain')}</th>
            <th class="num c-sgain hide-s ${SH('postgain')}" onclick="setPSort('${kind}','postgain')" title="This team's expected postseason points minus ${inc.n}'s — the playoff ladder, a conference title, a bowl. Paid to whoever holds the team at the end, so it counts for a hold that runs to the end and for no shorter one. Recomputed every week from results, never read off the draft board.">Post<br>Gain${AR('postgain')}</th>`
@@ -6270,11 +6384,23 @@ function availTable(kind){
              0% -- and that IS the answer to the column's question, not a missing one. The word
              BYE rides alongside as the reason. Showing only the word left a percentage column
              with no percentage in it and no way to rank the row. */
-          x.p30 == null ? '<span class="d">—</span>' : (x.b.byes ? '0%' : pctP(x.p30))}${
-          x.b.byes ? `<span class="recg b" title="${x.b.byes} of these ${HOLD_WKS} weeks ${
+          WIDE
+            ? (x.odds
+                ? `<b>${x.odds.k}-${x.odds.n - x.odds.k}</b> <span class="d">${pctP(x.odds.p)}</span>
+                   <span class="recg" title="Chance it loses none of the ${x.odds.n}.">${pctP(x.odds.sweep)} clean</span>`
+                : '<span class="d">—</span>')
+            : (x.p30 == null ? '<span class="d">—</span>' : (x.b.byes ? '0%' : pctP(x.p30)))}${
+          !WIDE && x.b.byes ? `<span class="recg b" title="${x.b.byes} of these ${HOLD_WKS} weeks ${
             x.b.byes === 1 ? 'is a bye' : 'are byes'} — a week with no game banks nothing and cannot be won, so a sweep is off the table and this reads 0%. It still banks ${x.b.pts.toFixed(2)} from the ${x.b.games} game${x.b.games === 1 ? '' : 's'} it does play; judge it on Bank 3 and Gain 3, not on the sweep.">BYE</span>` : ''}</td>
-        <td class="num c-bank">${x.b.pts.toFixed(2)}</td>
-        <td class="num c-gain"><b class="${g3 > 0.3 ? 'g' : g3 < 0 ? 'b' : 'y'}">${g3 >= 0 ? '+' : ''}${g3.toFixed(2)}</b></td>
+        <td class="num c-bank" title="${WIDE && x.hb
+            ? esc(`${x.hb.games} game${x.hb.games === 1 ? '' : 's'} in ${x.hw} week${x.hw === 1 ? '' : 's'}`
+                  + (x.hb.byes ? `, including ${x.hb.byes} bye week${x.hb.byes === 1 ? '' : 's'} that banks nothing` : ', no bye'))
+            : ''}">${WIDE ? (x.hb ? x.hb.pts.toFixed(2) : '—') : x.b.pts.toFixed(2)}${
+          WIDE && x.hb && x.hb.byes ? ` <span class="recg b" title="A bye inside the window. The ${PICKN} games take ${x.hw} weeks of your roster slot instead of ${PICKN}.">${x.hw}w</span>` : ''}</td>
+        <td class="num c-gain">${WIDE
+          ? (x.hgain == null ? '<span class="d">—</span>'
+             : `<b class="${x.hgain > 0.3 ? 'g' : x.hgain < 0 ? 'b' : 'y'}">${x.hgain >= 0 ? '+' : ''}${x.hgain.toFixed(2)}</b>`)
+          : `<b class="${g3 > 0.3 ? 'g' : g3 < 0 ? 'b' : 'y'}">${g3 >= 0 ? '+' : ''}${g3.toFixed(2)}</b>`}</td>
         ${PICKMODE === 'keep'
           ? `<td class="num c-season hide-s" title="Both sides measured over the same weeks — ${t.n}'s own remaining season. The postseason is not in this one."><span class="${
               x.seasonGain == null ? 'd' : x.seasonGain > 0.5 ? 'g' : x.seasonGain < 0 ? 'b' : 'd'}">${
