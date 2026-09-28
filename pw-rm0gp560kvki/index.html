@@ -3379,7 +3379,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 2:12 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 2:23 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5726,8 +5726,23 @@ function recommend(t, inc, minEdge){
   const span = x => `${x.w} week${x.w === 1 ? '' : 's'}` +
     (x.byes ? ` (${x.games} game${x.games === 1 ? '' : 's'}, ${x.byes} bye)` : '');
 
-  /* THE BYE CASE SAYS WHY, because "every length loses points" would be false here: this swap
-     gains a little and still is not worth making. */
+  /* ---- THE BYE CHARGE IS A STREAMER'S QUESTION, AND ONLY A STREAMER'S ---------------------
+   * Casey, 28 Sep 2026: "on the Keepers tab your advice is AVOID for certain teams, and the AVOID
+   * is because you're telling me there's a bye week in the next three games. That would be
+   * something you'd say on the Streamers ... on the Keepers, for St Thomas or Iowa, I wouldn't
+   * need to avoid them just because they have a bye in the next three games. I think labelling it
+   * in the 3-0 piece as a bye tells me enough. I would rather have the advice tell me, is it three
+   * weeks, is it four weeks, is it a keeper."
+   * He is right, and the rule above was written for the other board. Charging a week of streaming
+   * for the extra week inside the mandate is the right question when the plan IS to stream the
+   * slot: the whole value of a streamer is what those three weeks earn before you move it on. It
+   * is the wrong question when the plan is to hold the team to the end, because the slot is not
+   * going anywhere either way and the extra week buys nothing and costs nothing.
+   * SO IN KEEPERS THE LADDER JUST ANSWERS. The bye is still on the row, in the 3-0 column, which
+   * is where he says it belongs. AVOID survives for the case that is still true in both modes --
+   * every length of hold loses points against the team you would drop. */
+  const keepMode = (typeof PICKMODE !== 'undefined' && PICKMODE === 'keep');
+  if (!best && keepMode) best = mand;
   if (!best && !mandOK)
     return {label: 'AVOID', cls: 'v-avoid', gain: mand.gain,
             tip: `Its ${DATA.hold_games} games take ${span(mand)}, so the slot is tied up `
@@ -5762,7 +5777,13 @@ function recommend(t, inc, minEdge){
   const f = form(t);
   const longer = best.w > minW;
   const last = best.w >= maxW;
-  return {label: last ? 'KEEP' : `${best.w}w`, weeks: best.w,
+  /* THE EXTRA WEEK IS STILL WORTH SAYING, even where it no longer decides anything. */
+  const byeNote = (keepMode && mand.w > leagueW)
+    ? ` Its ${DATA.hold_games} games take ${span(mand)}, so the slot is tied up `
+      + `${mand.w - leagueW} week${mand.w - leagueW === 1 ? '' : 's'} longer than the league `
+      + `forces. On a team you mean to hold to the end that costs nothing, which is why it does `
+      + `not change the advice here — it would on the Streamers board.` : '';
+  return {label: last ? 'KEEP' : `${best.w}w`, weeks: best.w, byeNote: byeNote,
           cls: last ? 'v-keep' : (best.w > minW ? 'v-hold' : 'v-stream'),
           gain: best.gain, proven: longer, upside: best,
           tip: `Hold it ${span(best)}` + (last ? ' — to the end of the regular season' : '')
@@ -5774,7 +5795,7 @@ function recommend(t, inc, minEdge){
              + ` It rests on ${f.games
                  ? `${f.games} game${f.games === 1 ? '' : 's'} played and `
                    + `${f.edge >= 0 ? '+' : ''}${f.edge.toFixed(2)} against what the model expected`
-                 : 'the preseason rating, with no games played yet'}.`};
+                 : 'the preseason rating, with no games played yet'}.` + byeNote};
 }
 
 function dropSelector(kind){
