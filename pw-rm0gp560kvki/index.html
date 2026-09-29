@@ -768,6 +768,11 @@ table.ownertbl{min-width:600px}
 button.nlink{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;
   text-decoration:underline dotted;text-underline-offset:3px;text-decoration-color:var(--dim)}
 button.nlink:hover{color:var(--blue)}
+/* THE SMALLEST THING ON THE BOARD THAT STILL READS AS A WORD. It rides inside a numeric cell
+   whose column is 73px at the narrowest setting, so it is sized to what is left after the record
+   and the percentage. */
+.byechip{font-size:9px;font-weight:700;letter-spacing:.2px;padding:0 2px;border-radius:3px;
+  background:var(--sunk);border:1px solid var(--line);color:var(--dim);vertical-align:1px}
 table.wtbl{min-width:0;width:100%;table-layout:fixed;margin-top:6px}
 table.wtbl td, table.wtbl th{padding:5px 7px}
 table.wtbl tfoot th{border-top:2px solid var(--line);background:var(--sunk);font-weight:700}
@@ -3453,7 +3458,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '29 Sep 2026, 12:36 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '29 Sep 2026, 7:53 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5725,16 +5730,21 @@ function p30Why(t, from, x){
  * played N games, and THE INCUMBENT IS MEASURED OVER THE SAME WEEKS -- the trap the 2 Sep note
  * describes is giving a bye team an extra week to earn in that the other side does not get. */
 const PICK_NS = [3, 4, 5, 6];
-let PICKN = (() => {
-  try { const v = +localStorage.getItem('rfl_pickn'); if (PICK_NS.indexOf(v) >= 0) return v; }
-  catch (e) {}
-  return 3;
-})();
+/* IT STARTS AT THE HOLD EVERY TIME, AND IT IS NOT REMEMBERED.
+ *
+ * Casey, 29 Sep 2026: "the Weeks Ahead feature is defaulting to four weeks. It should default to
+ * three weeks." It was remembering the last setting in this browser, so a look at four weeks last
+ * night became the board's silent default this morning.
+ *
+ * THE SIBLING CONTROL ALREADY HAD THIS RULE and it is the same argument: every projected number
+ * on this tab moves with it, so coming back to figures quietly measured over a window you set
+ * once and forgot is the worst thing the control can do. Three is the hold the league forces, so
+ * three is where the board starts. */
+let PICKN = DATA.hold_games || 3;
 function setPickN(n){
   n = +n;
   if (PICKN === n || PICK_NS.indexOf(n) < 0) return;
   PICKN = n;
-  try { localStorage.setItem('rfl_pickn', String(n)); } catch (e) {}
   renderPick();
 }
 /* WEEKS AHEAD, NOT GAMES AHEAD. Casey, 29 Sep 2026, on the old name: "games ahead just doesn't
@@ -6268,6 +6278,20 @@ function crossPanel(){
 /* WHAT THE FLAG MEANS, ON THE BOARD IT APPEARS ON. An absence is never an answer: the FCS
    half of the college board can never carry a flag, and the note has to say that where the
    board is, not in a document. */
+/* ONE CLOSED ROW FOR EVERYTHING THE BOARD HAS TO SAY ABOUT ITSELF.
+   The summary carries the two facts a reader needs WITHOUT opening it: which day the numbers are
+   measured from, and how many teams the board is not showing. An absence is never an answer, so
+   the count of teams left out is on the closed line and not inside. */
+function boardNotes(kind, from, inner){
+  if (!inner || !inner.trim()) return '';
+  const left = (SHORT_N || 0);
+  const bits = [`measured from ${pretty(from)}`];
+  if (left) bits.push(`${left} team${left === 1 ? '' : 's'} not listed`);
+  return `<details class="how boardnotes"><summary><span class="qm" aria-hidden="true">?</span>
+    <b>About This Board</b> <span class="d">${esc(bits.join(' · '))}</span></summary>
+    <div class="note">${inner}</div></details>`;
+}
+
 function injBoardNote(kind){
   if (!INJ) return '';
   const who = `A quarterback at any status counts. A running back, receiver or tight end
@@ -6337,6 +6361,7 @@ function availTable(kind){
         && windowPts(t, from, null).games < DATA.claim_min)
     : [];
   SHORT_NOTE = shortNote(_shortOut, from);
+  SHORT_N = _shortOut.length;
   let list = DATA.teams.filter(t => t.owner == null && want(t) && canClaim(t)
       && (!PICK_FROM || windowPts(t, from, null).games >= DATA.claim_min))
     .map(t => {
@@ -6461,12 +6486,30 @@ function availTable(kind){
        from ${pretty(from)}${PICK_FROM ? ', which is the date you chose'
                                        : `, which is when ${esc(inc.n)}'s slot frees up`}.`}</div>`;
 
-  /* THE HINT GOES ABOVE THE TABLE, not below it. Casey, 31 Aug 2026: a note at the bottom
-     of a long table is only found by the reader who has already scrolled past the thing
-     it was meant to explain. It sits ahead of the scroll container so it does not scroll
-     sideways with the table it is describing. */
-  return `${pickFromNote(kind, from)}${FROZEN_NOTE}${SHORT_NOTE}${injBoardNote(kind)}<div class="row" style="margin:0 0 10px;align-items:center;gap:10px">${
+  /* ---- THE CONTROLS SIT ON THE TABLE; THE PROSE SITS BEHIND ONE LINE --------------------
+   *
+   * Casey, 29 Sep 2026: "you've got a bunch of verbiage at the top of the window ... I'm
+   * wondering if you can restructure this so the search is more directly above the table, and so
+   * I don't have to scroll so much to get down to the list of teams. This is a lot of junk
+   * that's taking up the whole window before I even start seeing the teams."
+   *
+   * MEASURED before touching it, on the built page: 771px above the first team row on a 1440px
+   * laptop and 948px on a 390px phone, of which four notes and two disclosures were 212px and
+   * 300px. A 900px laptop window showed no teams at all without scrolling.
+   *
+   * THE RULE THAT PUT THEM THERE STILL HOLDS, and it is why they are not simply moved below:
+   * Casey, 31 Aug 2026, "a note at the bottom of a long table is only found by the reader who
+   * has already scrolled past the thing it was meant to explain." So they stay ABOVE the table
+   * and behind ONE closed row, the same disclosure pattern he asked for on 31 Aug -- "can we do
+   * something like we did on the standings page where we have a question mark". The summary line
+   * carries the counts, so what the notes are about is readable without opening it.
+   *
+   * WHAT IS NEVER FOLDED: anything that changes what a number on the table MEANS. The date the
+   * board is measured from is in the disclosure's own summary line, not inside it. */
+  const _notes = `${pickFromNote(kind, from)}${FROZEN_NOTE}${SHORT_NOTE}${injBoardNote(kind)}${poolNote()}${rerateNote()}`;
+  return `<div class="row" style="margin:0 0 8px;align-items:center;gap:10px">${
       pickModeBar()}${horizonBar()}</div>
+    ${boardNotes(kind, from, _notes)}
     <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
     <div class="scr" data-avail="${kind}"><table class="${PICKMODE === 'keep' ? 'pickkeep' : 'pickstream'}">
     <!-- The Cmp column is a FIXED pixel width, not a percentage: it holds a 26px control and a
@@ -6578,10 +6621,22 @@ function availTable(kind){
              figure beside it needs 84 and wraps the row onto two lines, which is the thing
              `verify_pickcols.js` exists to stop. So the cell carries what Casey asked for -- the
              record and how likely it is -- and the hover carries every record from a sweep down. */
+          /* THE BYE IS BACK BESIDE THE RECORD. Casey, 29 Sep 2026: "you used to print a little
+             BYE next to the record ... can we not still do that, so we know that it's 3-1 and
+             there's also then a bye." He is right that it belongs here: the record is over the
+             games PLAYED in the window, so a bye is the reason 4 weeks shows a 3-game record,
+             and that reason should be where the surprise is.
+             IT WAS MOVED TO BANK on 29 Sep because a two-line odds cell overran its column. It
+             is a 9px chip now, measured: "3-1 44% BYE" is 71px in a 73px column at the narrowest
+             setting, and `verify_pickcols.js` measures the ink against the box at every width
+             and every horizon. Bank keeps its own week count, which answers a different
+             question -- how many weeks of the slot the window costs. */
           x.odds
-            ? `<b>${x.odds.k}-${x.odds.n - x.odds.k}</b> <span class="d">${pctP(x.odds.p)}</span>`
-            : '<span class="d">—</span>'}${
-          ''}</td>
+            ? `<b>${x.odds.k}-${x.odds.n - x.odds.k}</b> <span class="d">${pctP(x.odds.p)}</span>${
+                (WIDE ? (x.hb && x.hb.byes) : x.b.byes)
+                  ? ` <span class="byechip" title="A bye inside these ${WIDE ? PICKN : HOLD_WKS} weeks. The slot is tied up for it and earns nothing, so this record is over the ${x.odds.n} game${x.odds.n === 1 ? '' : 's'} actually played.">BYE</span>`
+                  : ''}`
+            : '<span class="d">—</span>'}</td>
         <td class="num c-bank" title="${WIDE && x.hb
             ? esc(`${x.hb.games} game${x.hb.games === 1 ? '' : 's'} in ${x.hw} week${x.hw === 1 ? '' : 's'}`
                   + (x.hb.byes ? `, including ${x.hb.byes} bye week${x.hb.byes === 1 ? '' : 's'} that banks nothing` : ', no bye'))
@@ -8729,6 +8784,7 @@ function frozenUntil(t){
 function canClaim(t){ return !!t.claim_ok && !frozenUntil(t); }
 function canTradeAway(t){ return t && t.tradeable_away !== false; }
 let SHORT_NOTE = '';
+let SHORT_N = 0;      // how many teams that note is about, for the closed summary line
 function shortNote(list, from){
   if (!list || !list.length) return '';
   const first = pretty(from);
@@ -9555,13 +9611,13 @@ function renderPick(){
     ${sheetCard}`,
     COL: `<div class="card"><h2>Best Available — College</h2>
       ${dropSelector('COL')}
-      <!-- The SAME tray, rendered where the picking happens. Casey had to scroll back up past
-           the whole comparison to press anything; now the button is beside the + buttons. -->
-      <div class="bar"><span id="cmptray2" class="tray" data-pool="COL">${trayHTML('COL')}</span></div>
+      <!-- ONE ROW, NOT THREE. The compare tray, the search and the Upsets filter were three
+           stacked bars of 34px, 36px and 36px with a note under them, which is 120px of controls
+           between the heading and the board. They are one line now and the search sits directly
+           on the table, which is what Casey asked for. -->
       <div class="bar"><input class="search" type="search" placeholder="Search team…"
         id="pq" value="${PQ}" oninput="pickSearch(this)" aria-label="Search available teams">
-        ${upsetBtn()}</div>
-      ${poolNote()}
+        ${upsetBtn()}<span id="cmptray2" class="tray" data-pool="COL">${trayHTML('COL')}</span></div>
       ${availTable('COL')}
       ${explain('Why FBS and FCS are one list', `They compete for the same eight college slots on
       your roster, so ranking them separately would ask you to choose between two lists that are
@@ -9652,10 +9708,8 @@ function renderPick(){
     </div></div>`,
     NFL: `<div class="card"><h2>Best Available — NFL</h2>
       ${dropSelector('NFL')}
-      <!-- The SAME tray as the college card. It was missing here, so after choosing an NFL team
-           to drop there was no Compare control anywhere near the NFL list. -->
-      <div class="bar"><span id="cmptray3" class="tray" data-pool="NFL">${trayHTML('NFL')}</span></div>
-      <div class="bar">${upsetBtn()}</div>
+      <!-- ONE ROW, same as the college card. -->
+      <div class="bar">${upsetBtn()}<span id="cmptray3" class="tray" data-pool="NFL">${trayHTML('NFL')}</span></div>
       ${availTable('NFL')}
       ${explain('Why the NFL list is separate', `An NFL team can only replace one of your three
       NFL teams, so it is a different slot and a different decision. Only
@@ -9735,7 +9789,11 @@ function renderPick(){
       left to be claimed, so the list already excludes anyone who cannot finish a hold.</p>`)}
     </div></div>`,
   };
-  el('pickBody').innerHTML = bar + rerateNote() + (panels[PICKTAB] || panels.roster);
+  /* `rerateNote()` used to print here, above every sub-tab, as a 44px disclosure before the
+     board's own heading. It is inside About This Board on the two boards it describes, and the
+     tabs that show ESPN's own data no longer carry an explainer about a projection they have
+     none of. */
+  el('pickBody').innerHTML = bar + (panels[PICKTAB] || panels.roster);
 }
 
 
