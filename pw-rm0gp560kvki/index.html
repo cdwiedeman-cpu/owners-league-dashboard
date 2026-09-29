@@ -1199,6 +1199,20 @@ details>summary::marker{color:var(--faint)}
    half a point each, which still leaves 85px for a five-character figure that needs 57. */
 .cg1{width:46px} .cg2{width:39%} .cg3{width:8.57%} .cg4{width:8.57%}
 .cg5{width:8.57%} .cg6{width:8.57%} .cg7{width:8.57%} .cg8{width:8.57%} .cg9{width:8.57%}
+/* ---- AND TWELVE OF THEM ON KEEPERS ------------------------------------------------------
+ * Casey, 29 Sep 2026, asked for the four keeper figures ON TOP of the next-N ones rather than
+ * instead of them. Twelve columns need more room than nine, and the rule on this page is the one
+ * he has given twice: a table may scroll sideways, a name may not break.
+ * MEASURED, NOT GUESSED, at the floor: the Team cell has to hold the widest row it CAN hold -- a
+ * long NFL name, the pool pill, the open arrow, UPSET x3, the plan flag and the watch star, which
+ * took 336px on a 390px phone. 32% of 1074px is 344. Each figure column gets 72px for a figure
+ * that needs 57, and "10-2 27%" is the widest thing any of them holds.
+ * The percentages add to 99 on purpose: at 100 the browser rounds up, the table reports two
+ * pixels more than it is given, and the open schedule panel reads as a second sideways scroller
+ * nested inside this one. */
+table.pickkeep{min-width:1120px}
+.cgK1{width:46px} .cgK2{width:32%}
+.cgK3, .cgK4, .cgK5, .cgK6, .cgK7, .cgK8, .cgK9, .cgK10, .cgK11, .cgK12{width:6.7%}
 /* ONE FLOOR, EVERY WIDTH. Percentages of a narrow window are narrower than the words in them, so
    the table keeps a minimum and the box around it scrolls -- the gesture this page already uses
    everywhere. It used to be set only inside the phone media query, which left a small laptop
@@ -1239,7 +1253,16 @@ table.esptbl td.num, table.esptbl td.c-team{white-space:nowrap}
 /* THE TABLE IS NO WIDER FOR THE FIFTH COLUMN. Team and Hold Through keep the pixels they had,
    because a narrower name column breaks names, and Casey has twice said he would rather swipe
    than read a broken name. The three number columns share what is left. */
-.rt-team{width:52%}.rt-hold{width:18%}.rt-n3{width:10%}.rt-rest{width:10%}.rt-keep{width:10%}
+/* ---- EIGHT COLUMNS SINCE 29 SEP 2026 -----------------------------------------------------
+ * Likely Record, Banked, Post and Proj joined it, so the shares were re-cut and the table gets a
+ * floor of its own. Casey asked for the same analysis here that the Pickups board gives, and for
+ * the same three names the Standings panel uses. Measured at the floor: a roster row's team cell
+ * carries the pool pill, the name, the open arrow, DROP FIRST, UPSET, the injury flag and the plan
+ * flag, which needs 300px; 34% of 884 is 300. Each figure column gets 76px for a figure that needs
+ * 57, and "10-2 27%" is the widest thing any of them holds. 99% on purpose, as everywhere here. */
+table.rostertbl{min-width:930px}
+.rt-team{width:34%}.rt-hold{width:13%}.rt-rec{width:9%}.rt-n3{width:9%}
+.rt-bank{width:8%}.rt-rest{width:8%}.rt-post{width:8%}.rt-proj{width:9%}
 table.slottbl{min-width:660px}
 /* ---- THE NUMBER, THE TEAM AND THE POINTS FIT THE PHONE; THE REST IS THE SWIPE ---------------
  * Casey, 27 Sep 2026: "I can get the slot number, the team, and the points across those without
@@ -1297,7 +1320,10 @@ table.watchtbl .cw7{width:10%} table.watchtbl .cw8{width:14%}
    Plan tab's swap table gained the postseason, and a number that wraps is the complaint Casey
    raised about the Pickups board. */
 td.c-p30, td.c-bank, td.c-gain, td.c-season, td.c-sgain, td.c-ups,
-td.c-post, td.c-keep, td.c-then{white-space:nowrap}
+td.c-post, td.c-keep, td.c-then,
+/* The four keeper figures and the roster's own Banked, added 29 Sep 2026. A figure that wraps is
+   the complaint this whole block exists for. */
+td.c-fin, td.c-rest, td.c-pst, td.c-prj, td.c-bank2{white-space:nowrap}
 /* THE ODDS CELL CARRIES TWO FACTS, SO IT GETS TWO LINES. Casey, 28 Sep 2026: "when you pick the
    games ahead three, four, five, six, the likely record overlaps with the Bank for games text."
    The column is 8.57% of a 1000px table, about 86px, and every numeric cell is `nowrap`. A cell
@@ -1379,7 +1405,10 @@ td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-sp
      the season put all five on one row and wrapped it. `verify_pickcols.js` found it the moment
      the result landed. The column is measured against what a row can hold, not what today's rows
      happen to hold. */
-  #pickBody table.rostertbl{min-width:820px}
+  /* RAISED AGAIN 29 SEP 2026, for the eight columns. This override is LOWER than the base floor,
+     so leaving it at 820 would have given a phone a narrower table than a laptop and squeezed the
+     name column below what a row can hold. A floor that only some widths obey is not a floor. */
+  #pickBody table.rostertbl{min-width:930px}
   /* ---- THE RESULT HAS TO BE ON THE SCREEN, NOT OFF THE SIDE OF IT --------------------------
    *
    * Casey, 27 Sep 2026: "when I click on a team, whether it's on standings or weekly quarterly
@@ -1416,7 +1445,8 @@ td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-sp
   #pickBody table td.num, #scout table td.num{white-space:nowrap;overflow-wrap:normal}
   #pickBody table th, #scout table th{white-space:normal;overflow-wrap:break-word;hyphens:auto}
   th.c-p30, td.c-p30, th.c-gain, td.c-gain, th.c-then, td.c-then,
-  th.c-bank, td.c-bank{white-space:nowrap;overflow-wrap:normal;word-break:keep-all}
+  th.c-bank, td.c-bank,
+  td.c-fin, td.c-rest, td.c-pst, td.c-prj, td.c-bank2{white-space:nowrap;overflow-wrap:normal;word-break:keep-all}
   .pill{white-space:nowrap}
   /* THE MODEL COLUMN USED TO BE DROPPED HERE, and that was the wrong call twice over.
      Casey, 1 Sep 2026: "I just noticed on the iPhone that doesn't have the model column."
@@ -3406,7 +3436,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 10:25 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 11:03 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5714,6 +5744,46 @@ function recordOdds(t, from, nWeeks){
   return {n: ms.length, sweep: d[d.length - 1], k: k, p: d[k], dist: d};
 }
 
+/* -> {w, l, p, n, partial} : the FINAL record this team is most likely to finish on, and how
+   likely that exact record is. Casey, 29 Sep 2026: "likely finish with like nine and three, 27%".
+   A DIFFERENT QUANTITY FROM Likely Record, which is the record over the next few games only.
+   This one is the whole season: the games already won plus the most likely number of the ones
+   still to come. It is the figure a KEEPER decision turns on, because the record bonuses and the
+   playoff ladder are paid on the season, not on a three-week window.
+   NULL when the page cannot price the remaining games. An unrated opponent has no margin and must
+   never be folded in as a coin flip. */
+function likelyFinish(name){
+  const t = BY.get(name); if (!t) return null;
+  const got = SEASON ? SEASON.get(name) : null;
+  const wins = got ? got.w : 0;
+  const played = got ? got.n : (t.hist || []).filter(g => !g.nc && !g.unknown).length;
+  const fg = futureGames(t);
+  const d = winDist(t.pool, fg.games.map(g => g.m));
+  if (!d) return null;
+  let k = 0;
+  for (let i = 1; i < d.length; i++) if (d[i] > d[k]) k = i;
+  const n = played + fg.games.length;
+  return {w: wins + k, l: n - (wins + k), p: d[k], n: n,
+          /* A SCHEDULE THIS BUILD ONLY PARTLY KNOWS gives a record that is a FLOOR on the wins
+             and cannot be a final record at all. It is flagged so the cell can say so. */
+          partial: !!t.partial || fg.skipped.length > 0};
+}
+
+/* The cell both boards print it in, so the two can never drift apart. */
+function finishCell(name, extra){
+  const f = likelyFinish(name);
+  if (!f) return '<span class="d" title="This build cannot price every game this team has left, so it has no final record to name. Unknown is not a zero.">—</span>';
+  return `<b>${f.w}-${f.l}</b> <span class="d">${pctP(f.p)}</span>${f.partial
+    ? ' <span class="recg b" title="This build does not know every game on this team\'s schedule, so the win total is a floor and this record is not final.">?</span>' : ''}${extra || ''}`;
+}
+function finishTip(name){
+  const f = likelyFinish(name);
+  if (!f) return 'This build cannot price every game this team has left.';
+  return `${name} is most likely to finish ${f.w}-${f.l} over ${f.n} games, and that exact record `
+    + `is ${pctP(f.p)} likely. It is the single likeliest of every record they can still post, not `
+    + `a prediction that it will happen.`;
+}
+
 function minHoldWeeks(t, from){
   let games = 0, wk = 0;
   const w0 = ownWeek0(t.pool, from);
@@ -6293,6 +6363,13 @@ function availTable(kind){
     ups:    x => { const w = upsetWins(x.t);
                    return w.length * 1000 - (w.length ? Math.min(...w.map(u => u.line)) : 0); },
     post:   x => (x.post == null ? -1 : x.post),
+    /* THE THREE ABSOLUTES, and the record they sit beside. Sorted on the raw figure the cell
+       prints, like every other column here. `fin` ranks on the win total first and uses the
+       chance of that exact record only to separate two teams on the same record. */
+    fin:    x => { const f = likelyFinish(x.t.n); return f ? f.w * 1000 + f.p : -1; },
+    rest:   x => x.r.pts,
+    pst:    x => (x.post == null ? -1 : x.post),
+    prj:    x => (x.post == null ? -Infinity : x.r.pts + x.post),
     postgain: x => (x.postGain == null ? -Infinity : x.postGain),
     keepgain: x => (x.keepGain == null ? -Infinity : x.keepGain),
     run:    x => x.run,
@@ -6336,7 +6413,7 @@ function availTable(kind){
   return `${pickFromNote(kind, from)}${FROZEN_NOTE}${SHORT_NOTE}${injBoardNote(kind)}<div class="row" style="margin:0 0 10px;align-items:center;gap:10px">${
       pickModeBar()}${horizonBar()}</div>
     <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
-    <div class="scr" data-avail="${kind}"><table>
+    <div class="scr" data-avail="${kind}"><table class="${PICKMODE === 'keep' ? 'pickkeep' : 'pickstream'}">
     <!-- The Cmp column is a FIXED pixel width, not a percentage: it holds a 26px control and a
          percentage of a narrow phone table is smaller than the button inside it. -->
     <!-- WIDTHS LIVE IN CSS, NOT IN style ATTRIBUTES, because three of these columns are hidden
@@ -6349,9 +6426,20 @@ function availTable(kind){
          they map to the first FIVE <col> elements in order. Naming these after columns
          (cg-bank, cg-gain) made the small-screen rules read as if they sized Bank 3 and Gain 3
          when they were really sizing whatever landed in slots 4 and 5. -->
-    <colgroup><col class="cg1"><col class="cg2"><col class="cg3"><col class="cg4">
-      <col class="cg5"><col class="cg6"><col class="cg7"><col class="cg8">
-      <col class="cg9"></colgroup>
+    <!-- TWELVE COLUMNS ON KEEPERS, NINE ON STREAMERS, AND THE COLGROUP HAS TO MATCH.
+         Casey, 29 Sep 2026: "keep everything because I want to be able to analyze the next 3, 4
+         etc while also looking at the keep information." So the four keeper figures are ADDED
+         rather than swapped in, and Post Gain comes out because it is Keep Gain minus Season
+         Gain and both of those are still on the row.
+         A colgroup with more <col> elements than the row has cells sizes the wrong columns, so
+         the two modes get their own list and their own floor. -->
+    ${PICKMODE === 'keep'
+      ? `<colgroup><col class="cgK1"><col class="cgK2"><col class="cgK3"><col class="cgK4">
+          <col class="cgK5"><col class="cgK6"><col class="cgK7"><col class="cgK8">
+          <col class="cgK9"><col class="cgK10"><col class="cgK11"><col class="cgK12"></colgroup>`
+      : `<colgroup><col class="cg1"><col class="cg2"><col class="cg3"><col class="cg4">
+          <col class="cg5"><col class="cg6"><col class="cg7"><col class="cg8">
+          <col class="cg9"></colgroup>`}
     <thead><tr><th class="c-cmp" title="Add this team to Side by side, above. Two at a time; tap again to remove.">Cmp</th>
       <th class="c-team ${SH('team')}" onclick="setPSort('${kind}','team')"
         title="Sort by team name. Tap again to turn it round.">Team${AR('team')}</th>
@@ -6367,8 +6455,19 @@ function availTable(kind){
         : 'Bank 3 minus what ' + inc.n + ' earns over THE SAME THREE WEEKS. Both sides start on ' + from + ' and run the same three weeks, so a bye on either side costs its own owner a week and the difference is like for like. That is what the swap is worth over the mandatory hold. The Advice column carries the gain at its own recommended length, which can be larger.'}">${
         WIDE ? 'Gain ' + PICKN + '<br>games' : 'Gain 3'}${AR('gain3')}</th>
       ${PICKMODE === 'keep'
-        ? `<th class="num c-season hide-s ${SH('sgain')}" onclick="setPSort('${kind}','sgain')" title="The whole rest of the regular season, minus what ${inc.n} earns over the same stretch. The postseason is NOT in this one — the column beside it holds that, and the two add up to Keep Gain.">Season<br>Gain${AR('sgain')}</th>
-           <th class="num c-sgain hide-s ${SH('postgain')}" onclick="setPSort('${kind}','postgain')" title="This team's expected postseason points minus ${inc.n}'s — the playoff ladder, a conference title, a bowl. Paid to whoever holds the team at the end, so it counts for a hold that runs to the end and for no shorter one. Recomputed every week from results, never read off the draft board.">Post<br>Gain${AR('postgain')}</th>`
+        ? /* ---- WHAT THE TEAM IS WORTH, BEFORE WHAT THE SWAP IS WORTH -----------------------
+             Casey, 29 Sep 2026: "here's the remaining season record, here's the postseason points
+             and then the total." And, on the names: "why not just use Rest, Post and Projection
+             ... we should just make it consistent in both places."
+             So these three carry the SAME three names the Standings projection panel uses, and
+             they mean the same three things. There is no Banked column here because the points
+             this team has already scored are not yours: it is somebody else's team until you take
+             it. That absence is the statement, and the Proj heading says so. */
+          `<th class="num c-fin hide-s ${SH('fin')}" onclick="setPSort('${kind}','fin')" title="The record this team is most likely to FINISH the season on, counting the games it has already won, and how likely that exact record is. A different question from Likely Record, which looks only at the next ${PICKN} games. This is the one the record bonuses and the playoff field are decided on.">Likely<br>Finish${AR('fin')}</th>
+           <th class="num c-rest hide-s ${SH('rest')}" onclick="setPSort('${kind}','rest')" title="Expected league points from ${from} to the end of the REGULAR season. The postseason is the column beside it. Same meaning as Rest on the Standings projection panel.">Rest${AR('rest')}</th>
+           <th class="num c-pst hide-s ${SH('pst')}" onclick="setPSort('${kind}','pst')" title="Expected postseason points: the playoff ladder, a conference title, a bowl, undefeated and one loss. Paid to whoever holds the team at the end of the year. Tap the team's name for every rule and its chance.">Post${AR('pst')}</th>
+           <th class="num c-prj hide-s ${SH('prj')}" onclick="setPSort('${kind}','prj')" title="Rest plus Post — everything this team is expected to earn YOU from ${from} to the end of the year. Points it scored before you took it are not in it, because they are not yours. On the Standings panel the same column also adds Banked, which for a team you already own is yours either way.">Proj${AR('prj')}</th>
+           <th class="num c-season hide-s ${SH('sgain')}" onclick="setPSort('${kind}','sgain')" title="Rest, minus what ${inc.n} earns over the same stretch. The postseason is not in this one. Season Gain plus the postseason difference is Keep Gain.">Season<br>Gain${AR('sgain')}</th>`
         : `<th class="num c-season hide-s ${SH('run')}" onclick="setPSort('${kind}','run')" title="How many games from ${from} this team is favoured in, straight through, stopping at the first one it is not. Three is enough for the hold. More than three is a team you can keep a while without having to decide anything. A bye does not break the run and does not count toward it.">Easy<br>Run${AR('run')}</th>
            <th class="num c-sgain hide-s ${SH('season')}" onclick="setPSort('${kind}','season')" title="Expected points from ${from} to the end of the regular season. The postseason is not in it — press Keepers for that.">Season<br>pts${AR('season')}</th>`}
       ${PICKMODE === 'keep'
@@ -6444,14 +6543,17 @@ function availTable(kind){
              : `<b class="${x.hgain > 0.3 ? 'g' : x.hgain < 0 ? 'b' : 'y'}">${x.hgain >= 0 ? '+' : ''}${x.hgain.toFixed(2)}</b>`)
           : `<b class="${g3 > 0.3 ? 'g' : g3 < 0 ? 'b' : 'y'}">${g3 >= 0 ? '+' : ''}${g3.toFixed(2)}</b>`}</td>
         ${PICKMODE === 'keep'
-          ? `<td class="num c-season hide-s" title="Both sides measured over the same weeks — ${t.n}'s own remaining season. The postseason is not in this one."><span class="${
+          ? `<td class="num c-fin hide-s" title="${esc(finishTip(t.n))}">${finishCell(t.n)}</td>
+             <td class="num d c-rest hide-s">${numOpen(t.n, x.r.pts.toFixed(2), `Open ${t.n} for every game it has left, one line each, adding to this figure`)}</td>
+             <td class="num d c-pst hide-s">${x.post == null
+                ? '<span class="d" title="This build ships no postseason vector for this team, so its postseason is unknown rather than zero.">—</span>'
+                : numOpen(t.n, x.post.toFixed(2), `Open ${t.n} for every postseason rule it can earn, adding to ${x.post.toFixed(2)}`)}</td>
+             <td class="num c-prj hide-s" title="${x.post == null ? 'Not known: this team has no postseason vector in this build.'
+                : esc(`${x.r.pts.toFixed(2)} from the rest of the regular season plus ${x.post.toFixed(2)} in the postseason. ${inc.n} is worth ${incRest.pts.toFixed(2)} plus ${incPost == null ? '?' : incPost.toFixed(2)} over the same stretch.`)}"><b>${
+              x.post == null ? '<span class="d">—</span>' : (x.r.pts + x.post).toFixed(2)}</b></td>
+             <td class="num c-season hide-s" title="Both sides measured over the same weeks — ${t.n}'s own remaining season. The postseason is not in this one."><span class="${
               x.seasonGain == null ? 'd' : x.seasonGain > 0.5 ? 'g' : x.seasonGain < 0 ? 'b' : 'd'}">${
-              x.seasonGain == null ? '—' : (x.seasonGain >= 0 ? '+' : '') + x.seasonGain.toFixed(2)}</span></td>
-             <td class="num c-sgain hide-s" title="${x.post == null ? 'Not known.'
-                : esc(t.n + ' is worth ' + x.post.toFixed(2) + ' after the regular season and '
-                      + inc.n + ' ' + (incPost == null ? '?' : incPost.toFixed(2)) + '.')}"><span class="${
-              x.postGain == null ? 'd' : x.postGain > 0.25 ? 'g' : x.postGain < -0.25 ? 'b' : 'd'}">${
-              x.postGain == null ? '—' : (x.postGain >= 0 ? '+' : '') + x.postGain.toFixed(2)}</span></td>`
+              x.seasonGain == null ? '—' : (x.seasonGain >= 0 ? '+' : '') + x.seasonGain.toFixed(2)}</span></td>`
           : `<td class="num c-season hide-s"><span class="${x.run >= 5 ? 'g' : x.run >= 3 ? 'y' : 'd'}">${x.run}</span></td>
              <td class="num d c-sgain hide-s">${numOpen(t.n, x.r.pts.toFixed(2), `Open ${t.n} for every game it has left, one line each, adding to this figure`)}</td>`}
         ${PICKMODE === 'keep'
@@ -9124,6 +9226,14 @@ function renderPick(){
       + `free to drop. Where two are level over the year, the next three games break the tie.`
       : '';
   }
+  /* ONCE PER RENDER, not once per row: slotTotalsFor walks the whole lineage. */
+  const ST_MINE = slotTotalsFor(MY_DIV, OWNERS[ME]);
+  /* THE HEADING NAMES THE WINDOW THE CELLS USE. At the league's own number it is the three weeks
+     of the hold; above it, however many weeks these teams need to play that many games. They can
+     differ by team, so the heading takes the longest of them and every cell says its own. */
+  const nWks = PICKN <= DATA.hold_games ? DATA.hold_games
+    : Math.max(...mine.map(t => { const w = pickWindow(t, azToday()); return w ? w.w : 0; }),
+               DATA.hold_games);
   const rosterRows = mine.map(t => {
     const sl = bySlot.get(t.n);
     /* COMPUTED HERE, NOT READ FROM THE BUILD. These two columns used `sl.bank3` and `sl.rest`,
@@ -9133,12 +9243,37 @@ function renderPick(){
        keeps paying for. They now come from the same `weekWindow`/`windowPts` the pickup table
        measures the incumbent with, so the roster's Next 3 IS the number Gain 3 is measured
        against. */
-    const from = sl ? pickFrom(sl) : null;
-    const w3 = from ? weekWindow(t, from, DATA.hold_games).pts : null;
-    const wr = from ? windowPts(t, from, null).pts : null;
+    /* ---- WHAT THIS TEAM IS WORTH TO ME FROM HERE, NOT FROM THE DAY I COULD DROP IT --------
+     * Casey, 29 Sep 2026: "St Thomas now only has 2.66 for the rest of the season and 3.63 for
+     * the Keep. There's no way that's right. St Thomas is definitely going to get more than 3.63
+     * points to keep it."
+     * He was right, and the cause is the window. Both figures started on the day the SLOT FREES
+     * UP, which for a team picked up this week is after its three hold games. St Thomas plays
+     * Presbyterian, Stetson and Marist inside the hold, worth 2.11 points, and the column threw
+     * all three away. 4.77 read as 2.66. Every team whose hold is finished was unaffected, which
+     * is why only the five he has traded for looked wrong.
+     * THE ORIGINAL WINDOW WAS RIGHT FOR A DIFFERENT QUESTION. Measuring from the drop date answers
+     * "what would I forfeit by swapping this out", which is the Pickups board's question and where
+     * both sides are measured over the same weeks. This table answers "what is this team worth to
+     * me", and the hold games are his whatever he decides. A committed game is not a sunk one.
+     * SO EVERY FIGURE ON THIS ROW NOW STARTS TODAY, and the three names are the three the
+     * Standings projection panel uses, because they are now the same three quantities. */
+    const pr = teamProjection(t.n, 0);
+    const pwR = pickWindow(t, azToday());
+    const nW = (PICKN > DATA.hold_games && pwR) ? pwR.w : DATA.hold_games;
+    const wN = weekWindow(t, null, nW);
+    const w3 = wN ? wN.pts : null;
+    const odds = recordOdds(t, null, nW);
+    const wr = pr ? pr.rest : null;
+    const pst = pr ? pr.post : null;
+    /* BANKED IS THE SLOT'S, NOT THE TEAM'S, exactly as it is on the Standings panel: a slot that
+       held another team first keeps those points. */
+    const bank = (ST_MINE && ST_MINE.map.get(t.n) != null) ? ST_MINE.map.get(t.n) : t.pts;
     /* THE SAME SUM `dropOrder()` RANKS ON, read from the same two functions, so the column and
        the pill can never be two different numbers. */
-    const kp = (wr == null) ? null : wr + (postOf(t.n) == null ? 0 : postOf(t.n));
+    /* PROJ IS BANKED + REST + POST, the same arithmetic the Standings panel prints, so the two
+       cannot disagree about one slot. */
+    const kp = (wr == null || pst == null) ? null : bank + wr + pst;
     const isWorst = sl && (worst[t.pool === 'NFL' ? 'NFL' : 'COL'] === t.n);
     return `<tr class="clickable ${isWorst ? 'g-before' : ''}"
         onclick="toggleMine('${t.n.replace(/'/g, "\\'")}')"
@@ -9165,11 +9300,24 @@ function renderPick(){
         !sl ? '' : sl.need === 0
           ? ' <span class="pill v-keep" title="Its third game for you has been played, so you can drop it in the window now open.">NOW</span>'
           : ` <span class="pill v-stream" title="It still owes you ${sl.need} of the ${DATA.hold_games} games you must hold it for. You can drop it once the game on ${pretty(sl.third_game)} has been played, and a replacement first plays for you on ${pretty(sl.drop_from)}.">${sl.need} to go</span>`}</td>
-      <td class="num">${w3 == null ? '—' : w3.toFixed(2)}</td>
-      <td class="num"><b>${wr == null ? '—' : wr.toFixed(2)}</b></td>
-      <td class="num"><b>${kp == null ? '—' : kp.toFixed(2)}</b></td>
+      <td class="num c-p30" title="${odds
+        ? esc(`Over its next ${odds.n} game${odds.n === 1 ? '' : 's'}: `
+            + odds.dist.map((pp, kk) => `${kk}-${odds.n - kk} ${Math.round(pp * 100)}%`)
+                 .filter((_, kk) => odds.dist[kk] >= 0.02).reverse().join(' · ')
+            + `. Wins all of them: ${Math.round(odds.sweep * 100)}%.`)
+        : 'No games left that this build can price.'}">${odds
+        ? `<b>${odds.k}-${odds.n - odds.k}</b> <span class="d">${pctP(odds.p)}</span>`
+        : '<span class="d">—</span>'}</td>
+      <td class="num c-bank" title="Expected league points over ${nW} week${nW === 1 ? '' : 's'} from today${
+        PICKN > DATA.hold_games ? `, which is how long this team takes to play its next ${PICKN} games` : ''}. A bye inside them earns nothing.">${w3 == null ? '—' : w3.toFixed(2)}</td>
+      <td class="num d c-bank2" title="What this ROSTER SLOT has earned so far, including any team that held it before this one. A fact, and yours whether you keep this team or not — which is why the drop order ignores it.">${bank == null ? '—' : bank.toFixed(2)}</td>
+      <td class="num d c-rest">${wr == null ? '—' : numOpen(t.n, wr.toFixed(2), `Open ${t.n} for every game it has left, one line each, adding to ${wr.toFixed(2)}`)}</td>
+      <td class="num d c-pst">${pst == null
+        ? '<span class="d" title="This build ships no postseason vector for this team, so its postseason is unknown rather than zero.">—</span>'
+        : numOpen(t.n, pst.toFixed(2), `Open ${t.n} for every postseason rule it can earn, adding to ${pst.toFixed(2)}`)}</td>
+      <td class="num c-prj" title="${kp == null ? 'Not known.' : esc(`${bank.toFixed(2)} banked + ${wr.toFixed(2)} from the games still to play + ${pst.toFixed(2)} postseason. The same three numbers the Standings projection panel shows for this slot.`)}"><b>${kp == null ? '—' : kp.toFixed(2)}</b></td>
     </tr>` + (OPEN_MINE === t.n
-      ? `<tr><td colspan="4">${teamPanel(t, null, 'mine')}</td></tr>` : '');
+      ? `<tr><td colspan="8">${teamPanel(t, null, 'mine')}</td></tr>` : '');
   }).join('');
   const anyFree = mine.some(t => t.played >= DATA.hold_games);
   const gate = anyFree ? '' : `<div class="note"><b class="y">Nothing can be dropped yet.</b>
@@ -9248,13 +9396,18 @@ function renderPick(){
     roster: `<div class="card"><h2>Your Roster</h2>
       <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
       <div class="scr"><table class="rostertbl">
-        <colgroup><col class="rt-team"><col class="rt-hold"><col class="rt-n3"
-          ><col class="rt-rest"><col class="rt-keep"></colgroup>
+        <colgroup><col class="rt-team"><col class="rt-hold"><col class="rt-rec"
+          ><col class="rt-n3"><col class="rt-bank"><col class="rt-rest"
+          ><col class="rt-post"><col class="rt-proj"></colgroup>
         <thead><tr><th class="c-team">Team</th>
           <th title="Keep this team THROUGH this date. It is the day of its third game and you must let it play that game; you can drop it afterwards, and a replacement first plays for you in the game after it.">Hold Through</th>
-          <th class="num" title="Expected points over this team's next three games after it becomes droppable — what you would give up in the near term.">Next 3</th>
-          <th class="num" title="Expected points from that point to the end of the regular season. Points already banked are excluded — you keep those whether you swap or not.">Rest</th>
-          <th class="num" title="Rest plus the points this team is projected to earn in the postseason, which are paid to whoever is holding it at the end of the year. This is the column the drop order is decided on.">Keep</th></tr></thead>
+          <th class="num c-p30" title="The record this team is most likely to post over the next ${nWks} week${nWks === 1 ? '' : 's'} from today, and how likely that exact record is. Games Ahead sets how far this looks.">Likely<br>Record</th>
+          <th class="num c-bank" title="Expected league points over those same ${nWks} week${nWks === 1 ? '' : 's'}, starting today. A bye inside them earns nothing.">${
+            PICKN > DATA.hold_games ? 'Next ' + PICKN + '<br>games' : 'Next 3'}</th>
+          <th class="num c-bank2" title="What this roster SLOT has earned so far, including any team that held it before this one. A fact. It is yours whether you keep this team or not, so the drop order ignores it.">Banked</th>
+          <th class="num c-rest" title="Expected league points from TODAY to the end of the regular season. Every game still to play is in it, including the ones inside a hold you cannot drop out of — those points are yours whatever you decide. The postseason is the column beside it.">Rest</th>
+          <th class="num c-pst" title="Expected postseason points: the playoff ladder, a conference title, a bowl, undefeated and one loss. Paid to whoever holds the team at the end of the year. Tap the figure for every rule and its chance.">Post</th>
+          <th class="num c-prj" title="Banked plus Rest plus Post — this slot's projected finish for the year. The same three columns and the same total as the Standings projection panel. The DROP FIRST mark does NOT rank on this: banked points are yours either way, so the order is Rest plus Post.">Proj</th></tr></thead>
         <tbody>${rosterRows}</tbody></table></div>
       ${gate}
       ${injBoardNote('roster')}
