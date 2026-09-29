@@ -2314,7 +2314,7 @@ function viewerSet(seat){
   FILTER = VIEWER ? 'ME' : (FILTER === 'ME' ? 'ALL' : FILTER);
   /* Changing who you are re-points "My teams only" rather than leaving it on the last person. */
   LSCOPE = VIEWER ? 'ME' : (LSCOPE === 'ME' ? 'ALL' : LSCOPE);
-  renderChips(); renderFilters(); renderScores(); renderStandings(); lRepaint();
+  renderChips(); renderFilters(); renderScores(); renderStandings(); lRepaint(); repaintPick();
 }
 /* SIGNING IN ANSWERS "WHO ARE YOU" FOR THE WHOLE PAGE, NOT JUST THE TRADES TAB.
    Casey, 13 Sep 2026: "is that also going to then update ... what's going to be filtered on for
@@ -3453,7 +3453,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '29 Sep 2026, 12:06 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '29 Sep 2026, 12:07 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3715,7 +3715,7 @@ async function setWeekView(v){
      browsing week 1 also fills week 1 into the standings -- better than the baked fallback and
      never worse, because applyLiveToSeason only ever ADDS a game it has not already counted. */
   renderFilters(); renderScores();
-  if (applyLiveToSeason()){ renderStandings(); lRepaint(); }
+  if (applyLiveToSeason()){ renderStandings(); lRepaint(); repaintPick(); }
   refreshScout();
 }
 
@@ -3765,7 +3765,7 @@ async function loadScores(){
   clearProj();
   LAST_FETCH = new Date();
   renderFilters(); renderScores();
-  if (applyLiveToSeason()){ renderStandings(); lRepaint(); }
+  if (applyLiveToSeason()){ renderStandings(); lRepaint(); repaintPick(); }
   refreshScout();
 }
 
@@ -6495,7 +6495,7 @@ function availTable(kind){
           `<th class="num c-fin hide-s ${SH('fin')}" onclick="setPSort('${kind}','fin')" title="The record this team is most likely to FINISH the season on, counting the games it has already won, and how likely that exact record is. A different question from Likely Record, which looks only at the next ${PICKN} games. This is the one the record bonuses and the playoff field are decided on.">Likely<br>Finish${AR('fin')}</th>
            <th class="num c-rest hide-s ${SH('rest')}" onclick="setPSort('${kind}','rest')" title="Expected league points from ${from} to the end of the REGULAR season. The postseason is the column beside it. Same meaning as Rest on the Standings projection panel.">Rest${AR('rest')}</th>
            <th class="num c-pst hide-s ${SH('pst')}" onclick="setPSort('${kind}','pst')" title="Expected postseason points: the playoff ladder, a conference title, a bowl, undefeated and one loss. Paid to whoever holds the team at the end of the year. Tap the team's name for every rule and its chance.">Post${AR('pst')}</th>
-           <th class="num c-prj hide-s ${SH('prj')}" onclick="setPSort('${kind}','prj')" title="Rest plus Post — everything this team is expected to earn YOU from ${from} to the end of the year. Points it scored before you took it are not in it, because they are not yours. On the Standings panel the same column also adds Banked, which for a team you already own is yours either way.">Proj${AR('prj')}</th>
+           <th class="num c-prj hide-s ${SH('prj')}" onclick="setPSort('${kind}','prj')" title="Rest plus Post — everything this team is expected to earn YOU from ${from} to the end of the year. There is no Banked column here: the points it has already scored belong to whoever held it then, so for a team you do not own Finish IS the total. Your own roster shows both.">Finish${AR('prj')}</th>
            <th class="num c-season hide-s ${SH('sgain')}" onclick="setPSort('${kind}','sgain')" title="Rest, minus what ${inc.n} earns over the same stretch. The postseason is not in this one. Season Gain plus the postseason difference is Keep Gain.">Season<br>Gain${AR('sgain')}</th>`
         : `<th class="num c-season hide-s ${SH('run')}" onclick="setPSort('${kind}','run')" title="How many games from ${from} this team is favoured in, straight through, stopping at the first one it is not. Three is enough for the hold. More than three is a team you can keep a while without having to decide anything. A bye does not break the run and does not count toward it.">Easy<br>Run${AR('run')}</th>
            <th class="num c-sgain hide-s ${SH('season')}" onclick="setPSort('${kind}','season')" title="Expected points from ${from} to the end of the regular season. The postseason is not in it — press Keepers for that.">Season<br>pts${AR('season')}</th>`}
@@ -9222,6 +9222,7 @@ function pickSearch(el){
   window.scrollTo({top: y});
 }
 
+let PICK_DREW_BLIND = false;   // see repaintPick(): the board drew before the results arrived
 function renderPick(){
   /* THIS TAB DOES NOT EXIST ON THE ALL-OWNERS PAGE, and its data was removed from that payload
      on purpose -- `stream_rate`, `p30`, the projections, all of it. `applyLiveToSeason()` calls
@@ -9232,6 +9233,9 @@ function renderPick(){
      The section element exists in both pages, so an early return keyed on the element is not
      enough. It is keyed on whether this page HAS the tab. */
   if (!PROJ_ON) return;
+  /* Remember whether this draw could see the results, so `repaintPick` knows to come back once
+     and only once. */
+  PICK_DREW_BLIND = (SEASON === null);
   const mine = DATA.teams.filter(t => t.owner === ME)
     .sort((a, b) => a.pool.localeCompare(b.pool) || a.n.localeCompare(b.n));
   /* WHAT EACH OF MY SLOTS IS PROJECTED TO EARN FROM THE WEEK IT COULD BE DROPPED.
@@ -10044,7 +10048,7 @@ async function loadSeason(){
      They were only redrawn on the SUCCESS path, so a page that failed to reach ESPN raised no
      chip at all -- the one case the chips exist for. Both outcomes redraw them now. */
   try { renderChips(); } catch (e) {}
-  renderStandings(); lRepaint();
+  renderStandings(); lRepaint(); repaintPick();
   if (typeof renderBest === 'function' && !el('best').hidden) renderBest();
 }
 
@@ -10438,20 +10442,23 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
         <th class="num" title="What this ROSTER SLOT has earned so far, including any team that held it before this one. A fact.">Banked</th>
         <th class="num" title="Every game this team still has to play: win probability plus the blowout and shutout bonuses, priced off current form.">Rest</th>
         <th class="num" title="Expected postseason points, summed over the win totals this team is on course for. Conference, bowls, the playoff ladder, undefeated and one-loss.">Post</th>
-        <th class="num">Proj</th></tr></thead>
+        <th class="num" title="Rest plus Post — everything still to come. Nothing banked is in it, so this is the number a keep-or-drop decision turns on.">Finish</th>
+        <th class="num" title="Banked plus Finish. The same five columns, with the same meanings, as Your Roster on the Pickups tab.">Total</th></tr></thead>
       <tbody>${proj.rows.map(r => `<tr data-team="${esc(r.team)}">
         <td><span class="pill p-${r.pool.toLowerCase()}">${r.pool}</span> ${teamOpenHTML(r.team)}${
           r.unpriced ? ` <span class="gtag t-before" title="${r.unpriced} remaining game(s) have an opponent this build could not rate, so they are not in the projection.">${r.unpriced} unpriced</span>` : ''}</td>
         <td class="num d">${r.banked.toFixed(1)}</td>
         <td class="num d">${numOpen(r.team, r.rest.toFixed(1), `Open ${r.team} for every game it has left, one line each, adding to ${r.rest.toFixed(2)}`)}</td>
         <td class="num d">${r.post == null ? '—' : numOpen(r.team, r.post.toFixed(1), `Open ${r.team} for every postseason rule it can earn, adding to ${r.post.toFixed(2)}`)}</td>
+        <td class="num">${r.post == null ? '<span class="d">—</span>' : (r.rest + r.post).toFixed(1)}</td>
         <td class="num"><b>${r.total.toFixed(1)}</b></td></tr>`).join('')}
         ${proj.gone ? `<tr><td class="d">Teams no longer held</td><td class="num d">${proj.gone.toFixed(1)}</td>
-          <td class="num d">—</td><td class="num d">—</td><td class="num"><b>${proj.gone.toFixed(1)}</b></td></tr>` : ''}
+          <td class="num d">—</td><td class="num d">—</td><td class="num d">—</td><td class="num"><b>${proj.gone.toFixed(1)}</b></td></tr>` : ''}
         <tr class="rbtot"><td><b>Projected total</b></td>
           <td class="num"><b>${(proj.banked + proj.gone).toFixed(1)}</b></td>
           <td class="num"><b>${proj.rest.toFixed(1)}</b></td>
           <td class="num"><b>${proj.post.toFixed(1)}</b></td>
+          <td class="num"><b>${(proj.rest + proj.post).toFixed(1)}</b></td>
           <td class="num"><b>${proj.total.toFixed(1)}</b></td></tr>
       </tbody></table></div>
     <div class="note"><b>Banked is a fact; the other two are not.</b> Rest prices every game still
@@ -12557,6 +12564,30 @@ function lSeats(){
  *
  * A BRANCH THAT NAMES THE PAGE ROTS THE DAY THE PAGES STOP DIFFERING. Asking whether the tab is
  * on this page cannot: a container that is not there is not drawn, and one that is, is. */
+/* AND THE PICKUPS TAB, WHICH IS NOT ONE OF THE FOUR BUT DEPENDS ON THE SAME RESULTS.
+ *
+ * Casey, 29 Sep 2026: "when I first come into the Pickups tab under My Roster, Banked is a dash
+ * and Projected is a dash. They don't populate until I click on like Houston, and then they
+ * populate."
+ *
+ * Both come off `slotTotalsFor`, which returns null until the results have arrived -- correctly,
+ * because unknown is not zero. The board renders once on load, with SEASON still null, and
+ * nothing redrew it when the results landed a few seconds later. Clicking a team re-rendered it
+ * by accident, which is why it looked like the numbers needed coaxing.
+ * IT IS NOT IN lRepaint's LIST because that one is about tabs whose state a press has changed.
+ * This is about new DATA, so it rides with the redraw that follows the results. */
+/* ONCE, AND NOT UNDER HIS FINGER. This runs on every live-score poll, and re-rendering a board
+   somebody is reading throws away their scroll and closes the team they just opened. It only
+   redraws when the last render was made WITHOUT results and the results have since arrived --
+   which is the one case that produced a dash. After that the board is left alone.
+   `PICK_DREW_BLIND` is declared beside renderPick, which is where it is set. */
+function repaintPick(){
+  if (!PROJ_ON || typeof renderPick !== 'function' || !el('pickBody')) return;
+  if (!PICK_DREW_BLIND || SEASON === null) return;
+  try { renderPick(); }
+  catch (e) { try { console.error('repaintPick failed', e); } catch (e2) {} }
+}
+
 function lRepaint(){
   /* THE KEY IS TABSETS, NOT THE CONTAINER. One template renders both pages, so ALL FOUR of these
      containers exist in both -- TABSETS decides which get a tab, not which get an element. Keying
