@@ -3406,7 +3406,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 8:02 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 10:35 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10202,7 +10202,15 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
   /* WHAT THE PROJECTION IS MADE OF, team by team. A projected total that cannot be taken apart
      is a number to argue with rather than read -- and the three parts are three different kinds
      of claim: banked is a fact, the remaining schedule is a price, the postseason is a bet. */
-  const projBlock = (OPEN_OWNER === key && proj) ? `<div class="scr"><table class="ownertbl">
+  /* IT WAS NEVER RENDERED. This block was built into a variable that nothing read, so the
+     Standings tab has had no Rest column and no Post column since it was written, while the Proj
+     cell's own hover text said "Tap for the breakdown." Casey, 29 Sep 2026: "when I go to the
+     standings page, I don't see anything about rest and post." A promise in a tooltip is a
+     promise, and this one went unkept for weeks because nothing checked that the variable was
+     used. It opens from the Proj figure now, and `verify_projtable.js` opens it.
+     A MODAL, NOT A ROW. The standings table is forty columns wide inside its own sideways
+     scroller, and a table nested in it would need a second scroller inside the first. */
+  const projBlock = proj ? `<div class="scr"><table class="ownertbl">
       <thead><tr><th>Team</th>
         <th class="num" title="What this ROSTER SLOT has earned so far, including any team that held it before this one. A fact.">Banked</th>
         <th class="num" title="Every game this team still has to play: win probability plus the blowout and shutout bonuses, priced off current form.">Rest</th>
@@ -10232,6 +10240,7 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       have no postseason vector in this build and contribute nothing to the Post column.</b>` : ''}
       ${proj.unpriced ? ` <b class="y">${proj.unpriced} remaining game(s) could not be priced</b>
       — an opponent this build has no rating for — and are in neither Rest nor Post.` : ''}</div>` : '';
+  PROJ_HTML.set(key, projBlock);
 
   /* THE TEAMS EXPAND INSIDE THE STANDINGS TABLE, AS ROWS. Casey, 6 Sep 2026: "when you click on
      a name it takes you to a table below... I think it'd be better if, when you click on the
@@ -10334,9 +10343,11 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
         title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
         ><span class="divshort">${o.div}</span></span></td>` : ''}
       <td class="num c-tot ${SORTBY === 'pts' ? 'sorted' : ''}"><b>${o.pts.toFixed(1)}</b></td>
-      ${PROJ_ON ? `<td class="num c-proj ${SORTBY === 'proj' ? 'sorted' : ''}"
-          title="${proj ? `${o.pts.toFixed(1)} banked + ${(proj.rest).toFixed(1)} from the games still to play + ${(proj.post).toFixed(1)} postseason. Tap for the breakdown.` : 'This build ships no postseason vectors, so there is nothing to project from.'}"
-        >${proj ? proj.total.toFixed(1) : '<span class="d">—</span>'}</td>` : ''}
+      ${PROJ_ON ? `<td class="num c-proj ${SORTBY === 'proj' ? 'sorted' : ''}">${proj
+        ? `<button class="nlink" onclick="event.stopPropagation();openProjTable(${jsStr(key)})"
+            title="${o.pts.toFixed(1)} banked + ${proj.rest.toFixed(1)} from the games still to play + ${proj.post.toFixed(1)} postseason. Tap for the team-by-team breakdown."
+            ><b>${proj.total.toFixed(1)}</b></button>`
+        : '<span class="d" title="This build ships no postseason vectors, so there is nothing to project from.">—</span>'}</td>` : ''}
       ${pctCell(o, tsep)}
       <td class="num d c-beh hide-s">${lead == null ? '—' : (lead === 0 ? '—' : '−' + lead.toFixed(1))}</td>
       ${undecidedCell('bonus')}
@@ -10345,6 +10356,27 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       ${postCell({post: o.post, postN: (o.teams || []).reduce((a, t) => a + (t.postN || 0), 0)})}
       </tr>`;
   return {row: row + kids, detail};
+}
+
+/* ONE OWNER'S PROJECTION TABLE, KEPT BY OWNER KEY so the modal can open it without rebuilding
+   the row. Cleared at the start of every standings render, because a stale copy would open with
+   last render's numbers in it. */
+const PROJ_HTML = new Map();
+
+function openProjTable(k){
+  const html = PROJ_HTML.get(k);
+  const box = el('help');
+  if (!box) return;
+  const who = String(k).split('|');
+  BONUS_OPEN = 'proj|' + k;
+  box.hidden = false;
+  box.innerHTML = `<div class="modalbox">
+    <div class="modalhd"><div><h2>${esc(who[1] || who[0])} — Where the Projection Comes From</h2></div>
+      <button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button></div>
+    ${html || `<div class="note">There is no projection for this owner. This build ships no
+      postseason vectors, so there is nothing to project from.</div>`}</div>`;
+  const x = box.querySelector('.modalx'); if (x) x.focus({preventScroll: true});
+  document.body.style.overflow = 'hidden';
 }
 
 function toggleOwner(k){
@@ -10759,6 +10791,8 @@ function renderStandings(){
   /* The inputs to a projection are results and ratings, and both can have moved since the last
      render. Recomputing costs a few milliseconds; showing a stale one costs trust. */
   clearProj();
+  /* AND THE SAVED BREAKDOWN TABLES GO WITH IT, or the modal opens on last render's numbers. */
+  PROJ_HTML.clear();
   const b = el('standBody');
   if (SEASON === null){
     b.innerHTML = `<div class="card"><div class="empty">
@@ -13622,6 +13656,7 @@ function openLeagueScout(n){
  * Applying a move twice would move a team twice, and this runs again every few minutes.
  */
 let BAKED_SNAPS = null, BAKED_TRADES = null, BAKED_SLOTS = null, BAKED_LABELS = null,
+    BAKED_MY_SLOTS = null,
     LIVE_TX_AT = null, LIVE_TX_N = 0, LIVE_TX_ERR = null;
 
 function _copyLabels(o){
@@ -13707,6 +13742,19 @@ function applyLiveTrades(list){
      * no row the slot could not find it and fell back to the team before it.
      * Two stores of one fact are written together or one of them lies. */
     BAKED_LABELS = new Map(DATA.teams.map(t => [t.n, (t.labels || []).slice()]));
+    /* AND MY ELEVEN SLOT RECORDS ARE A SIXTH STORE OF THE SAME FACT, AND NOBODY MOVED THEM.
+     *
+     * Casey, 29 Sep 2026: "why does St Thomas, who I picked up today, on my roster not have
+     * anything on Hold Through, Next 3, Rest or Keep. It's just dashes all the way across."
+     *
+     * `DATA.my_slots` is written by the build and holds one record per roster position: the date
+     * its hold ends, how many games it still owes him, and the pool. EVERY figure in the roster
+     * table comes off that record, because `pickFrom()` needs the hold date to know which weeks
+     * to measure. A team that arrived after the build has no record, so `from` was null and all
+     * four columns dashed out.
+     * The Slots tab was already being moved, by `applyLiveSlot`, which writes the lineage. This
+     * is the other list, and it is the one the Pickups tab reads. */
+    BAKED_MY_SLOTS = (DATA.my_slots || []).slice();
   }
   if (BAKED_LABELS) DATA.teams.forEach(t => {
     const b = BAKED_LABELS.get(t.n); if (b) t.labels = b.slice();
@@ -13732,6 +13780,7 @@ function applyLiveTrades(list){
   txs.trades = BAKED_TRADES.filter(b => !_liveSeen.has(
     [b.div || '', b.owner || '', b.old || '', b.new || ''].join('|')));
   if (BAKED_SLOTS) DATA.slots.lineage = JSON.parse(JSON.stringify(BAKED_SLOTS));
+  if (BAKED_MY_SLOTS) DATA.my_slots = BAKED_MY_SLOTS.slice();
   LIVE_TX_N = 0;
   if (!list || !list.length) return;
 
@@ -13797,7 +13846,7 @@ function applyLiveTrades(list){
        week and everything before it keeps the old owner. */
     hist.snapshots.push({asof: null, week: snapW, source: 'trades page',
                          labels: _copyLabels(labels)});
-    for (const t of byWeek.get(w)) applyLiveSlot(t, ew);
+    for (const t of byWeek.get(w)){ applyLiveSlot(t, ew); applyLiveMySlot(t, ew); }
   }
   hist.snapshots.sort((a, b) => a.week - b.week);
   /* ONLY THE TEAMS A TRADE ACTUALLY TOUCHED. Rewriting every team's holders from the snapshot
@@ -13832,6 +13881,67 @@ function applyLiveTrades(list){
        sitting on the Plan's drop list after the trade settled. */
     if (ME != null) t.mine = (idx >= 0 && idx === ME);
   });
+  /* THE DROP ORDER WAS WORKED OUT ON THE OLD ROSTER. It is cached, keyed on the chosen date and
+     the projection basis, and neither of those changes when a trade settles -- so the DROP FIRST
+     pill and `dropOrder()` would keep naming a team he no longer holds. */
+  DROP_ORDER.clear();
+}
+
+/* ---- ONE SLOT RECORD FOR A TEAM THAT ARRIVED AFTER THE BUILD -------------------------------
+ * The hold is three GAMES and it belongs to the owner, so it starts on the day the team changed
+ * hands. That is the rule `build_season.py` uses for a mid-season pickup and this is the same
+ * rule, read off the same two fields: games in `hist` played on or after that day, and the games
+ * left in `sched`.
+ * `drop_from` is NOT computed here. `swapFrom()` already derives it from the third game, and the
+ * note on that function records that it reproduces the build's own `drop_from` for all eleven of
+ * his slots. One store.
+ * -> a slot record, or null when the page cannot work one out. Null is not a zero: the roster row
+ * says which of the two it is looking at. */
+function liveMySlotFor(name, from){
+  const t = BY.get(name);
+  if (!t || !from) return null;
+  const H = DATA.hold_games;
+  const done = (t.hist || []).filter(g => !g.nc && g.d && g.d >= from);
+  const need = Math.max(0, H - done.length);
+  const gs = (t.sched || []).filter(g => !g.bye && g.d);
+  let third = null, short = 0;
+  if (!need){
+    third = done[H - 1].d;
+  } else if (gs.length >= need){
+    third = gs[need - 1].d;
+  } else {
+    /* ITS SEASON ENDS BEFORE THE HOLD CAN. The honest answer is the last game it plays plus the
+       count of games the hold will never get, and the roster row prints both. */
+    third = gs.length ? gs[gs.length - 1].d : null;
+    short = need - gs.length;
+  }
+  if (!third) return null;
+  return {n: name, pool: t.pool, third_game: third, drop_from: swapFrom({third_game: third}),
+          need: need, short: short, held_since: from, live: true, bank3: 0, rest: 0};
+}
+
+/* WHICH DAY A LIVE TRADE TOOK EFFECT. The back end carries the date on most rows and only the
+   settled week on the rest, so the week's own Tuesday is the fallback. */
+function liveEffDate(t, week){
+  if (t && typeof t.effective === 'string' && t.effective.slice(0, 2) === '20') return t.effective;
+  const w1 = (DATA.calendar || {}).league_week1_start;
+  if (!w1 || !week) return null;
+  return new Date(Date.parse(w1 + 'T00:00:00Z') + (week - 1) * 604800000)
+    .toISOString().slice(0, 10);
+}
+
+function applyLiveMySlot(t, week){
+  if (!t || typeof MY_DIV === 'undefined' || !OWNERS || ME == null) return;
+  if (t.div !== MY_DIV || t.owner !== OWNERS[ME]) return;
+  const list = DATA.my_slots || (DATA.my_slots = []);
+  if (t.out){
+    const i = list.findIndex(x => x.n === t.out);
+    if (i >= 0) list.splice(i, 1);
+  }
+  if (t['in'] && !list.some(x => x.n === t['in'])){
+    const sl = liveMySlotFor(t['in'], liveEffDate(t, week));
+    if (sl) list.push(sl);
+  }
 }
 
 function fetchLiveTrades(){
