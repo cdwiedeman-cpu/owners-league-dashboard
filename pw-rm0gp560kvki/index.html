@@ -787,6 +787,8 @@ button.nlink:hover{color:var(--blue)}
 table.wtbl{min-width:0;width:100%;table-layout:fixed;margin-top:6px}
 table.wtbl td, table.wtbl th{padding:5px 7px}
 table.wtbl tfoot th{border-top:2px solid var(--line);background:var(--sunk);font-weight:700}
+table.rostertbl tfoot td{border-top:2px solid var(--line);background:var(--sunk)}
+table.rostertbl tfoot tr.rbtot td{font-weight:700}
 table.wtbl tbody tr:nth-child(even){background:rgba(255,255,255,.02)}
 .pill.p-div{background:var(--sunk);border:1px solid var(--line);color:var(--dim)}
 .pill.p-div.own{border-color:var(--blue);color:var(--blue)}
@@ -3473,7 +3475,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '29 Sep 2026, 7:58 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '29 Sep 2026, 8:00 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9410,6 +9412,10 @@ function renderPick(){
   const nWks = PICKN <= DATA.hold_games ? DATA.hold_games
     : Math.max(...mine.map(t => { const w = pickWindow(t, R_FROM); return w ? w.w : 0; }),
                DATA.hold_games);
+  /* THE FOOT ADDS THE COLUMNS UP, so the table comes to the same season total the Standings
+     panel shows. Collected as the rows are built rather than re-derived, so the two cannot
+     disagree about a slot. */
+  const RTOT = {bank: 0, rest: 0, post: 0, fin: 0, tot: 0, known: true};
   const rosterRows = mine.map(t => {
     const sl = bySlot.get(t.n);
     /* COMPUTED HERE, NOT READ FROM THE BUILD. These two columns used `sl.bank3` and `sl.rest`,
@@ -9499,7 +9505,11 @@ function renderPick(){
         ? '<span class="d" title="This build ships no postseason vector for this team, so its postseason is unknown rather than zero.">—</span>'
         : numOpen(t.n, pst.toFixed(2), `Open ${t.n} for every postseason rule it can earn, adding to ${pst.toFixed(2)}`)}</td>
       <td class="num rc-finish" title="${fin == null ? 'Not known.' : esc(`${wr.toFixed(2)} from the games still to play plus ${pst.toFixed(2)} in the postseason. What ${t.n} is expected to earn you from here. Nothing banked is in it, so this is the number a keep-or-drop decision turns on.`)}"><b>${fin == null ? '—' : fin.toFixed(2)}</b></td>
-      <td class="num rc-proj" title="${kp == null ? 'Not known.' : esc(`${bank.toFixed(2)} already banked by ${t.n} plus ${fin.toFixed(2)} still to come.`)}"><b>${kp == null ? '—' : kp.toFixed(2)}</b></td>
+      <td class="num rc-proj" title="${kp == null ? 'Not known.' : esc(`${bank.toFixed(2)} already banked by ${t.n} plus ${fin.toFixed(2)} still to come.`)}"><b>${kp == null ? '—' : kp.toFixed(2)}</b></td>${((() => {
+        if (bank == null || fin == null){ RTOT.known = false; return ''; }
+        RTOT.bank += bank; RTOT.rest += wr; RTOT.post += pst; RTOT.fin += fin; RTOT.tot += kp;
+        return '';
+      })())}
     </tr>` + (OPEN_MINE === t.n
       ? `<tr><td colspan="8">${teamPanel(t, null, 'mine')}</td></tr>` : '');
   }).join('');
@@ -9598,12 +9608,31 @@ function renderPick(){
           <th class="num rc-post" title="Expected postseason points: the playoff ladder, a conference title, a bowl, undefeated and one loss. Paid to whoever holds the team at the end of the year. Tap the figure for every rule and its chance.">Post</th>
           <th class="num rc-finish" title="Rest plus Post — everything this team is still expected to earn you, counting from TODAY. Nothing banked is in it. The DROP FIRST mark does not rank on this figure: a drop can only take effect on the day that slot frees up, so the order is worked out from THAT day and ignores the games you are obliged to play first. Hover DROP FIRST for its own two numbers.">Finish</th>
           <th class="num rc-proj" title="Banked plus Finish — what this team is worth to you across the whole year, what it has earned already and what it is expected to earn from here.">Total</th></tr></thead>
-        <tbody>${rosterRows}</tbody></table></div>
-      ${EARLIER_N ? `<div class="note"><b>Banked is what the team on the row has earned for you.</b>
-        ${EARLIER_N} team${EARLIER_N === 1 ? '' : 's'} you have already traded away earned
-        <b>${EARLIER.toFixed(2)}</b> more in these slots before their replacements arrived. Those
-        points are yours and they are in your standings total; they are not in this table, because
-        every row here is about a team you hold now.</div>` : ''}
+        <tbody>${rosterRows}</tbody>
+        <!-- ---- THE COLUMN HAS TO ADD UP TO HIS SEASON, AND SAY WHAT IT CANNOT CONTAIN -------
+             Casey, 29 Sep 2026: "you said the points earned by teams that held those slots
+             before are counted and printed in a line under the table. I don't see where that's
+             at. I'm not following what you mean by that."
+             It WAS under the table, as a sentence below eleven rows, which is the same as not
+             being there. It is a row IN the table now, in the Banked column, where the question
+             is asked -- the same shape the Standings projection panel already uses for the teams
+             an owner no longer holds. And the foot totals every column, so the table comes to
+             the season total that panel shows instead of leaving him to add it up. -->
+        <tfoot>
+          ${EARLIER_N ? `<tr><td class="d">Teams you have traded away (${EARLIER_N})</td>
+            <td class="d"></td><td class="num d">—</td><td class="num d">—</td>
+            <td class="num d">—</td>
+            <td class="num d" title="What those teams earned in these slots BEFORE you traded them. The points are yours and they are in your standings total. They are not on any row above, because every row up there is a team you hold now.">${EARLIER.toFixed(2)}</td>
+            <td class="num d">—</td><td class="num d">—</td><td class="num d">—</td>
+            <td class="num d">${EARLIER.toFixed(2)}</td></tr>` : ''}
+          <tr class="rbtot"><td><b>Your season</b></td><td></td>
+            <td class="num d">—</td><td class="num d">—</td><td class="num d">—</td>
+            <td class="num"><b>${RTOT.known ? (RTOT.bank + EARLIER).toFixed(2) : '—'}</b></td>
+            <td class="num"><b>${RTOT.known ? RTOT.rest.toFixed(2) : '—'}</b></td>
+            <td class="num"><b>${RTOT.known ? RTOT.post.toFixed(2) : '—'}</b></td>
+            <td class="num"><b>${RTOT.known ? RTOT.fin.toFixed(2) : '—'}</b></td>
+            <td class="num"><b>${RTOT.known ? (RTOT.tot + EARLIER).toFixed(2) : '—'}</b></td></tr>
+        </tfoot></table></div>
       ${gate}
       ${injBoardNote('roster')}
       ${explain('How to read your roster', `<b>Hold Through</b> is the date of this team's third
