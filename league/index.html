@@ -3483,7 +3483,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '29 Sep 2026, 3:10 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '29 Sep 2026, 3:36 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6531,7 +6531,7 @@ function availTable(kind){
    *
    * WHAT IS NEVER FOLDED: anything that changes what a number on the table MEANS. The date the
    * board is measured from is in the disclosure's own summary line, not inside it. */
-  const _notes = `${pickFromNote(kind, from)}${FROZEN_NOTE}${SHORT_NOTE}${injBoardNote(kind)}${poolNote()}${rerateNote()}`;
+  const _notes = `${pickFromNote(kind, from)}${FROZEN_NOTE}${SHORT_NOTE}${injBoardNote(kind)}${poolNote()}`;
   return `<div class="row" style="margin:0 0 8px;align-items:center;gap:10px">${
       pickModeBar()}${horizonBar()}</div>
     ${boardNotes(kind, from, _notes)}
@@ -9845,11 +9845,20 @@ function renderPick(){
       left to be claimed, so the list already excludes anyone who cannot finish a hold.</p>`)}
     </div></div>`,
   };
-  /* `rerateNote()` used to print here, above every sub-tab, as a 44px disclosure before the
-     board's own heading. It is inside About This Board on the two boards it describes, and the
-     tabs that show ESPN's own data no longer carry an explainer about a projection they have
-     none of. */
-  el('pickBody').innerHTML = bar + (panels[PICKTAB] || panels.roster);
+  /* ---- THE EXPLANATION GOES WHERE THE CONTROL IS, ON EVERY TAB THE CONTROL IS ON -----------
+   *
+   * The Projections buttons sit on six sub-tabs. The sentence explaining what they choose
+   * between was folded into About This Board, which only the College and NFL boards draw -- so
+   * on My Roster, the Watch List, the Plan and Taken Elsewhere there were two buttons changing
+   * every projected number on screen and nothing anywhere saying what the difference was.
+   * `test_season_ui.js` had been red on it for four checks; the note that used to sit here
+   * argued for the folding without saying who had asked for it, and nobody had. Casey asked for
+   * the HEADER to be shorter, which is a different thing.
+   *
+   * ONE PLACE, KEYED ON THE SAME SET THAT DRAWS THE CONTROL, so the two cannot disagree about
+   * which tabs have it. It is a closed disclosure, so it costs one line. */
+  el('pickBody').innerHTML = bar + (CTL_RERATE.has(PICKTAB) ? rerateNote() : '')
+    + (panels[PICKTAB] || panels.roster);
 }
 
 
