@@ -389,18 +389,28 @@ button.mailbtn.pri{background:var(--pribg);border-color:var(--priline);color:var
 /* ROOM FOR THE STRIP AT THE FOOT OF AN iPHONE. Without this the bar sits in the band iOS keeps
    for the home indicator, and the curved corner takes a bite out of whatever is nearest it.
    `env()` is zero everywhere that has no such strip, so it costs nothing on a laptop. */
+/* ---- AND IT IS AS SHORT AS IT CAN BE, BECAUSE IT IS OVER THE WORK ---------------------------
+   Casey, 29 Sep 2026: "the floater bar at the bottom of the trades window, it's a little bit
+   wide. Could you make it a little more narrow? ... right now you see the trade stuff, but the
+   table isn't fully there. You have to go down a little bit to see the wording."
+   Fourteen pixels came off: three from each end of the padding, four off the buttons, and the
+   status line sits closer under them. The room the page leaves underneath is MEASURED from the
+   bar, so it followed on its own. */
 .stickybar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--pan);
  border-top:1px solid var(--line);display:block;
- padding:10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+ padding:7px 14px calc(7px + env(safe-area-inset-bottom, 0px));
  box-shadow:0 -10px 24px rgba(0,0,0,.45)}
 /* ONE LINE, ONE BUTTON AT EACH END. The count used to sit between them, which is what pushed
    Submit onto its own line at the very bottom of a phone. */
 .stickybar .barrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.stickybar .barrow button{min-width:0;white-space:normal;flex:0 1 auto}
+.stickybar .barrow button{min-width:0;white-space:normal;flex:0 1 auto;min-height:38px}
 .stickybar .barrow button.pri{margin-left:auto}
 .stickybar .barrow button:only-child{margin-left:auto}
-.stickybar .grow{display:block;margin-top:7px;font-size:12px;color:var(--dim);text-align:center}
-body.hasbar{padding-bottom:104px}
+.stickybar .grow{display:block;margin-top:4px;font-size:11.5px;line-height:1.35;
+ color:var(--dim);text-align:center}
+/* A FALLBACK ONLY. The real figure is measured off the bar every time the page is drawn, because
+   the bar is one line of buttons on a laptop and two on a folded phone. */
+body.hasbar{padding-bottom:90px}
 /* ---- ONE FILLED BUTTON PER SCREEN, AND IT IS THE ONE THAT FINISHES THE JOB -------------------
  * Casey, 15 Sep 2026: "in the middle section both Add Another Trade and Submit My Trades are a
  * blue box. On the floating bar, Add Another Trade is grey and Submit is blue. If they're all
@@ -417,7 +427,7 @@ button.add{background:var(--pan);color:var(--blue);border-color:var(--blue);bord
 button.add:hover{background:var(--chipon);color:var(--blue);border-color:var(--blue)}
 button.add:disabled{opacity:.45}
 /* The floating bar carries the same pair, so the two rows cannot teach different things. */
-.stickybar button.add{min-height:42px;font-size:14px;padding:0 14px}
+.stickybar button.add{min-height:38px;font-size:14px;padding:0 14px}
 /* SEND IS THE END OF THE JOB. Full width, and nothing sits beside it competing for the press. */
 .sendwrap{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
 button.pri.big{width:100%;min-height:56px;font-size:17px;font-weight:700}
@@ -2209,13 +2219,36 @@ function asideTail(r, seat){
  * only a word from a short list of ordinary sentence openers is lowered; anything else keeps
  * its capital, which still reads correctly after a comma.
  */
-var BOB_OPENERS = [
+var BOB_CLEAN = [
   {lead: 'Yo, ',                       cap: false},
   {lead: '{who}, yo, ',                cap: false},
   {lead: '{who}, ',                    cap: false},
   {lead: 'Yo {who}, ',                 cap: false},
   {lead: '{who}, yo, what\u2019s up? ', cap: true}
 ];
+/* ---- AND THE WAY THEY ACTUALLY TALK TO EACH OTHER -------------------------------------------
+ *
+ * Casey, 29 Sep 2026: "could you also mix in things like what's up, dickhead, or hey, fucktard,
+ * or hey, shithead ... just randomly."
+ *
+ * HIS LEAGUE, HIS TONE. These land on every seat by the same hash as the clean ones, so nobody
+ * is singled out and the same row always reads the same way. He asked for no setting and there
+ * is none; BOB_BLUE is the one place to turn the whole lot off, and flipping it to false is a
+ * one-line change that needs no other edit anywhere.
+ *
+ * WORTH KNOWING BEFORE IT GOES OUT: these sentences are not only on the page. They are in the
+ * messages Bob copies into email on a Monday, so they end up in 27 inboxes, and an inbox is not
+ * always read by the person it belongs to. That is Casey's call and he has made it; it is
+ * written down here so nobody has to rediscover why the emails read the way they do.
+ */
+var BOB_BLUE = true;
+var BOB_RUDE = [
+  {lead: 'Yo, fucktard, ',             cap: false},
+  {lead: 'Hey, shithead, ',            cap: false},
+  {lead: 'What\u2019s up, dickhead? ', cap: true},
+  {lead: '{who}, you fucktard, ',      cap: false}
+];
+var BOB_OPENERS = BOB_CLEAN.concat(BOB_BLUE ? BOB_RUDE : []);
 /* DUDE IS FOR BAD NEWS AND NOTHING ELSE. Casey, 23 Sep 2026: "I think when you say you lost a
    flip, that's where you put in dude. Dude, you lost the coin flip, right?" Keeping it out of
    the ordinary rotation gives the word a job: seeing it means the row went against you, before
@@ -3655,10 +3688,16 @@ function offerResult(){
   if (alreadySeen(m.seat, m.week)) return;
   markSeen(m.seat, m.week);
   var got = m.rows.filter(function(r){ return r && sentence(r, m.seat).kind === 'won'; }).length;
+  /* THE PANEL IS BOB TALKING, TOO. Casey, 29 Sep 2026: "it should be on the pop-up window as
+     well, when owners first come in to see their trades." The rows inside it already are,
+     because they are the same sentences the tab prints; this is the line above them, which was
+     the one place the page still opened in an admin voice. Seeded on the seat and the week, so
+     the panel says the same thing if it is ever drawn twice. */
+  var hello = bobSay('panel|' + m.seat + '|' + m.week,
+    (got ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + ' this week.'
+         : 'You did not get a team this week.'), m.seat).text;
   showHelp('Week ' + playOf(m.week) + ' Is Settled',
-    '<p>This is <b>' + esc(m.seat) + '</b>. ' + (got
-        ? 'You got ' + got + ' team' + (got === 1 ? '' : 's') + ' this week.'
-        : 'You did not get a team this week.') + '</p>'
+    '<p>This is <b>' + esc(m.seat) + '</b>. ' + esc(hello) + '</p>'
     + resultLines(m)
     + '<p class="note">This is also on the <b>Trades</b> tab until the next week is settled. '
     + 'Every settled trade in the league is on the <b>Transactions</b> tab.</p>');
