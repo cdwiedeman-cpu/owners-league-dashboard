@@ -2689,6 +2689,8 @@ function barAct(act){
   if (act === 'addbk') return addBackupRow();
   if (act === 'submit') return submitList();
   if (act === 'unsubmit') return unsubmit();
+  if (act === 'claimstart') return claimStart();
+  if (act === 'claim') return doClaim();
 }
 function sendBar(){
   if (!BAR_HOST) return;
@@ -3776,7 +3778,7 @@ function viewTrades(){
     + '</div></div>';
 
   var h = clockBanner() + myResultCard() + waysStrip(fcfs, statNote);
-  if (fcfs) return h + fcfsForm(a, free, mine, k) + helpCard + clockCard();
+  if (fcfs) return h + fcfsForm(a, free, mine, k) + helpCard + fcfsBar() + clockCard();
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
 
@@ -4573,6 +4575,36 @@ function rowForm(r, i, free, mine, k){
 }
 /* FIRST COME IS A DIFFERENT SHAPE, not the same form with the queue hidden. One team, one drop,
    an answer immediately. Pretending it is a list would imply a priority that does not exist. */
+/* ---- THE SAME BAR IN THE FIRST-COME WINDOW, WITH THE TWO BUTTONS THAT WINDOW HAS ----------
+ *
+ * Casey, 29 Sep 2026: "when you were just doing the first come first serve trade, you dropped
+ * the bar that hovers at the bottom to be able to add a trade. We should keep that bar." And,
+ * settling what goes on it: "we don't need to be able to add another trade or multiple trades.
+ * It's really one trade at a time, like we've talked about ... a button called Add a Trade and
+ * then a Claim It Now button."
+ *
+ * So the bar is the same furniture and not the same buttons. A first-come claim is one team in
+ * and one team out, decided the moment it is pressed, so there is no second row to add and
+ * nothing to back up. ADD A TRADE OPENS THE TEAM SEARCH rather than making a row: pressing it
+ * puts the cursor in the box that is next to fill in, which is what an owner arriving at the bar
+ * actually wants. Claim It Now is the same press as the button on the form, and it stays switched
+ * off until both teams are chosen, because a claim with one side of it is not a claim.
+ */
+function claimStart(){ popen(S.fcp ? 'fd' : 'fp'); }
+function fcfsBar(){
+  var ready = !!(S.fcp && S.fcd);
+  var said = ready
+    ? '<b class="g">' + esc(S.fcp) + '</b> in, <b>' + esc(S.fcd) + '</b> out. Nothing is claimed '
+      + 'until you press it.'
+    : S.fcp ? '<b class="g">' + esc(S.fcp) + '</b> to come in. Now choose the team to drop.'
+    : S.fcd ? '<b>' + esc(S.fcd) + '</b> to go out. Now choose the team to pick up.'
+    : 'One team in, one team out. Nothing chosen yet.';
+  return '<div class="stickybar" id="actbar"><div class="barrow">'
+    + '<button class="add" data-act="claimstart" onclick="claimStart()">+ Add a Trade</button>'
+    + '<button class="pri" data-act="claim" ' + (ready ? '' : 'disabled')
+    + ' onclick="doClaim()">Claim It Now</button></div>'
+    + '<span class="grow">' + said + '</span></div>';
+}
 function fcfsForm(a, free, mine, k){
   var kind = S.fcp ? kindOf(S.fcp) : null;
   var dns = (kind ? ofKind(mine, kind) : mine)
