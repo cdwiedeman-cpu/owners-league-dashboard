@@ -3453,7 +3453,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '29 Sep 2026, 12:07 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '29 Sep 2026, 12:08 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8384,7 +8384,7 @@ function teamOpenHTML(name, tip){
 function numOpen(name, text, tip){
   const s2 = String(name || '');
   if (!s2 || typeof BY === 'undefined' || !BY.get(s2)) return text;
-  return `<button class="nlink" onclick="event.stopPropagation();openScout(${jsStr(s2)})"
+  return `<button class="nlink" onclick="event.stopPropagation();openScout(${jsStr(s2)},'why')"
     title="${esc(tip || ('Open ' + s2 + ' for the games and the rules this adds up from'))}">${text}</button>`;
 }
 
@@ -8397,7 +8397,15 @@ function oppLink(name){
   return teamOpenHTML(name, `Open ${String(name || '')}'s own season`);
 }
 
-function openScout(n){
+/* `at` IS WHERE TO LAND, NOT WHAT TO SHOW. The panel is the same panel however it was opened --
+   one store of it, so a fix reaches every route in. What changes is the reading position.
+ *
+ * Casey, 29 Sep 2026, after pressing the Rest figure: "I thought that was going to give me a link
+ * to the points ... I would think if I clicked on 6.15 for UNLV, it would just show me the pays,
+ * the chance and the points." He arrived at the top of a full-season schedule instead, which on a
+ * narrow window is a table he has to scroll sideways, and the thing he pressed for was below it.
+ * Pressing a FIGURE now lands on the two lists that figure is made of. */
+function openScout(n, at){
   if (LEAGUE) return openLeagueScout(n);
   if (!n) return;
   SCOUT = n; WHY = null;
@@ -8408,6 +8416,18 @@ function openScout(n){
      Escape has somewhere to land. */
   const x = document.querySelector('#scout .modalx');
   if (x) x.focus({preventScroll: true});
+  if (at === 'why') scoutScrollToWhy();
+}
+
+/* THE HEADING, NOT THE TABLE. Landing on the table puts its first row at the top of the window
+   with nothing above it saying what it is. */
+function scoutScrollToWhy(){
+  requestAnimationFrame(() => {
+    const box = el('scout'); if (!box) return;
+    const h = Array.from(box.querySelectorAll('h3'))
+      .find(x => /Where These Points Come From/i.test(x.textContent || ''));
+    if (h) h.scrollIntoView({block: 'start', behavior: 'smooth'});
+  });
 }
 /* AN OPEN PANEL FOLLOWS THE SCORES IN. Casey, 20 Sep 2026: Live Scores showed Virginia Tech
    final; the team panel still had the game as scheduled until he reloaded the whole page. "I
