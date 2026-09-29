@@ -2224,7 +2224,8 @@ var BOB_CLEAN = [
   {lead: '{who}, yo, ',                cap: false},
   {lead: '{who}, ',                    cap: false},
   {lead: 'Yo {who}, ',                 cap: false},
-  {lead: '{who}, yo, what\u2019s up? ', cap: true}
+  {lead: '{who}, yo, what\u2019s up? ', cap: true},
+  {lead: 'Dude, ',                     cap: false}
 ];
 /* ---- AND THE WAY THEY ACTUALLY TALK TO EACH OTHER -------------------------------------------
  *
@@ -2246,16 +2247,30 @@ var BOB_RUDE = [
   {lead: 'Yo, fucktard, ',             cap: false},
   {lead: 'Hey, shithead, ',            cap: false},
   {lead: 'What\u2019s up, dickhead? ', cap: true},
-  {lead: '{who}, you fucktard, ',      cap: false}
+  /* NAME FIRST MEANS YO, NOT YOU. Casey, 29 Sep 2026: "PW, you fucktard -- I don't like that.
+     That's directly calling them. I would just do like PW, yo fucktard." He is right: "you
+     fucktard" is an accusation and "yo fucktard" is a greeting, and the difference is the whole
+     register. Same shape as the clean `{who}, yo,` opener beside it. */
+  {lead: '{who}, yo fucktard, ',       cap: false}
 ];
 var BOB_OPENERS = BOB_CLEAN.concat(BOB_BLUE ? BOB_RUDE : []);
-/* DUDE IS FOR BAD NEWS AND NOTHING ELSE. Casey, 23 Sep 2026: "I think when you say you lost a
-   flip, that's where you put in dude. Dude, you lost the coin flip, right?" Keeping it out of
-   the ordinary rotation gives the word a job: seeing it means the row went against you, before
-   you have read the sentence. A losing row therefore carries ONE greeting rather than two -- on
-   the heading, which is where the loss is stated, and on the reason only when the heading is
-   not addressed to the reader. */
-var BOB_LOSS = [{lead: 'Dude, ', cap: false}];
+/* ---- ONE BANK, AND A LOSS DRAWS FROM IT LIKE ANYTHING ELSE --------------------------------
+ *
+ * "Dude," used to be a bank of its own, kept for a losing row so the word carried a meaning:
+ * seeing it told you the row went against you before you read the sentence. Casey asked for that
+ * on 23 Sep 2026 and took it back on 29 Sep: "Dude should not just be hard coded to you lost the
+ * coin flip. Let's mix dude into the rotation of everything, and all those items in the rotation
+ * can also be on the when you lost a coin flip."
+ *
+ * WHAT DID NOT CHANGE is the shape. A losing row carries ONE greeting rather than two -- on the
+ * heading, which is where the loss is stated, and on the reason only when the heading is not
+ * addressed to the reader. That is about how often a reader is greeted in three lines, and it has
+ * nothing to do with which words are used.
+ *
+ * IT IS THE SAME ARRAY AND NOT A COPY OF IT, so an opener added in one place cannot be missing
+ * from the other.
+ */
+var BOB_LOSS = BOB_OPENERS;
 var BOB_LOWER = {you: 1, your: 1, yours: 1, every: 1, everyone: 1, nothing: 1, it: 1, the: 1,
                  this: 1, that: 1, anything: 1, a: 1, an: 1, all: 1, we: 1, college: 1,
                  first: 1, there: 1, both: 1, no: 1, one: 1, whatever: 1, they: 1, none: 1};
