@@ -758,6 +758,20 @@ table.ownertbl td, table.ownertbl th{overflow-wrap:normal}
 table.ownertbl{min-width:600px}
 #standBody .dtl .scr{overflow-x:visible}
 #standBody .dtl table{min-width:0;width:100%}
+/* THE BREAKDOWN TABLES. Four narrow columns, so they fit any phone and never need the sideways
+   scroll the full schedule needs. `table-layout:fixed` plus a colgroup, and the widths go on the
+   COLS because CSS cannot override a colgroup. */
+/* A FIGURE YOU CAN OPEN. Dotted underline, because a solid one in a column of nine numbers
+   shouts louder than the numbers -- the same reason the team links are bold-and-caret rather
+   than blue. It is a button, not an anchor: several of these cells sit inside something that is
+   already clickable. */
+button.nlink{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;
+  text-decoration:underline dotted;text-underline-offset:3px;text-decoration-color:var(--dim)}
+button.nlink:hover{color:var(--blue)}
+table.wtbl{min-width:0;width:100%;table-layout:fixed;margin-top:6px}
+table.wtbl td, table.wtbl th{padding:5px 7px}
+table.wtbl tfoot th{border-top:2px solid var(--line);background:var(--sunk);font-weight:700}
+table.wtbl tbody tr:nth-child(even){background:rgba(255,255,255,.02)}
 .pill.p-div{background:var(--sunk);border:1px solid var(--line);color:var(--dim)}
 .pill.p-div.own{border-color:var(--blue);color:var(--blue)}
 /* A real disclosure control: 44px of tap target, and it keeps its own open/closed state. */
@@ -1398,7 +1412,7 @@ td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-sp
      560px floor written for the five-column table beside them, so Score and Where sat off the
      side of the screen for no reason at all -- there was nothing out there worth swiping to.
      Three columns, full width, and no sideways gesture anywhere in that panel. */
-  #scout .scr table.lsched{min-width:0;width:100%}
+  #scout .scr table.lsched, #scout .scr table.wtbl{min-width:0;width:100%}
   #pickBody table td.num, #scout table td.num{white-space:nowrap;overflow-wrap:normal}
   #pickBody table th, #scout table th{white-space:normal;overflow-wrap:break-word;hyphens:auto}
   th.c-p30, td.c-p30, th.c-gain, td.c-gain, th.c-then, td.c-then,
@@ -1528,7 +1542,7 @@ td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-sp
   #scout .scr table{min-width:406px}
   #scout .sc-when{width:54px}#scout .sc-opp{width:112px}#scout .sc-odds{width:56px}
   #scout .sc-mdl{width:92px}#scout .sc-vg{width:92px}
-  #scout .scr table.lsched{min-width:0;width:100%}
+  #scout .scr table.lsched, #scout .scr table.wtbl{min-width:0;width:100%}
 }
 /* A FOLDED PHONE IS 280px WIDE AND GIVES THE PANEL 196px. Measured, same pass. The three columns
    still fit; the opponent name takes three lines and that is the right trade, because a score
@@ -1537,7 +1551,7 @@ td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-sp
   #scout .scr table{min-width:364px}
   #scout .sc-when{width:48px}#scout .sc-opp{width:82px}#scout .sc-odds{width:52px}
   #scout .sc-mdl{width:91px}#scout .sc-vg{width:91px}
-  #scout .scr table.lsched{min-width:0;width:100%}
+  #scout .scr table.lsched, #scout .scr table.wtbl{min-width:0;width:100%}
 }
 
 /* =========================================================================================
@@ -3392,7 +3406,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 6:47 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 8:02 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6263,9 +6277,10 @@ function availTable(kind){
     /* THE SORT READS THE COLUMN ON SCREEN. With a wider horizon these three cells hold
        different quantities, and ranking a visible column by a hidden one is the fault this
        page has been bitten by before. */
-    p30:    x => (PICKN > DATA.hold_games
-                    ? (x.odds ? x.odds.sweep : -1)
-                    : (x.b.byes ? 0 : (x.p30 == null ? -1 : x.p30))),
+    /* SORTED ON THE RECORD THE CELL PRINTS, with the chance of losing none as the tie-break
+       inside a group. Ranking on a number the reader cannot see is the fault this page has been
+       caught by before, and the clean figure now lives in the hover. */
+    p30:    x => (x.odds ? x.odds.k * 1000 + x.odds.sweep : -1),
     bank:   x => (PICKN > DATA.hold_games ? (x.hb ? x.hb.pts : -Infinity) : x.b.pts),
     gain3:  x => (PICKN > DATA.hold_games
                     ? (x.hgain == null ? -Infinity : x.hgain) : x.gain3),
@@ -6341,9 +6356,8 @@ function availTable(kind){
       <th class="c-team ${SH('team')}" onclick="setPSort('${kind}','team')"
         title="Sort by team name. Tap again to turn it round.">Team${AR('team')}</th>
       <th class="num c-p30 ${SH('p30')}" onclick="setPSort('${kind}','p30')" title="${WIDE
-        ? 'The record this team is most likely to post over its next ' + PICKN + ' games from ' + from + ', and how likely that is. The second figure is the chance it loses none of them. Hover a row for every record from a clean sweep down. Sorting uses the sweep.'
-        : 'Probability it wins EVERY game in the three weeks the hold occupies your roster slot, starting from ' + from + ' — the day ' + inc.n + '\'s slot frees up. Those are the same three weeks Bank 3 adds up. A BYE inside them is a week that banks nothing and cannot be won, so it makes a sweep impossible and the figure reads 0% with BYE beside it. Changing the team above changes this.'}">${
-        WIDE ? 'Likely<br>Record' : '3-0'}${AR('p30')}</th>
+        ? 'The record this team is most likely to post over its next ' + PICKN + ' games from ' + from + ', and how likely that is. The second figure is the chance it loses none of them. Sorting uses that second figure.'
+        : 'The record this team is most likely to post over the three weeks the hold occupies your roster slot, starting from ' + from + ' — the day ' + inc.n + '\'s slot frees up. The second figure is the chance it loses none of them. A BYE inside those weeks means it plays only two games, so the record is over two; the empty week is charged on Bank 3 and Gain 3. Sorting uses the second figure.'}">Likely<br>Record${AR('p30')}</th>
       <th class="num c-bank ${SH('bank')}" onclick="setPSort('${kind}','bank')" title="${WIDE
         ? 'Expected league points over the weeks it takes this team to play its next ' + PICKN + ' games from ' + from + '. A bye inside them is a week of your roster slot that banks nothing, and the cell says how many weeks the ' + PICKN + ' games take.'
         : 'Expected league points over the THREE WEEKS from ' + from + ' that the hold occupies your roster slot. A bye inside them contributes nothing, so a team with one banks only the games it actually plays — that is the cost of the bye. Games it plays before ' + from + ' belong to its current owner and are not counted.'}">${
@@ -6385,27 +6399,46 @@ function availTable(kind){
         <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
           <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}${upsetTag(t)}${injFlag(t.n)}
           ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td>
-        <td class="num c-p30 ${WIDE ? 'oddscell ' : ''}${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
-            title="${x.p30==null ? 'No games left in this window.' : p30Why(t, from, x)}">${
+        <td class="num c-p30 oddscell ${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
+            title="${x.odds
+              ? esc(`Over ${x.odds.n} game${x.odds.n === 1 ? '' : 's'}: `
+                  + x.odds.dist.map((pp, kk) => `${x.odds.n - (x.odds.n - kk)}`).length
+                  && x.odds.dist.map((pp, kk) => `${kk}-${x.odds.n - kk} ${Math.round(pp * 100)}%`)
+                       .filter((_, kk) => x.odds.dist[kk] >= 0.02).reverse().join(' · ')
+                  + `. Loses none of them: ${Math.round(x.odds.sweep * 100)}%.`)
+              : (x.p30 == null ? 'No games left in this window.' : esc(p30Why(t, from, x)))}">${
           /* A NUMBER, ALWAYS -- AND THE REASON BESIDE IT, NEVER INSTEAD OF IT.
              Casey, 1 Sep 2026: "it shouldn't ever show just a bye in that column."
              With a bye inside the three weeks a sweep is impossible, so the honest figure is
              0% -- and that IS the answer to the column's question, not a missing one. The word
              BYE rides alongside as the reason. Showing only the word left a percentage column
              with no percentage in it and no way to rank the row. */
-          WIDE
-            ? (x.odds
-                ? `<span class="orec">${x.odds.k}-${x.odds.n - x.odds.k} ${pctP(x.odds.p)}</span>
-                   <span class="oclean">${pctP(x.odds.sweep)} clean</span>`
-                : '<span class="d">—</span>')
-            : (x.p30 == null ? '<span class="d">—</span>' : (x.b.byes ? '0%' : pctP(x.p30)))}${
-          !WIDE && x.b.byes ? `<span class="recg b" title="${x.b.byes} of these ${HOLD_WKS} weeks ${
-            x.b.byes === 1 ? 'is a bye' : 'are byes'} — a week with no game banks nothing and cannot be won, so a sweep is off the table and this reads 0%. It still banks ${x.b.pts.toFixed(2)} from the ${x.b.games} game${x.b.games === 1 ? '' : 's'} it does play; judge it on Bank 3 and Gain 3, not on the sweep.">BYE</span>` : ''}</td>
+          /* THE SAME ANSWER AT EVERY SETTING. Casey, 29 Sep 2026: "I want to see the likely
+             record of three and O ... it should default to three, and then I can change it to
+             four, five, six, but it should show that likely record."
+             At three the window is still the hold -- three WEEKS of the roster slot -- so a team
+             with a bye in them plays two games and its likely record is over two, not three.
+             That is the honest answer to the column's question and the BYE chip beside it is
+             what says the third week bought nothing. */
+          /* ONE LINE, MEASURED. The column has 73px and "2-1 45%" needs 52. Adding the clean
+             figure beside it needs 84 and wraps the row onto two lines, which is the thing
+             `verify_pickcols.js` exists to stop. So the cell carries what Casey asked for -- the
+             record and how likely it is -- and the hover carries every record from a sweep down. */
+          x.odds
+            ? `<b>${x.odds.k}-${x.odds.n - x.odds.k}</b> <span class="d">${pctP(x.odds.p)}</span>`
+            : '<span class="d">—</span>'}${
+          ''}</td>
         <td class="num c-bank" title="${WIDE && x.hb
             ? esc(`${x.hb.games} game${x.hb.games === 1 ? '' : 's'} in ${x.hw} week${x.hw === 1 ? '' : 's'}`
                   + (x.hb.byes ? `, including ${x.hb.byes} bye week${x.hb.byes === 1 ? '' : 's'} that banks nothing` : ', no bye'))
             : ''}">${WIDE ? (x.hb ? x.hb.pts.toFixed(2) : '—') : x.b.pts.toFixed(2)}${
-          WIDE && x.hb && x.hb.byes ? ` <span class="recg b" title="A bye inside the window. The ${PICKN} games take ${x.hw} weeks of your roster slot instead of ${PICKN}.">${x.hw}w</span>` : ''}</td>
+          /* THE BYE LIVES ON BANK AT EVERY SETTING. It used to sit in the odds column at three
+             and on Bank at four and up, which is two homes for one fact -- and with the likely
+             record now in that column the chip pushed it onto a second line. Bank is the right
+             home anyway: a bye is a week of your slot that earns nothing, and Bank is the cell
+             that charges you for it. */
+          WIDE && x.hb && x.hb.byes ? ` <span class="recg b" title="A bye inside the window. The ${PICKN} games take ${x.hw} weeks of your roster slot instead of ${PICKN}.">${x.hw}w</span>`
+          : (!WIDE && x.b.byes ? ` <span class="recg b" title="${x.b.byes} of these ${HOLD_WKS} weeks ${x.b.byes === 1 ? 'is a bye' : 'are byes'} — a week with no game banks nothing, so this team plays only ${x.b.games} game${x.b.games === 1 ? '' : 's'} in the three weeks the hold costs you, and the Likely Record beside it is over those ${x.b.games}. This figure already charges you for the empty week.">BYE</span>` : '')}</td>
         <td class="num c-gain">${WIDE
           ? (x.hgain == null ? '<span class="d">—</span>'
              : `<b class="${x.hgain > 0.3 ? 'g' : x.hgain < 0 ? 'b' : 'y'}">${x.hgain >= 0 ? '+' : ''}${x.hgain.toFixed(2)}</b>`)
@@ -6420,7 +6453,7 @@ function availTable(kind){
               x.postGain == null ? 'd' : x.postGain > 0.25 ? 'g' : x.postGain < -0.25 ? 'b' : 'd'}">${
               x.postGain == null ? '—' : (x.postGain >= 0 ? '+' : '') + x.postGain.toFixed(2)}</span></td>`
           : `<td class="num c-season hide-s"><span class="${x.run >= 5 ? 'g' : x.run >= 3 ? 'y' : 'd'}">${x.run}</span></td>
-             <td class="num d c-sgain hide-s">${x.r.pts.toFixed(2)}</td>`}
+             <td class="num d c-sgain hide-s">${numOpen(t.n, x.r.pts.toFixed(2), `Open ${t.n} for every game it has left, one line each, adding to this figure`)}</td>`}
         ${PICKMODE === 'keep'
           ? `<td class="num c-ups hide-s"><b class="${kg == null ? 'd'
                 : kg > 0.5 ? 'g' : kg < 0 ? 'b' : 'y'}">${
@@ -7360,6 +7393,7 @@ function teamPanel(t, inc, mode, opts){
         <th class="num" title="What a sportsbook has posted on this game, written the same way as the model's own number beside it. A game with no number has not been priced yet. Lines collected ${DATA.lines_asof || DATA.vegas_asof}.">Vegas</th></tr></thead>
       <tbody>${past}${rows}</tbody></table></div>
     ${partialNote(t.n)}
+    ${pointsWhyHTML(t)}
     <div class="note">
       ${scout ? `This is a <b>scouting view</b>: the whole season, what the model made every game
         beforehand, and the final score once it is played. <b>No game is marked yours or not
@@ -7381,6 +7415,110 @@ function teamPanel(t, inc, mode, opts){
       once you pick it up — you cannot drop it before those are played.`}
       <br><b>Click any game</b> for the reasoning. ${DATA.vegas_n} posted lines exist in this
       build (${DATA.vegas_asof}); every other game says <b>not posted</b>.</div></div>`;
+}
+
+/* ---- THE BREAKDOWN CARD ---------------------------------------------------------------
+   Casey, 29 Sep 2026: "maybe it's in like the number you can click on it and it would then show
+   you the breakdown."
+   Two lists and nothing else. The first is every game this team has left, with the chance it
+   wins and what that game is worth; it adds to the Season figure. The second is every postseason
+   rule it can earn, with the chance and the payout; it adds to the Postseason figure. Both
+   totals are printed at the foot of their own list, so the reader can check the arithmetic
+   rather than take it. */
+function pointsWhyHTML(t){
+  const pr = teamProjection(t.n, 0);
+  if (!pr) return '';
+  const fg = futureGames(t);
+  const rows = fg.games.map(g => `<tr><td class="d">${when(g, t.pool)}</td>
+      <td>${g.loc === 'Home' ? 'vs' : g.loc === 'Away' ? 'at' : 'vs'} ${esc(g.opp)}</td>
+      <td class="num ${g.p >= 0.7 ? 'g' : g.p >= 0.5 ? 'y' : 'b'}">${pctP(g.p)}</td>
+      <td class="num">${(g.ep || 0).toFixed(2)}</td></tr>`).join('');
+
+  const parts = postPartsOf(t.n);
+  const wt = winTableOf(t.n);
+  let postBlock;
+  if (pr.post == null){
+    postBlock = `<div class="note"><b>No postseason figure for ${esc(t.n)}.</b> This build ships
+      no postseason vector for them, so the board leaves that column empty rather than scoring it
+      zero. A team with nothing to play for and a team this page cannot price are different
+      things.</div>`;
+  } else if (parts && parts.length){
+    postBlock = `<div class="scr"><table class="wtbl">
+      <colgroup><col style="width:52%"><col style="width:14%"><col style="width:17%"><col style="width:17%"></colgroup>
+      <thead><tr><th>Postseason Rule</th>
+        <th class="num" title="What the rulebook pays for this, in league points.">Pays</th>
+        <th class="num" title="This team's chance of earning it, worked out from the record they are on course for.">Chance</th>
+        <th class="num">Points</th></tr></thead>
+      <tbody>${parts.map(r => `<tr><td>${esc(r.label)}</td>
+        <td class="num d">${r.pay.toFixed(2)}</td>
+        <td class="num">${r.p == null ? '<span class="d">—</span>' : pctP(Math.min(r.p, 1))}</td>
+        <td class="num">${r.pts.toFixed(2)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><th colspan="3">Postseason</th>
+        <th class="num">${pr.post.toFixed(2)}</th></tr></tfoot></table></div>`;
+  } else if (wt && wt.length){
+    /* THE NFL HAS NO RULE-BY-RULE SPLIT AND NEVER WILL. Its postseason value is seeding, and
+       seeding is a property of all 32 teams at once, so mc.py answers it with 25,000 simulated
+       seasons instead of a formula. What the simulation CAN say is what this team is worth at
+       each final record, which is the same question one layer out. */
+    postBlock = `<div class="note">The NFL postseason comes out of <b>25,000 simulated
+      seasons</b>, not a formula, because a team's playoff value is its seed and a seed depends
+      on all 32 teams at once. So there is no rule-by-rule split to show. What the simulation
+      does say is what this team is worth at each final record.</div>
+      ${winTableHTML(wt, pr.post)}`;
+  } else {
+    postBlock = `<div class="note">The postseason breakdown needs this team's win distribution,
+      which needs a margin for every game left. This build has one for
+      ${fg.games.length} of them, so the list is not shown.</div>`;
+  }
+
+  return `<h3 style="margin-top:18px">Where These Points Come From</h3>
+    <div class="note">Two lists. The first is every game ${esc(t.n)} has left and what each one is
+      worth. The second is the postseason. <b>Each list adds up to the figure at its foot</b>, and
+      those two figures are the Season and Postseason numbers on the board.</div>
+    ${rows ? `<div class="scr"><table class="wtbl">
+      <colgroup><col style="width:22%"><col style="width:41%"><col style="width:18%"><col style="width:19%"></colgroup>
+      <thead><tr><th>When</th><th>Opponent</th>
+        <th class="num" title="The chance this team wins this game, after the re-rate.">Win</th>
+        <th class="num" title="League points this one game is expected to earn: the win itself, plus the blowout and shutout bonuses at their own chances.">Points</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><th colspan="3">Rest of the Season</th>
+        <th class="num">${pr.rest.toFixed(2)}</th></tr></tfoot></table></div>`
+    : `<div class="note"><b>${esc(t.n)} has no games left that this build can price</b>, so the
+        season figure is 0.00.</div>`}
+    ${fg.skipped.length ? `<div class="note"><b class="b">${fg.skipped.length} game${
+      fg.skipped.length === 1 ? ' is' : 's are'} left out of that total.</b> This build could not
+      rate ${esc(fg.skipped.slice(0, 4).join(', '))}${fg.skipped.length > 4 ? ' and others' : ''},
+      so those games are counted as unknown rather than scored as a coin flip. The season figure
+      is a floor by that much.</div>` : ''}
+    ${postBlock}
+    <div class="note">Season <b>${pr.rest.toFixed(2)}</b> plus postseason
+      <b>${pr.post == null ? '—' : pr.post.toFixed(2)}</b> is
+      <b>${(pr.rest + (pr.post || 0)).toFixed(2)}</b> still to earn. Points already banked are
+      not in either list: they are facts, and they are on the Standings tab.</div>`;
+}
+
+/* The win-total table, used wherever a postseason figure has to be explained without a
+   rule-by-rule split. Records below 1% are folded into one line rather than dropped, because a
+   table that quietly leaves rows out does not add up to the total under it. */
+function winTableHTML(wt, total){
+  const big = wt.filter(r => r.p >= 0.01);
+  const rest = wt.filter(r => r.p < 0.01);
+  const restP = rest.reduce((a, r) => a + r.p, 0);
+  const restPts = rest.reduce((a, r) => a + r.p * r.pts, 0);
+  return `<div class="scr"><table class="wtbl">
+    <colgroup><col style="width:34%"><col style="width:22%"><col style="width:22%"><col style="width:22%"></colgroup>
+    <thead><tr><th>Final Record</th>
+      <th class="num">Chance</th>
+      <th class="num" title="What the postseason is worth to this team if they finish on that record.">Worth</th>
+      <th class="num">Points</th></tr></thead>
+    <tbody>${big.slice().reverse().map(r => `<tr><td>${r.w} win${r.w === 1 ? '' : 's'}</td>
+      <td class="num">${pctP(r.p)}</td><td class="num d">${r.pts.toFixed(2)}</td>
+      <td class="num">${(r.p * r.pts).toFixed(2)}</td></tr>`).join('')}
+      ${rest.length ? `<tr><td class="d">${rest.length} other record${rest.length === 1 ? '' : 's'}, each under 1%</td>
+        <td class="num d">${pctP(restP)}</td><td class="num d">—</td>
+        <td class="num d">${restPts.toFixed(2)}</td></tr>` : ''}</tbody>
+    <tfoot><tr><th colspan="3">Postseason</th>
+      <th class="num">${total == null ? '—' : total.toFixed(2)}</th></tr></tfoot></table></div>`;
 }
 
 function holdIndexFrom(t, from){
@@ -8106,6 +8244,17 @@ function teamOpenHTML(name, tip){
   return `<button class="tname tnamerow" onclick="event.stopPropagation();openScout(${jsStr(s)})"
     title="${esc(tip || (s + ': every game, the score, and the games still to play'))}"
     ><b>${esc(s)}</b><span class="caret">▸</span></button>`;
+}
+
+/* A NUMBER THAT OPENS THE TEAM BEHIND IT. Casey, 29 Sep 2026: "maybe it's in like the number
+   you can click on it and it would then show you the breakdown."
+   It opens the team's own panel, which carries the two lists that add up to this figure. Same
+   panel the name opens, so there is one breakdown and not two. */
+function numOpen(name, text, tip){
+  const s2 = String(name || '');
+  if (!s2 || typeof BY === 'undefined' || !BY.get(s2)) return text;
+  return `<button class="nlink" onclick="event.stopPropagation();openScout(${jsStr(s2)})"
+    title="${esc(tip || ('Open ' + s2 + ' for the games and the rules this adds up from'))}">${text}</button>`;
 }
 
 /* THE OPPONENT IN A SCHEDULE IS A TEAM NAME TOO, so it is the same control and the same look.
@@ -10060,11 +10209,11 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
         <th class="num" title="Expected postseason points, summed over the win totals this team is on course for. Conference, bowls, the playoff ladder, undefeated and one-loss.">Post</th>
         <th class="num">Proj</th></tr></thead>
       <tbody>${proj.rows.map(r => `<tr data-team="${esc(r.team)}">
-        <td><span class="pill p-${r.pool.toLowerCase()}">${r.pool}</span> ${esc(r.team)}${
+        <td><span class="pill p-${r.pool.toLowerCase()}">${r.pool}</span> ${teamOpenHTML(r.team)}${
           r.unpriced ? ` <span class="gtag t-before" title="${r.unpriced} remaining game(s) have an opponent this build could not rate, so they are not in the projection.">${r.unpriced} unpriced</span>` : ''}</td>
         <td class="num d">${r.banked.toFixed(1)}</td>
-        <td class="num d">${r.rest.toFixed(1)}</td>
-        <td class="num d">${r.post == null ? '—' : r.post.toFixed(1)}</td>
+        <td class="num d">${numOpen(r.team, r.rest.toFixed(1), `Open ${r.team} for every game it has left, one line each, adding to ${r.rest.toFixed(2)}`)}</td>
+        <td class="num d">${r.post == null ? '—' : numOpen(r.team, r.post.toFixed(1), `Open ${r.team} for every postseason rule it can earn, adding to ${r.post.toFixed(2)}`)}</td>
         <td class="num"><b>${r.total.toFixed(1)}</b></td></tr>`).join('')}
         ${proj.gone ? `<tr><td class="d">Teams no longer held</td><td class="num d">${proj.gone.toFixed(1)}</td>
           <td class="num d">—</td><td class="num d">—</td><td class="num"><b>${proj.gone.toFixed(1)}</b></td></tr>` : ''}
@@ -10886,6 +11035,79 @@ function futureGames(t){
     out.push(g);
   }
   return {games: out, skipped};
+}
+
+/* ---- WHERE A TEAM'S PROJECTED POINTS COME FROM --------------------------------------------
+   Casey, 29 Sep 2026: "I just don't understand how this works ... You have Idaho State with 12
+   projected points. You have St Thomas with 9.7. St Thomas is more likely to win their division
+   ... why is there such a large gap?"
+   The board could not answer him. It showed two totals and nothing behind either one. These
+   three functions are the answer: the games still to play, one line each, adding to the season
+   figure; and the postseason rules, one line each, adding to the postseason figure.
+   NOTHING HERE IS A SECOND MODEL. The per-game numbers are `g.p` and `g.ep`, which applyRerate()
+   has already written. The postseason rows are coefficient vectors built by postseason.py and
+   shipped in the payload, read against the SAME win distribution `teamProjection()` uses. If the
+   two could disagree the list would be worse than no list, because a reader who adds it up and
+   gets a different answer has been told the board is wrong about something and cannot tell what.
+*/
+function unRLE(a){
+  const out = [];
+  for (const x of (a || [])){
+    if (Array.isArray(x)){ for (let i = 0; i < x[1]; i++) out.push(x[0]); }
+    else out.push(x);
+  }
+  return out;
+}
+
+/* -> [{label, pay, p, pts}] for one college team, biggest first, or null.
+   Null for an NFL team, and that is not a gap in the page: the NFL postseason comes from 25,000
+   simulated seasons, where seeding decides everything and no single rule owns a share of the
+   answer. The panel says so and shows the win-total table instead. */
+function postPartsOf(name){
+  const t = BY.get(name); if (!t) return null;
+  const v = ((DATA.race || {}).post || {})[name];
+  if (!v || !v.p) return null;
+  const labs = ((DATA.race || {}).part_labels || {})[t.pool];
+  if (!labs) return null;
+  const got = SEASON ? SEASON.get(name) : null;
+  const wins = got ? got.w : 0;
+  const d = winDist(t.pool, futureGames(t).games.map(g => g.m));
+  if (!d) return null;
+  const rows = [];
+  for (const key of Object.keys(v.p)){
+    const col = unRLE(v.p[key]);
+    if (!col.length) continue;
+    let pts = 0;
+    for (let k = 0; k < d.length; k++){
+      /* THE SAME INDEX teamProjection() READS AT, for the same reason: the vector is indexed by
+         FINAL win total, so a 4-1 team reads it at 4 + k. Written once here and once there is
+         two stores of one fact, so verify_partsum.js checks the two against each other. */
+      pts += d[k] * col[Math.min(wins + k, col.length - 1)];
+    }
+    const L = labs[+key];
+    if (!L) continue;
+    rows.push({label: L[0], pay: L[1], pts: pts, p: L[1] ? pts / L[1] : null});
+  }
+  rows.sort((a, b) => b.pts - a.pts);
+  return rows;
+}
+
+/* -> [{w, p, pts}] — every final win total this team can still reach, how likely it is, and what
+   the postseason pays at it. This is the NFL answer and it is also the honest general one: the
+   postseason figure IS the average of this column weighted by that one. */
+function winTableOf(name){
+  const t = BY.get(name); if (!t) return null;
+  const v = ((DATA.race || {}).post || {})[name];
+  if (!v || !v.w || !v.w.length) return null;
+  const got = SEASON ? SEASON.get(name) : null;
+  const wins = got ? got.w : 0;
+  const d = winDist(t.pool, futureGames(t).games.map(g => g.m));
+  if (!d) return null;
+  const out = [];
+  for (let k = 0; k < d.length; k++){
+    out.push({w: wins + k, p: d[k], pts: v.w[Math.min(wins + k, v.w.length - 1)]});
+  }
+  return out;
 }
 
 /* -> {banked, rest, post, total, wins, games, unpriced} for one team, or null when the page has
