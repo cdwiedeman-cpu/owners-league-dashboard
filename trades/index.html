@@ -4727,14 +4727,32 @@ function setting(label, opts, why){
  */
 function editWaiting(div, seat){
   if (!isCommish()) return;
+  /* ---- A LIST CANNOT BE EDITED WHILE FIRST COME IS OPEN, SO SAY SO --------------------------
+   * The Trades tab shows ONE form, and which one it shows is the clock's answer. Inside the
+   * first-come window that is the claim form, so Edit would drop a commissioner on a form that
+   * has nothing to do with the list he pressed Edit on. Casey, 29 Sep 2026: "it takes me to the
+   * trade window, but it's in the Claim It Now ... it should be letting me edit it as if it was
+   * the first come first serve list, not the Claim It Now list, so that doesn't make sense."
+   * Taking the list out is the one thing that does work here, so that is what is offered. */
+  if (mode() === 'fcfs'){
+    return showHelp('Lists Are Shut Until 5:00pm AZ Tuesday',
+      '<p>The coin flips have been run, so the trade form is taking claims rather than lists. '
+      + '<b>' + esc(seat) + '</b>&rsquo;s list cannot be changed until peloton entry opens '
+      + 'again.</p>'
+      + '<p>You can take it out now and tell them to enter a new one after 5:00pm.</p>'
+      + '<div class="row" style="margin-top:10px">'
+      + '<button class="dang" onclick="closeHelp();askTakeOut(' + jq(div) + ',' + jq(seat)
+      + ')">Take It Out</button>'
+      + '<button onclick="closeHelp()">Leave It Alone</button></div>', true);
+  }
+  /* NO PANEL. Casey, 29 Sep 2026: "it would be nice if clicking that edit button would just take
+     you to the trades tab, instead of you have to click Edit, then click Close, and then go to
+     the trade tab yourself." He is right, and there was nothing in the panel the page does not
+     already say: the acting strip at the top of the list names the seat in red and carries Back
+     to My Own Seat. A notice that repeats what is on screen is a button to close. */
   S.actingAs = div + '|' + seat;
   try { save(); } catch (e) {}
   setTab('trades'); render();
-  showHelp('You Are Entering for ' + seat,
-    '<p>This is <b>' + esc(seat) + '</b>&rsquo;s own trade form, with the list they sent already '
-    + 'in it. Change it and send it again, and it replaces what they had.</p>'
-    + '<p>The red line at the top of the list says whose list you are in. Press <b>Back to My '
-    + 'Own Seat</b> when you are done, or it clears itself the next time the page is opened.</p>');
 }
 function askTakeOut(div, seat){
   if (!isCommish()) return;
