@@ -3436,7 +3436,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 11:05 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 11:13 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9280,12 +9280,17 @@ function renderPick(){
     const pst = pr ? pr.post : null;
     /* BANKED IS THE SLOT'S, NOT THE TEAM'S, exactly as it is on the Standings panel: a slot that
        held another team first keeps those points. */
-    const bank = (ST_MINE && ST_MINE.map.get(t.n) != null) ? ST_MINE.map.get(t.n) : t.pts;
+    /* UNKNOWN IS NOT ZERO, AND IT IS NOT `t.pts` EITHER. `slotTotalsFor` returns null until the
+       results have loaded, and a team object carries no points field of its own -- reading one
+       gave `undefined`, which the Proj cell then called .toFixed on. Before the results land this
+       slot's banked total is genuinely unknown, exactly as the Standings panel says, so Banked
+       and Proj both print a dash and the two pages agree about what they do not know. */
+    const bank = (ST_MINE && ST_MINE.map.get(t.n) != null) ? ST_MINE.map.get(t.n) : null;
     /* THE SAME SUM `dropOrder()` RANKS ON, read from the same two functions, so the column and
        the pill can never be two different numbers. */
     /* PROJ IS BANKED + REST + POST, the same arithmetic the Standings panel prints, so the two
        cannot disagree about one slot. */
-    const kp = (wr == null || pst == null) ? null : bank + wr + pst;
+    const kp = (wr == null || pst == null || bank == null) ? null : bank + wr + pst;
     const isWorst = sl && (worst[t.pool === 'NFL' ? 'NFL' : 'COL'] === t.n);
     return `<tr class="clickable ${isWorst ? 'g-before' : ''}"
         onclick="toggleMine('${t.n.replace(/'/g, "\\'")}')"
@@ -12484,10 +12489,37 @@ function lSeats(){
 /* Everything the standings repaint on also has to repaint these, and this is the ONE place
    that knows which set is live. Personal mode keeps Slots and Race; league mode keeps the three
    all-owners grids. A second copy of this list is a tab that silently stops updating. */
+/* REPAINT EVERY TAB THIS PAGE HAS, not the ones it had the day this was written.
+ *
+ * Casey, 29 Sep 2026: "in the PW dashboard, when I go to Season Summary and I try to click the
+ * plus sign next to my teams, it does not expand. Nothing happens. If I do it on the league
+ * dashboard, they do expand."
+ *
+ * The two pages were split down `PROJ_ON`: his page redrew Slots and Race, the league page redrew
+ * Weekly and Season Summary. That was true when they had five tabs each and no tab in common.
+ * HIS PAGE LATER GAINED Weekly / Quarterly AND Season Summary and this line never moved, so those
+ * two tabs were never redrawn on it. `toggleSlotRow` sets the open slot and calls this; on the
+ * league page the summary redrew and the row opened, on his page nothing was told to draw, and a
+ * click that changes state and repaints nothing looks exactly like a click that did nothing.
+ *
+ * A BRANCH THAT NAMES THE PAGE ROTS THE DAY THE PAGES STOP DIFFERING. Asking whether the tab is
+ * on this page cannot: a container that is not there is not drawn, and one that is, is. */
 function lRepaint(){
-  if (PROJ_ON){ if (typeof renderSlots === 'function') renderSlots();
-                if (typeof renderRace === 'function') renderRace(); }
-  else { renderWeekly(); renderSummary(); }
+  /* THE FUNCTIONS ARE PASSED, NOT LOOKED UP BY NAME. A top-level declaration is not reliably a
+     property of `window` -- that assumption already cost this project a suite that reported zero
+     postseason vectors on a page carrying 296 of them. All four are declared in this file, so
+     naming them directly always works; the element is the thing that differs between pages.
+     AND A THROW IS REPORTED, NEVER SWALLOWED. One tab failing must not stop the others drawing,
+     but a silent catch is how a broken tab survives a green suite. */
+  const draw = (fn, id) => {
+    if (typeof fn !== 'function' || !el(id)) return;
+    try { fn(); }
+    catch (e) { try { console.error('lRepaint: ' + id + ' failed', e); } catch (e2) {} }
+  };
+  draw(renderSlots, 'slotsBody');
+  draw(renderRace, 'raceBody');
+  draw(renderWeekly, 'weeklyBody');
+  draw(renderSummary, 'summaryBody');
 }
 
 function lNoSeason(what){
