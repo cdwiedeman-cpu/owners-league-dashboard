@@ -3392,7 +3392,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 7:24 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 7:26 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6413,13 +6413,18 @@ function availTable(kind){
           x.odds
             ? `<b>${x.odds.k}-${x.odds.n - x.odds.k}</b> <span class="d">${pctP(x.odds.p)}</span>`
             : '<span class="d">—</span>'}${
-          !WIDE && x.b.byes ? `<span class="recg b" title="${x.b.byes} of these ${HOLD_WKS} weeks ${
-            x.b.byes === 1 ? 'is a bye' : 'are byes'} — a week with no game banks nothing, so this team plays only ${x.b.games} game${x.b.games === 1 ? '' : 's'} in the three weeks the hold costs you. The record beside this is over those ${x.b.games}. It banks ${x.b.pts.toFixed(2)}; judge the bye on Bank 3 and Gain 3, which charge you for the empty week.">BYE</span>` : ''}</td>
+          ''}</td>
         <td class="num c-bank" title="${WIDE && x.hb
             ? esc(`${x.hb.games} game${x.hb.games === 1 ? '' : 's'} in ${x.hw} week${x.hw === 1 ? '' : 's'}`
                   + (x.hb.byes ? `, including ${x.hb.byes} bye week${x.hb.byes === 1 ? '' : 's'} that banks nothing` : ', no bye'))
             : ''}">${WIDE ? (x.hb ? x.hb.pts.toFixed(2) : '—') : x.b.pts.toFixed(2)}${
-          WIDE && x.hb && x.hb.byes ? ` <span class="recg b" title="A bye inside the window. The ${PICKN} games take ${x.hw} weeks of your roster slot instead of ${PICKN}.">${x.hw}w</span>` : ''}</td>
+          /* THE BYE LIVES ON BANK AT EVERY SETTING. It used to sit in the odds column at three
+             and on Bank at four and up, which is two homes for one fact -- and with the likely
+             record now in that column the chip pushed it onto a second line. Bank is the right
+             home anyway: a bye is a week of your slot that earns nothing, and Bank is the cell
+             that charges you for it. */
+          WIDE && x.hb && x.hb.byes ? ` <span class="recg b" title="A bye inside the window. The ${PICKN} games take ${x.hw} weeks of your roster slot instead of ${PICKN}.">${x.hw}w</span>`
+          : (!WIDE && x.b.byes ? ` <span class="recg b" title="${x.b.byes} of these ${HOLD_WKS} weeks ${x.b.byes === 1 ? 'is a bye' : 'are byes'} — a week with no game banks nothing, so this team plays only ${x.b.games} game${x.b.games === 1 ? '' : 's'} in the three weeks the hold costs you, and the Likely Record beside it is over those ${x.b.games}. This figure already charges you for the empty week.">BYE</span>` : '')}</td>
         <td class="num c-gain">${WIDE
           ? (x.hgain == null ? '<span class="d">—</span>'
              : `<b class="${x.hgain > 0.3 ? 'g' : x.hgain < 0 ? 'b' : 'y'}">${x.hgain >= 0 ? '+' : ''}${x.hgain.toFixed(2)}</b>`)
