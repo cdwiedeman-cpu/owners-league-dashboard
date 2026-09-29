@@ -1323,7 +1323,13 @@ td.c-p30, td.c-bank, td.c-gain, td.c-season, td.c-sgain, td.c-ups,
 td.c-post, td.c-keep, td.c-then,
 /* The four keeper figures and the roster's own Banked, added 29 Sep 2026. A figure that wraps is
    the complaint this whole block exists for. */
-td.c-fin, td.c-rest, td.c-pst, td.c-prj, td.c-bank2{white-space:nowrap}
+td.c-fin, td.c-rest, td.c-pst, td.c-prj,
+/* THE ROSTER TABLE HAS ITS OWN CLASS NAMES, and it must. It borrowed `c-bank` and `c-p30` from the
+   pick board for one build, and `.c-bank{display:none}` inside the phone block hid the Next N
+   column on every phone -- silently, because a hidden <td> is removed from its row and the eight
+   colgroup widths then landed on seven cells. `verify_rostercols.js` measured the cell at zero
+   pixels wide and was right. A class is a contract about behaviour, not a label. */
+td.rc-rec, td.rc-next, td.rc-bank, td.rc-rest, td.rc-post, td.rc-proj{white-space:nowrap}
 /* THE ODDS CELL CARRIES TWO FACTS, SO IT GETS TWO LINES. Casey, 28 Sep 2026: "when you pick the
    games ahead three, four, five, six, the likely record overlaps with the Bank for games text."
    The column is 8.57% of a 1000px table, about 86px, and every numeric cell is `nowrap`. A cell
@@ -1446,7 +1452,8 @@ td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-sp
   #pickBody table th, #scout table th{white-space:normal;overflow-wrap:break-word;hyphens:auto}
   th.c-p30, td.c-p30, th.c-gain, td.c-gain, th.c-then, td.c-then,
   th.c-bank, td.c-bank,
-  td.c-fin, td.c-rest, td.c-pst, td.c-prj, td.c-bank2{white-space:nowrap;overflow-wrap:normal;word-break:keep-all}
+  td.c-fin, td.c-rest, td.c-pst, td.c-prj,
+  td.rc-rec, td.rc-next, td.rc-bank, td.rc-rest, td.rc-post, td.rc-proj{white-space:nowrap;overflow-wrap:normal;word-break:keep-all}
   .pill{white-space:nowrap}
   /* THE MODEL COLUMN USED TO BE DROPPED HERE, and that was the wrong call twice over.
      Casey, 1 Sep 2026: "I just noticed on the iPhone that doesn't have the model column."
@@ -3436,7 +3443,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 11:13 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 11:19 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -9317,7 +9324,7 @@ function renderPick(){
         !sl ? '' : sl.need === 0
           ? ' <span class="pill v-keep" title="Its third game for you has been played, so you can drop it in the window now open.">NOW</span>'
           : ` <span class="pill v-stream" title="It still owes you ${sl.need} of the ${DATA.hold_games} games you must hold it for. You can drop it once the game on ${pretty(sl.third_game)} has been played, and a replacement first plays for you on ${pretty(sl.drop_from)}.">${sl.need} to go</span>`}</td>
-      <td class="num c-p30" title="${odds
+      <td class="num rc-rec" title="${odds
         ? esc(`Over its next ${odds.n} game${odds.n === 1 ? '' : 's'}: `
             + odds.dist.map((pp, kk) => `${kk}-${odds.n - kk} ${Math.round(pp * 100)}%`)
                  .filter((_, kk) => odds.dist[kk] >= 0.02).reverse().join(' · ')
@@ -9325,14 +9332,14 @@ function renderPick(){
         : 'No games left that this build can price.'}">${odds
         ? `<b>${odds.k}-${odds.n - odds.k}</b> <span class="d">${pctP(odds.p)}</span>`
         : '<span class="d">—</span>'}</td>
-      <td class="num c-bank" title="Expected league points over ${nW} week${nW === 1 ? '' : 's'} from today${
+      <td class="num rc-next" title="Expected league points over ${nW} week${nW === 1 ? '' : 's'} from today${
         PICKN > DATA.hold_games ? `, which is how long this team takes to play its next ${PICKN} games` : ''}. A bye inside them earns nothing.">${w3 == null ? '—' : w3.toFixed(2)}</td>
-      <td class="num d c-bank2" title="What this ROSTER SLOT has earned so far, including any team that held it before this one. A fact, and yours whether you keep this team or not — which is why the drop order ignores it.">${bank == null ? '—' : bank.toFixed(2)}</td>
-      <td class="num d c-rest">${wr == null ? '—' : numOpen(t.n, wr.toFixed(2), `Open ${t.n} for every game it has left, one line each, adding to ${wr.toFixed(2)}`)}</td>
-      <td class="num d c-pst">${pst == null
+      <td class="num d rc-bank" title="What this ROSTER SLOT has earned so far, including any team that held it before this one. A fact, and yours whether you keep this team or not — which is why the drop order ignores it.">${bank == null ? '—' : bank.toFixed(2)}</td>
+      <td class="num d rc-rest">${wr == null ? '—' : numOpen(t.n, wr.toFixed(2), `Open ${t.n} for every game it has left, one line each, adding to ${wr.toFixed(2)}`)}</td>
+      <td class="num d rc-post">${pst == null
         ? '<span class="d" title="This build ships no postseason vector for this team, so its postseason is unknown rather than zero.">—</span>'
         : numOpen(t.n, pst.toFixed(2), `Open ${t.n} for every postseason rule it can earn, adding to ${pst.toFixed(2)}`)}</td>
-      <td class="num c-prj" title="${kp == null ? 'Not known.' : esc(`${bank.toFixed(2)} banked + ${wr.toFixed(2)} from the games still to play + ${pst.toFixed(2)} postseason. The same three numbers the Standings projection panel shows for this slot.`)}"><b>${kp == null ? '—' : kp.toFixed(2)}</b></td>
+      <td class="num rc-proj" title="${kp == null ? 'Not known.' : esc(`${bank.toFixed(2)} banked + ${wr.toFixed(2)} from the games still to play + ${pst.toFixed(2)} postseason. The same three numbers the Standings projection panel shows for this slot.`)}"><b>${kp == null ? '—' : kp.toFixed(2)}</b></td>
     </tr>` + (OPEN_MINE === t.n
       ? `<tr><td colspan="8">${teamPanel(t, null, 'mine')}</td></tr>` : '');
   }).join('');
@@ -9418,13 +9425,13 @@ function renderPick(){
           ><col class="rt-post"><col class="rt-proj"></colgroup>
         <thead><tr><th class="c-team">Team</th>
           <th title="Keep this team THROUGH this date. It is the day of its third game and you must let it play that game; you can drop it afterwards, and a replacement first plays for you in the game after it.">Hold Through</th>
-          <th class="num c-p30" title="The record this team is most likely to post over the next ${nWks} week${nWks === 1 ? '' : 's'} from today, and how likely that exact record is. Games Ahead sets how far this looks.">Likely<br>Record</th>
-          <th class="num c-bank" title="Expected league points over those same ${nWks} week${nWks === 1 ? '' : 's'}, starting today. A bye inside them earns nothing.">${
+          <th class="num rc-rec" title="The record this team is most likely to post over the next ${nWks} week${nWks === 1 ? '' : 's'} from today, and how likely that exact record is. Games Ahead sets how far this looks.">Likely<br>Record</th>
+          <th class="num rc-next" title="Expected league points over those same ${nWks} week${nWks === 1 ? '' : 's'}, starting today. A bye inside them earns nothing.">${
             PICKN > DATA.hold_games ? 'Next ' + PICKN + '<br>games' : 'Next 3'}</th>
-          <th class="num c-bank2" title="What this roster SLOT has earned so far, including any team that held it before this one. A fact. It is yours whether you keep this team or not, so the drop order ignores it.">Banked</th>
-          <th class="num c-rest" title="Expected league points from TODAY to the end of the regular season. Every game still to play is in it, including the ones inside a hold you cannot drop out of — those points are yours whatever you decide. The postseason is the column beside it.">Rest</th>
-          <th class="num c-pst" title="Expected postseason points: the playoff ladder, a conference title, a bowl, undefeated and one loss. Paid to whoever holds the team at the end of the year. Tap the figure for every rule and its chance.">Post</th>
-          <th class="num c-prj" title="Banked plus Rest plus Post — this slot's projected finish for the year. The same three columns and the same total as the Standings projection panel. The DROP FIRST mark does NOT rank on this: banked points are yours either way, so the order is Rest plus Post.">Proj</th></tr></thead>
+          <th class="num rc-bank" title="What this roster SLOT has earned so far, including any team that held it before this one. A fact. It is yours whether you keep this team or not, so the drop order ignores it.">Banked</th>
+          <th class="num rc-rest" title="Expected league points from TODAY to the end of the regular season. Every game still to play is in it, including the ones inside a hold you cannot drop out of — those points are yours whatever you decide. The postseason is the column beside it.">Rest</th>
+          <th class="num rc-post" title="Expected postseason points: the playoff ladder, a conference title, a bowl, undefeated and one loss. Paid to whoever holds the team at the end of the year. Tap the figure for every rule and its chance.">Post</th>
+          <th class="num rc-proj" title="Banked plus Rest plus Post — this slot's projected finish for the year. The same three columns and the same total as the Standings projection panel. The DROP FIRST mark does NOT rank on this: banked points are yours either way, so the order is Rest plus Post.">Proj</th></tr></thead>
         <tbody>${rosterRows}</tbody></table></div>
       ${gate}
       ${injBoardNote('roster')}
