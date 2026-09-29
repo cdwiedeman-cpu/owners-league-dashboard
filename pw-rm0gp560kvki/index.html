@@ -3458,7 +3458,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '29 Sep 2026, 7:53 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '29 Sep 2026, 7:54 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -8990,7 +8990,11 @@ function trayHTML(kind){
         ? `<span class="d">Nothing selected.</span>
            <button class="cgo hot" onclick="cmpClear('${k}')"
              title="Take the comparison off the page">Clear comparison</button>`
-        : `<span class="d">Tap <b>+</b> beside up to two teams below, then press Compare.</span>`);
+        /* THE SENTENCE BECAME A LABEL. It shared a row with the search and the Upsets filter
+           from 29 Sep 2026, and at 390px the prose wrapped that row onto two lines -- 76px of
+           controls where 36 will do. What it has to say is "this is where a comparison
+           appears", and the hover carries the instruction for anyone who wants it. */
+        : `<span class="d" title="Tap the + beside up to two teams below, then press Compare. The two are drawn side by side under the board.">Compare: tap <b>+</b> on two teams</span>`);
   return names.map(nm => `<span class="cchip">${nm}<button class="cx"
       onclick="cmpPick('${nm.replace(/'/g, "\\'")}')" title="Remove ${nm}"
       aria-label="Remove ${nm}">x</button></span>`).join('')
