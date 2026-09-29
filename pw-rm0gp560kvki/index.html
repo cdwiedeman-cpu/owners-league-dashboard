@@ -1260,9 +1260,13 @@ table.esptbl td.num, table.esptbl td.c-team{white-space:nowrap}
  * carries the pool pill, the name, the open arrow, DROP FIRST, UPSET, the injury flag and the plan
  * flag, which needs 300px; 34% of 884 is 300. Each figure column gets 76px for a figure that needs
  * 57, and "10-2 27%" is the widest thing any of them holds. 99% on purpose, as everywhere here. */
-table.rostertbl{min-width:930px}
-.rt-team{width:34%}.rt-hold{width:13%}.rt-rec{width:9%}.rt-n3{width:9%}
-.rt-bank{width:8%}.rt-rest{width:8%}.rt-post{width:8%}.rt-proj{width:9%}
+/* RE-CUT ONCE MORE, because the first cut was measured against the wrong row. At 1024px the
+   table got 986px, Team got 34% of it, and `NFL Houston Texans` with DROP FIRST and a two-digit
+   injury count needed 360px in a 335px cell. `verify_pickcols.js` found it. The column is sized
+   for the widest row it CAN hold, never the widest it happens to hold today. */
+table.rostertbl{min-width:990px}
+.rt-team{width:38%}.rt-hold{width:12%}.rt-rec{width:8.1%}.rt-n3{width:8.1%}
+.rt-bank{width:8.1%}.rt-rest{width:8.1%}.rt-post{width:8.1%}.rt-proj{width:8.1%}
 table.slottbl{min-width:660px}
 /* ---- THE NUMBER, THE TEAM AND THE POINTS FIT THE PHONE; THE REST IS THE SWIPE ---------------
  * Casey, 27 Sep 2026: "I can get the slot number, the team, and the points across those without
@@ -1414,7 +1418,7 @@ td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-sp
   /* RAISED AGAIN 29 SEP 2026, for the eight columns. This override is LOWER than the base floor,
      so leaving it at 820 would have given a phone a narrower table than a laptop and squeezed the
      name column below what a row can hold. A floor that only some widths obey is not a floor. */
-  #pickBody table.rostertbl{min-width:930px}
+  #pickBody table.rostertbl{min-width:990px}
   /* ---- THE RESULT HAS TO BE ON THE SCREEN, NOT OFF THE SIDE OF IT --------------------------
    *
    * Casey, 27 Sep 2026: "when I click on a team, whether it's on standings or weekly quarterly
@@ -3443,7 +3447,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 11:19 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 11:22 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
