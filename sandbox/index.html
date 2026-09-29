@@ -1461,7 +1461,15 @@ var Store = (function () {
                       requests: a.mine ? (function (o) { o[mineKey] = a.mine; return o; })({}) : {},
                       log: a.transactions || [], results: a.results || null,
                       ranWeeks: a.ranWeeks || {}};
-            return {ok: true, rev: a.rev, state: st, me: a.me, owner: true};
+            /* TWO ANSWERS THE VIEW ALREADY GAVE, CARRIED THROUGH RATHER THAN DROPPED.
+               `othersWaiting` and the owner's own row are not part of a roster, so they have no
+               place in `st` -- but the page needs them to know whether first come may open, and
+               this line used to throw them away. Casey, 29 Sep 2026, inside the window: "the
+               first come first serve reverted back to build your list for Monday." It was not a
+               revert. The page asked whether the week had been settled, the answer had been
+               deleted one function earlier, and an answer it could not get is treated as no. */
+            return {ok: true, rev: a.rev, state: st, me: a.me, owner: true,
+                    othersWaiting: a.othersWaiting, mine: a.mine || null};
           }
           return a;
         })
@@ -1803,22 +1811,37 @@ function fcfsWeek(s){
  * browser. ON THE REAL PAGE it is the league's, and the league sends it: `fn=view` has carried
  * `ranWeeks` since the back end was written.
  *
- * IT WAS NEVER READ. The page kept only `{ok, me}` out of that reply and looked for the settle
- * state in `S.ranWeeks`, which on a real owner's page is the empty object it was initialised
- * with. So `mode()` answered "not settled" for every minute of every first-come window, and
- * FIRST COME HAS NEVER ONCE BEEN REACHABLE ON THE REAL PAGE. It worked in the sandbox, which is
- * the one copy where the reader sets `ranWeeks` themselves, so every test of it passed.
+ * IT WAS NEVER READ. The page kept only `{ok, me}` out of that reply, and the store dropped
+ * `ranWeeks` while reshaping the view into a state, so `S.ranWeeks` on a real owner's page was
+ * the empty object it was initialised with. `mode()` answered "not settled" for every minute of
+ * every first-come window, and FIRST COME HAS NEVER ONCE BEEN REACHABLE ON THE REAL PAGE. It
+ * worked in the sandbox, which is the one copy where the reader sets `ranWeeks` themselves, so
+ * every test of it passed. The store carries it into the state now, for an owner and for a
+ * commissioner alike, and this is the only place it is read.
  *
  * NULL IS THE THIRD ANSWER AND IT IS NOT "NO". "The league says this week is not settled" and
  * "the league has not been asked" need opposite handling from the same code path, and the
  * dangerous one is treating the second as the first: a team nobody has won yet must never be
  * claimable. Both close the window, but only one of them is a fact. */
-var LIVE_RAN = null;      // the league's ranWeeks, from the view. null means never asked.
+/* ONE STORE OF THE ANSWER, AND IT IS THE STATE THE PAGE ALREADY HOLDS.
+ *
+ * The first attempt kept the league's `ranWeeks` in a variable of its own, filled from the
+ * sign-in reply. It was never filled, because the store reshapes that reply before it hands it
+ * over: an owner gets `{state, me}` built from the view, a commissioner gets the whole state
+ * from `load`, and `ranWeeks` is INSIDE `state` in both. So the variable stayed empty, `ranOf`
+ * answered "could not ask" every minute of every window, and first come stayed shut on the real
+ * page exactly as before. Casey, 29 Sep 2026: "the first come first serve reverted back to build
+ * your list for Monday."
+ *
+ * A SECOND COPY OF A FACT IS A SECOND COPY TO FORGET TO FILL. `S.ranWeeks` is the league's own
+ * answer on the live page and the reader's own on the practice copy, so it is read here and
+ * nowhere else.
+ */
+var LEAGUE_OK = false;    // has the league answered this page at all?
 var LIVE_WAIT = null;     // how many lists the league is holding. null means never asked.
 function ranOf(wk){
-  if (!Store.live()) return !!(S && (S.ranWeeks || {})[wk]);
-  if (LIVE_RAN === null) return null;
-  return !!LIVE_RAN[wk];
+  if (Store.live() && !LEAGUE_OK) return null;
+  return !!((S && S.ranWeeks) || {})[wk];
 }
 /* ---- NOTHING TO SETTLE IS SETTLED ---------------------------------------------------------
  *
@@ -1841,10 +1864,10 @@ function ranOf(wk){
  * an unsent draft keeps the window shut; that errs on the safe side, and the back end clears
  * every row at each settle so one cannot sit there for weeks. */
 function nothingToSettle(wk){
-  if (!Store.live()){
-    try { return !B_.pending(S.requests, wk).length; } catch (e) { return false; }
-  }
-  return LIVE_WAIT === 0;
+  /* A COMMISSIONER HOLDS EVERY LIST, so he can count them. An owner is sent a number instead,
+     because the lists themselves are not his to see. */
+  if (Store.live() && !isCommish()) return LIVE_WAIT === 0;
+  try { return !B_.pending(S.requests, wk).length; } catch (e) { return false; }
 }
 function mode(s){
   var m = clockMode(s);
@@ -1854,6 +1877,15 @@ function mode(s){
   if (ran === null) return 'queue';          // could not ask: never open on a guess
   if (ran) return 'fcfs';
   return nothingToSettle(wk) ? 'fcfs' : 'queue';
+}
+/* WHAT THE CHIP AT THE TOP SAYS, AND IT HAS THE SAME THREE ANSWERS `mode()` HAS.
+ * Saying "Peloton Entry Is Open" while the clock is inside the first-come window is wrong twice
+ * over: entry is not open, and the reason it is not first come yet is that the coin flips have
+ * not been run. An absence is never an answer, so the third state is named. */
+function openLabel(){
+  if (mode() === 'fcfs') return 'First Come, First Served Is Open';
+  if (clockMode() === 'fcfs') return 'Waiting on This Week\u2019s Coin Flips';
+  return 'Peloton Entry Is Open';
 }
 function isFlipMoment(s){
   var p = parts(s || now());
@@ -2799,7 +2831,7 @@ function render(){
      open for Week 1 is helpful." So on the real page it is the week and what is open, in words.
      The clock itself stays on the practice copy, where moving it is the whole point, and for a
      commissioner, who needs to see the moment the page is working from. */
-  var openNow = (mode() === 'fcfs' ? 'First Come, First Served Is Open' : 'Peloton Entry Is Open');
+  var openNow = openLabel();
   if (Store.live()){
     /* "SEASON WEEK", NOT "WEEK". Two different weeks are on this page at once -- the one the
        season is in, and the one a list is for -- and calling both of them "Week 1" and "Week 2"
@@ -2808,7 +2840,7 @@ function render(){
       + (isCommish() ? ' &nbsp;·&nbsp; <span class="d">' + esc(pretty(now())) + '</span>' : '');
   } else {
     el('clockchip').innerHTML = ' &nbsp;·&nbsp; ' + esc(pretty(now())) + ' &nbsp;·&nbsp; '
-      + (mode() === 'fcfs' ? 'first come, first served' : 'peloton entry open')
+      + openLabel().toLowerCase().replace(' is open', '')
       + ' &nbsp;·&nbsp; season week ' + weekNo();
   }
   el('subline').innerHTML = 'A copy of the real rosters, a clock you can move, and the same rules the live '
@@ -3270,7 +3302,7 @@ function doSignOutLive(){
   LIVE_ME = null;
   /* SIGNED OUT IS NOT "THE LEAGUE SAYS NO", it is "nobody has asked". Leaving the last answer
      behind would let a signed-out page decide the window from a stale one. */
-  LIVE_RAN = null; LIVE_WAIT = null;
+  LEAGUE_OK = false; LIVE_WAIT = null;
   closeHelp();
   boot();
 }
@@ -3709,24 +3741,42 @@ function viewTrades(){
    * is about where you are in the week, which is exactly what those three buttons explain. They
    * are the first thing on the screen and they are out of the way of the job.
    */
-  var helpRow = '<div class="row" style="margin-top:10px">'
+  /* ---- STATUS ON TOP, EXPLANATION AT THE FOOT, THE FORM IN BETWEEN -------------------------
+   *
+   * Casey, 29 Sep 2026: "you have the section called Build Your List for Monday, Open Now, with
+   * the instructions underneath it ... you have to kind of go to the bottom to make a trade. I
+   * almost feel like, because all those are just instructions, can we find a different place to
+   * put that so that the Add a Trade is more up at the top?"
+   *
+   * He is right, and it is the same ordering mistake as before rather than a new one: the three
+   * help buttons went up out of the list card on 15 Sep and landed on top of the whole tab, so
+   * now they are what an owner scrolls past to reach the form.
+   *
+   * WHAT STAYS ON TOP IS WHAT CHANGES HOUR TO HOUR: which window is open, when it closes, who
+   * you are and how many teams are free. That is two lines and it is the answer to "can I trade
+   * right now". Everything that explains rather than does goes to the foot of the tab, where it
+   * is still one tap away and no longer in front of the only control on the page. */
+  var statNote = '<p class="note" style="margin-top:9px">'
+    + 'You are <b>' + esc(a.seat) + '</b> in ' + esc(DATA.div_names[a.div] || a.div) + ' · '
+    + free.length + ' team' + (free.length === 1 ? '' : 's') + ' nobody in your division owns · '
+    + mine.length + ' on your roster</p>';
+  var helpCard = '<div class="card"><h2>How This Works</h2>'
+    + '<p class="note">'
+    + (fcfs
+        ? 'The coin flips have been run. Anything still unowned is yours if you ask first, until '
+          + '<b>Tuesday at 5:00pm AZ</b>.'
+        : 'Entry closes at <b>Monday at 3:59pm AZ</b>. First come, first served opens straight '
+          + 'afterwards and runs until Tuesday at 5:00pm AZ.')
+    + '</p>'
+    + '<div class="row" style="margin-top:10px">'
     + '<button onclick="showHelp(' + jq(howTitle) + ',HOWNOTE)">' + esc(howTitle) + '</button>'
     + '<button onclick="showHelp(\'What You Are Allowed to Trade\',RULESNOTE)">What Am I '
     + 'Allowed to Trade?</button>'
     + '<button onclick="showHelp(\'How the Week Works\',WAYSNOTE)">How the Week Works</button>'
-    + '</div>'
-    + '<p class="note" style="border-top:1px solid var(--line);padding-top:9px;margin-top:10px">'
-    + (fcfs
-        ? 'The coin flips have been run. Anything still unowned is yours if you ask first, until '
-          + '<b>Tuesday at 5:00pm AZ</b>.<br>'
-        : 'Entry closes at <b>Monday at 3:59pm AZ</b>. First come, first served opens straight '
-          + 'afterwards and runs until Tuesday at 5:00pm AZ.<br>')
-    + 'You are <b>' + esc(a.seat) + '</b> in ' + esc(DATA.div_names[a.div] || a.div) + ' · '
-    + free.length + ' team' + (free.length === 1 ? '' : 's') + ' nobody in your division owns · '
-    + mine.length + ' on your roster</p>';
+    + '</div></div>';
 
-  var h = clockBanner() + myResultCard() + waysStrip(fcfs, helpRow);
-  if (fcfs) return h + fcfsForm(a, free, mine, k) + clockCard();
+  var h = clockBanner() + myResultCard() + waysStrip(fcfs, statNote);
+  if (fcfs) return h + fcfsForm(a, free, mine, k) + helpCard + clockCard();
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
 
@@ -3843,6 +3893,10 @@ function viewTrades(){
      what is under it, and "Your List for Monday" does not name a mail form. It returns an empty
      string for every seat but the one that asked for it. */
   if (sent) h += coMailCard();
+  /* THE EXPLANATION SITS AT THE FOOT, ABOVE THE BAR. It has to go in before the bar rather than
+     after it, because the bar is the last thing in the tab and the page measures its height to
+     leave room underneath. */
+  h += helpCard;
   /* THE TWO BUTTONS THAT MATTER, ALWAYS ON SCREEN.
      Casey, 15 Sep 2026, watching Bob: "he kept struggling with the Add Another Trade button,
      kept scrolling up and down to try to find it. And the Send My List, he was struggling to
@@ -4555,7 +4609,7 @@ function doClaim(){
     S.rosters = L.rosters;
     markGot(key(a.div, a.seat), p, today());
     S.log.unshift(Object.assign({when: now(), by: a.by || null},
-      P.claimRow(a.div, a.seat, res, {week: weekNo()})));
+      P.claimRow(a.div, a.seat, res, {week: fcfsWeek()})));
     S.fcp = ''; S.fcd = '';
     save();
   }
@@ -4630,6 +4684,43 @@ function setting(label, opts, why){
  * thing in its row -- a second button beside it of the same size is a fork in the road, and this
  * is not a fork.
  */
+/* ---- TAKING A WAITING LIST IN HAND, FROM THE TABLE IT IS SITTING IN ------------------------
+ * Both of these are the commissioner's, and both check that again here rather than trusting the
+ * button not to have been drawn. A control that is only hidden is not a control that is denied.
+ */
+function editWaiting(div, seat){
+  if (!isCommish()) return;
+  S.actingAs = div + '|' + seat;
+  try { save(); } catch (e) {}
+  setTab('trades'); render();
+  showHelp('You Are Entering for ' + seat,
+    '<p>This is <b>' + esc(seat) + '</b>&rsquo;s own trade form, with the list they sent already '
+    + 'in it. Change it and send it again, and it replaces what they had.</p>'
+    + '<p>The red line at the top of the list says whose list you are in. Press <b>Back to My '
+    + 'Own Seat</b> when you are done, or it clears itself the next time the page is opened.</p>');
+}
+function askTakeOut(div, seat){
+  if (!isCommish()) return;
+  showHelp('Take ' + seat + '&rsquo;s List Out of Week ' + playWeek() + '?',
+    '<p>The whole list goes. Nothing is settled for <b>' + esc(seat) + '</b> on Monday, and '
+    + 'their rosters do not change.</p>'
+    + '<p>This cannot be undone from here. They would have to enter it again themselves, or you '
+    + 'can enter it for them with <b>Edit</b>.</p>'
+    + '<div class="row" style="margin-top:10px">'
+    + '<button class="dang" onclick="closeHelp();takeOut(' + jq(div) + ',' + jq(seat) + ')">'
+    + 'Take It Out</button>'
+    + '<button onclick="closeHelp()">Leave It In</button></div>', true);
+}
+function takeOut(div, seat){
+  if (!isCommish()) return;
+  var k = key(div, seat);
+  if (!S.requests || !S.requests[k]){ render(); return; }
+  delete S.requests[k];
+  save(); render();
+  showHelp('Taken Out',
+    '<p><b>' + esc(seat) + '</b> is no longer in week ' + playWeek() + '. Tell them, so they can '
+    + 'enter a new list if they still want one before Monday at 3:59pm AZ.</p>');
+}
 function viewRun(){
   var reqs = pendingRequests();
   var auto = S.autoPeloton !== false;
@@ -4710,12 +4801,12 @@ function viewRun(){
     };
     h += '<div class="card"><h2>Waiting to Be Settled</h2><div class="scr">'
       + '<table class="waittbl">'
-      + '<colgroup><col style="width:20%"><col style="width:8%"><col style="width:24%">'
-      + '<col style="width:24%"><col style="width:24%"></colgroup>'
+      + '<colgroup><col style="width:17%"><col style="width:7%"><col style="width:20%">'
+      + '<col style="width:20%"><col style="width:20%"><col style="width:16%"></colgroup>'
       + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th>'
-      + '<th>Drops</th><th>Rule</th></tr></thead><tbody>'
+      + '<th>Drops</th><th>Rule</th><th>Change</th></tr></thead><tbody>'
       + byDivision(reqs).map(function(g){
-        return '<tr><td class="divband" colspan="5">' + esc(g.name) + '</td></tr>'
+        return '<tr><td class="divband" colspan="6">' + esc(g.name) + '</td></tr>'
           + g.seats.map(function(r){
           return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
             + '<td class="d">' + r.rows.map(function(x, i){
@@ -4734,9 +4825,38 @@ function viewRun(){
             + '<td class="d">' + r.rows.map(function(x, i){
                 return esc(wline(r, i, condShort(x.cond, i)));
               }).join('<br>')
+            + '</td>'
+            /* ---- A LIST WAITING TO BE SETTLED IS STILL A LIST SOMEBODY CAN GET WRONG --------
+             *
+             * Casey, 29 Sep 2026: "somebody has submitted a trade and it's sitting in for this
+             * upcoming Monday's peloton. That was supposed to be a first come first serve trade
+             * for week four ... I am unable to undo that trade ... myself and Bob should be able
+             * to go in and edit those trades or clear those trades while they're sitting in the
+             * waiting to be settled."
+             *
+             * THE EDIT ALREADY EXISTS AND IT IS HARD TO FIND. Entering for Someone Else, on the
+             * Trades tab, gives a commissioner that seat's own form. What was missing was a way
+             * in from the table where the problem is actually visible, and any way at all to
+             * take a list back out. Both are here now, one press each. */
+            + '<td>' + (isCommish()
+                ? '<button class="f" style="padding:3px 8px;font-size:11px" '
+                  + 'onclick="editWaiting(' + jq(r.div) + ',' + jq(r.seat) + ')" '
+                  + 'title="Open this seat\'s own trade form and change what it asked for.">'
+                  + 'Edit</button> '
+                  + '<button class="f dang" style="padding:3px 8px;font-size:11px" '
+                  + 'onclick="askTakeOut(' + jq(r.div) + ',' + jq(r.seat) + ')" '
+                  + 'title="Take this list out of the week entirely. Nothing is settled for this '
+                  + 'seat on Monday.">Take It Out</button>'
+                : '<span class="d">&mdash;</span>')
             + '</td></tr>';
         }).join('');
       }).join('') + '</tbody></table></div>'
+      + (isCommish()
+          ? '<p class="note"><b>Edit</b> opens that seat\'s own trade form with you entering for '
+            + 'them, so you can change what they asked for and send it again. <b>Take It Out</b> '
+            + 'removes the whole list, and that seat is then settled for nothing on Monday. Tell '
+            + 'the owner either way.</p>'
+          : '')
       + '<p class="note">The seats are grouped by division. A coin flip only happens between '
       + 'owners in the same division, so that is the group a week is read in.</p>'
       + '<p class="note">Where a trade names more than one team to drop, only one of them goes. '
@@ -5203,7 +5323,7 @@ function retryClaim(i){
     S.rosters = L.rosters;
     markGot(key(c.div, c.owner), c.pickup, today());
     S.log.unshift(Object.assign({when: now(), by: c.by},
-      P.claimRow(c.div, c.owner, res, {week: weekNo(), fee: DATA.trade_cost})));
+      P.claimRow(c.div, c.owner, res, {week: fcfsWeek(), fee: DATA.trade_cost})));
     c.state = 'done'; c.why = 'Granted again — ' + c.pickup + ' for ' + res.drop + '.';
   } else {
     c.state = 'refused'; c.why = sent.head + ' ' + sent.body;
@@ -7295,7 +7415,7 @@ function bootOpts(){
        would have them wiped by the next refresh. */
     whoami: function(a){
       LIVE_ME = {ok: true, me: a.me};
-      if (a.ranWeeks) LIVE_RAN = a.ranWeeks;
+      LEAGUE_OK = true;
       if (typeof a.othersWaiting === 'number')
         LIVE_WAIT = a.othersWaiting + ((a.mine && a.mine.submitted) ? 1 : 0);
     },
