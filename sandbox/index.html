@@ -3782,8 +3782,21 @@ function viewTrades(){
     + '<button onclick="showHelp(\'How the Week Works\',WAYSNOTE)">How the Week Works</button>'
     + '</div></div>';
 
-  var h = clockBanner() + myResultCard() + waysStrip(fcfs, statNote);
-  if (fcfs) return h + fcfsForm(a, free, mine, k) + helpCard + fcfsBar() + clockCard();
+  /* ---- WHAT YOU CAME TO DO IS THE FIRST THING ON THE TAB -----------------------------------
+   *
+   * Casey, 29 Sep 2026: "you have the What Happened to Palma/Wiedeman at the top, then you have
+   * the first come first serve open, then you finally get down to Claim a Team. So you're
+   * constantly scrolling on this page to make a simple trade ... it is already under Trade
+   * Results. Do we really need it on the Make a Trade page? And they get the pop up when they
+   * first come in as well."
+   *
+   * Last week's answer is worth keeping and it is not worth the top of the screen. It arrives as
+   * a panel the first time the page is opened after a settle, and it stays on this tab under the
+   * form for anybody who dismissed it. WHAT IS LEFT ABOVE THE FORM IS ONE LINE: which window is
+   * open, when it closes, and who you are. */
+  var h = clockBanner() + waysStrip(fcfs, statNote);
+  if (fcfs) return h + fcfsForm(a, free, mine, k) + helpCard + myResultCard()
+                    + fcfsBar() + clockCard();
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
 
@@ -3903,7 +3916,7 @@ function viewTrades(){
   /* THE EXPLANATION SITS AT THE FOOT, ABOVE THE BAR. It has to go in before the bar rather than
      after it, because the bar is the last thing in the tab and the page measures its height to
      leave room underneath. */
-  h += helpCard;
+  h += helpCard + myResultCard();
   /* THE TWO BUTTONS THAT MATTER, ALWAYS ON SCREEN.
      Casey, 15 Sep 2026, watching Bob: "he kept struggling with the Add Another Trade button,
      kept scrolling up and down to try to find it. And the Send My List, he was struggling to
@@ -4615,9 +4628,16 @@ function fcfsForm(a, free, mine, k){
   var dns = (kind ? ofKind(mine, kind) : mine)
               .map(function(n){ return {n: n, why: whyNotDrop(k, n, S.fcp)}; });
   var ups = free.map(function(n){ return {n: n, why: whyNotClaim(n)}; });
+  /* TWO COLUMNS WHERE THERE IS ROOM, THE SAME TWO THE LIST FORM USES. Casey, 29 Sep 2026:
+     "it's really big boxes. Couldn't you have pick up to the left and drop to the right so you
+     save a row?" `.tgrid` is that grid and it already stacks on a narrow screen, so this is the
+     existing rule rather than a second one. */
   return '<div class="card"><h2>Claim a Team</h2>' + actingStrip()
-    + pickField('fp', 'Pick up', S.fcp, ups)
-    + '<div style="margin-top:9px">' + pickField('fd', 'Drop', S.fcd, dns) + '</div>'
+    + '<div class="tgrid"><div class="half">'
+    + pickField('fp', 'The Team You Want', S.fcp, ups, null, '1')
+    + '</div><div class="half">'
+    + pickField('fd', 'What You Would Give Up', S.fcd, dns, null, '2')
+    + '</div></div>'
     + '<div class="row" style="margin-top:11px">'
     + '<button class="pri" onclick="doClaim()">Claim It Now</button></div>'
     + '<p class="note" style="margin-top:8px">Whoever presses this first gets the team. There is '
