@@ -1213,7 +1213,11 @@ details>summary::marker{color:var(--faint)}
    column CAN hold rather than the widest it happens to hold today: the longest NFL name is three
    characters longer than either of those, and UPSET can read ×3. The seven number columns give up
    half a point each, which still leaves 85px for a five-character figure that needs 57. */
-.cg1{width:46px} .cg2{width:39%} .cg3{width:8.57%} .cg4{width:8.57%}
+/* THE RECORD COLUMN TOOK A POINT FROM TEAM ON 29 SEP 2026, when the BYE chip came back to sit
+   beside the record. Measured: "0-2 64% BYE" is the widest thing it can hold and it needed 86px
+   in the 83px the old share gave it on a 1024px window. Team drops from 372px to 363 at the
+   floor, which is still past the 336 its own widest row needs. */
+.cg1{width:46px} .cg2{width:38%} .cg3{width:9.57%} .cg4{width:8.57%}
 .cg5{width:8.57%} .cg6{width:8.57%} .cg7{width:8.57%} .cg8{width:8.57%} .cg9{width:8.57%}
 /* ---- AND TWELVE OF THEM ON KEEPERS ------------------------------------------------------
  * Casey, 29 Sep 2026, asked for the four keeper figures ON TOP of the next-N ones rather than
@@ -1227,8 +1231,8 @@ details>summary::marker{color:var(--faint)}
  * pixels more than it is given, and the open schedule panel reads as a second sideways scroller
  * nested inside this one. */
 table.pickkeep{min-width:1120px}
-.cgK1{width:46px} .cgK2{width:32%}
-.cgK3, .cgK4, .cgK5, .cgK6, .cgK7, .cgK8, .cgK9, .cgK10, .cgK11, .cgK12{width:6.7%}
+.cgK1{width:46px} .cgK2{width:31.1%} .cgK3{width:7.6%}
+.cgK4, .cgK5, .cgK6, .cgK7, .cgK8, .cgK9, .cgK10, .cgK11, .cgK12{width:6.7%}
 /* ONE FLOOR, EVERY WIDTH. Percentages of a narrow window are narrower than the words in them, so
    the table keeps a minimum and the box around it scrolls -- the gesture this page already uses
    everywhere. It used to be set only inside the phone media query, which left a small laptop
@@ -3469,7 +3473,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '29 Sep 2026, 7:56 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '29 Sep 2026, 7:58 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
