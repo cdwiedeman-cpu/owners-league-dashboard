@@ -3436,7 +3436,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 11:03 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 11:05 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4956,6 +4956,17 @@ function ownWeek0(pool, from){
   const d = new Date(from + 'T00:00:00Z');
   d.setUTCDate(d.getUTCDate() + 1);
   return gwOf(d.toISOString().slice(0, 10));
+}
+
+/* "STARTING TODAY", AS A `from` DATE. Every window function here takes the last day that is NOT
+   yours and counts the games after it, and `ownWeek0` takes the week of the day AFTER it. So the
+   date that means "from now" is YESTERDAY. Passing today drops a game played later today and
+   starts the window in tomorrow's league week; passing null threw, because `ownWeek0` cannot make
+   a date out of it. */
+function fromNow(){
+  const d = new Date(azToday() + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 /* THE HOLD IS THREE GAMES, SO THIS COUNTS GAMES. Casey, 2 Sep 2026: "I still don't understand
@@ -9231,8 +9242,9 @@ function renderPick(){
   /* THE HEADING NAMES THE WINDOW THE CELLS USE. At the league's own number it is the three weeks
      of the hold; above it, however many weeks these teams need to play that many games. They can
      differ by team, so the heading takes the longest of them and every cell says its own. */
+  const R_FROM = fromNow();
   const nWks = PICKN <= DATA.hold_games ? DATA.hold_games
-    : Math.max(...mine.map(t => { const w = pickWindow(t, azToday()); return w ? w.w : 0; }),
+    : Math.max(...mine.map(t => { const w = pickWindow(t, R_FROM); return w ? w.w : 0; }),
                DATA.hold_games);
   const rosterRows = mine.map(t => {
     const sl = bySlot.get(t.n);
@@ -9259,11 +9271,11 @@ function renderPick(){
      * SO EVERY FIGURE ON THIS ROW NOW STARTS TODAY, and the three names are the three the
      * Standings projection panel uses, because they are now the same three quantities. */
     const pr = teamProjection(t.n, 0);
-    const pwR = pickWindow(t, azToday());
+    const pwR = pickWindow(t, R_FROM);
     const nW = (PICKN > DATA.hold_games && pwR) ? pwR.w : DATA.hold_games;
-    const wN = weekWindow(t, null, nW);
+    const wN = weekWindow(t, R_FROM, nW);
     const w3 = wN ? wN.pts : null;
-    const odds = recordOdds(t, null, nW);
+    const odds = recordOdds(t, R_FROM, nW);
     const wr = pr ? pr.rest : null;
     const pst = pr ? pr.post : null;
     /* BANKED IS THE SLOT'S, NOT THE TEAM'S, exactly as it is on the Standings panel: a slot that
