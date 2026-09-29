@@ -1797,10 +1797,63 @@ function fcfsWeek(s){
   if (!p) return weekNo(s);
   return p.day === 2 ? weekNo(s) - 1 : weekNo(s);
 }
+/* ---- HAS THIS WEEK BEEN SETTLED? THREE ANSWERS, AND THE LEAGUE HOLDS TWO OF THEM ----------
+ *
+ * ON THE PRACTICE COPY the reader runs the coin flips themselves, so the answer is in their own
+ * browser. ON THE REAL PAGE it is the league's, and the league sends it: `fn=view` has carried
+ * `ranWeeks` since the back end was written.
+ *
+ * IT WAS NEVER READ. The page kept only `{ok, me}` out of that reply and looked for the settle
+ * state in `S.ranWeeks`, which on a real owner's page is the empty object it was initialised
+ * with. So `mode()` answered "not settled" for every minute of every first-come window, and
+ * FIRST COME HAS NEVER ONCE BEEN REACHABLE ON THE REAL PAGE. It worked in the sandbox, which is
+ * the one copy where the reader sets `ranWeeks` themselves, so every test of it passed.
+ *
+ * NULL IS THE THIRD ANSWER AND IT IS NOT "NO". "The league says this week is not settled" and
+ * "the league has not been asked" need opposite handling from the same code path, and the
+ * dangerous one is treating the second as the first: a team nobody has won yet must never be
+ * claimable. Both close the window, but only one of them is a fact. */
+var LIVE_RAN = null;      // the league's ranWeeks, from the view. null means never asked.
+var LIVE_WAIT = null;     // how many lists the league is holding. null means never asked.
+function ranOf(wk){
+  if (!Store.live()) return !!(S && (S.ranWeeks || {})[wk]);
+  if (LIVE_RAN === null) return null;
+  return !!LIVE_RAN[wk];
+}
+/* ---- NOTHING TO SETTLE IS SETTLED ---------------------------------------------------------
+ *
+ * Casey, 29 Sep 2026: "what if nobody trades anything during the run it period and there is no
+ * coin flip to run? It still needs to be available for first come first serve until Tuesday
+ * night, because trades can still come in for that week until Tuesday at 5pm."
+ *
+ * He is right, and the hole is only open on ONE setting. On Automatically the back end's Monday
+ * schedule calls settleWeek anyway, finds no lists, and still marks the week run -- it says so
+ * in as many words: "nobody sent a list, so there was nothing to settle". On I Do It Myself
+ * nothing fires, and a commissioner with no lists in front of him has no reason to press Run It.
+ * The week is then never marked, and first come stays shut for its whole window.
+ *
+ * A WEEK WITH NOTHING IN IT IS DECIDED THE MOMENT IT CLOSES. Nobody is contesting anything, so
+ * every unowned team is free and there is nothing a coin flip could change.
+ *
+ * WHAT THE PAGE IS ALLOWED TO KNOW. An owner is never sent other owners' lists -- knowing what
+ * somebody else asked for would let them steer their own. They are sent a COUNT, which is
+ * exactly what this rule needs and nothing more. The count is of rows the league is holding, so
+ * an unsent draft keeps the window shut; that errs on the safe side, and the back end clears
+ * every row at each settle so one cannot sit there for weeks. */
+function nothingToSettle(wk){
+  if (!Store.live()){
+    try { return !B_.pending(S.requests, wk).length; } catch (e) { return false; }
+  }
+  return LIVE_WAIT === 0;
+}
 function mode(s){
   var m = clockMode(s);
   if (m !== 'fcfs') return m;
-  return (S && (S.ranWeeks || {})[fcfsWeek(s)]) ? 'fcfs' : 'queue';
+  var wk = fcfsWeek(s);
+  var ran = ranOf(wk);
+  if (ran === null) return 'queue';          // could not ask: never open on a guess
+  if (ran) return 'fcfs';
+  return nothingToSettle(wk) ? 'fcfs' : 'queue';
 }
 function isFlipMoment(s){
   var p = parts(s || now());
@@ -3215,6 +3268,9 @@ function refreshMe(then){
 function doSignOutLive(){
   Store.forget();
   LIVE_ME = null;
+  /* SIGNED OUT IS NOT "THE LEAGUE SAYS NO", it is "nobody has asked". Leaving the last answer
+     behind would let a signed-out page decide the window from a stale one. */
+  LIVE_RAN = null; LIVE_WAIT = null;
   closeHelp();
   boot();
 }
@@ -7231,8 +7287,18 @@ function bootOpts(){
     access: adoptAccess,
     accessLog: function(L){ LIVE_LOG = L || []; },
     status: saveLight,
-    /* THE LOAD ALREADY KNOWS WHO THIS IS, so `refreshMe` is skipped after it. */
-    whoami: function(a){ LIVE_ME = {ok: true, me: a.me}; },
+    /* THE LOAD ALREADY KNOWS WHO THIS IS, so `refreshMe` is skipped after it.
+       AND IT KNOWS TWO MORE THINGS THE PAGE THREW AWAY: whether each week has been settled, and
+       how many lists the league is holding. Both decide whether first come is open, and both
+       were being dropped on this line. They are kept in their own variables because `fn=me`
+       carries neither, and `refreshMe` replaces LIVE_ME wholesale -- so putting them in there
+       would have them wiped by the next refresh. */
+    whoami: function(a){
+      LIVE_ME = {ok: true, me: a.me};
+      if (a.ranWeeks) LIVE_RAN = a.ranWeeks;
+      if (typeof a.othersWaiting === 'number')
+        LIVE_WAIT = a.othersWaiting + ((a.mine && a.mine.submitted) ? 1 : 0);
+    },
     needKey: askForKey,
     ready: function(stuck){
       if (!S) adopt(null);
