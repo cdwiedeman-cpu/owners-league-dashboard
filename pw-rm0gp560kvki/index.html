@@ -3392,7 +3392,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 7:20 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 7:24 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6263,9 +6263,10 @@ function availTable(kind){
     /* THE SORT READS THE COLUMN ON SCREEN. With a wider horizon these three cells hold
        different quantities, and ranking a visible column by a hidden one is the fault this
        page has been bitten by before. */
-    p30:    x => (PICKN > DATA.hold_games
-                    ? (x.odds ? x.odds.sweep : -1)
-                    : (x.b.byes ? 0 : (x.p30 == null ? -1 : x.p30))),
+    /* SORTED ON THE RECORD THE CELL PRINTS, with the chance of losing none as the tie-break
+       inside a group. Ranking on a number the reader cannot see is the fault this page has been
+       caught by before, and the clean figure now lives in the hover. */
+    p30:    x => (x.odds ? x.odds.k * 1000 + x.odds.sweep : -1),
     bank:   x => (PICKN > DATA.hold_games ? (x.hb ? x.hb.pts : -Infinity) : x.b.pts),
     gain3:  x => (PICKN > DATA.hold_games
                     ? (x.hgain == null ? -Infinity : x.hgain) : x.gain3),
@@ -6385,7 +6386,13 @@ function availTable(kind){
           <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}${upsetTag(t)}${injFlag(t.n)}
           ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td>
         <td class="num c-p30 oddscell ${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
-            title="${x.p30==null ? 'No games left in this window.' : p30Why(t, from, x)}">${
+            title="${x.odds
+              ? esc(`Over ${x.odds.n} game${x.odds.n === 1 ? '' : 's'}: `
+                  + x.odds.dist.map((pp, kk) => `${x.odds.n - (x.odds.n - kk)}`).length
+                  && x.odds.dist.map((pp, kk) => `${kk}-${x.odds.n - kk} ${Math.round(pp * 100)}%`)
+                       .filter((_, kk) => x.odds.dist[kk] >= 0.02).reverse().join(' · ')
+                  + `. Loses none of them: ${Math.round(x.odds.sweep * 100)}%.`)
+              : (x.p30 == null ? 'No games left in this window.' : esc(p30Why(t, from, x)))}">${
           /* A NUMBER, ALWAYS -- AND THE REASON BESIDE IT, NEVER INSTEAD OF IT.
              Casey, 1 Sep 2026: "it shouldn't ever show just a bye in that column."
              With a bye inside the three weeks a sweep is impossible, so the honest figure is
@@ -6399,9 +6406,12 @@ function availTable(kind){
              with a bye in them plays two games and its likely record is over two, not three.
              That is the honest answer to the column's question and the BYE chip beside it is
              what says the third week bought nothing. */
+          /* ONE LINE, MEASURED. The column has 73px and "2-1 45%" needs 52. Adding the clean
+             figure beside it needs 84 and wraps the row onto two lines, which is the thing
+             `verify_pickcols.js` exists to stop. So the cell carries what Casey asked for -- the
+             record and how likely it is -- and the hover carries every record from a sweep down. */
           x.odds
-            ? `<span class="orec">${x.odds.k}-${x.odds.n - x.odds.k} ${pctP(x.odds.p)}</span>
-               <span class="oclean">${pctP(x.odds.sweep)} clean</span>`
+            ? `<b>${x.odds.k}-${x.odds.n - x.odds.k}</b> <span class="d">${pctP(x.odds.p)}</span>`
             : '<span class="d">—</span>'}${
           !WIDE && x.b.byes ? `<span class="recg b" title="${x.b.byes} of these ${HOLD_WKS} weeks ${
             x.b.byes === 1 ? 'is a bye' : 'are byes'} — a week with no game banks nothing, so this team plays only ${x.b.games} game${x.b.games === 1 ? '' : 's'} in the three weeks the hold costs you. The record beside this is over those ${x.b.games}. It banks ${x.b.pts.toFixed(2)}; judge the bye on Bank 3 and Gain 3, which charge you for the empty week.">BYE</span>` : ''}</td>
