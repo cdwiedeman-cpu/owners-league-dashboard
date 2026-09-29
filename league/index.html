@@ -1284,6 +1284,15 @@ table.watchtbl .cw7{width:10%} table.watchtbl .cw8{width:14%}
    raised about the Pickups board. */
 td.c-p30, td.c-bank, td.c-gain, td.c-season, td.c-sgain, td.c-ups,
 td.c-post, td.c-keep, td.c-then{white-space:nowrap}
+/* THE ODDS CELL CARRIES TWO FACTS, SO IT GETS TWO LINES. Casey, 28 Sep 2026: "when you pick the
+   games ahead three, four, five, six, the likely record overlaps with the Bank for games text."
+   The column is 8.57% of a 1000px table, about 86px, and every numeric cell is `nowrap`. A cell
+   reading "3-1 40% 23% clean" is twice that wide, so with nowrap it ran straight over the column
+   beside it instead of wrapping. The width is right and the content was wrong: it is stacked now,
+   and nowrap is lifted for this one cell so the two lines can break where they are meant to. */
+td.c-p30.oddscell{white-space:normal;line-height:1.25}
+td.c-p30.oddscell .orec{display:block;font-weight:700}
+td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-space:nowrap}
 @media (max-width:560px){
   .hide-s{display:none}
   /* NO COLUMN-HIDING IN THE OWNER DRAWER. Casey, 31 Aug 2026, asked that this panel keep every
@@ -3383,7 +3392,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 4:07 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 5:56 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6376,7 +6385,7 @@ function availTable(kind){
         <td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span> <b>${t.n}</b>
           <span class="d" style="font-size:11px">▸</span>${partialTag(t.n)}${upsetTag(t)}${injFlag(t.n)}
           ${planBtn(t.n, true)}${watchBtn(t.n, true)}</td>
-        <td class="num c-p30 ${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
+        <td class="num c-p30 ${WIDE ? 'oddscell ' : ''}${x.p30==null?'d':x.p30>=0.5?'g':x.p30>=0.25?'y':'b'}"
             title="${x.p30==null ? 'No games left in this window.' : p30Why(t, from, x)}">${
           /* A NUMBER, ALWAYS -- AND THE REASON BESIDE IT, NEVER INSTEAD OF IT.
              Casey, 1 Sep 2026: "it shouldn't ever show just a bye in that column."
@@ -6386,8 +6395,8 @@ function availTable(kind){
              with no percentage in it and no way to rank the row. */
           WIDE
             ? (x.odds
-                ? `<b>${x.odds.k}-${x.odds.n - x.odds.k}</b> <span class="d">${pctP(x.odds.p)}</span>
-                   <span class="recg" title="Chance it loses none of the ${x.odds.n}.">${pctP(x.odds.sweep)} clean</span>`
+                ? `<span class="orec">${x.odds.k}-${x.odds.n - x.odds.k} ${pctP(x.odds.p)}</span>
+                   <span class="oclean">${pctP(x.odds.sweep)} clean</span>`
                 : '<span class="d">—</span>')
             : (x.p30 == null ? '<span class="d">—</span>' : (x.b.byes ? '0%' : pctP(x.p30)))}${
           !WIDE && x.b.byes ? `<span class="recg b" title="${x.b.byes} of these ${HOLD_WKS} weeks ${
