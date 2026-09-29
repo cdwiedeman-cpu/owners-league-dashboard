@@ -3447,7 +3447,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '28 Sep 2026, 11:22 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '28 Sep 2026, 11:28 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12516,21 +12516,25 @@ function lSeats(){
  * A BRANCH THAT NAMES THE PAGE ROTS THE DAY THE PAGES STOP DIFFERING. Asking whether the tab is
  * on this page cannot: a container that is not there is not drawn, and one that is, is. */
 function lRepaint(){
-  /* THE FUNCTIONS ARE PASSED, NOT LOOKED UP BY NAME. A top-level declaration is not reliably a
-     property of `window` -- that assumption already cost this project a suite that reported zero
-     postseason vectors on a page carrying 296 of them. All four are declared in this file, so
-     naming them directly always works; the element is the thing that differs between pages.
+  /* THE KEY IS TABSETS, NOT THE CONTAINER. One template renders both pages, so ALL FOUR of these
+     containers exist in both -- TABSETS decides which get a tab, not which get an element. Keying
+     on the element would have drawn Slots and Race into the all-owners page, where nothing
+     personal may appear. `verify_repaint.js` caught exactly that and was right.
+     THE FUNCTIONS ARE PASSED, NOT LOOKED UP BY NAME. A top-level declaration is not reliably a
+     property of `window`; that assumption already cost this project a suite that reported zero
+     postseason vectors on a page carrying 296 of them.
      AND A THROW IS REPORTED, NEVER SWALLOWED. One tab failing must not stop the others drawing,
      but a silent catch is how a broken tab survives a green suite. */
-  const draw = (fn, id) => {
-    if (typeof fn !== 'function' || !el(id)) return;
+  const has = new Set((TABSETS[MODE] || TABSETS.personal).map(t => t[0]));
+  const draw = (fn, tab, id) => {
+    if (!has.has(tab) || typeof fn !== 'function' || !el(id)) return;
     try { fn(); }
     catch (e) { try { console.error('lRepaint: ' + id + ' failed', e); } catch (e2) {} }
   };
-  draw(renderSlots, 'slotsBody');
-  draw(renderRace, 'raceBody');
-  draw(renderWeekly, 'weeklyBody');
-  draw(renderSummary, 'summaryBody');
+  draw(renderSlots, 'slots', 'slotsBody');
+  draw(renderRace, 'race', 'raceBody');
+  draw(renderWeekly, 'weekly', 'weeklyBody');
+  draw(renderSummary, 'summary', 'summaryBody');
 }
 
 function lNoSeason(what){
