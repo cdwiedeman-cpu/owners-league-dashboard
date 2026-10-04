@@ -980,9 +980,19 @@ async function handle(request, env) {
        outside was to try using it -- and a wrong word and a missing one give the same answer, on
        purpose. A yes-or-no says what is needed and gives away nothing: knowing that a password
        exists has never helped anybody guess it. */
+    /* THE CRON LINE IS WHAT wrangler.jsonc ASKS FOR, NOT WHAT CLOUDFLARE IS RUNNING, and saying
+       so is the point. This field read "0 23 * * 1 (Mon 4:00pm AZ)" on the Sunday the back end
+       settled week 4, which is how a wrong schedule stayed invisible: the thing that fires and
+       the thing that describes it were two different stores of one fact. `settle_now` is the
+       guard's own answer at this moment, which is a fact about the code that is running. */
+    const now = scheduleOK();
     return out({ ok: true, at: new Date().toISOString(), seats: access.length,
                  ready: !!box.state, rev: box.rev, store: 'cloudflare',
-                 admin_set: !!env.ADMIN, cron: '0 23 * * 1 (Mon 4:00pm AZ)' });
+                 admin_set: !!env.ADMIN,
+                 cron_asked_for: '0 23 * * 1 (Mon 4:00pm AZ)',
+                 az_now: now.az, settle_now: now.ok,
+                 settle_rule: 'Monday, 4:00pm AZ or later',
+                 last_skip: await getJSON(env, 'lastScheduleSkip', null) });
   }
 
   if (fn === 'public') return out(publicOf(await readState(env)));
