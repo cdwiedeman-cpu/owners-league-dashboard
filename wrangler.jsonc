@@ -23,6 +23,16 @@
   // in January and in July. Do not "fix" it in March.
   // IT IS STILL A SWITCH: the Run It tab's Automatically / I Do It Myself setting is read before
   // anything is settled, so this firing does nothing when it is set to do-it-myself.
+  //
+  // AND IT IS NO LONGER THE ONLY THING STANDING BETWEEN A FIRING AND A SETTLED WEEK. On
+  // 4 Oct 2026 the back end settled week 4 on a SUNDAY while this file said Monday, so the
+  // schedule the Worker was actually running on was not this one -- most likely a trigger left
+  // behind from the months the Worker was uploaded by hand through the Cloudflare dashboard.
+  // `scheduleOK()` in worker.js now works the answer out from the moment it was fired at, and a
+  // firing on any other day or before 4:00pm AZ writes `lastScheduleSkip` into KV and settles
+  // nothing. IF A STRAY TRIGGER IS STILL LISTED IN THE CLOUDFLARE DASHBOARD IT IS STILL FIRING,
+  // harmlessly -- check Workers -> rfl -> Settings -> Trigger Events and delete anything that is
+  // not the line below.
   "triggers": {
     "crons": ["0 23 * * 1"]
   }

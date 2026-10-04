@@ -1404,6 +1404,36 @@ function azNow(at) {
 }
 const azDay = (at) => azNow(at).toISOString().slice(0, 10);
 
+/* ---- IS THIS MOMENT THE ONE THE LEAGUE SETTLES ON? ------------------------------------------
+ *
+ * Casey, 4 Oct 2026, a Sunday: "we had the auto process turned on and it ran it tonight,
+ * Sunday ... It's not supposed to run on Sundays. It's supposed to run on Mondays at four
+ * o'clock." Eight lists for week 4 were settled a day early.
+ *
+ * Nothing stood between a firing and a settled week except the cron expression, and a cron is a
+ * second store of a fact this file can work out for itself. `azNow` shifts by seven hours and
+ * Arizona keeps no daylight saving, so the UTC fields of the result read as Arizona wall clock
+ * all year. Day 1 is Monday; 16 is 4:00pm.
+ */
+function scheduleOK(at) {
+  const az = azNow(at);
+  const day = az.getUTCDay(), hour = az.getUTCHours();
+  return {
+    ok: day === 1 && hour >= 16,
+    az: az.toISOString().slice(0, 16).replace('T', ' ') + ' AZ',
+    day, hour,
+  };
+}
+
+/* ---- THE DAY WEEK N's LISTS CLOSE ------------------------------------------------------------
+ * A league week runs Tuesday to Monday, and week N's lists close at 4:00pm AZ on the Monday that
+ * ENDS week N -- week 1's Tuesday, plus (N-1) weeks, plus six days. Before that day every list is
+ * still being edited, so settling them is wrong whoever asked. Derived, never typed. */
+function weekCloses(week, week1) {
+  const w1 = Date.parse((week1 || '2026-09-08') + 'T00:00:00Z');
+  return new Date(w1 + ((Number(week) - 1) * 7 + 6) * 86400000).toISOString().slice(0, 10);
+}
+
 function weekOf(day, week1) {
   const w1 = Date.parse((week1 || '2026-09-08') + 'T00:00:00Z');
   const n = Math.floor((Date.parse(day + 'T00:00:00Z') - w1) / 604800000) + 1;
@@ -1421,8 +1451,36 @@ async function settleWeek(env, opts) {
   const s = box.state;
   if (!s) return {ok: false, why: 'empty', note: 'the league has not been set up yet'};
 
-  const day = o.day || azDay();
+  /* THE DAY IS THE MOMENT THIS WAS FIRED AT. `scheduled()` has always passed `at` and this line
+     has always ignored it, so the day used was whenever the code happened to run. On a cron that
+     fires on time those are the same; on a retry, a queued invocation or a replay they are not,
+     and the week number is worked out from this. */
+  const day = o.day || azDay(o.at);
   const week = o.week != null ? Number(o.week) : weekOf(day, board.week1);
+
+  /* ---- A WEEK CANNOT BE SETTLED BEFORE ITS LISTS HAVE CLOSED --------------------------------
+   *
+   * Casey, 4 Oct 2026, a Sunday: "we had the auto process turned on and it ran it tonight,
+   * Sunday ... It's not supposed to run on Sundays. It's supposed to run on Mondays at four
+   * o'clock."
+   *
+   * Eight lists for week 4 were settled a day early. Nothing stopped it, because the only thing
+   * standing between a firing and a settled week was the cron expression -- and a cron is a
+   * second store of a fact that this file can work out for itself. WORKED OUT, NEVER TRUSTED:
+   * week N's lists close at 4:00pm AZ on the Monday that ENDS week N, which is week 1's Tuesday
+   * plus (N-1) weeks plus six days. Before that day, every list is still being edited and
+   * settling them is wrong whoever asked.
+   *
+   * `force` still goes through, because that is a commissioner deliberately re-running a week
+   * they have already seen.
+   */
+  if (!o.force) {
+    const closes = weekCloses(week, board.week1);
+    if (day < closes) {
+      return {ok: false, why: 'early', week, closes, day,
+              note: `week ${week} is still open -- its lists close at 4:00pm AZ on ${closes}`};
+    }
+  }
 
   /* A WEEK IS SETTLED ONCE. The schedule could fire twice, or fire after somebody pressed Run It,
      and settling again would move rosters a second time on requests that are already spent. */
@@ -1485,6 +1543,10 @@ async function settleWeek(env, opts) {
   return {ok: true, week, settled: (res.log || []).length, at: when};
 }
 
+/* NAMED SO A SUITE CAN ASK THEM DIRECTLY. A Worker ignores extra named exports; a check written
+   against a second copy of this arithmetic would be the bug it is meant to catch. */
+export { scheduleOK, weekCloses, weekOf, azDay };
+
 export default {
   /* MONDAY, 4:00pm ARIZONA. The cron is `0 23 * * 1` in UTC, which is Monday 16:00 AZ all year
      because Arizona does not observe daylight saving.
@@ -1493,11 +1555,37 @@ export default {
      commissioner presses the button when they are ready. */
   async scheduled(event, env, ctx) {
     try {
+      /* ---- THE SCHEDULE IS A TRIGGER, NOT AN AUTHORITY ------------------------------------
+       *
+       * This used to settle whenever it was called. The cron says Monday and the week was
+       * settled on a Sunday, so the cron the back end is actually running on is not the one in
+       * wrangler.jsonc -- most likely a trigger left behind from the months the Worker was
+       * uploaded by hand through the Cloudflare dashboard. THAT IS NOT KNOWABLE FROM IN HERE,
+       * and it does not need to be: a firing on the wrong day now does nothing.
+       *
+       * ARIZONA, WORKED OUT FROM THE MOMENT IT WAS FIRED AT. `azNow` shifts by seven hours and
+       * Arizona keeps no daylight saving, so the UTC fields of the result read as Arizona wall
+       * clock all year. Day 1 is Monday. Sixteen is 4:00pm.
+       *
+       * IT IS WRITTEN DOWN WHEN IT REFUSES. A scheduled run has nobody watching it, and a
+       * Monday that quietly did not happen looks exactly like a Monday that was never due.
+       */
+      const at = (event && event.scheduledTime) || Date.now();
+      const when = scheduleOK(at);
+      if (!when.ok) {
+        try {
+          await putJSON(env, 'lastScheduleSkip', {
+            at: new Date(at).toISOString(), az: when.az,
+            note: 'the schedule fired outside Monday 4:00pm AZ, so nothing was settled',
+          });
+        } catch (e2) {}
+        return;
+      }
       const box = await readState(env);
       const s = box.state;
       if (!s) return;
       if (s.autoPeloton === false) return;
-      await settleWeek(env, {at: event && event.scheduledTime, by: 'schedule'});
+      await settleWeek(env, {at, by: 'schedule'});
     } catch (e) {
       /* A SCHEDULED RUN HAS NOBODY WATCHING IT. Swallowing the error would leave a Monday that
          quietly did not happen, so it is written where the next person to look will find it. */
