@@ -989,7 +989,7 @@ async function handle(request, env) {
     return out({ ok: true, at: new Date().toISOString(), seats: access.length,
                  ready: !!box.state, rev: box.rev, store: 'cloudflare',
                  admin_set: !!env.ADMIN,
-                 cron_asked_for: '0 23 * * 1 (Mon 4:00pm AZ)',
+                 cron_asked_for: '0 23 * * MON (Mon 4:00pm AZ)',
                  az_now: now.az, settle_now: now.ok,
                  settle_rule: 'Monday, 4:00pm AZ or later',
                  last_skip: await getJSON(env, 'lastScheduleSkip', null) });
@@ -1558,8 +1558,10 @@ async function settleWeek(env, opts) {
 export { scheduleOK, weekCloses, weekOf, azDay };
 
 export default {
-  /* MONDAY, 4:00pm ARIZONA. The cron is `0 23 * * 1` in UTC, which is Monday 16:00 AZ all year
-     because Arizona does not observe daylight saving.
+  /* MONDAY, 4:00pm ARIZONA. The cron is `0 23 * * MON` in UTC, which is Monday 16:00 AZ all year
+     because Arizona does not observe daylight saving. THE DAY IS SPELLED OUT because Cloudflare
+     counts weekdays from Sunday = 1, so the `1` this used to say meant SUNDAY, and that is how
+     week 4 came to be settled on 4 Oct 2026.
      IT IS A SWITCH, NOT A LAW. `autoPeloton` is the same flag the Run It tab already shows as
      Automatically / I Do It Myself. Set to do-it-myself, this fires and does nothing, and the
      commissioner presses the button when they are ready. */

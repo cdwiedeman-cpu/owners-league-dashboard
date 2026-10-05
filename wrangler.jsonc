@@ -24,17 +24,26 @@
   // IT IS STILL A SWITCH: the Run It tab's Automatically / I Do It Myself setting is read before
   // anything is settled, so this firing does nothing when it is set to do-it-myself.
   //
-  // AND IT IS NO LONGER THE ONLY THING STANDING BETWEEN A FIRING AND A SETTLED WEEK. On
-  // 4 Oct 2026 the back end settled week 4 on a SUNDAY while this file said Monday, so the
-  // schedule the Worker was actually running on was not this one -- most likely a trigger left
-  // behind from the months the Worker was uploaded by hand through the Cloudflare dashboard.
-  // `scheduleOK()` in worker.js now works the answer out from the moment it was fired at, and a
-  // firing on any other day or before 4:00pm AZ writes `lastScheduleSkip` into KV and settles
-  // nothing. IF A STRAY TRIGGER IS STILL LISTED IN THE CLOUDFLARE DASHBOARD IT IS STILL FIRING,
-  // harmlessly -- check Workers -> rfl -> Settings -> Trigger Events and delete anything that is
-  // not the line below.
+  // ===== THE DAY IS SPELLED OUT, AND THAT IS NOT A STYLE CHOICE =====
+  //
+  // This line used to read `0 23 * * 1`, and on 4 Oct 2026 it settled week 4 on a SUNDAY.
+  //
+  // CLOUDFLARE COUNTS THE DAYS FROM SUNDAY = 1, NOT FROM SUNDAY = 0. Their own documentation
+  // says so and says it is deliberately different: "Days of the week go from 1 = Sunday to
+  // 7 = Saturday, which is different on some other cron systems (where 0 = Sunday and
+  // 6 = Saturday)." Every other cron in the world reads 1 as Monday. This one reads it as
+  // Sunday, so the schedule fired a day early from the moment it was written, and the comment
+  // beside it swore it was Monday.
+  //
+  // NEVER WRITE A NUMBER IN THE LAST FIELD. Cloudflare recommends the three-letter name for
+  // exactly this reason, and `test_schedule_guard.js` refuses a bare number here now.
+  //
+  // AND IT IS NO LONGER THE ONLY THING STANDING BETWEEN A FIRING AND A SETTLED WEEK.
+  // `scheduleOK()` in worker.js works the day out from the moment it was fired at, so a firing
+  // on any other day, or before 4:00pm AZ, writes `lastScheduleSkip` into KV and settles
+  // nothing. Had that existed, this would have been a line in a log instead of eight rosters.
   "triggers": {
-    "crons": ["0 23 * * 1"]
+    "crons": ["0 23 * * MON"]
   }
 
   // THE SETUP WORD IS NOT IN HERE. `ADMIN` is a secret, set once in the dashboard, and secrets
