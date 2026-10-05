@@ -5287,6 +5287,31 @@ function askUndo(){
         : '')
     + (other ? '<p class="b">' + other + ' other change' + (other === 1 ? '' : 's')
              + ' since the flips will also be undone.</p>' : '')
+    /* A LIST TYPED SINCE THE FLIPS IS KEPT, AND SAYING SO IS THE POINT. The first version of this
+       threw one away silently, which is how Casey lost a Viper owner's list on 4 Oct 2026.
+       Counted from the lists that are there right now, because a settle clears them: anything
+       present arrived afterwards. */
+    + (function(){
+        var fresh = Object.keys(S.requests || {}).filter(function(k){
+          var r = (S.requests || {})[k];
+          return r && (r.rows || []).length;
+        });
+        if (!fresh.length) return '';
+        return '<div class="card ok" style="margin:10px 0"><b class="g">' + fresh.length
+          + ' list' + (fresh.length === 1 ? '' : 's') + ' entered since the flips ran, and '
+          + (fresh.length === 1 ? 'it stays' : 'they stay') + ' in.</b>'
+          + '<p class="note">' + (fresh.length === 1 ? 'It was' : 'They were')
+          + ' never settled, so there is nothing about '
+          + (fresh.length === 1 ? 'it' : 'them') + ' to put back. '
+          + (fresh.length === 1 ? 'It goes' : 'They go') + ' into the re-run with everybody '
+          + 'else.</p>'
+          + '<ul class="note">' + fresh.map(function(k){
+              var b = k.split('|');
+              return '<li>' + esc(b[1]) + ' \u00b7 ' + esc(DATA.div_names[b[0]] || b[0])
+                + ' \u00b7 ' + ((S.requests[k].rows || []).length) + ' trade'
+                + (((S.requests[k].rows || []).length) === 1 ? '' : 's') + '</li>';
+            }).join('') + '</ul></div>';
+      })()
     + '<p>Then add the request you missed and run the week again. It is settled from the start '
     + 'with everything in it.</p>'
     + '<p>That is the only way to get the right answer. A late request does not just add one '
@@ -5309,7 +5334,27 @@ function doUndo(){
               by: e.by || null, state: 'waiting'};
     }).reverse();                       // back into the order they arrived
   S.rosters = JSON.parse(JSON.stringify(u.rosters));
-  S.requests = JSON.parse(JSON.stringify(u.requests));
+  /* ---- A LIST ENTERED AFTER THE FLIPS IS NOT UNDONE WITH THEM -------------------------------
+   *
+   * Casey, 4 Oct 2026, after undoing the Sunday settle: "I thought before I did the undo there
+   * was a trade there waiting to be processed by someone in the Viper division. I believe the
+   * Cleveland Browns were one of the teams they were trying to add, but it does not appear that
+   * that team is now back in the list."
+   *
+   * He was right and it was this line. It REPLACED every list with the snapshot, so a list
+   * somebody typed in the hour between the flips running and the undo was thrown away with no
+   * sign that it had ever existed. Theirs was the one list the undo was not supposed to touch:
+   * it had not been settled, so there was nothing about it to put back.
+   *
+   * WHY ANYTHING HERE NOW IS NEW, with no timestamp to compare. A settle CLEARS the lists -- the
+   * page does it in `doRun()` and the back end does it in `settleWeek()`. So every list present
+   * at the moment of an undo arrived after the flips, by construction. Restore the snapshot, then
+   * let what is there now win. No clock is read, which matters: the snapshot's own time is UTC
+   * and a list carries an Arizona wall-clock stamp, and comparing those two as text is a bug
+   * waiting for a Monday evening.
+   */
+  S.requests = Object.assign(JSON.parse(JSON.stringify(u.requests || {})),
+                             S.requests || {});
   S.acquiredAt = JSON.parse(JSON.stringify(u.acquiredAt || {}));
   S.log = (S.log || []).slice((S.log || []).length - u.logLen);
   S.results = null;
