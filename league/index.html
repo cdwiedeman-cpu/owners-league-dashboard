@@ -933,7 +933,10 @@ h4.txrun .d{font-weight:400}
 table.txtbl{table-layout:fixed;width:100%}
 table.txtbl td, table.txtbl th{overflow-wrap:anywhere;word-break:normal;vertical-align:top}
 table.txtbl .winspan{display:block;white-space:normal}
-table.txtbl .claimat{font-size:10px}
+/* ONE LINE FOR THE RANGE wherever there is room for it. Only a narrow screen breaks it, and it
+   breaks between words rather than inside a date. */
+table.txtbl .wdates{white-space:nowrap}
+table.txtbl .claimat{display:block;font-size:10px}
 /* THE CHIP GETS ITS OWN LINE IN THIS TABLE. It cannot wrap -- it is one word with no space in
    it -- so sharing a line with a team name means the pair needs more width than the column has,
    and the ink runs over the column beside it. Casey, 6 Oct 2026: "the text is overlapping."
@@ -956,6 +959,9 @@ col.w-out{width:22%} col.w-in{width:20%} col.w-fee{width:9%}
 /* The division, small and dim, beside the owner it belongs to. */
 table.txtbl .dvtag{font-size:10px;letter-spacing:.04em}
 @media (max-width:480px){
+  /* A PHONE HAS TO BE ALLOWED TO BREAK IT. 'Mon, Oct 5 to Tue, Oct 6' does not fit a quarter of
+     a 390px screen on one line, and the alternative to wrapping is overlapping. */
+  table.txtbl .wdates{white-space:normal}
   col.w-win{width:26%} col.w-own{width:24%} col.w-out{width:22%}
   col.w-in{width:20%} col.w-fee{width:8%}
 }
@@ -3603,7 +3609,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 10:04 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 11:28 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13765,9 +13771,19 @@ function buildTx(){
      * screen. `pretty` is the short form this page already uses everywhere else -- "Mon, Oct 5"
      * -- so this is one fewer way of writing a date, not a new one. The full form stays on the
      * hover, where there is room for it and nothing to overlap. */
+    /* ---- TWO LINES, NOT THREE: THE DATES TOGETHER, THE TIME UNDER THEM --------------------
+     * Casey, 6 Oct 2026: "you've got your wrapping text of the trade window date, and it makes
+     * this much longer than it needs to be. I don't think the dates need to wrap. You could
+     * spread that out, at least on the laptop window."
+     * The first version broke the range over two lines on every screen and put the claim time
+     * under that, so a row was three lines tall on a laptop with room to spare. The range is one
+     * line now and only a narrow screen is allowed to break it. The cell is at most two lines:
+     * the window, and the minute a claim was made. The owner's cell is the same shape -- name,
+     * then division.
+     * WIDTH IS NOT THE PROBLEM ON A LAPTOP. It was being treated as though it were. */
     return `<span class="winspan" title="${esc(prettyLong(x.start) + ' to '
-        + prettyLong(x.end))}">${esc(pretty(x.start))}<br>
-      <span class="d">to ${esc(pretty(x.end))}</span>${claimed}</span>`;
+        + prettyLong(x.end))}"><span class="wdates">${esc(pretty(x.start))} to ${
+        esc(pretty(x.end))}</span>${claimed}</span>`;
   };
 
   /* ---- ONE WEEK AT A TIME, NEWEST FIRST -------------------------------------------------
