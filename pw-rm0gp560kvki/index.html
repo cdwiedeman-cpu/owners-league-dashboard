@@ -3524,7 +3524,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '05 Oct 2026, 11:02 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 12:20 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13597,13 +13597,27 @@ function buildTx(){
    * effect in, and every calendar window carries the date its trades take effect; run that date
    * through the same week function and the two join with nothing to type and nothing to go
    * stale. The date is still used first where there is one. */
+  /* KEYED BY THE WINDOW'S OWN WEEK -- the week its lists are settled in, which is the number
+     every trade carries. It used to be keyed by `lWeekOfDate(w.effective)`, the week the window's
+     trades PLAY in, which is one higher. So looking a trade up by its settle week landed on the
+     window BEFORE the right one, and a trade settled in the 5 Oct window printed 28 September
+     beside a heading that said week 5. The calendar states the week outright; the date is only a
+     fallback for a window that somehow has no week, and then it is converted rather than used
+     raw. TWO NUMBERS ONE APART ARE THE EASIEST PAIR IN THIS PROJECT TO MIX UP: name which one a
+     map is keyed by, every time. */
   const weekOfWin = new Map();
   for (const w of calWinsAll){
-    const wk = w.effective ? lWeekOfDate(w.effective) : null;
+    const wk = (w.week != null) ? +w.week
+             : (w.effective ? (lWeekOfDate(w.effective) - 1) : null);
     if (wk != null && !weekOfWin.has(wk)) weekOfWin.set(wk, w);
   }
+  /* THE WINDOW A TRADE WAS MADE IN, FROM THE SETTLE WEEK. Every window on the calendar carries
+     the week it belongs to, and every trade carries the week its list was settled in, so the two
+     join on that one number. The DATE is only asked when a row has no week -- it is the field
+     that is missing on most live rows and wrong on a first come claim, so it cannot lead. */
   const winOfTrade = t => {
     if (t.window && winByLabel.get(t.window)) return winByLabel.get(t.window);
+    if (t.week != null && weekOfWin.has(+t.week)) return weekOfWin.get(+t.week);
     const d = t.effective || null;
     if (d){
       const exact = calWinsAll.find(w => w.effective === d);
@@ -13612,7 +13626,6 @@ function buildTx(){
       for (const w of calWinsAll) if (String(w.end || '') <= String(d)) best = w;
       if (best) return best;
     }
-    if (t.week != null && weekOfWin.has(+t.week)) return weekOfWin.get(+t.week);
     return null;
   };
   /* ---- ONE WINDOW COLUMN, BECAUSE THERE WAS ONLY EVER ONE FACT IN IT ----------------------
@@ -13691,14 +13704,11 @@ function buildTx(){
      * EFFECT, never by adding one to a stored number: the effective date is on every row and the
      * calendar turns a date into a week in one place.
      */
-    const effWeek = (() => {
-      const e = rows.map(r => r.effective).filter(Boolean).sort()[0];
-      if (!e) return null;
-      const wk = (cal('trade_windows') || []).find(x => x.effective === e);
-      if (wk && wk.week != null) return wk.week + 1;
-      return null;
-    })();
-    const shownWeek = effWeek == null ? w : effWeek;
+    /* THE HEADING IS THE WEEK THESE TRADES PLAY FROM, and it is the settle week plus one. The
+       block is grouped BY the settle week, so one sum covers every row in it and the heading can
+       never disagree with the window printed beside each row -- they come from the same number.
+       `verify_txweeks.js` asserts exactly that against the shape the back end really sends. */
+    const shownWeek = (w == null) ? null : w + 1;
     const head = shownWeek == null ? 'No week recorded' : 'Week ' + shownWeek;
     /* ---- WHEN THE WEEK WAS ACTUALLY PROCESSED ----------------------------------------------
      * Casey, 5 Oct 2026: "I think we need somewhere a timestamp that shows what time the trades
@@ -14270,9 +14280,35 @@ function lWeekOfDate(d){
  * DATE and are filed by it. Only the live path stamped the entry week. Both use the date now
  * where there is one, and W+1 where there is not.
  */
+/* ---- WHICH WEEK A TRADE PLAYS FROM ----------------------------------------------------------
+ *
+ * Casey, 6 Oct 2026, after four hours of this: "the trade results say week four, 31 trades.
+ * That's for Monday, September 28th. Run it, the Run It tab still shows week five."
+ *
+ * A LIST IS SETTLED IN ONE WEEK AND THE TRADE IT WINS PLAYS IN THE NEXT. That is the whole rule,
+ * and the settle's own week is the one field every source agrees about: the back end stamps it and
+ * the build bakes it. So it is the one this reads.
+ *
+ * WHAT IT USED TO READ, AND WHY THAT FAILED. It preferred `effective`, a date. Most rows from the
+ * back end carry no date at all, and the one row that did carry one was a FIRST COME claim stamped
+ * with the day it was claimed -- a Monday, which is the last day of the week BEFORE the one the
+ * trade plays in. So that row answered 4 where its fifteen neighbours answered 5.
+ *
+ * AND THE ANSWER WAS THEN APPLIED TO ALL OF THEM. `applyLiveTrades` asked this question once per
+ * stored week, using the FIRST row of the group, on the stated assumption that every trade settled
+ * together takes effect together. A first come claim breaks that assumption: it is settled on the
+ * spot, in the same week, by a different road. One odd row dragged fifteen trades back a week, and
+ * the week Casey was looking for did not exist on the page at all.
+ *
+ * ONE ROW, ONE ANSWER, FROM THE FIELD THAT IS ALWAYS THERE. The date survives only as the fallback
+ * for a row with no week on it.
+ */
 function effWeek(t, w){
+  const stored = (t && t.week != null && t.week !== '') ? +t.week
+               : ((w != null && w !== '') ? +w : null);
+  if (stored != null && !isNaN(stored) && stored >= 0) return stored + 1;
   const byDate = t && t.effective ? lWeekOfDate(t.effective) : null;
-  return (byDate != null && byDate > 0) ? byDate : (w + 1);
+  return (byDate != null && byDate > 0) ? byDate : null;
 }
 
 function applyLiveTrades(list){
@@ -14392,7 +14428,14 @@ function applyLiveTrades(list){
                           nothing came back charged in full and the correction was invisible. */
                        fee: (typeof t.fee === 'number') ? t.fee
                             : (DATA.trade_cost != null ? DATA.trade_cost : 3),
-                       fee_note: t.fee_note || '', week: ew, live: true,
+                       /* THE SETTLE'S OWN WEEK, NOT THE WEEK IT PLAYS IN. A live row and a
+                          baked row now carry the same field meaning the same thing, so every
+                          reader downstream gets one shape and the play week is worked out once,
+                          where it is shown. Writing the play week in here made a live row and a
+                          baked row disagree about what `week` means, and the Transactions tab
+                          read both. */
+                       fee_note: t.fee_note || '', week: (t.week == null ? null : +t.week),
+                       live: true,
                        /* THE DATE IT TOOK EFFECT RIDES ALONG. The Transactions tab works out
                           which trade window a trade fell in by joining on this date, and it is
                           also what orders the rows inside a week. Without it a settled trade
