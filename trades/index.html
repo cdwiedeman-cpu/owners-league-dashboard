@@ -5903,9 +5903,17 @@ function claimsThisWeek(week){
           + '<button style="' + bsty + '" title="Shows what this owner will read, before you '
           + 'open anything" onclick="showClaimEmail(' + (+week) + ',' + i
           + ')">Read It</button></div></div>'
-          + '<div class="res won"><div class="t">Claimed first come, first served</div>'
-          + '<div class="w">' + esc(e['in'] || '')
-          + (e.out ? ' in, ' + esc(e.out) + ' out.' : ' in.') + '</div></div>';
+          /* THE TEAMS ARE THE BOLD LINE. Casey, 6 Oct 2026: "because you say first come first
+             serve under each name, that's the entire section. I would like to see the teams
+             bolded that they won. Like in the Run It tab you have Wake Forest dropping
+             Washington." He is right -- the sub-heading already says these are claims, so
+             repeating it on every row spent the one bold line on the thing every row shares.
+             The teams read in the same words a Monday row uses. */
+          + '<div class="res won"><div class="t">' + esc(e['in'] || '')
+          + (e.out ? ', dropping ' + esc(e.out) : '') + '</div>'
+          + '<div class="w">Claimed first come, first served.'
+          + (e.out ? ' ' + esc(e.out) + ' goes back into the pool.' : '')
+          + '</div></div>';
       }).join('');
 }
 /* ---- WHAT AN OWNER IS TOLD ABOUT A CLAIM ---------------------------------------------------
