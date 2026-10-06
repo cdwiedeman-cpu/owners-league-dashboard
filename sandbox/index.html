@@ -5790,11 +5790,21 @@ function resultsCard(){
      And a standing notice that nothing has been sent said the same thing every week to the one
      person who already knew it. Both are behind How Sending Works now, and the week's results
      start at the top of the card. */
+  /* NEWEST AT THE TOP. Casey, 6 Oct 2026: "you put the claim first come first serve at the
+     bottom, but I would think this should go chronologically from newest to oldest. So I think
+     first come first serve claims within that What Happened section should be up at the top."
+     A claim is taken AFTER the Monday run, in the window that opens behind it, so the claims are
+     always the newer half of the week. The same order the Trade Results tab reads in. */
   return '<div class="card"><h2>Week ' + playOf(R.week) + ' &mdash; What Happened</h2>'
-    + '<div class="row" style="margin:0 0 4px"><span class="grow note" style="margin:0">Run at '
-    + esc(pretty(R.at)) + '.</span>'
+    + '<div class="row" style="margin:0 0 4px"><span class="grow note" style="margin:0">'
+    + 'The whole week, newest first.</span>'
     + '<button style="font-size:12px;min-height:30px;padding:4px 10px" '
     + 'onclick="showHelp(\'How Sending Works\', SENDNOTE)">How Sending Works</button></div>'
+    + claimsThisWeek(R.week)
+    + '<h3 style="margin:18px 0 6px">Settled by the Monday Run'
+    + ' <span class="d" style="font-weight:400;font-size:13px">\u00b7 ' + keys.length
+    + (keys.length === 1 ? ' owner' : ' owners') + '</span></h3>'
+    + '<p class="note" style="margin:0 0 8px">Run at ' + esc(pretty(R.at)) + '.</p>'
     + keys.map(function(k){
         var b = k.split('|'), seat = b[1];
         var rows = R.results[k] || [];
@@ -5828,7 +5838,6 @@ function resultsCard(){
                 + esc(s.head) + '</div><div class="w">' + esc(s.body) + '</div></div>';
             }).join('');
       }).join('')
-    + claimsThisWeek(R.week)
     + '</div>';
 }
 
@@ -5850,27 +5859,101 @@ function resultsCard(){
  * Trade Results tab now uses, so the two tabs tell the story the same way.
  * NEWEST FIRST, each with its own moment, because claims are hours apart.
  */
-function claimsThisWeek(week){
-  var all = (S.log || []).filter(function(e){
+/* ONE LIST, READ THE SAME WAY BY THE CARD AND BY EVERY BUTTON ON IT. The card used to sort its
+   own copy, so a button could only be keyed by something the card had already thrown away. Both
+   call this, so the row the button acts on is the row the commissioner pressed. */
+function claimsOfWeek(week){
+  return (S.log || []).filter(function(e){
     return e && String(e.how || '').toLowerCase() === 'first come'
       && e.week != null && +e.week === +week;
-  });
-  if (!all.length) return '';
-  all = all.slice().sort(function(a, b){
+  }).slice().sort(function(a, b){
     return String(b.when || '').localeCompare(String(a.when || ''));
   });
+}
+function claimsThisWeek(week){
+  var all = claimsOfWeek(week);
+  if (!all.length) return '';
+  var bsty = 'font-size:12px;min-height:30px;padding:4px 10px';
   return '<h3 style="margin:16px 0 6px">Claimed First Come, First Served'
-    + ' <span class="d" style="font-weight:400;font-size:13px">\u00b7 ' + all.length
+    + ' <span class="d" style="font-weight:400;font-size:13px">· ' + all.length
     + ' trade' + (all.length === 1 ? '' : 's') + '</span></h3>'
     + '<p class="note" style="margin:0 0 8px">These were taken after the coin flips ran, in the '
     + 'window that stays open until Tuesday at 5:00pm AZ. Nobody else had asked for them.</p>'
-    + all.map(function(e){
-        return '<div class="res won"><div class="t">' + esc(e.owner || '')
-          + (e.div ? ' <span class="d">' + esc(e.div) + '</span>' : '')
-          + (e.when ? ' <span class="d">\u00b7 ' + esc(pretty(e.when)) + '</span>' : '')
-          + '</div><div class="w">' + esc(e['in'] || '')
+    + all.map(function(e, i){
+        /* THE SAME THREE BUTTONS THE MONDAY ROWS CARRY. Casey, 6 Oct 2026: "I also think you're
+           missing the emails that should be like the create email, copy it, read it button should
+           be next to each claim, first come first serve claim in case Bob did it manually and
+           then needs to send the email."
+           The page grants a claim and tells the owner on the spot, so nothing here is owed by
+           default. But a claim Bob worked through himself, or one an owner says never reached
+           them, leaves him with a result and no way to write it out. */
+        return '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;'
+          + 'margin:14px 0 4px"><div style="flex:1 1 140px;min-width:0"><b>'
+          + esc(e.owner || '') + '</b> <span class="pill">'
+          + esc(DATA.div_names[e.div] || e.div || '') + '</span>'
+          + (e.when ? ' <span class="d">· ' + esc(pretty(e.when)) + '</span>' : '')
+          + '</div><div class="row" style="flex:0 0 auto;margin:0;gap:5px">'
+          + '<button class="pri" style="' + bsty + '" title="Opens a new message to '
+          + esc(e.owner || 'this owner') + ', addressed, with the claim already written out. '
+          + 'Read it and press send." onclick="writeClaimMail(' + (+week) + ',' + i
+          + ')">Create Email</button>'
+          + '<button style="' + bsty + '" title="Puts the whole message on your clipboard as '
+          + 'plain text, with the address at the top" onclick="copyClaim(' + (+week) + ',' + i
+          + ',this)">Copy</button>'
+          + '<button style="' + bsty + '" title="Shows what this owner will read, before you '
+          + 'open anything" onclick="showClaimEmail(' + (+week) + ',' + i
+          + ')">Read It</button></div></div>'
+          + '<div class="res won"><div class="t">Claimed first come, first served</div>'
+          + '<div class="w">' + esc(e['in'] || '')
           + (e.out ? ' in, ' + esc(e.out) + ' out.' : ' in.') + '</div></div>';
       }).join('');
+}
+/* ---- WHAT AN OWNER IS TOLD ABOUT A CLAIM ---------------------------------------------------
+   Four lines. The claim is already decided, so there is no coin flip to explain and no window to
+   point at -- the one thing worth saying after the result is the date it starts scoring on. */
+function claimEmailFor(e){
+  var lines = ['Your Claim for Week ' + playOf(e.week),
+               (e.owner || '') + ' · ' + (DATA.div_names[e.div] || e.div || ''), '',
+               'Granted first come, first served.',
+               (e['in'] || '') + ' is yours'
+                 + (e.out ? ', and ' + e.out + ' is off your roster.' : '.'), ''];
+  if (e.when) lines.push('Taken at ' + pretty(e.when) + '.', '');
+  /* A PLAIN DATE IS NOT A MOMENT. `pretty` reads an unqualified date as UTC midnight and shows
+     it in Arizona, which lands on the day before. `prettyDay` is the one that writes a date. */
+  if (e.effective) lines.push('It starts scoring for you on '
+    + prettyDay(e.effective) + '.', '');
+  lines.push('Nobody else had asked for it, so there was no coin flip.', '');
+  return lines.join('\n').replace(/\n+$/, '\n');
+}
+function oneClaimEmail(e){
+  var to = addressesFor(e.div, e.owner);
+  return 'To: ' + (to.length ? to.join(', ') : '(no address on file — tell them yourself)')
+       + '\n\n' + claimEmailFor(e);
+}
+function claimAt(week, i){
+  return claimsOfWeek(week)[i] || null;
+}
+function writeClaimMail(week, i){
+  var e = claimAt(week, i); if (!e) return;
+  var to = addressesFor(e.div, e.owner);
+  if (!to.length){
+    showHelp('No Address for ' + esc(e.owner || 'This Seat'),
+      '<p>There is no email address on file for this seat, so there is nothing to write to.</p>'
+      + '<p>Put one in with <b>Change Address</b> on the Access List, then press this again.</p>');
+    return;
+  }
+  openMail(to, 'Your claim — week ' + playOf(e.week) + ' · ' + (e.owner || ''),
+           claimEmailFor(e), e.owner);
+}
+function copyClaim(week, i, btn){
+  var e = claimAt(week, i); if (!e) return;
+  copyPlain(oneClaimEmail(e), btn, 'Copied', 'Here Is the Message');
+}
+function showClaimEmail(week, i){
+  var e = claimAt(week, i); if (!e) return;
+  showHelp('The Message ' + (e.owner || 'This Owner') + ' Gets',
+    '<pre class="mono" style="white-space:pre-wrap;background:#fff;color:#111;padding:10px;'
+    + 'border-radius:8px;margin:0">' + esc(oneClaimEmail(e)) + '</pre>');
 }
 var SENDNOTE =
   '<p class="note"><b>Nothing here sends mail, and it never will.</b> Each owner has a '
