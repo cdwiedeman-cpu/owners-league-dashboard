@@ -1304,10 +1304,16 @@ var Store = (function () {
      its own account whatever this says. */
   var role = 'owner';
   var mine = null;            // {div, seat} of the signed-in seat
+  /* HOW MANY TIMES THIS SEAT'S LIST HAS BEEN WRITTEN, as the league last told this browser.
+     Sent with every list and checked there, so a device holding an older copy cannot land it on
+     top of a newer one. `rev` cannot do this job: it moves whenever ANY owner writes. */
+  var mineSeq = 0;
+  var lastSent = null;        // the reply to the last list this browser sent
   var sendTimer = null;
   var rev = null;             // the revision the copy in this browser was built on
   var dirty = false, sending = false, timer = null;
   var onstatus = function () {};
+  var onstale = null;         // told when the league refused a list because it had moved on
   var state = 'ready';        // ready | saving | saved | offline | stale
   var lastWhy = '';
 
@@ -1399,11 +1405,28 @@ var Store = (function () {
       setStatus('saving');
       fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
                   body: JSON.stringify(rows.length
-                    ? {fn: 'submit', key: ckey(), rows: rows, week: r.week}
-                    : {fn: 'submit', key: ckey(), clear: true})})
+                    ? {fn: 'submit', key: ckey(), rows: rows, week: r.week, baseSeq: mineSeq}
+                    : {fn: 'submit', key: ckey(), clear: true, baseSeq: mineSeq})})
         .then(function (x) { return x.json(); })
         .then(function (a) {
-          if (a && a.ok) { rev = a.rev; setStatus('saved'); return; }
+          if (a && a.ok) {
+            rev = a.rev;
+            mineSeq = Number(a.seq) || mineSeq;
+            lastSent = a;
+            setStatus('saved');
+            return;
+          }
+          /* ---- REFUSED BECAUSE SOMETHING ELSE CHANGED THE LIST FIRST ---------------------
+           * Not an outage, and not a failed save to shrug at. Another device of this owner's
+           * wrote a newer list, and this one was about to land on top of it. The league kept
+           * the newer one, so the right thing here is to go and read it rather than to tell
+           * the owner their change was saved. THREE ANSWERS AGAIN: saved, refused as stale,
+           * and could not be reached. */
+          if (a && a.why === 'stale') {
+            setStatus('stale', (a && a.note) || 'your list was changed somewhere else');
+            if (onstale) { try { onstale(a); } catch (e) {} }
+            return;
+          }
           setStatus('offline', (a && a.note) || 'the league did not take that list');
         })
         .catch(function (e) {
@@ -1425,6 +1448,7 @@ var Store = (function () {
     boot: function (opts) {
       api = opts.api || null;
       onstatus = opts.status || function () {};
+      onstale = opts.stale || null;
       var get = opts.get, set = opts.set;
 
       if (!live()) {
@@ -1499,6 +1523,10 @@ var Store = (function () {
           if (!a || !a.ok) throw new Error((a && a.note) || 'the league did not answer');
           rev = a.rev;
           if (a.me) { role = a.me.role || 'owner'; mine = {div: a.me.div, seat: a.me.seat}; }
+          /* THE VERSION COMES BACK WITH THE LIST. Read from the league's own answer, never
+             counted up in here, so a page that has been open for an hour knows exactly which
+             version it is proposing to replace. A seat with no list is version 0. */
+          mineSeq = (a.mine && Number(a.mine.seq)) || 0;
           set(a.state || opts.blank());
           if (opts.access && a.access) opts.access(a.access);
           /* THE ACCESS HISTORY COMES BACK WITH THE ACCESS LIST, because it is a history OF
@@ -1524,13 +1552,43 @@ var Store = (function () {
         try { localStorage.setItem(KEY, JSON.stringify(get())); } catch (e) {}
         return;
       }
-      /* AN OWNER SENDS THEIR OWN ROW. THE COMMISSIONER SENDS THE STATE.
-         Not a convenience: the back end refuses `save` from an owner's key, so sending the whole
-         state would be a save that silently never happened and a list that never reached Monday. */
-      if (role !== 'commissioner') { submitMine(get); return; }
+      /* ---- SAVING UI STATE IS NOT THE SAME ACT AS CHANGING YOUR LIST -----------------------
+       *
+       * Casey, 5 Oct 2026, about Mark Secrest's pro trade: "can you just go check that to see if
+       * that's an actual bug and fix it?"
+       *
+       * It was. `save()` is called by the application after ANY change -- opening a panel,
+       * choosing a team in the first come picker, switching the clock -- forty-two places in all.
+       * For an owner this line sent their Monday list every single time. `submitMine` sends a
+       * CLEAR when the local copy holds no sent list, so a browser whose copy was empty wiped the
+       * seat's real list the moment the owner touched anything. The Sunday settle emptied every
+       * list, so every device opened that evening was carrying exactly that empty copy.
+       *
+       * A LIST GOES UP WHEN THE LIST CHANGES, AND AT NO OTHER TIME. `sendList` is called by the
+       * four places that actually change one: adding or removing a row, sending it, and taking it
+       * back. Opening a panel is not one of them.
+       *
+       * THE COMMISSIONER STILL SENDS THE WHOLE STATE, because that is what his half of the page
+       * edits, and the back end refuses `save` from an owner's key on its own account.
+       */
+      if (role !== 'commissioner') return;
       dirty = true;
       schedule(get, set);
     },
+
+    /* THE OWNER'S LIST, SENT ON PURPOSE. The only caller is a change to the list itself.
+       An empty list still goes up as a clear -- deleting your last row has to reach the league,
+       or Monday settles a list you thought you had taken back. What has changed is that an empty
+       list no longer goes up when nothing happened to it. */
+    sendList: function (get) {
+      if (!live()) { try { localStorage.setItem(KEY, JSON.stringify(get())); } catch (e) {} return; }
+      if (role === 'commissioner') { dirty = true; schedule(get, function () {}); return; }
+      submitMine(get);
+    },
+
+    /* WHAT THE LEAGUE SAID ABOUT THE LAST LIST THIS BROWSER SENT. */
+    lastList: function () { return lastSent; },
+    seq: function () { return mineSeq; },
 
     reload: function (opts) { this.boot(opts); },
 
@@ -1648,6 +1706,20 @@ function cap(t){ t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice
    practice copy, the league spreadsheet for the real one. Every one of the thirty-odd places
    that calls save() is unchanged by that, which is the point -- one application, two stores. */
 function save(){ Store.save(function(){ return S; }, adopt); }
+/* ---- CHANGING YOUR LIST IS A DIFFERENT ACT FROM SAVING THE PAGE -----------------------------
+ *
+ * Casey, 5 Oct 2026, about Mark Secrest's pro trade: "can you just go check that to see if that's
+ * an actual bug and fix it?"
+ *
+ * It was. `save()` is called after any change at all -- opening a panel, choosing a team in the
+ * first come picker, moving the clock -- and for an owner it used to send their Monday list every
+ * time. When the browser's own copy held no sent list it sent a CLEAR, so touching anything on a
+ * device whose copy was empty wiped the seat's real list on the league. The Sunday settle emptied
+ * every list, so every device opened that evening was carrying exactly that empty copy.
+ *
+ * SO THE LIST GOES UP FROM HERE AND NOWHERE ELSE. Four callers: adding or removing a row,
+ * sending the list, and the two ways of taking it back. */
+function saveList(){ Store.sendList(function(){ return S; }); }
 /* TAKING A COPY THAT CAME FROM THE SHEET. Used on the first load and again whenever somebody
    else saved while this page was open. */
 function adopt(x){
@@ -1934,13 +2006,61 @@ function playWeekStarts(){
   var d = new Date(w1.getTime() + (playWeek() - 1) * 604800000);
   return d.toLocaleDateString(undefined, {weekday: 'long', month: 'short', day: 'numeric'});
 }
+var DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var MON_NAME = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
+                'Dec'];
+var MON_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+                'September', 'October', 'November', 'December'];
+function ordinal(d){
+  var t = d % 100;
+  if (t >= 11 && t <= 13) return d + 'th';
+  return d + ({1: 'st', 2: 'nd', 3: 'rd'}[d % 10] || 'th');
+}
+function clockOf(mins){
+  var h = Math.floor(mins / 60), m = mins % 60;
+  return ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h >= 12 ? 'pm' : 'am');
+}
+
+/* ---- ONE READER FOR BOTH SHAPES OF TIME THIS PAGE HOLDS -------------------------------------
+ *
+ * Casey, 5 Oct 2026, on the Run It tab: "it says settled at 2026-10-05T23:01:15. That's a mess.
+ * Can you clean that up, so it has a space after the date and a time that actually is readable."
+ *
+ * WHAT IT WAS. `parts()` matches `YYYY-MM-DDTHH:MM` and nothing else, because that is the format
+ * the PAGE keeps its own clock in. The back end writes a real instant -- `toISOString()`, with
+ * seconds and a Z on the end -- so `parts()` returned null and the old `pretty()` handed the raw
+ * string straight back. Every time that came from the league was printed as machine text, and
+ * printed in UTC, which is also seven hours wrong.
+ *
+ * THE TWO SHAPES ARE NOT A MISTAKE TO REMOVE. The page's clock is an Arizona wall-clock reading
+ * that the commissioner can move to test with, and the league's stamps are real instants. They
+ * are different things. What was wrong is that only one of them had a reader. So this reads both
+ * and prints Arizona either way, and the page's own clock stays strict, because `clockMode()`
+ * decides the trade window from it and must never guess.
+ *
+ * ARIZONA IS UTC-7 ALL YEAR. Do not "fix" that in March.
+ */
 function pretty(s){
-  var p = parts(s); if (!p) return s;
-  var DAY = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var h = Math.floor(p.mins / 60), m = p.mins % 60;
-  var ap = h >= 12 ? 'pm' : 'am', hh = (h % 12) || 12;
-  return DAY[p.day] + ' ' + p.d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'})
-    + ', ' + hh + ':' + (m < 10 ? '0' : '') + m + ap + ' AZ';
+  if (!s) return '';
+  var p = parts(s);
+  if (p) return said(p.d.getDay(), p.d.getMonth(), p.d.getDate(), p.mins);
+  var t = Date.parse(s);
+  if (isNaN(t)) return String(s);
+  var az = new Date(t - 7 * 3600 * 1000);
+  return said(az.getUTCDay(), az.getUTCMonth(), az.getUTCDate(),
+              az.getUTCHours() * 60 + az.getUTCMinutes());
+}
+function said(day, mon, date, mins){
+  return DAY_NAME[day] + ', ' + MON_NAME[mon] + ' ' + date + ' at ' + clockOf(mins) + ' AZ';
+}
+/* THE SAME MOMENT, WRITTEN OUT IN FULL, for a table cell with room for it. Casey asked for the
+   trade window to read "Monday, October 5th to Tuesday, October 6th". */
+function prettyDay(s){
+  var t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? s + 'T12:00:00Z' : s);
+  if (isNaN(t)) return String(s || '');
+  var d = new Date(t);
+  return DAY_NAME[d.getUTCDay()] + ', ' + MON_LONG[d.getUTCMonth()] + ' '
+       + ordinal(d.getUTCDate());
 }
 
 /* ---- the league copy ---------------------------------------------------------------------- */
@@ -2689,7 +2809,7 @@ function takePlan(rows){
     setRows(clean);
     /* A LIST THAT WAS ALREADY SENT GOES BACK OUT OF THE WEEK, because what is in the week is no
        longer what is on the screen. Same rule as changing a row by hand. */
-    var r = myReq(); if (r){ r.submitted = null; save(); }
+    var r = myReq(); if (r){ r.submitted = null; saveList(); }
     setTab('trades'); render();
     showHelp('Your Plan Is Filled In',
       '<p><b>' + clean.length + ' trade' + (clean.length === 1 ? '' : 's') + '</b> from your '
@@ -3424,7 +3544,7 @@ function setRows(rows){
   var prev = myReq();
   S.requests[key(a.div, a.seat)] = {week: weekNo(), rows: rows, by: a.by || a.seat,
                                     submitted: prev ? prev.submitted : null};
-  save();
+  saveList();
 }
 /* WHAT IS WRONG WITH THIS LIST, in the owner's words. Returned as a list of sentences rather
    than a boolean, because "Submit is greyed out" is not a reason. */
@@ -3497,7 +3617,7 @@ function submitList(){
   }
   var a = actingSeat();
   S.requests[key(a.div, a.seat)].submitted = now();
-  save();
+  saveList();
   /* NO PANEL. Casey, 15 Sep 2026: "the pop-up that comes out of that seems just like an extra
      step ... can we just not? On the screen it looks like you've saved something."
      He is right, and the page was already saying it twice: the card turns green and names the
@@ -3508,7 +3628,7 @@ function submitList(){
 function unsubmit(){
   var a = actingSeat(); if (!a) return;
   var r = myReq(); if (!r) return;
-  r.submitted = null; save(); render();
+  r.submitted = null; saveList(); render();
 }
 function addRow(cond, drops){
   var rows = myRows().slice();
@@ -7671,6 +7791,18 @@ function bootOpts(){
     access: adoptAccess,
     accessLog: function(L){ LIVE_LOG = L || []; },
     status: saveLight,
+    /* THE LEAGUE REFUSED A LIST BECAUSE IT HAD ALREADY MOVED ON, which happens when the owner
+       has this seat open on a second device. Nothing was overwritten, and the owner has to be
+       told that in words rather than left looking at a list the league does not have. The page
+       re-reads so what is on screen is what the league holds. */
+    stale: function(a){
+      showHelp('Your List Was Changed Somewhere Else',
+        '<p>' + esc((a && a.note) || 'Your list was changed on another device.') + '</p>'
+        + '<p>Nothing you just did was saved over it, and nothing was lost. What is on screen '
+        + 'now is the list the league is holding. Check it, and make your change again if you '
+        + 'still want it.</p>');
+      Store.reload(bootOpts());
+    },
     /* THE LOAD ALREADY KNOWS WHO THIS IS, so `refreshMe` is skipped after it.
        AND IT KNOWS TWO MORE THINGS THE PAGE THREW AWAY: whether each week has been settled, and
        how many lists the league is holding. Both decide whether first come is open, and both
