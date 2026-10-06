@@ -4673,8 +4673,9 @@ function fcfsBar(){
     : 'One team in, one team out. Nothing chosen yet.';
   return '<div class="stickybar" id="actbar"><div class="barrow">'
     + '<button class="add" data-act="claimstart" onclick="claimStart()">+ Add a Trade</button>'
-    + '<button class="pri" data-act="claim" ' + (ready ? '' : 'disabled')
-    + ' onclick="doClaim()">Claim It Now</button></div>'
+    + '<button class="pri" data-act="claim" ' + (ready && !CLAIMING ? '' : 'disabled')
+    + ' onclick="doClaim()">' + (CLAIMING ? 'Asking the League' : 'Claim It Now')
+    + '</button></div>'
     + '<span class="grow">' + said + '</span></div>';
 }
 function fcfsForm(a, free, mine, k){
@@ -4693,10 +4694,16 @@ function fcfsForm(a, free, mine, k){
     + pickField('fd', 'What You Would Give Up', S.fcd, dns, null, '2')
     + '</div></div>'
     + '<div class="row" style="margin-top:11px">'
-    + '<button class="pri" onclick="doClaim()">Claim It Now</button></div>'
+    + '<button class="pri" ' + (CLAIMING ? 'disabled' : '')
+    + ' onclick="doClaim()">' + (CLAIMING ? 'Asking the League' : 'Claim It Now')
+    + '</button></div>'
     + '<p class="note" style="margin-top:8px">Whoever presses this first gets the team. There is '
     + 'no queue to be in and nothing to wait for.</p></div>';
 }
+
+/* ONE CLAIM AT A TIME. A second tap while the league is being asked is not a second claim, and
+   on a phone a slow answer invites exactly that tap. */
+var CLAIMING = false;
 
 function doClaim(){
   var a = actingSeat(); if (!a) return;
@@ -4712,6 +4719,41 @@ function doClaim(){
   var p = S.fcp || '', d = S.fcd || '';
   if (!p || !d){ showHelp('Not enough to go on',
     '<p>A claim needs both a team to pick up and a team to drop.</p>'); return; }
+
+  /* ---- THE LEAGUE DECIDES A CLAIM. THIS PAGE ONLY ASKS. --------------------------------------
+   *
+   * Casey, 5 Oct 2026, forwarding Mark Secrest: "I got a confirmation message that I won the
+   * trade as no one else had tried to claim that team. But when I go in and look at my teams, I
+   * am not seeing the change to my pro teams."
+   *
+   * WHAT WAS WRONG. This function used to run `P.claim` here, write the new roster into `S`,
+   * push a row onto `S.log`, and show the owner a confirmation. Then it called `save()`. For
+   * anybody who is not the commissioner that goes to `submit`, which sends the rows of their
+   * Monday list and NOTHING ELSE, so the roster and the log row never left the device. The
+   * owner was told they had won a team the league had never heard of.
+   *
+   * IT WORKED FOR CASEY, WHICH IS WHY IT SURVIVED. The commissioner's page may send the whole
+   * state through `save`, so his own claims did reach the league, and he is the only person who
+   * ever tested it. A PAGE THAT ANSWERS ITS OWN QUESTION CANNOT BE WRONG IN FRONT OF THE PERSON
+   * TESTING IT.
+   *
+   * AND FIRST COME, FIRST SERVED WAS NOT HAPPENING AT ALL. Two owners could each be told they
+   * had won the same team, each by their own copy. A race needs one referee, and the referee is
+   * the back end.
+   *
+   * THE PRACTICE COPY STILL DECIDES FOR ITSELF, because there is no league behind it and its
+   * whole purpose is that the reader sets the state themselves. That is the one place where
+   * answering your own question is the right thing to do.
+   */
+  if (Store.live()){
+    if (CLAIMING) return;
+    CLAIMING = true; render();
+    Store.call('claim', {pickup: p, drops: [d]})
+      .then(function(r){ leagueClaimed(a, p, r, null); })
+      .catch(function(e){ leagueClaimed(a, p, null, String((e && e.message) || e)); });
+    return;
+  }
+
   var L = league();
   var res = P.claim({league: L, div: a.div, seat: a.seat, pickup: p, drops: [d]});
   var s = sentence(res, a.seat);
@@ -4727,6 +4769,48 @@ function doClaim(){
   showHelp(s.head, '<p>' + esc(s.body) + '</p>' + (P.GOT[res.outcome]
     ? '<p class="g">Your roster has already changed. Look at the Rosters tab.</p>' : ''));
   render();
+}
+
+/* THREE ANSWERS, NOT TWO, AND THE THIRD ONE IS THE IMPORTANT ONE.
+ * "The league says no" and "the league could not be asked" need opposite handling. A no is
+ * final and the team is gone. An unreachable league has changed nothing, so the team is still
+ * there to claim and the owner has to be told to try again rather than told they missed it.
+ * Treating the second as the first is how a page comes to report a loss that never happened --
+ * the same shape as `whoAmI()` returning the seat, 'no' or null.
+ */
+function leagueClaimed(a, pickup, r, err){
+  CLAIMING = false;
+  if (err || !r || r.ok !== true){
+    render();
+    showHelp('The League Could Not Be Asked',
+      '<p>Your claim was not sent, so nothing has changed. ' + esc(pickup) + ' is still there to '
+      + 'claim. Try it again.</p>'
+      + ((r && r.note) ? '<p>' + esc(r.note) + '</p>'
+                       : (err ? '<p>' + esc(err) + '</p>' : '')));
+    return;
+  }
+  if (!r.granted){
+    render();
+    if (r.closed){
+      showHelp('First Come Is Closed', '<p>' + esc(r.note || '') + '</p>'
+        + '<p>Your roster has not changed.</p>');
+      return;
+    }
+    /* THE WORDING IS THE PAGE'S ONE STORE OF IT. The league sends back the outcome and this
+       hands it to the same `sentence()` a coin flip goes through, so a refusal reads the same
+       way whichever road it came down. */
+    var no = sentence({outcome: r.outcome, pickup: pickup, drop: r.drop || null,
+                       detail: r.detail || ''}, a.seat);
+    showHelp(no.head, '<p>' + esc(no.body) + '</p>');
+    return;
+  }
+  S.fcp = ''; S.fcd = '';
+  var won = sentence({outcome: r.outcome, pickup: r.pickup, drop: r.drop}, a.seat);
+  /* AND THE ROSTER SHOWN AFTERWARDS IS THE LEAGUE'S, NOT THIS PAGE'S GUESS AT IT. That is the
+     whole difference: the old code wrote what it hoped had happened, this reads what did. */
+  Store.reload(bootOpts());
+  showHelp(won.head, '<p>' + esc(won.body) + '</p>'
+    + '<p class="g">The league has it. Every owner sees this trade now.</p>');
 }
 
 /* ---- TAB: run it ------------------------------------------------------------------------------ */
