@@ -1187,6 +1187,112 @@ async function handle(request, env) {
     return out({ ok: true, rev, mine: s.requests[mine] || null });
   }
 
+  /* ---------- FIRST COME, FIRST SERVED, DECIDED HERE --------------------------------------
+   *
+   * Casey, 5 Oct 2026, forwarding Mark Secrest: "I got a confirmation message that I won the
+   * trade as no one else had tried to claim that team. But when I go in and look at my teams, I
+   * am not seeing the change to my pro teams."
+   *
+   * WHAT WAS WRONG. `doClaim()` on the page ran the rules itself, wrote the new roster into that
+   * browser, pushed a row onto that browser's log, and showed the owner a confirmation. Then it
+   * called `save()`. For anybody who is not the commissioner that goes to `submit`, which sends
+   * THE ROWS OF THEIR MONDAY LIST and nothing else. There was no route for a claim on this side
+   * of the wire at all -- no handler, and nothing in the store that sent one. So every owner's
+   * claim lived in their own device and died there, while telling them it had worked.
+   *
+   * It worked for Casey, which is why it went unseen. The commissioner's page may send the whole
+   * state back through `save`, so his own claims did reach the league. He is the only person who
+   * ever tested it.
+   *
+   * AND IT WAS NOT FIRST COME, FIRST SERVED IN ANY SENSE. Two owners could each be told they had
+   * won the same team, each by their own copy, and neither claim would reach the league.
+   *
+   * WHAT THIS DOES. The league decides. The window, the week stamp, the roster it is judged
+   * against and the record it leaves are all on this side, and the page shows this answer rather
+   * than one of its own. The decision itself is `Peloton.claim`, the same function the page used
+   * to call and the same one a coin flip goes through, so a claim and a settle can never disagree
+   * about whether a trade was legal.
+   */
+  if (fn === 'claim') {
+    const w = claimWindowOK();
+    if (!w.ok) {
+      return out({ok: true, granted: false, outcome: 'closed', closed: true, az: w.az,
+                  note: `first come is open ${w.rule}. Right now it is ${w.az}.`});
+    }
+    const pickup = String(p('pickup') || '');
+    const drops = [].concat(p('drops') || p('drop') || []).map(String).filter(Boolean);
+    if (!pickup || !drops.length) {
+      return out({ok: false, why: 'empty',
+                  note: 'a claim needs a team to pick up and a team to drop'});
+    }
+    const board = await readBoard();
+    if (!board) {
+      return out({ok: false, why: 'noboard',
+                  note: 'the board could not be read, so nothing was decided. Nothing changed.'});
+    }
+
+    /* READ, DECIDE, THEN CHECK THE LEAGUE STILL SAYS SO BEFORE ANSWERING.
+     * KV has no compare and swap, so two claims landing in the same instant can both read the
+     * same version and the second write wins. The window cannot be closed completely here, so
+     * it is made as small as the store allows and then CHECKED: the version is re-read right
+     * before the write, and the stored state is re-read right after it. An owner is told they
+     * won only when the league's own copy says they hold the team. A FALSE CONFIRMATION IS THE
+     * BUG THIS HANDLER EXISTS TO FIX, so an uncertain answer is reported as uncertain and never
+     * rounded up to a yes.
+     * The real answer is a Durable Object, which serialises properly. That is a bigger change
+     * than a window that closes tomorrow afternoon allows, and it is written down in
+     * START_HERE_NEXT_YEAR.md rather than left as a comment nobody reads.
+     */
+    for (let tries = 0; tries < 4; tries++) {
+      const box = await readState(env);
+      const s0 = box.state;
+      if (!s0) return out({ok: false, why: 'empty', note: 'the league has not been set up yet'});
+      const day = azDay();
+      const league = Board.build({
+        teams: board.teams, rosters: s0.rosters, acquiredAt: s0.acquiredAt,
+        today: day, divisions: board.divisions, rules: board.rules,
+      });
+      const res = Peloton.claim({league, div: who.div, seat: who.seat,
+                                 pickup, drops});
+      if (!Peloton.GOT[res.outcome]) {
+        return out({ok: true, granted: false, outcome: res.outcome, detail: res.detail || '',
+                    pickup, rev: box.rev});
+      }
+      Peloton.applyClaim(league, who.div, who.seat, res);
+
+      /* THE ACQUISITION DATE IS PART OF THE TRADE, NOT A DETAIL. `holdOf` reads a missing date as
+         the start of the season, so a team picked up today with no date on it could be dropped
+         again on the spot. The settle writes this for every row it grants and so does this. */
+      const key = who.div + '|' + who.seat;
+      const s1 = s0;
+      s1.rosters = league.rosters;
+      s1.acquiredAt = s1.acquiredAt || {};
+      (s1.acquiredAt[key] = s1.acquiredAt[key] || {})[res.pickup] = day;
+      const week = claimWeek(null, board.week1);
+      const row = Object.assign({when: new Date().toISOString()},
+        Peloton.claimRow(who.div, who.seat, res,
+                         {week, fee: board.rules.trade_cost, effective: day}));
+      s1.log = s1.log || [];
+      s1.log.unshift(row);
+
+      /* STILL THE SAME VERSION? If somebody wrote while this was deciding, the decision was made
+         against a roster that has moved and must be made again. */
+      const again = await readState(env);
+      if (again.rev !== box.rev) continue;
+      await writeState(env, s1, box.rev + 1);
+
+      /* AND THE LEAGUE'S OWN COPY HAS TO AGREE BEFORE THE OWNER IS TOLD ANYTHING. */
+      const after = await readState(env);
+      const holds = (((after.state || {}).rosters || {})[key] || []).indexOf(res.pickup) !== -1;
+      if (!holds) continue;
+      return out({ok: true, granted: true, outcome: res.outcome, pickup: res.pickup,
+                  drop: res.drop, week, rev: after.rev, effective: day});
+    }
+    return out({ok: false, why: 'busy',
+                note: 'the league was being written to at the same moment, so nothing was '
+                    + 'decided. Nothing changed. Try the claim again.'});
+  }
+
   /* ---------- the commissioner's half ---------------------------------------------------- */
   if (!isCommish(who)) {
     return out({ ok: false, why: 'notyours',
@@ -1406,6 +1512,19 @@ async function handle(request, env) {
  */
 const BOARD_URL = 'https://cdwiedeman-cpu.github.io/owners-league-dashboard/backend/board.json';
 
+/* ONE READER, TWO CALLERS. The settle and a first come claim both have to be answered against
+   the board that is actually on the site, and a second fetch written out longhand is how the two
+   come to be answered against different boards. Returns null when it cannot be read, and each
+   caller says what that means in its own words. */
+async function readBoard() {
+  try {
+    const b = await fetch(BOARD_URL, {cf: {cacheTtl: 60}}).then((r) => r.json());
+    return (b && b.teams && b.teams.length) ? b : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 /* ARIZONA DOES NOT MOVE ITS CLOCKS. UTC-7 all year, so this is right in January and in July --
    do not "fix" it in March. The league runs on AZ time and every date in the state is AZ. */
 function azNow(at) {
@@ -1444,6 +1563,46 @@ function weekCloses(week, week1) {
   return new Date(w1 + ((Number(week) - 1) * 7 + 6) * 86400000).toISOString().slice(0, 10);
 }
 
+/* ---- IS THIS MOMENT INSIDE THE FIRST COME WINDOW? -------------------------------------------
+ *
+ * Monday 4:00pm AZ to Tuesday 5:00pm AZ, and the LEAGUE decides that, not the page. Until
+ * 5 Oct 2026 nothing on this side of the wire decided anything about a claim at all: the owner's
+ * own browser ran the rules, wrote the new roster into that one device, and told the owner they
+ * had won. Nothing was sent. Mark Secrest was told he had won a pro team that the league had
+ * never heard of, and two owners could each have been told they won the same team, because each
+ * was being answered by their own copy.
+ *
+ * FIRST COME, FIRST SERVED IS A RACE BETWEEN 27 PEOPLE, AND ONLY ONE PLACE CAN REFEREE A RACE.
+ * That is this file. `scheduleOK` is its sibling and the same reasoning applies: a window the
+ * page draws a chip from is a second store of a fact, and the second store is the one that lies.
+ *
+ * Day 1 is Monday and day 2 is Tuesday, out of `azNow`, whose UTC fields read as Arizona wall
+ * clock all year because Arizona keeps no daylight saving.
+ */
+function claimWindowOK(at) {
+  const az = azNow(at);
+  const day = az.getUTCDay(), hour = az.getUTCHours();
+  const ok = (day === 1 && hour >= 16) || (day === 2 && hour < 17);
+  return {
+    ok, day, hour,
+    az: az.toISOString().slice(0, 16).replace('T', ' ') + ' AZ',
+    rule: 'Monday 4:00pm AZ to Tuesday 5:00pm AZ',
+  };
+}
+
+/* ---- WHICH WEEK A CLAIM BELONGS TO ----------------------------------------------------------
+ * The window straddles a league week boundary: a league week runs Tuesday to Monday, so the
+ * Monday half is the week that has just closed and the Tuesday half is already the next one.
+ * A claim belongs to the week that closed, on BOTH halves, because it is the answer to that
+ * week's settle. Stamped from the clock alone it read 5 on the Tuesday and 4 on the Monday, and
+ * one window cannot write two weeks. This is the same rule `fcfsWeek()` applies on the page.
+ */
+function claimWeek(at, week1) {
+  const az = azNow(at);
+  const n = weekOf(azDay(at), week1);
+  return az.getUTCDay() === 2 ? n - 1 : n;
+}
+
 function weekOf(day, week1) {
   const w1 = Date.parse((week1 || '2026-09-08') + 'T00:00:00Z');
   const n = Math.floor((Date.parse(day + 'T00:00:00Z') - w1) / 604800000) + 1;
@@ -1453,8 +1612,8 @@ function weekOf(day, week1) {
 const when0 = () => new Date().toISOString();
 async function settleWeek(env, opts) {
   const o = opts || {};
-  const board = await fetch(BOARD_URL, {cf: {cacheTtl: 60}}).then((r) => r.json());
-  if (!board || !board.teams || !board.teams.length) {
+  const board = await readBoard();
+  if (!board) {
     return {ok: false, why: 'noboard', note: 'the board could not be read, so nothing was settled'};
   }
   const box = await readState(env);
@@ -1555,7 +1714,7 @@ async function settleWeek(env, opts) {
 
 /* NAMED SO A SUITE CAN ASK THEM DIRECTLY. A Worker ignores extra named exports; a check written
    against a second copy of this arithmetic would be the bug it is meant to catch. */
-export { scheduleOK, weekCloses, weekOf, azDay };
+export { scheduleOK, weekCloses, weekOf, azDay, claimWindowOK, claimWeek };
 
 export default {
   /* MONDAY, 4:00pm ARIZONA. The cron is `0 23 * * MON` in UTC, which is Monday 16:00 AZ all year
