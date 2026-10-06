@@ -1209,17 +1209,37 @@ async function handle(request, env) {
      * The settle's own results answer that for every row that was still there at 4:00pm -- each
      * one gets an outcome line, including the ones it turned down. What they cannot show is a row
      * that was REMOVED before 4:00pm, and that is precisely what happened to Mark's. So every
-     * write to a list is recorded here: when, whose, how many rows, and whether it was sent or
-     * taken back. No team names and nothing personal -- enough to answer "what happened to my
-     * list" and no more. Newest first, capped, because this is a trail and not an archive.
+     * write to a list is recorded here. Newest first, capped, because this is a trail and not an
+     * archive.
+     *
+     * THE TEAMS ARE RECORDED, AND THE FIRST VERSION WRONGLY LEFT THEM OUT.
+     * I withheld them on the grounds that a record of 27 seats' intentions before Monday is the
+     * one thing the peloton exists to prevent. Casey, 6 Oct 2026: "you need to put which team,
+     * because otherwise the list is irrelevant for us. Bob and I need to see that as
+     * commissioners. That's okay. If we don't know the team, then there's no value in showing us
+     * every change to a list. And we already see what team it is in the waiting to be settled
+     * section."
+     * He is right and the reasoning settles it. This record is served to the COMMISSIONER HALF
+     * only -- `fn=view`, which every owner calls, has never carried it and does not now -- and
+     * the commissioner is already shown every team on every waiting list in the card above this
+     * one. Withholding the names here protected nothing and left a log that could not answer the
+     * question it exists for. A PRIVACY RULE THAT PROTECTS NOTHING IS JUST A MISSING FEATURE.
      */
-    const note = (what, n) => {
+    const note = (what, n, rows) => {
       s.listLog = [{ at: new Date().toISOString(), div: who.div, seat: who.seat,
-                     what, n, seq: curSeq + 1 }].concat(s.listLog || []).slice(0, 500);
+                     what, n, seq: curSeq + 1,
+                     /* The row shapes as they were sent, trimmed to the two fields the card
+                        prints. A conditional row's rule is not kept: the question this answers is
+                        "which teams were on it", and the full list is in the settle's own record. */
+                     teams: (rows || []).map((r) => ({
+                       in: (r && r.pickup) || '',
+                       out: ((r && r.drops) || []).filter(Boolean),
+                     })) }].concat(s.listLog || []).slice(0, 500);
     };
 
     if (p('clear')) {
-      note('took the list back', cur ? (cur.rows || []).length : 0);
+      note('took the list back', cur ? (cur.rows || []).length : 0,
+           cur ? (cur.rows || []) : []);
       delete s.requests[mine];
     } else {
       const rows = p('rows');
@@ -1238,7 +1258,7 @@ async function handle(request, env) {
                            week: p('week') == null ? null : Number(p('week')),
                            submitted: new Date().toISOString(), by: who.seat,
                            seq: curSeq + 1 };
-      note('sent a list', rows.length);
+      note('sent a list', rows.length, rows);
     }
     const rev = box.rev + 1;
     await writeState(env, s, rev);
