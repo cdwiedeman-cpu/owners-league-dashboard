@@ -2855,24 +2855,45 @@ function prettyLong(iso){
  * seven hours wrong and unreadable. Arizona keeps no daylight saving, so UTC-7 is right all
  * year -- do not "fix" this in March.
  */
+/* ---- ONE READER FOR BOTH SHAPES OF TIME THE LEAGUE WRITES -----------------------------------
+ *
+ * A week settled by the SCHEDULE is stamped by the back end with `toISOString()` -- a real
+ * instant, in UTC, with a Z on the end. A week settled by somebody pressing Run It is stamped by
+ * the PAGE with `now()`, which is an Arizona wall-clock reading with no timezone on it at all.
+ * Both arrive in the same field.
+ *
+ * READ AS AN INSTANT, A WALL-CLOCK STRING IS SEVEN HOURS WRONG. `Date.parse('2026-09-29T14:18')`
+ * treats it as local time, and shifting that to Arizona moves an afternoon settle to the morning.
+ * Read as a wall clock, an instant is wrong the other way. Which is why this is one function and
+ * not a conversion written at each of the three places that print a time.
+ *
+ * ARIZONA KEEPS NO DAYLIGHT SAVING, so UTC-7 holds in January and in July. `ms` is a sortable
+ * number for both shapes, because comparing the two as text goes wrong inside a single day.
+ */
+function azParts(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(iso || ''));
+  if (m) return {y: +m[1], mo: +m[2] - 1, d: +m[3], h: +m[4], mi: +m[5],
+                 ms: Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5])};
+  const t = Date.parse(iso);
+  if (isNaN(t)) return null;
+  const az = new Date(t - 7 * 3600 * 1000);
+  return {y: az.getUTCFullYear(), mo: az.getUTCMonth(), d: az.getUTCDate(),
+          h: az.getUTCHours(), mi: az.getUTCMinutes(), ms: az.getTime()};
+}
+const azClock = (p) => ((p.h % 12) || 12) + ':' + (p.mi < 10 ? '0' : '') + p.mi
+  + (p.h >= 12 ? 'pm' : 'am') + ' AZ';
+
 /* JUST THE TIME, ARIZONA, am or pm. For a row whose date is already printed above it. */
 function clockOnly(iso){
-  if (!iso) return '';
-  const t = Date.parse(iso);
-  if (isNaN(t)) return '';
-  const az = new Date(t - 7 * 3600 * 1000);
-  const h = az.getUTCHours(), m = az.getUTCMinutes();
-  return ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h >= 12 ? 'pm' : 'am') + ' AZ';
+  const p = azParts(iso);
+  return p ? azClock(p) : '';
 }
 function prettyAt(iso){
-  if (!iso) return '';
-  const t = Date.parse(iso);
-  if (isNaN(t)) return '';
-  const az = new Date(t - 7 * 3600 * 1000);
-  const h = az.getUTCHours(), m = az.getUTCMinutes();
-  return DAY_LONG[az.getUTCDay()] + ', ' + MONTH_LONG[az.getUTCMonth()] + ' '
-       + ordinalOf(az.getUTCDate()) + ' at ' + (((h % 12) || 12) + ':'
-       + (m < 10 ? '0' : '') + m + (h >= 12 ? 'pm' : 'am')) + ' AZ';
+  const p = azParts(iso);
+  if (!p) return '';
+  const dow = new Date(Date.UTC(p.y, p.mo, p.d)).getUTCDay();
+  return DAY_LONG[dow] + ', ' + MONTH_LONG[p.mo] + ' ' + ordinalOf(p.d)
+       + ' at ' + azClock(p);
 }
 
 function azNow(){
@@ -3544,7 +3565,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 1:21 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 1:23 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13821,10 +13842,13 @@ function buildTx(){
       if (!byRun.has(k)) byRun.set(k, {fc, at: t.at || null, rows: []});
       byRun.get(k).rows.push(t);
     }
-    const groups = [...byRun.values()].sort((a, c) =>
-      /* Newest first, and a group with no time recorded goes last rather than first. */
-      (a.at ? 0 : 1) - (c.at ? 0 : 1)
-      || String(c.at || '').localeCompare(String(a.at || '')));
+    const msOf = (x) => { const p = azParts(x); return p ? p.ms : null; };
+    const groups = [...byRun.values()].sort((a, c) => {
+      /* Newest first, and a group with no time recorded goes last rather than first. SORTED ON A
+         NUMBER, because the two shapes of stamp do not compare as text inside one day. */
+      const A = msOf(a.at), C = msOf(c.at);
+      return (A == null ? 1 : 0) - (C == null ? 1 : 0) || (C || 0) - (A || 0);
+    });
     return groups.map(g => {
       const name = g.fc ? 'Claimed First Come, First Served' : 'Settled in the Coin Flips';
       const n = g.rows.length;
