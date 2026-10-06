@@ -939,8 +939,18 @@ table.txtbl .claimat{font-size:10px}
    and the ink runs over the column beside it. Casey, 6 Oct 2026: "the text is overlapping."
    On its own line it never competes for width, and `verify_txweeks.js` measures the ink against
    the box at 390px and 280px so this cannot come back. */
-table.txtbl .howchip{display:block;margin-top:2px;width:-moz-fit-content;width:fit-content}
+/* AND IT IS ALLOWED TO WRAP. `COIN FLIP` has a space in it and the chip forbids breaking at it,
+   so on its own line it was still 62px of unbreakable ink in a 48px column on a folded phone.
+   Letting it break at its own space costs nothing and is the difference between fitting and
+   overlapping. The project rule is to forbid mid-word breaks, not breaks between words. */
+table.txtbl .howchip{display:block;margin-top:2px;white-space:normal;
+  width:-moz-fit-content;width:fit-content}
 table.txtbl .dvtag{display:block}
+/* ROOM COMES OUT OF THE PADDING BEFORE IT COMES OUT OF THE WORDS. */
+table.txtbl td, table.txtbl th{padding-left:5px;padding-right:5px}
+@media (max-width:360px){
+  table.txtbl td, table.txtbl th{padding-left:3px;padding-right:3px;font-size:11px}
+}
 col.w-win{width:25%} col.w-own{width:24%}
 col.w-out{width:22%} col.w-in{width:20%} col.w-fee{width:9%}
 /* The division, small and dim, beside the owner it belongs to. */
@@ -3593,7 +3603,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 10:03 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 10:04 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
