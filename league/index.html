@@ -934,16 +934,13 @@ table.txtbl{table-layout:fixed;width:100%}
 table.txtbl td, table.txtbl th{overflow-wrap:anywhere;word-break:normal;vertical-align:top}
 table.txtbl .winspan{display:block;white-space:normal}
 table.txtbl .claimat{font-size:10px}
-col.w-win{width:23%} col.w-div{width:9%} col.w-own{width:21%}
-col.w-out{width:20%} col.w-in{width:18%} col.w-fee{width:9%}
+col.w-win{width:25%} col.w-own{width:24%}
+col.w-out{width:22%} col.w-in{width:20%} col.w-fee{width:9%}
+/* The division, small and dim, beside the owner it belongs to. */
+table.txtbl .dvtag{font-size:10px;letter-spacing:.04em}
 @media (max-width:480px){
-  /* THE DIVISION GOES, NOT SMALLER. Casey's standing rule: on a narrow screen DROP a column
-     rather than shrink it. The owner's name already says which division they are in, because an
-     owner sits in one. */
-  table.txtbl col.w-div{width:0}
-  table.txtbl td:nth-child(2), table.txtbl th:nth-child(2){display:none}
-  col.w-win{width:27%} col.w-own{width:24%} col.w-out{width:22%}
-  col.w-in{width:19%} col.w-fee{width:8%}
+  col.w-win{width:26%} col.w-own{width:24%} col.w-out{width:22%}
+  col.w-in{width:20%} col.w-fee{width:8%}
 }
 /* YOUR OWN ROW IS OUTLINED, NOT LABELLED. Casey, 20 Sep 2026: "I don't like how the YOU is
    hidden underneath the PFD division. What if instead of saying YOU next to Palma/Wiedeman, you
@@ -3589,7 +3586,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 10:01 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 10:02 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13764,10 +13761,19 @@ function buildTx(){
    * button that narrows it to the reader's own seat. What they are looking for is the first
    * thing on the tab.
    */
+  /* ---- FIVE COLUMNS, NOT SIX, AND THE DIVISION RIDES WITH THE OWNER ----------------------
+   * Casey's standing rule is to DROP a column on a narrow screen rather than shrink it. The
+   * first attempt did that in CSS, with `display:none` on the division cell and a zero-width
+   * col. THAT BREAKS THE COLUMN MAPPING: hiding a cell takes it out of the row, so every cell
+   * after it slides one column left and the owner's name landed on the zero-width column.
+   * `verify_txweeks.js` measured it as "Mark Secrest needs 17 in 0".
+   * A COLUMN DROPPED IN CSS IS STILL IN THE ROW. So it is dropped from the markup instead, at
+   * every width, and the division goes where it belongs anyway -- beside the owner whose
+   * division it is. One fewer column everywhere, and the same information. */
   const rowOfTrade = t => `<tr${txMine(t) ? ' class="txmine"' : ''}>
           <td class="d">${winCell(t)}</td>
-          <td class="d">${esc(t.div || '')}</td>
-          <td>${esc(t.owner || '')}${txMine(t) ? ' <span class="mytag">YOU</span>' : ''}</td>
+          <td>${esc(t.owner || '')}${t.div ? ' <span class="d dvtag">' + esc(t.div)
+            + '</span>' : ''}${txMine(t) ? ' <span class="mytag">YOU</span>' : ''}</td>
           <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}${howChip(t)}</td>
           <td class="num${feeOf(t) === FEE ? '' : ' gold'}" title="${esc(feeOf(t) === FEE
               ? `The standard ${money(FEE)} transaction fee.`
@@ -13887,8 +13893,8 @@ function buildTx(){
       return `<h4 class="txrun">${name} <span class="d">· ${n} trade${n === 1 ? '' : 's'}${
         g.at ? ' · ' + esc(prettyAt(g.at)) : ' · the time was not recorded'}</span></h4>
         <div class="scr"><table class="txtbl">
-      <colgroup><col class="w-win"><col class="w-div"><col class="w-own"><col class="w-out"><col class="w-in"><col class="w-fee"></colgroup>
-      <thead><tr><th>Trade Window</th><th>Div</th><th>Owner</th>
+      <colgroup><col class="w-win"><col class="w-own"><col class="w-out"><col class="w-in"><col class="w-fee"></colgroup>
+      <thead><tr><th>Trade Window</th><th>Owner</th>
         <th>Out</th><th>In</th><th class="num">Cost</th></tr></thead>
       <tbody>${g.rows.map(rowOfTrade).join('')}</tbody></table></div>`;
     }).join('');
