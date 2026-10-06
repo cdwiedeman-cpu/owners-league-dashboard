@@ -921,6 +921,44 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
    below it came from, so it reads as a step down from the week rather than a second week. */
 h4.txrun{margin:12px 0 5px;font-size:13px;font-weight:700;letter-spacing:.01em}
 h4.txrun .d{font-weight:400}
+/* ---- THE TRADE RESULTS TABLE, SIZED SO NOTHING OVERLAPS ON A PHONE -------------------------
+ * Casey, 6 Oct 2026: "on the trade results tab in mobile the table looks terrible, the text is
+ * overlapping."
+ * A colgroup alone does not stop a cell pushing itself wider than its share -- the browser grows
+ * the column to fit the longest unbreakable word, and six columns of team names on a 390px screen
+ * is more than fits. `table-layout:fixed` makes the widths the widths. Team names then WRAP
+ * instead of overflowing, which is why the rows are allowed to be two lines tall here.
+ * CSS CANNOT OVERRIDE A COLGROUP's width, so the widths are ON the col elements and the media
+ * query swaps them there rather than trying to restyle the cells. */
+table.txtbl{table-layout:fixed;width:100%}
+table.txtbl td, table.txtbl th{overflow-wrap:anywhere;word-break:normal;vertical-align:top}
+table.txtbl .winspan{display:block;white-space:normal}
+table.txtbl .claimat{font-size:10px}
+/* THE CHIP GETS ITS OWN LINE IN THIS TABLE. It cannot wrap -- it is one word with no space in
+   it -- so sharing a line with a team name means the pair needs more width than the column has,
+   and the ink runs over the column beside it. Casey, 6 Oct 2026: "the text is overlapping."
+   On its own line it never competes for width, and `verify_txweeks.js` measures the ink against
+   the box at 390px and 280px so this cannot come back. */
+/* AND IT IS ALLOWED TO WRAP. `COIN FLIP` has a space in it and the chip forbids breaking at it,
+   so on its own line it was still 62px of unbreakable ink in a 48px column on a folded phone.
+   Letting it break at its own space costs nothing and is the difference between fitting and
+   overlapping. The project rule is to forbid mid-word breaks, not breaks between words. */
+table.txtbl .howchip{display:block;margin-top:2px;white-space:normal;
+  width:-moz-fit-content;width:fit-content}
+table.txtbl .dvtag{display:block}
+/* ROOM COMES OUT OF THE PADDING BEFORE IT COMES OUT OF THE WORDS. */
+table.txtbl td, table.txtbl th{padding-left:5px;padding-right:5px}
+@media (max-width:360px){
+  table.txtbl td, table.txtbl th{padding-left:3px;padding-right:3px;font-size:11px}
+}
+col.w-win{width:25%} col.w-own{width:24%}
+col.w-out{width:22%} col.w-in{width:20%} col.w-fee{width:9%}
+/* The division, small and dim, beside the owner it belongs to. */
+table.txtbl .dvtag{font-size:10px;letter-spacing:.04em}
+@media (max-width:480px){
+  col.w-win{width:26%} col.w-own{width:24%} col.w-out{width:22%}
+  col.w-in{width:20%} col.w-fee{width:8%}
+}
 /* YOUR OWN ROW IS OUTLINED, NOT LABELLED. Casey, 20 Sep 2026: "I don't like how the YOU is
    hidden underneath the PFD division. What if instead of saying YOU next to Palma/Wiedeman, you
    just outline Palma/Wiedeman in that purple outline, a box around it."
@@ -3565,7 +3603,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 1:24 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 10:07 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13717,11 +13755,19 @@ function buildTx(){
        Put in the cell the reader is already reading rather than in a column of its own, because
        nothing on these pages scrolls sideways. */
     const claimed = (String(t.how || '').toLowerCase() === 'first come' && t.at)
-      ? `<br><span class="d claimat" style="white-space:nowrap;font-size:10px">claimed ${
-          esc(clockOnly(t.at))}</span>`
+      ? `<br><span class="d claimat" style="white-space:nowrap">${esc(clockOnly(t.at))}</span>`
       : '';
-    return `<span style="white-space:nowrap">${esc(prettyLong(x.start))}</span><br>
-      <span class="d" style="white-space:nowrap">to ${esc(prettyLong(x.end))}</span>${claimed}`;
+    /* ---- SHORT DATES, BECAUSE THIS TABLE IS READ ON A PHONE -------------------------------
+     * Casey, 6 Oct 2026: "on the trade results tab in mobile the table looks terrible, the text
+     * is overlapping. I think you could abbreviate the way you're doing the trade window dates
+     * instead of spelling out Monday ... and not spell out the exact month."
+     * "Monday, October 5th to Tuesday, October 6th" is 44 characters in a column 24% of a 390px
+     * screen. `pretty` is the short form this page already uses everywhere else -- "Mon, Oct 5"
+     * -- so this is one fewer way of writing a date, not a new one. The full form stays on the
+     * hover, where there is room for it and nothing to overlap. */
+    return `<span class="winspan" title="${esc(prettyLong(x.start) + ' to '
+        + prettyLong(x.end))}">${esc(pretty(x.start))}<br>
+      <span class="d">to ${esc(pretty(x.end))}</span>${claimed}</span>`;
   };
 
   /* ---- ONE WEEK AT A TIME, NEWEST FIRST -------------------------------------------------
@@ -13732,10 +13778,19 @@ function buildTx(){
    * button that narrows it to the reader's own seat. What they are looking for is the first
    * thing on the tab.
    */
+  /* ---- FIVE COLUMNS, NOT SIX, AND THE DIVISION RIDES WITH THE OWNER ----------------------
+   * Casey's standing rule is to DROP a column on a narrow screen rather than shrink it. The
+   * first attempt did that in CSS, with `display:none` on the division cell and a zero-width
+   * col. THAT BREAKS THE COLUMN MAPPING: hiding a cell takes it out of the row, so every cell
+   * after it slides one column left and the owner's name landed on the zero-width column.
+   * `verify_txweeks.js` measured it as "Mark Secrest needs 17 in 0".
+   * A COLUMN DROPPED IN CSS IS STILL IN THE ROW. So it is dropped from the markup instead, at
+   * every width, and the division goes where it belongs anyway -- beside the owner whose
+   * division it is. One fewer column everywhere, and the same information. */
   const rowOfTrade = t => `<tr${txMine(t) ? ' class="txmine"' : ''}>
           <td class="d">${winCell(t)}</td>
-          <td class="d">${esc(t.div || '')}</td>
-          <td>${esc(t.owner || '')}${txMine(t) ? ' <span class="mytag">YOU</span>' : ''}</td>
+          <td>${esc(t.owner || '')}${t.div ? ' <span class="d dvtag">' + esc(t.div)
+            + '</span>' : ''}${txMine(t) ? ' <span class="mytag">YOU</span>' : ''}</td>
           <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}${howChip(t)}</td>
           <td class="num${feeOf(t) === FEE ? '' : ' gold'}" title="${esc(feeOf(t) === FEE
               ? `The standard ${money(FEE)} transaction fee.`
@@ -13854,9 +13909,9 @@ function buildTx(){
       const n = g.rows.length;
       return `<h4 class="txrun">${name} <span class="d">· ${n} trade${n === 1 ? '' : 's'}${
         g.at ? ' · ' + esc(prettyAt(g.at)) : ' · the time was not recorded'}</span></h4>
-        <div class="scr"><table>
-      <colgroup><col style="width:24%"><col style="width:8%"><col style="width:20%"><col style="width:20%"><col style="width:18%"><col style="width:10%"></colgroup>
-      <thead><tr><th>Trade Window</th><th>Div</th><th>Owner</th>
+        <div class="scr"><table class="txtbl">
+      <colgroup><col class="w-win"><col class="w-own"><col class="w-out"><col class="w-in"><col class="w-fee"></colgroup>
+      <thead><tr><th>Trade Window</th><th>Owner</th>
         <th>Out</th><th>In</th><th class="num">Cost</th></tr></thead>
       <tbody>${g.rows.map(rowOfTrade).join('')}</tbody></table></div>`;
     }).join('');
