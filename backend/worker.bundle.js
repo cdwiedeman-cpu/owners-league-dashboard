@@ -951,6 +951,12 @@ function publicOf(box) {
       contested: !!t.contested, effective: t.effective || null,
       fee: typeof t.fee === 'number' ? t.fee : null,
       fee_note: t.fee_note || '',
+      /* WHEN IT WAS ACTUALLY PROCESSED. Casey, 5 Oct 2026: "I think we need somewhere a
+         timestamp that shows what time the trades were processed, in Arizona time." The settle
+         has always stamped every row it writes, and this filter dropped the field, so no page
+         could show it however it was asked. It is a real instant in UTC; every page turns it
+         into Arizona for the reader. */
+      at: t.when || null,
     });
   }
   return { ok: true, rev: box.rev, at: new Date().toISOString(),
@@ -1163,7 +1169,57 @@ async function handle(request, env) {
                          note: 'the league has not been set up in the trades page yet' });
     const mine = who.div + '|' + who.seat;
     s.requests = s.requests || {};
+
+    /* ---- A STALE DEVICE MUST NOT OVERWRITE A NEWER LIST -------------------------------------
+     *
+     * Casey, 5 Oct 2026, about Mark Secrest's pro trade: "he entered his, re-entered the trade
+     * after that ... so it would have been there for today's Monday run. And he's saying that is
+     * what didn't go through."
+     *
+     * WHAT WAS WRONG. An owner's list is held in their own browser and pushed up WHOLE, and this
+     * handler took it without asking which version it was replacing. So the last device to write
+     * won, silently, and nobody was told. A phone and a laptop signed into one seat are two
+     * writers. Open the page on one, add a row on the other, touch anything on the first, and the
+     * first one's older list lands on top of the newer one.
+     *
+     * AND IT WAS WORSE THAN A RACE BETWEEN TWO DEVICES. On the page, `save()` was wired to this
+     * handler for every kind of change, so merely opening a panel or choosing a team in the first
+     * come form sent a list -- and a browser whose local copy was empty sent a CLEAR. Any device
+     * that had loaded while the league held no list for that seat would wipe the seat's real list
+     * the next time it was touched. The Sunday settle emptied every list, so every device opened
+     * that evening was carrying exactly that empty copy.
+     *
+     * THE SEAT'S OWN VERSION, NOT THE LEAGUE'S. `rev` moves every time ANY owner writes, so
+     * checking it here would refuse an owner because somebody else had submitted. `seq` counts
+     * writes to THIS SEAT's entry and nothing else. A page sends the seq it last saw; if the
+     * league has moved on, the write is refused and the page is handed what the league holds.
+     */
+    const cur = s.requests[mine] || null;
+    const curSeq = cur ? (Number(cur.seq) || 0) : 0;
+    const base = p('baseSeq');
+    if (base != null && Number(base) !== curSeq) {
+      return out({ ok: false, why: 'stale', seq: curSeq, mine: cur,
+                   note: 'your list was changed somewhere else since this page read it, so '
+                       + 'nothing was overwritten. This page has been brought up to date.' });
+    }
+
+    /* ---- AND A LIST THAT DISAPPEARS LEAVES A TRAIL ------------------------------------------
+     * Casey, 5 Oct 2026: "I also think we need to build in something that logs what trades were
+     * submitted before the Run It process takes place."
+     * The settle's own results answer that for every row that was still there at 4:00pm -- each
+     * one gets an outcome line, including the ones it turned down. What they cannot show is a row
+     * that was REMOVED before 4:00pm, and that is precisely what happened to Mark's. So every
+     * write to a list is recorded here: when, whose, how many rows, and whether it was sent or
+     * taken back. No team names and nothing personal -- enough to answer "what happened to my
+     * list" and no more. Newest first, capped, because this is a trail and not an archive.
+     */
+    const note = (what, n) => {
+      s.listLog = [{ at: new Date().toISOString(), div: who.div, seat: who.seat,
+                     what, n, seq: curSeq + 1 }].concat(s.listLog || []).slice(0, 500);
+    };
+
     if (p('clear')) {
+      note('took the list back', cur ? (cur.rows || []).length : 0);
       delete s.requests[mine];
     } else {
       const rows = p('rows');
@@ -1180,11 +1236,13 @@ async function handle(request, env) {
          page would have shown a week that settled nothing. */
       s.requests[mine] = { div: who.div, seat: who.seat, rows,
                            week: p('week') == null ? null : Number(p('week')),
-                           submitted: new Date().toISOString(), by: who.seat };
+                           submitted: new Date().toISOString(), by: who.seat,
+                           seq: curSeq + 1 };
+      note('sent a list', rows.length);
     }
     const rev = box.rev + 1;
     await writeState(env, s, rev);
-    return out({ ok: true, rev, mine: s.requests[mine] || null });
+    return out({ ok: true, rev, seq: curSeq + 1, mine: s.requests[mine] || null });
   }
 
   /* ---------- FIRST COME, FIRST SERVED, DECIDED HERE --------------------------------------
@@ -1698,7 +1756,15 @@ async function settleWeek(env, opts) {
     s.log = s.log || [];
     s.log.unshift(Object.assign({when}, e));
   });
-  s.results = {week, at: when, results: res.results, log: res.log};
+  /* THE LISTS IT SETTLED ARE KEPT BESIDE THE ANSWERS. Every row that was there gets an outcome
+     line, so the answers already say what was asked for -- but only for the rows that survived
+     to 4:00pm. Keeping the lists themselves means the record shows what the week STARTED with,
+     which is the question asked when a row is missing rather than refused. Row shapes only, as
+     they were sent. */
+  s.results = {week, at: when, results: res.results, log: res.log,
+               pending: pending.map((r) => ({div: r.div, seat: r.seat, week: r.week,
+                                             submitted: r.submitted || null,
+                                             rows: r.rows || []}))};
   /* `since` IS THE LOG LENGTH AFTER THE RUN, which is what tells the page what arrived
      afterwards -- a first come claim taken between the run and the undo. */
   snap.since = (s.log || []).length;

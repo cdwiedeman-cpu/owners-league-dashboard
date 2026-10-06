@@ -2814,6 +2814,47 @@ function pretty(iso){
   return d.toLocaleDateString('en-US', {timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric'});
 }
 
+/* ---- THE SAME DAY, WRITTEN OUT THE WAY A PERSON SAYS IT -------------------------------------
+ * Casey, 5 Oct 2026, on the Trade Results table: "I think it makes sense to have the trade
+ * window and then put the actual dates, Monday, October 5th to Tuesday, October 6th."
+ * `pretty` gives "Mon, Oct 5", which is right for a chip and too clipped for a table cell with
+ * room in it. MIDDAY IS USED ON PURPOSE: a plain date read as UTC midnight and shown in any
+ * American timezone lands on the day before.
+ */
+const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+                    'September', 'October', 'November', 'December'];
+const DAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function ordinalOf(n){
+  const t = n % 100;
+  if (t >= 11 && t <= 13) return n + 'th';
+  return n + ({1: 'st', 2: 'nd', 3: 'rd'}[n % 10] || 'th');
+}
+function prettyLong(iso){
+  if (!iso) return '';
+  const d = new Date(iso + 'T12:00:00Z');
+  if (isNaN(d.getTime())) return String(iso);
+  return DAY_LONG[d.getUTCDay()] + ', ' + MONTH_LONG[d.getUTCMonth()] + ' '
+       + ordinalOf(d.getUTCDate());
+}
+
+/* ---- A REAL INSTANT, IN ARIZONA, WITH AM AND PM ---------------------------------------------
+ * Casey, 5 Oct 2026: "a timestamp that shows what time the trades were processed, in Arizona
+ * time ... if you can avoid military time, do AM and PM."
+ * The back end stamps a settle with `toISOString()`, which is UTC. Printed as it stands it is
+ * seven hours wrong and unreadable. Arizona keeps no daylight saving, so UTC-7 is right all
+ * year -- do not "fix" this in March.
+ */
+function prettyAt(iso){
+  if (!iso) return '';
+  const t = Date.parse(iso);
+  if (isNaN(t)) return '';
+  const az = new Date(t - 7 * 3600 * 1000);
+  const h = az.getUTCHours(), m = az.getUTCMinutes();
+  return DAY_LONG[az.getUTCDay()] + ', ' + MONTH_LONG[az.getUTCMonth()] + ' '
+       + ordinalOf(az.getUTCDate()) + ' at ' + (((h % 12) || 12) + ':'
+       + (m < 10 ? '0' : '') + m + (h >= 12 ? 'pm' : 'am')) + ' AZ';
+}
+
 function azNow(){
   try {
     return new Date().toLocaleString('en-US', {timeZone: 'America/Phoenix',
@@ -3483,7 +3524,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '04 Oct 2026, 10:53 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '05 Oct 2026, 9:46 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13563,14 +13604,31 @@ function buildTx(){
     if (t.week != null && weekOfWin.has(+t.week)) return weekOfWin.get(+t.week);
     return null;
   };
-  const winLabel = t => {
+  /* ---- ONE WINDOW COLUMN, BECAUSE THERE WAS ONLY EVER ONE FACT IN IT ----------------------
+   * Casey, 5 Oct 2026: "you have a windows column and a dates column, and that's the same. It
+   * seems duplicative and confusing. I think it makes sense to have the trade window and then
+   * put the actual dates, Monday, October 5th to Tuesday, October 6th."
+   * He is right, and it had been true since the column was added. The derived window's `label`
+   * IS its date range -- "10/5-10/6" -- so the Window column printed the two dates in slashes
+   * and the Dates column printed the same two dates in words, side by side. A LABEL THAT IS A
+   * RESTATEMENT OF THE COLUMN NEXT TO IT IS NOT A LABEL.
+   * The window is already named by the "Week 4" heading above the block, so nothing is lost by
+   * dropping the slashes and keeping the words.
+   * TWO SHORT LINES, NOT ONE LONG ONE. The full form is what he asked for and it is wide, and
+   * nothing on these pages scrolls sideways, so the cell breaks at "to" instead of stretching
+   * the table.
+   */
+  const winCell = t => {
     const x = winOfTrade(t);
-    if (!x) return t.window || '—';
-    return calByRange.get((x.start || '') + '|' + (x.end || '')) || x.label || t.window || '—';
-  };
-  const dateOfT = t => {
-    const x = winOfTrade(t);
-    return x && x.start ? `${pretty(x.start)} – ${pretty(x.end)}` : '<span class="d">—</span>';
+    if (!x || !x.start) {
+      /* AN ABSENCE IS NEVER AN ANSWER. A trade whose window could not be worked out says so,
+         and the table that lists those and why is further down the tab. */
+      return t.window ? `<span class="d" title="Typed into the commissioner's workbook as ${
+        esc(t.window)}. It is not a window on the league calendar.">${esc(t.window)}</span>`
+        : '<span class="d">Not dated</span>';
+    }
+    return `<span style="white-space:nowrap">${esc(prettyLong(x.start))}</span><br>
+      <span class="d" style="white-space:nowrap">to ${esc(prettyLong(x.end))}</span>`;
   };
 
   /* ---- ONE WEEK AT A TIME, NEWEST FIRST -------------------------------------------------
@@ -13582,8 +13640,7 @@ function buildTx(){
    * thing on the tab.
    */
   const rowOfTrade = t => `<tr${txMine(t) ? ' class="txmine"' : ''}>
-          <td class="d">${esc(winLabel(t))}</td>
-          <td class="d">${dateOfT(t)}</td>
+          <td class="d">${winCell(t)}</td>
           <td class="d">${esc(t.div || '')}</td>
           <td>${esc(t.owner || '')}${txMine(t) ? ' <span class="mytag">YOU</span>' : ''}</td>
           <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}</td>
@@ -13607,11 +13664,24 @@ function buildTx(){
     const rows = byWeek.get(w).slice()
       .sort((a, c) => String(a.effective || '~').localeCompare(String(c.effective || '~')));
     const head = w == null ? 'No week recorded' : 'Week ' + w;
+    /* ---- WHEN THE WEEK WAS ACTUALLY PROCESSED ----------------------------------------------
+     * Casey, 5 Oct 2026: "I think we need somewhere a timestamp that shows what time the trades
+     * were processed, in Arizona time ... if you can avoid military time, do AM and PM."
+     * The settle has always stamped every row it writes. The stamp did not reach any page,
+     * because the back end's public filter dropped the field, so there was nothing to show
+     * however it was asked for. It is carried now.
+     * THE LATEST STAMP IN THE BLOCK, because one settle writes every row in a week at the same
+     * moment and a re-run writes later ones. UNKNOWN IS NOT ZERO: a week whose rows carry no
+     * stamp says nothing here rather than printing a dash or a made-up time. Rows logged before
+     * the stamp started travelling are exactly that case.
+     */
+    const ats = rows.map(r => r.at).filter(Boolean).sort();
+    const when = ats.length ? prettyAt(ats[ats.length - 1]) : '';
     return `<h3 class="txwk">${head} <span class="d">· ${rows.length} trade${
-      rows.length === 1 ? '' : 's'}</span></h3>
+      rows.length === 1 ? '' : 's'}${when ? ' · settled ' + esc(when) : ''}</span></h3>
       <div class="scr"><table>
-      <colgroup><col style="width:14%"><col style="width:20%"><col style="width:8%"><col style="width:18%"><col style="width:18%"><col style="width:14%"><col style="width:8%"></colgroup>
-      <thead><tr><th>Window</th><th>Dates</th><th>Div</th><th>Owner</th>
+      <colgroup><col style="width:24%"><col style="width:8%"><col style="width:20%"><col style="width:20%"><col style="width:18%"><col style="width:10%"></colgroup>
+      <thead><tr><th>Trade Window</th><th>Div</th><th>Owner</th>
         <th>Out</th><th>In</th><th class="num">Cost</th></tr></thead>
       <tbody>${rows.map(rowOfTrade).join('')}</tbody></table></div>`;
   };
