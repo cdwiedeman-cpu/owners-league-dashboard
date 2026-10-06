@@ -1327,9 +1327,23 @@ async function handle(request, env) {
       s1.acquiredAt = s1.acquiredAt || {};
       (s1.acquiredAt[key] = s1.acquiredAt[key] || {})[res.pickup] = day;
       const week = claimWeek(null, board.week1);
+      /* ---- TWO DIFFERENT DATES, AND THEY ARE NOT INTERCHANGEABLE ----------------------------
+       * `acquiredAt`, written above, is the day the owner GOT the team. The three-game hold runs
+       * from there, so it is the day of the claim.
+       * `effective` is the day the team starts SCORING for them, and the league's rule is the day
+       * AFTER the window closes -- Casey's own wording on the Trades tab: "a trade takes effect
+       * the day after its window closes, so a game played on the Tuesday still belongs to the old
+       * owner." A first come claim made on the Monday is in the Monday-to-Tuesday window like any
+       * other trade in it.
+       * The first version stamped both from the claim day, which would have handed the new owner
+       * Monday's and Tuesday's games. DERIVED FROM `weekCloses`, never typed: that returns the
+       * Monday the window opens, so the Wednesday after it is two days on. */
+      const closes = weekCloses(week, board.week1);
+      const effective = new Date(Date.parse(closes + 'T00:00:00Z') + 2 * 86400000)
+        .toISOString().slice(0, 10);
       const row = Object.assign({when: new Date().toISOString()},
         Peloton.claimRow(who.div, who.seat, res,
-                         {week, fee: board.rules.trade_cost, effective: day}));
+                         {week, fee: board.rules.trade_cost, effective}));
       s1.log = s1.log || [];
       s1.log.unshift(row);
 
@@ -1344,7 +1358,7 @@ async function handle(request, env) {
       const holds = (((after.state || {}).rosters || {})[key] || []).indexOf(res.pickup) !== -1;
       if (!holds) continue;
       return out({ok: true, granted: true, outcome: res.outcome, pickup: res.pickup,
-                  drop: res.drop, week, rev: after.rev, effective: day});
+                  drop: res.drop, week, rev: after.rev, effective, acquired: day});
     }
     return out({ok: false, why: 'busy',
                 note: 'the league was being written to at the same moment, so nothing was '
