@@ -5828,7 +5828,49 @@ function resultsCard(){
                 + esc(s.head) + '</div><div class="w">' + esc(s.body) + '</div></div>';
             }).join('');
       }).join('')
+    + claimsThisWeek(R.week)
     + '</div>';
+}
+
+/* ---- AND THE CLAIMS, BECAUSE THE WEEK IS NOT JUST THE RUN -------------------------------------
+ *
+ * Casey, 6 Oct 2026: "On the Run It tab, the What Happened section for me and Bob is only showing
+ * what happened during the Run It period. The way it reads, it should be telling us what happened
+ * for the entire week, and so that should include the first come first serve trades as well. So
+ * Mark's trade should be showing up there."
+ *
+ * He is right, and the heading was writing a cheque the card did not cash. `S.results` is what the
+ * COIN FLIPS decided, and it is the only thing this card has ever shown. A claim never goes
+ * through the flips -- it is granted on the spot, in the window that opens afterwards -- so it
+ * lands in the log and nowhere else, and a card headed "What Happened" said nothing about it.
+ *
+ * A HEADING NAMES WHAT IS UNDER IT. Either the heading narrows to the run or the card widens to
+ * the week. The week is what he asked for and the week is what an owner means, so the claims for
+ * this week are read out of the log and shown under their own sub-heading -- the same shape the
+ * Trade Results tab now uses, so the two tabs tell the story the same way.
+ * NEWEST FIRST, each with its own moment, because claims are hours apart.
+ */
+function claimsThisWeek(week){
+  var all = (S.log || []).filter(function(e){
+    return e && String(e.how || '').toLowerCase() === 'first come'
+      && e.week != null && +e.week === +week;
+  });
+  if (!all.length) return '';
+  all = all.slice().sort(function(a, b){
+    return String(b.when || '').localeCompare(String(a.when || ''));
+  });
+  return '<h3 style="margin:16px 0 6px">Claimed First Come, First Served'
+    + ' <span class="d" style="font-weight:400;font-size:13px">\u00b7 ' + all.length
+    + ' trade' + (all.length === 1 ? '' : 's') + '</span></h3>'
+    + '<p class="note" style="margin:0 0 8px">These were taken after the coin flips ran, in the '
+    + 'window that stays open until Tuesday at 5:00pm AZ. Nobody else had asked for them.</p>'
+    + all.map(function(e){
+        return '<div class="res won"><div class="t">' + esc(e.owner || '')
+          + (e.div ? ' <span class="d">' + esc(e.div) + '</span>' : '')
+          + (e.when ? ' <span class="d">\u00b7 ' + esc(pretty(e.when)) + '</span>' : '')
+          + '</div><div class="w">' + esc(e['in'] || '')
+          + (e.out ? ' in, ' + esc(e.out) + ' out.' : ' in.') + '</div></div>';
+      }).join('');
 }
 var SENDNOTE =
   '<p class="note"><b>Nothing here sends mail, and it never will.</b> Each owner has a '
