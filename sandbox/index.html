@@ -237,6 +237,9 @@ table.accessgrid td .f{white-space:nowrap}
 .pend .row{align-items:baseline}
 .pendrows{margin:0;padding-left:20px}
 .pendrows li{margin:2px 0;line-height:1.35;overflow-wrap:anywhere}
+/* The trades on one change-log entry, inside its own table cell. */
+.trailrows{margin:3px 0 0;padding-left:16px}
+.trailrows li{margin:1px 0;line-height:1.3;font-size:11px;overflow-wrap:anywhere}
 .inbox{background:var(--goodbg);border:1px solid var(--goodline);border-radius:9px;padding:10px;margin:8px 0}
 .inbox h3{margin:0 0 5px;font-size:13px;color:var(--good)}
 .res{border-left:3px solid var(--line);padding:7px 0 7px 10px;margin:0 0 9px}
@@ -5017,11 +5020,21 @@ function beforeRunCard(){
  * Monday, so what happened to it?" The settle cannot say, because the row was gone before it
  * ran. Every write to a list is recorded as it happens instead.
  *
- * WHAT IT HOLDS AND WHAT IT DELIBERATELY DOES NOT. When, which seat, whether the list was sent
- * or taken back, and how many trades were on it. NOT the teams: that would put all 27 seats'
- * intentions on one screen before Monday, which is the one thing the peloton exists to prevent.
- * Counting is enough to find a list that disappeared, and the card says so rather than leaving
- * the reader wondering what was left out.
+ * WHAT IT HOLDS. When, which seat, whether the list was sent or taken back, how many trades were
+ * on it, AND THE TEAMS ON EACH ONE.
+ *
+ * THE FIRST VERSION LEFT THE TEAMS OUT AND THAT WAS WRONG. I withheld them on the grounds that a
+ * record of 27 seats' intentions before Monday is the thing the peloton exists to prevent.
+ * Casey, 6 Oct 2026: "you need to put which team, because otherwise the list is irrelevant for
+ * us. Bob and I need to see that as commissioners. That's okay. If we don't know the team, then
+ * there's no value in showing us every change to a list. And we already see what team it is in
+ * the waiting to be settled section."
+ * He is right twice over. This card is drawn for the COMMISSIONER ONLY and the back end serves
+ * the record to the commissioner half alone -- `fn=view`, which every owner calls, has never
+ * carried it. And the card directly above this one already shows the commissioner every team on
+ * every waiting list. So the names protected nothing and their absence left a log that could not
+ * answer the question it exists for.
+ * A PRIVACY RULE THAT PROTECTS NOTHING IS JUST A MISSING FEATURE.
  */
 function listTrailCard(){
   if (!isCommish()) return '';
@@ -5029,8 +5042,8 @@ function listTrailCard(){
   var head = '<div class="card"><h2>Every Change to a List</h2>'
     + '<p class="note">Use this to find out what happened to a list that is not there any more. '
     + 'Every time an owner sends a list or takes one back, the league writes down when it '
-    + 'happened, whose seat it was, and how many trades were on it. It does not record which '
-    + 'teams, because that would show every seat\'s hand before Monday.</p>';
+    + 'happened, whose seat it was, and every trade that was on it. Only you and Bob can see '
+    + 'this.</p>';
   if (!L.length){
     return head + '<p class="note">Nothing has been recorded yet. The league began keeping this '
       + 'on 6 October 2026, so it covers every change made from then on.</p></div>';
@@ -5041,13 +5054,29 @@ function listTrailCard(){
     + '<div class="scr"><table style="table-layout:fixed">'
     + '<colgroup><col style="width:40%"><col style="width:34%"><col style="width:26%">'
     + '</colgroup>'
-    + '<thead><tr><th>When</th><th>Seat</th><th>What Happened</th></tr></thead><tbody>'
+    + '<thead><tr><th>When</th><th>Seat</th><th>What Was On It</th></tr></thead><tbody>'
     + rows.map(function(e){
         var n = Number(e.n) || 0;
+        var teams = e.teams || [];
+        /* THE TRADES THEMSELVES, ONE PER LINE. An entry written before the teams were being
+           recorded has none, and says so rather than looking like an empty list -- unknown is
+           not zero, and "no trades" and "we did not write them down" are different facts. */
+        var what = '<b>' + esc(e.what || 'changed the list') + '</b> \u00b7 ' + n + ' trade'
+          + (n === 1 ? '' : 's');
+        if (teams.length){
+          what += '<ul class="trailrows">' + teams.map(function(x){
+            var outs = (x.out || []).filter(Boolean);
+            return '<li>' + esc(x['in'] || '(no team chosen)')
+              + (outs.length ? ' <span class="d">for ' + esc(outs.join(' or ')) + '</span>' : '')
+              + '</li>';
+          }).join('') + '</ul>';
+        } else if (n > 0){
+          what += '<div class="d" style="font-size:11px">the teams were not recorded on this '
+            + 'entry</div>';
+        }
         return '<tr><td class="d">' + esc(pretty(e.at)) + '</td>'
           + '<td>' + esc((e.div || '') + ' ' + (e.seat || '')) + '</td>'
-          + '<td class="d">' + esc((e.what || 'changed the list') + ' \u00b7 ' + n + ' trade'
-              + (n === 1 ? '' : 's')) + '</td></tr>';
+          + '<td>' + what + '</td></tr>';
       }).join('')
     + '</tbody></table></div>'
     + (L.length > SHOW
