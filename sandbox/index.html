@@ -1356,11 +1356,38 @@ var Store = (function () {
       .then(function (r) { return r.json(); });
   }
 
+  /* ---- ONE DEVICE'S HALF-TYPED FORM IS NOT THE LEAGUE'S BUSINESS -----------------------------
+   *
+   * Casey, 6 Oct 2026: "On the Make a Trade tab it's defaulting for everyone to trade the
+   * Cleveland Browns for the New York Giants. Bob sees it under his, I see it under mine, even
+   * though we don't own the Cleveland Browns."
+   *
+   * WHAT WAS HAPPENING. The commissioner's page sends the WHOLE state to the league on every
+   * save, because the whole state is what that half of the page edits. `S.fcp` and `S.fcd` are
+   * the two teams picked in the claim form -- a selection one person makes on one device, before
+   * pressing anything. They were going up with everything else, so the moment a commissioner
+   * touched the form the league was holding their half-finished claim, and the OTHER commissioner
+   * loaded it and saw it pre-filled on their own page. Neither of them owned either team.
+   *
+   * A FORM IS NOT A FACT ABOUT THE LEAGUE. These fields are stripped before the state is sent.
+   * `open` goes too: which picker is open is a thing about one screen and nothing else.
+   * The claim form is also cleared on every load, in the `ready` hook, so a state already
+   * carrying one does not keep showing it.
+   */
+  var LOCAL_ONLY = ['fcp', 'fcd', 'open'];
+  function shared(st) {
+    var out = {};
+    Object.keys(st || {}).forEach(function (k) {
+      if (LOCAL_ONLY.indexOf(k) === -1) out[k] = st[k];
+    });
+    return out;
+  }
+
   function push(get, set) {
     if (sending || !dirty) return;
     sending = true; dirty = false;
     setStatus('saving');
-    call({fn: 'save', rev: rev, state: get(), what: 'trades'})
+    call({fn: 'save', rev: rev, state: shared(get()), what: 'trades'})
       .then(function (a) {
         sending = false;
         if (a && a.ok) { rev = a.rev; setStatus('saved'); if (dirty) schedule(get, set); return; }
@@ -7988,6 +8015,17 @@ function bootOpts(){
          has already been typed into the wrong owner's list. It is cleared HERE rather than in
          boot(), because before the load there is no S to clear it on. */
       if (S && S.actingAs){ S.actingAs = null; try { save(); } catch (e) {} }
+      /* AND THE CLAIM FORM STARTS EMPTY, EVERY TIME, for the same reason and one more.
+         Casey, 6 Oct 2026: "it's defaulting for everyone to trade the Cleveland Browns for the
+         New York Giants ... even though we don't own the Cleveland Browns." The two teams picked
+         in the claim form were travelling to the league with the rest of the commissioner's
+         state, so one commissioner's half-finished claim appeared pre-filled on the other's page.
+         The store no longer sends them. This clears what a state already holds, and it also makes
+         the form start blank rather than showing yesterday's half-made claim.
+         A TEAM CHOSEN BUT NOT CLAIMED IS NOT A DECISION. Nothing is lost by clearing it: nothing
+         is claimed until Claim It Now is pressed, and the league refuses the claim anyway if the
+         teams are not legal for that seat. */
+      if (S && (S.fcp || S.fcd)){ S.fcp = ''; S.fcd = ''; try { save(); } catch (e) {} }
       render();
       /* THE WEEK'S ANSWER, ONCE THE PAGE KNOWS WHO THIS IS. It has to be after the load, because
          before it there is no seat to look the answer up under. Not shown when the page could not
