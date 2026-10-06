@@ -910,6 +910,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .mytag{display:inline-block;font:700 9px inherit;letter-spacing:.06em;padding:1px 5px;
   border-radius:3px;border:1px solid var(--mine);color:var(--mine);margin-left:5px;
   vertical-align:1px}
+/* HOW A TRADE HAPPENED, as a chip beside the team coming in. Small, quiet, and only on the rows
+   where the answer is not "the usual" -- a claim or a coin flip. Measured at phone width by
+   test_devices.js, which drives this table at 280px. */
+.howchip{display:inline-block;font:700 9px inherit;letter-spacing:.06em;padding:1px 5px;
+  border-radius:4px;vertical-align:1px;white-space:nowrap}
+.howchip.fc{background:rgba(122,162,247,.17);color:#7aa2f7}
+.howchip.cf{background:rgba(224,175,104,.17);color:#e0af68}
 /* YOUR OWN ROW IS OUTLINED, NOT LABELLED. Casey, 20 Sep 2026: "I don't like how the YOU is
    hidden underneath the PFD division. What if instead of saying YOU next to Palma/Wiedeman, you
    just outline Palma/Wiedeman in that purple outline, a box around it."
@@ -3524,7 +3531,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 12:32 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 12:37 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13642,6 +13649,27 @@ function buildTx(){
    * nothing on these pages scrolls sideways, so the cell breaks at "to" instead of stretching
    * the table.
    */
+  /* ---- HOW THE TRADE HAPPENED, WHICH THE TABLE HAS NEVER SAID ----------------------------
+   * Casey went looking for the trade he made through first come, first served and could not find
+   * it among fifteen rows that all looked identical. A claim, a coin flip and an unopposed
+   * Monday row are three different events and the table drew them the same way.
+   * NO NEW COLUMN. Nothing on these pages scrolls sideways, and a seventh column at phone width
+   * is how that rule gets broken. It is a chip beside the team coming in, which is the cell the
+   * reader is already looking at.
+   * UNOPPOSED GETS NOTHING. It is most of the rows and it is what a trade normally is, so a chip
+   * on every row would be noise rather than information.
+   */
+  const howChip = t => {
+    const h = String(t.how || '').toLowerCase();
+    if (h === 'first come')
+      return ' <span class="howchip fc" title="Claimed through first come, first served, in the '
+        + 'window that opened after the coin flips ran. No other owner had asked for it.">FIRST '
+        + 'COME</span>';
+    if (h === 'coin flip' || t.contested)
+      return ' <span class="howchip cf" title="More than one owner asked for this team, so it '
+        + 'was settled by a coin flip.">COIN FLIP</span>';
+    return '';
+  };
   const winCell = t => {
     const x = winOfTrade(t);
     if (!x || !x.start) {
@@ -13667,7 +13695,7 @@ function buildTx(){
           <td class="d">${winCell(t)}</td>
           <td class="d">${esc(t.div || '')}</td>
           <td>${esc(t.owner || '')}${txMine(t) ? ' <span class="mytag">YOU</span>' : ''}</td>
-          <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}</td>
+          <td class="b">${esc(t.old || '—')}</td><td class="g">${esc(t.new || '—')}${howChip(t)}</td>
           <td class="num${feeOf(t) === FEE ? '' : ' gold'}" title="${esc(feeOf(t) === FEE
               ? `The standard ${money(FEE)} transaction fee.`
               : `Set to ${money(feeOf(t))} rather than the standard ${money(FEE)}${
@@ -13685,8 +13713,23 @@ function buildTx(){
   const weekOrder = [...byWeek.keys()].sort((a, c) =>
     (a == null) - (c == null) || (c - a));
   const weekBlock = w => {
-    const rows = byWeek.get(w).slice()
-      .sort((a, c) => String(a.effective || '~').localeCompare(String(c.effective || '~')));
+    /* ---- IN THE LEAGUE'S OWN ORDER, SO A READER CAN FIND A SEAT ---------------------------
+     * Casey, 6 Oct 2026: "I finally see the week five trades under trade results. But the Mark
+     * Secrest trade that he made with first come first serve today is not listed there still."
+     * It WAS listed. It was row 15 of 15, at the very bottom, with his other trade at row 12 and
+     * nothing between them to connect the two.
+     * These were sorted by the date the trade takes effect -- a field almost no row carries, so
+     * the handful that do went to one end and everything else kept whatever order the back end
+     * happened to return. A SORT ON A FIELD MOST ROWS DO NOT HAVE IS NOT AN ORDER, IT IS AN
+     * ACCIDENT. Division, then owner, then the team coming in: every seat's trades sit together
+     * and the order is the same every time the page is opened.
+     */
+    const divAt = (d) => { const i = (DATA.divisions || []).indexOf(d);
+                           return i < 0 ? 99 : i; };
+    const rows = byWeek.get(w).slice().sort((a, c) =>
+      divAt(a.div) - divAt(c.div)
+      || String(a.owner || '').localeCompare(String(c.owner || ''))
+      || String(a.new || '').localeCompare(String(c.new || '')));
     /* ---- ONE WEEK NUMBER FOR ONE THING ------------------------------------------------------
      * Casey, 5 Oct 2026, unable to find today's trades: "I think for some reason you got your
      * weeks confused. The trade results say week four ... Under the Run It tab, it's week five.
