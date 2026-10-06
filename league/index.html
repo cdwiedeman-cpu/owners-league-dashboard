@@ -3544,7 +3544,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 1:17 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 1:21 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13696,7 +13696,7 @@ function buildTx(){
        Put in the cell the reader is already reading rather than in a column of its own, because
        nothing on these pages scrolls sideways. */
     const claimed = (String(t.how || '').toLowerCase() === 'first come' && t.at)
-      ? `<br><span class="d" style="white-space:nowrap;font-size:10px">claimed ${
+      ? `<br><span class="d claimat" style="white-space:nowrap;font-size:10px">claimed ${
           esc(clockOnly(t.at))}</span>`
       : '';
     return `<span style="white-space:nowrap">${esc(prettyLong(x.start))}</span><br>
@@ -14541,6 +14541,11 @@ function applyLiveTrades(list){
                           baked row disagree about what `week` means, and the Transactions tab
                           read both. */
                        fee_note: t.fee_note || '', week: (t.week == null ? null : +t.week),
+                       /* WHEN THE LEAGUE ACTUALLY WROTE IT DOWN. The back end stamps every row
+                          it settles and the Trade Results tab groups by that stamp -- one table
+                          per settle, newest first -- so dropping it here left every table saying
+                          the time was not recorded and no way to order them. */
+                       at: t.at || null,
                        live: true,
                        /* THE DATE IT TOOK EFFECT RIDES ALONG. The Transactions tab works out
                           which trade window a trade fell in by joining on this date, and it is
