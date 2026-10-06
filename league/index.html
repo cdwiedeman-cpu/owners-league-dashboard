@@ -917,6 +917,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   border-radius:4px;vertical-align:1px;white-space:nowrap}
 .howchip.fc{background:rgba(122,162,247,.17);color:#7aa2f7}
 .howchip.cf{background:rgba(224,175,104,.17);color:#e0af68}
+/* ONE SETTLE, ONE TABLE. The sub-heading sits inside a week block and names the event the table
+   below it came from, so it reads as a step down from the week rather than a second week. */
+h4.txrun{margin:12px 0 5px;font-size:13px;font-weight:700;letter-spacing:.01em}
+h4.txrun .d{font-weight:400}
 /* YOUR OWN ROW IS OUTLINED, NOT LABELLED. Casey, 20 Sep 2026: "I don't like how the YOU is
    hidden underneath the PFD division. What if instead of saying YOU next to Palma/Wiedeman, you
    just outline Palma/Wiedeman in that purple outline, a box around it."
@@ -2851,6 +2855,15 @@ function prettyLong(iso){
  * seven hours wrong and unreadable. Arizona keeps no daylight saving, so UTC-7 is right all
  * year -- do not "fix" this in March.
  */
+/* JUST THE TIME, ARIZONA, am or pm. For a row whose date is already printed above it. */
+function clockOnly(iso){
+  if (!iso) return '';
+  const t = Date.parse(iso);
+  if (isNaN(t)) return '';
+  const az = new Date(t - 7 * 3600 * 1000);
+  const h = az.getUTCHours(), m = az.getUTCMinutes();
+  return ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h >= 12 ? 'pm' : 'am') + ' AZ';
+}
 function prettyAt(iso){
   if (!iso) return '';
   const t = Date.parse(iso);
@@ -3531,7 +3544,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 12:37 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 1:17 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -13659,15 +13672,14 @@ function buildTx(){
    * UNOPPOSED GETS NOTHING. It is most of the rows and it is what a trade normally is, so a chip
    * on every row would be noise rather than information.
    */
+  /* THE GROUP HEADING SAYS A CLAIM IS A CLAIM, so the row does not say it again -- a label that
+     restates the heading above it is not a label. What the heading CANNOT say is which rows in a
+     Monday run were contested, because the same run holds both, so that chip stays. */
   const howChip = t => {
     const h = String(t.how || '').toLowerCase();
-    if (h === 'first come')
-      return ' <span class="howchip fc" title="Claimed through first come, first served, in the '
-        + 'window that opened after the coin flips ran. No other owner had asked for it.">FIRST '
-        + 'COME</span>';
     if (h === 'coin flip' || t.contested)
       return ' <span class="howchip cf" title="More than one owner asked for this team, so it '
-        + 'was settled by a coin flip.">COIN FLIP</span>';
+        + 'was settled by a coin flip. The others in this run were unopposed.">COIN FLIP</span>';
     return '';
   };
   const winCell = t => {
@@ -13679,8 +13691,16 @@ function buildTx(){
         esc(t.window)}. It is not a window on the league calendar.">${esc(t.window)}</span>`
         : '<span class="d">Not dated</span>';
     }
+    /* A CLAIM HAS ITS OWN MOMENT AND EVERY ROW IN A RUN SHARES ONE. The run's time is on its
+       heading; a claim's belongs on the row, because two claims in one window are hours apart.
+       Put in the cell the reader is already reading rather than in a column of its own, because
+       nothing on these pages scrolls sideways. */
+    const claimed = (String(t.how || '').toLowerCase() === 'first come' && t.at)
+      ? `<br><span class="d" style="white-space:nowrap;font-size:10px">claimed ${
+          esc(clockOnly(t.at))}</span>`
+      : '';
     return `<span style="white-space:nowrap">${esc(prettyLong(x.start))}</span><br>
-      <span class="d" style="white-space:nowrap">to ${esc(prettyLong(x.end))}</span>`;
+      <span class="d" style="white-space:nowrap">to ${esc(prettyLong(x.end))}</span>${claimed}`;
   };
 
   /* ---- ONE WEEK AT A TIME, NEWEST FIRST -------------------------------------------------
@@ -13767,12 +13787,55 @@ function buildTx(){
     const ats = rows.map(r => r.at).filter(Boolean).sort();
     const when = ats.length ? prettyAt(ats[ats.length - 1]) : '';
     return `<h3 class="txwk">${head} <span class="d">· ${rows.length} trade${
-      rows.length === 1 ? '' : 's'}${when ? ' · settled ' + esc(when) : ''}</span></h3>
-      <div class="scr"><table>
+      rows.length === 1 ? '' : 's'}${when ? ' · latest ' + esc(when) : ''}</span></h3>
+      ${settleGroups(rows)}`;
+  };
+
+  /* ---- ONE TABLE PER SETTLE, NEWEST FIRST -----------------------------------------------------
+   *
+   * Casey, 6 Oct 2026: "I would think from a trade results perspective that you split the tables
+   * within week five ... these are the ones that show that were done as first come first serve
+   * versus the ones that were run during the Monday peloton, so it's clear what happened and
+   * when. I look at the trades as it should be a chronological order of what happened and when.
+   * So I would want to see the latest trade that happened at the very top."
+   *
+   * A WEEK IS NOT ONE EVENT. The coin flips run once, at 4:00pm on the Monday, and settle a batch
+   * together. The first come window then opens and each claim is its own moment, hours later. All
+   * of them belong to the same week, and putting them in one table said they all happened at once.
+   *
+   * SO THE GROUP IS THE SETTLE, AND A SETTLE IS IDENTIFIED BY ITS OWN TIMESTAMP. That handles the
+   * re-run for free: a week settled twice has two stamps and comes out as two tables, which is the
+   * truth. Nothing has to keep a list of what kinds of settle exist.
+   * NEWEST FIRST, because that is the order he reads them in: the claims from last night sit above
+   * the run they followed.
+   * UNKNOWN IS NOT ZERO. Rows logged before the back end started sending a timestamp have none, so
+   * their table says the time was not recorded rather than printing a guess, and it sorts last.
+   */
+  const settleGroups = (rows) => {
+    const byRun = new Map();
+    for (const t of rows){
+      const fc = String(t.how || '').toLowerCase() === 'first come';
+      /* A CLAIM IS ITS OWN SETTLE. Two owners claiming at different moments are two events, so
+         the timestamp is part of the key for a claim and shared for a run. */
+      const k = (fc ? 'fc|' : 'run|') + (t.at || '');
+      if (!byRun.has(k)) byRun.set(k, {fc, at: t.at || null, rows: []});
+      byRun.get(k).rows.push(t);
+    }
+    const groups = [...byRun.values()].sort((a, c) =>
+      /* Newest first, and a group with no time recorded goes last rather than first. */
+      (a.at ? 0 : 1) - (c.at ? 0 : 1)
+      || String(c.at || '').localeCompare(String(a.at || '')));
+    return groups.map(g => {
+      const name = g.fc ? 'Claimed First Come, First Served' : 'Settled in the Coin Flips';
+      const n = g.rows.length;
+      return `<h4 class="txrun">${name} <span class="d">· ${n} trade${n === 1 ? '' : 's'}${
+        g.at ? ' · ' + esc(prettyAt(g.at)) : ' · the time was not recorded'}</span></h4>
+        <div class="scr"><table>
       <colgroup><col style="width:24%"><col style="width:8%"><col style="width:20%"><col style="width:20%"><col style="width:18%"><col style="width:10%"></colgroup>
       <thead><tr><th>Trade Window</th><th>Div</th><th>Owner</th>
         <th>Out</th><th>In</th><th class="num">Cost</th></tr></thead>
-      <tbody>${rows.map(rowOfTrade).join('')}</tbody></table></div>`;
+      <tbody>${g.rows.map(rowOfTrade).join('')}</tbody></table></div>`;
+    }).join('');
   };
   /* AN ABSENCE IS NEVER AN ANSWER. Narrowed to one seat that has not traded, the tab has to say
      that rather than show an empty table. */
