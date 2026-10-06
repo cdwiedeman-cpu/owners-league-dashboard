@@ -934,6 +934,13 @@ table.txtbl{table-layout:fixed;width:100%}
 table.txtbl td, table.txtbl th{overflow-wrap:anywhere;word-break:normal;vertical-align:top}
 table.txtbl .winspan{display:block;white-space:normal}
 table.txtbl .claimat{font-size:10px}
+/* THE CHIP GETS ITS OWN LINE IN THIS TABLE. It cannot wrap -- it is one word with no space in
+   it -- so sharing a line with a team name means the pair needs more width than the column has,
+   and the ink runs over the column beside it. Casey, 6 Oct 2026: "the text is overlapping."
+   On its own line it never competes for width, and `verify_txweeks.js` measures the ink against
+   the box at 390px and 280px so this cannot come back. */
+table.txtbl .howchip{display:block;margin-top:2px;width:-moz-fit-content;width:fit-content}
+table.txtbl .dvtag{display:block}
 col.w-win{width:25%} col.w-own{width:24%}
 col.w-out{width:22%} col.w-in{width:20%} col.w-fee{width:9%}
 /* The division, small and dim, beside the owner it belongs to. */
@@ -3586,7 +3593,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '06 Oct 2026, 10:02 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '06 Oct 2026, 10:03 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
