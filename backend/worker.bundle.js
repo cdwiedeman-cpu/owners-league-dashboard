@@ -1143,6 +1143,11 @@ async function handle(request, env) {
       rosters: s.rosters || null,
       acquiredAt: s.acquiredAt || {},
       mine: reqs[mine] || null,
+      /* THE SEAT'S OWN VERSION, SENT WHETHER OR NOT THERE IS A LIST. The page used to read this
+         off `mine.seq`, so a seat with no list read as version 0 -- and after Monday's settle
+         every seat has no list while the league has counted several writes. The page would then
+         propose to replace version 0 and be refused. One store of the fact, served from it. */
+      seq: Number((s.seatSeq || {})[mine]) || 0,
       /* HOW MANY OTHERS ARE IN, AND NOT WHO OR FOR WHAT. Knowing which team somebody else asked
          for would let an owner steer their own list. */
       othersWaiting: Math.max(0, Object.keys(reqs).length - (reqs[mine] ? 1 : 0)),
@@ -1194,13 +1199,44 @@ async function handle(request, env) {
      * writes to THIS SEAT's entry and nothing else. A page sends the seq it last saw; if the
      * league has moved on, the write is refused and the page is handed what the league holds.
      */
+    /* ---- THE COUNTER IS THE SEAT'S, NOT THE ENTRY'S -----------------------------------------
+     *
+     * Casey, 11 Oct 2026, relaying Brian Gardiner: "he's getting this error ... your list was
+     * changed somewhere else ... And this is every week now."
+     *
+     * He was right and this was mine. The version was read off the LIST (`cur.seq`), and the
+     * list gets DELETED in two ordinary situations:
+     *   - an owner presses Take My List Back, which is `clear` and deletes the entry;
+     *   - Monday's settle sets `s.requests = {}` for the whole league.
+     * Either one put the version back to 0 while every page that had already submitted was
+     * holding 1 or more. The next submit then compared 1 against 0, decided the list had been
+     * changed somewhere else, and refused it. Nothing had changed. A VERSION COUNTER THAT CAN
+     * GO BACKWARDS IS NOT A VERSION COUNTER.
+     * That is why it was every week: a settle resets it for all 27 seats at once, so every owner
+     * with the page still open from Sunday met it on their first submit of the new week.
+     *
+     * `s.seatSeq` counts writes to this seat's entry and only ever climbs. It is not inside the
+     * undo snapshot, so putting a week back cannot wind it back either -- an undo restores the
+     * LISTS, and it is not true that the writes never happened.
+     *
+     * FIRST CONTACT IS NOT A REFUSAL. For a seat the counter has never seen, the baseline is the
+     * highest number anybody has shown us -- the entry's own, or the one this page is holding --
+     * and the write goes through. That is one forgiving write per seat, once, on the deploy that
+     * introduces the counter, and strict from the second write on. The alternative is refusing
+     * every owner once, which is the bug being fixed.
+     */
     const cur = s.requests[mine] || null;
-    const curSeq = cur ? (Number(cur.seq) || 0) : 0;
+    s.seatSeq = s.seatSeq || {};
     const base = p('baseSeq');
-    if (base != null && Number(base) !== curSeq) {
+    const firstEver = s.seatSeq[mine] == null;
+    if (firstEver) {
+      s.seatSeq[mine] = Math.max(cur ? (Number(cur.seq) || 0) : 0, Number(base) || 0);
+    }
+    const curSeq = Number(s.seatSeq[mine]) || 0;
+    if (!firstEver && base != null && Number(base) !== curSeq) {
       return out({ ok: false, why: 'stale', seq: curSeq, mine: cur,
-                   note: 'your list was changed somewhere else since this page read it, so '
-                       + 'nothing was overwritten. This page has been brought up to date.' });
+                   note: 'somebody else on your seat sent a list a moment ago, so yours was not '
+                       + 'saved over it.' });
     }
 
     /* ---- AND A LIST THAT DISAPPEARS LEAVES A TRAIL ------------------------------------------
@@ -1260,6 +1296,10 @@ async function handle(request, env) {
                            seq: curSeq + 1 };
       note('sent a list', rows.length, rows);
     }
+    /* THE COUNTER MOVES ON EVERY ACCEPTED WRITE, INCLUDING A CLEAR. Taking a list back is a
+       write to this seat's entry, so the version it leaves behind must be higher than the one
+       before it, not absent. */
+    s.seatSeq[mine] = curSeq + 1;
     const rev = box.rev + 1;
     await writeState(env, s, rev);
     return out({ ok: true, rev, seq: curSeq + 1, mine: s.requests[mine] || null });
