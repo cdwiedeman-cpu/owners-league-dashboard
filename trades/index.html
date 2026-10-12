@@ -4068,7 +4068,7 @@ function viewTrades(){
         + (cl ? '<span class="tsub">' + cl.tag + ' \u00b7 ' + cl.text + '</span>' : '')
         + '</div>'
         + '<div><b>' + esc(r.pickup) + '</b> <span class="d">for</span> '
-        + esc((r.drops || []).filter(Boolean).join(' or ')) + '</div></div>';
+        + esc(dropOrder(r.drops)) + '</div></div>';
     }).join('');
   } else {
     /* THE FIRST ACTION IS AT THE TOP WHEN THERE IS NOTHING YET. An empty list with the only
@@ -5119,7 +5119,7 @@ function listTrailCard(){
           what += '<ul class="trailrows">' + teams.map(function(x){
             var outs = (x.out || []).filter(Boolean);
             return '<li>' + esc(x['in'] || '(no team chosen)')
-              + (outs.length ? ' <span class="d">for ' + esc(outs.join(' or ')) + '</span>' : '')
+              + (outs.length ? ' <span class="d">for ' + esc(dropOrder(outs)) + '</span>' : '')
               + '</li>';
           }).join('') + '</ul>';
         } else if (n > 0){
@@ -5353,7 +5353,7 @@ function viewRun(){
             + '</td>'
             + '<td class="d">' + r.rows.map(function(x, i){
                 var ds = (x.drops || []).filter(Boolean);
-                return ds.length ? esc(wline(r, i, ds.join(' or ')))
+                return ds.length ? esc(wline(r, i, dropOrder(ds)))
                                  : esc(wline(r, i, '')) + '<span class="b">nothing named</span>';
               }).join('<br>')
             + '</td>'
@@ -6600,6 +6600,26 @@ function coMailWho(){
   if (!out.length) return {how: 'none'};
   return {how: 'ok', to: out};
 }
+/* ---- THE DROPS ARE AN ORDER, NOT A CHOICE ---------------------------------------------------
+ *
+ * Casey, 11 Oct 2026, reading the email to Dominic: "the way you're writing the email, it says
+ * pick up UCLA, give up Prairie View A&M or Idaho State or Miami of Ohio. It's not an or. It
+ * should be then, because it's an order. So give up Prairie View A&M, then Idaho State, then
+ * Miami of Ohio. There is no or, because it's the order that I'm putting it in."
+ *
+ * He is right, and "or" was describing the machinery rather than the list. The resolver takes the
+ * drops IN ORDER and uses the first one it is allowed to use, so the second is what happens if
+ * the first cannot, and the third if neither can. That is a sequence, and "or" reads as a free
+ * choice somebody else makes.
+ *
+ * ONE HELPER, FOUR READERS. The same list is written out in the email to his co-owner, on the
+ * waiting-list card, in the commissioner's record of what a week held, and on the trail of every
+ * change to a list. Four places saying "or" and one saying "then" is how a sentence drifts, so
+ * there is one function and they all call it.
+ */
+function dropOrder(list){
+  return (list || []).filter(Boolean).join(', then ');
+}
 /* ---- ONE TRADE, WRITTEN OUT IN WORDS, IN ONE PLACE -----------------------------------------
  * The email Casey sends his co-owner and the record of what a week held before it was settled
  * are two readers of the same sentence. Written out twice they drift, and the one nobody reads
@@ -6607,7 +6627,7 @@ function coMailWho(){
 function rowSentence(r, i){
   var drops = ((r || {}).drops || []).filter(Boolean);
   var line = (i + 1) + '. Pick up ' + ((r || {}).pickup || '(no team chosen)') + '.';
-  if (drops.length) line += ' Give up ' + drops.join(' or ') + '.';
+  if (drops.length) line += ' Give up ' + dropOrder(drops) + '.';
   var cl = condLine((r || {}).cond, i);
   if (cl) line += ' ' + cl.text;
   return line;
