@@ -236,6 +236,14 @@ main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
   background:var(--pan2);color:var(--ink);font:600 13px/1 inherit;cursor:pointer;padding:0}
 .cbtn.on{background:var(--accent-soft,rgba(90,140,255,.18));border-color:var(--accent,#5a8cff);
   color:var(--accent,#5a8cff)}
+/* THE ORDER CONTROLS. Narrower than a .cbtn because two of them sit where one button sat, and
+   still 26px tall, which is over the 12px floor this project holds every clickable mark to.
+   A BUTTON THAT CANNOT MOVE IS DISABLED, NOT REMOVED: the top row keeps both, so the columns
+   stay lined up down the list. Casey has raised misalignment more than once. */
+.ordwrap{display:inline-flex;gap:3px;vertical-align:middle}
+.ordbtn{min-width:22px;width:22px;min-height:26px;border-radius:7px;border:1px solid var(--line);
+  background:var(--pan2);color:var(--ink);font:600 11px/1 inherit;cursor:pointer;padding:0}
+.ordbtn[disabled]{opacity:.32;cursor:default}
 .cchip{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;
   background:var(--pan2);border:1px solid var(--line);font-size:13px}
 .cchip.empty-chip{color:var(--dim,#8a8f98);border-style:dashed}
@@ -1282,8 +1290,17 @@ details>summary::marker{color:var(--faint)}
    beside the record. Measured: "0-2 64% BYE" is the widest thing it can hold and it needed 86px
    in the 83px the old share gave it on a 1024px window. Team drops from 372px to 363 at the
    floor, which is still past the 336 its own widest row needs. */
-.cg1{width:46px} .cg2{width:38%} .cg3{width:9.57%} .cg4{width:8.57%}
-.cg5{width:8.57%} .cg6{width:8.57%} .cg7{width:8.57%} .cg8{width:8.57%} .cg9{width:8.57%}
+/* AND AGAIN ON 11 OCT 2026, because two teams joined the board that had never been on it.
+   The freeze was being measured against TODAY rather than against the day a trade takes effect,
+   so Washington Commanders and Miami Dolphins were being hidden. Fixing that put the LONGEST NFL
+   NAME on the board for the first time -- and the 27 Sep sizing had been done against Cleveland
+   Browns plus three characters, which is two characters short of Washington Commanders.
+   MEASURED BY verify_pickcols.js, which is what it is for: Team had 366px and needed more, and
+   the record column had 92px and wrapped its BYE chip. Team takes two and a half points and the
+   record column takes another, from the six number columns, which still leave 77px for a
+   five-character figure that needs 57. The total stays at 99 for the reason above. */
+.cg1{width:46px} .cg2{width:40.5%} .cg3{width:10.4%} .cg4{width:8.015%}
+.cg5{width:8.015%} .cg6{width:8.015%} .cg7{width:8.015%} .cg8{width:8.015%} .cg9{width:8.015%}
 /* ---- AND TWELVE OF THEM ON KEEPERS ------------------------------------------------------
  * Casey, 29 Sep 2026, asked for the four keeper figures ON TOP of the next-N ones rather than
  * instead of them. Twelve columns need more room than nine, and the rule on this page is the one
@@ -3609,7 +3626,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '11 Oct 2026, 10:33 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '12 Oct 2026, 12:01 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6928,9 +6945,10 @@ function watchStatus(t){
   const thaw = frozenUntil(t);
   if (thaw)
     return {cls: 'v-hold', label: 'JUST DROPPED',
-            tip: 'Somebody dropped this team. A dropped team has to play one more game before '
-                 + 'anybody is allowed to pick it up, so you cannot take it yet. You can from '
-                 + pretty(thaw) + '. This has nothing to do with a bye.'};
+            tip: 'Somebody dropped this team, and a dropped team has to play one more game before '
+                 + 'anybody is allowed to pick it up. Its next game is too late for this week\u2019s '
+                 + 'trades, so you can take it from ' + pretty(thaw)
+                 + '. This has nothing to do with a bye.'};
   if (!canClaim(t))
     return {cls: 'v-stream', label: 'TOO LATE',
             tip: 'Nobody in Predator owns it, but it cannot finish the '
@@ -7060,10 +7078,22 @@ function planPrune(){
 function planPanel(){
   planPrune();
   const nD = (PLAN.drop || []).length, nG = (PLAN.get || []).length;
-  const row = (n, side) => {
+  const row = (n, side, i, last) => {
     const t = BY.get(n);
     if (!t) return '';
     const q = String(n).replace(/'/g, "\\'");
+    /* WHAT THE ORDER MEANS, SAID ON THE BUTTON, because the two sides mean different things by
+       it: the Pick Up order is which trade is which, and the Drop order is first choice before
+       back-up. A title that said "move up" on both would be telling him nothing he cannot see. */
+    const what = side === 'get' ? 'Trade order: the team at the top is trade 1.'
+                                : 'Drop order: the team at the top is the first choice.';
+    const ord = `<span class="ordwrap">
+      <button class="ordbtn" ${i === 0 ? 'disabled' : ''} aria-label="Move ${esc(n)} up"
+        title="Move ${esc(n)} up. ${what}"
+        onclick="event.stopPropagation();planMove('${q}','${side}',-1)">&#9650;</button>
+      <button class="ordbtn" ${last ? 'disabled' : ''} aria-label="Move ${esc(n)} down"
+        title="Move ${esc(n)} down. ${what}"
+        onclick="event.stopPropagation();planMove('${q}','${side}',1)">&#9660;</button></span>`;
     /* THE NAME OPENS THE TEAM. Casey, 28 Sep 2026: "on my Plan tab ... can you make it so I can
        click on those teams and see their schedules like I can on the watch list and Taken
        Elsewhere." It was the one list of teams on this page whose names did nothing. */
@@ -7076,19 +7106,22 @@ function planPanel(){
               + ' slot, in Side by Side below'}"
           aria-label="${cmpSlotOf(n) ? 'Remove' : 'Add'} ${n} ${
             cmpSlotOf(n) ? 'from' : 'to'} the comparison">${cmpSlotOf(n) || '+'}</button>
-        ${planBtn(n, true)}${side === 'get' ? watchBtn(n, true) : ''}</td></tr>`;
+        ${planBtn(n, true)}${side === 'get' ? watchBtn(n, true) : ''}</td>
+      <td class="c-ord">${ord}</td></tr>`;
   };
   const lists = `<div class="card"><h2>What You Mean to Do</h2>
     <div class="row" style="align-items:flex-start;gap:14px">
       <div class="grow" style="flex:1 1 260px;min-width:0">
         <h3 class="txwk">Drop (${nD})</h3>
-        ${nD ? `<table>${(PLAN.drop || []).map(n => row(n, 'drop')).join('')}</table>`
+        ${nD ? `<table>${(PLAN.drop || []).map((n, i, A) =>
+                  row(n, 'drop', i, i === A.length - 1)).join('')}</table>`
              : `<div class="empty">Nothing flagged. Press the <b>&minus;</b> beside any of your
                 own teams — on <b>My Roster</b>, on <b>Live Scores</b>, or in a team panel.</div>`}
       </div>
       <div class="grow" style="flex:1 1 260px;min-width:0">
         <h3 class="txwk">Pick Up (${nG})</h3>
-        ${nG ? `<table>${(PLAN.get || []).map(n => row(n, 'get')).join('')}</table>`
+        ${nG ? `<table>${(PLAN.get || []).map((n, i, A) =>
+                  row(n, 'get', i, i === A.length - 1)).join('')}</table>`
              : `<div class="empty">Nothing flagged. Press the <b>+</b> beside any team you do not
                 hold — on <b>College</b>, on <b>NFL</b>, on your <b>Watch List</b>, or in a team
                 panel.</div>`}
@@ -7105,7 +7138,9 @@ function planPanel(){
     <div class="bar"><label class="d" style="align-self:center;font-size:12px">NFL</label>
       <span id="cmptray7" class="tray" data-pool="NFL">${trayHTML('NFL')}</span></div>
     <div class="note">Flagging a team here does nothing to your roster and tells nobody. It is a
-      note to yourself until you press <b>Send to Trades</b>.</div></div>`;
+      note to yourself until you press <b>Send to Trades</b>.
+      <br>The arrows set the order. Under <b>Pick Up</b> the team at the top becomes trade 1, and
+      under <b>Drop</b> the team at the top is the first choice on every trade.</div></div>`;
 
   const pairs = planPairs();
   /* AN ABSENCE IS NEVER AN ANSWER, and there are three different absences here. */
@@ -7388,9 +7423,10 @@ function watchPanel(){
       <br>A team with no badge beside its name is one you can pick up now.
       <b>TAKEN</b> means another Predator owner holds it. The numbers in the row are still true.
       You cannot act on them until that changes.
-      <b>JUST DROPPED</b> means somebody dropped it and it has not played since. A dropped team
-      has to play one more game before anybody is allowed to pick it up, so it comes free the day
-      after it next plays. It is not a bye.
+      <b>JUST DROPPED</b> means somebody dropped it and its next game falls after this week's
+      trades take effect. A dropped team has to play one more game before anybody is allowed to
+      pick it up, and a team playing at any point this week counts — it will have played before
+      the trade starts scoring. It is not a bye.
       <b>TOO LATE</b> means nobody holds it and it still cannot finish a
       ${DATA.hold_games}-game hold from the day your slot frees up, so it is not legal this week.
       <b>YOURS</b> is one of your own eleven.
@@ -7528,6 +7564,33 @@ function planToggle(n){
   watchSave();
   if (SCOUT) renderScout();
   if (PROJ_ON && el('pick') && !el('pick').hidden) renderPick();
+}
+/* ---- THE ORDER OF THE PLAN IS THE ORDER OF THE TRADES ---------------------------------------
+ *
+ * Casey, 11 Oct 2026: "I need the ability under pickups, under plan, to basically move my teams
+ * around in order. Because I flag them but then I have to basically flag them in the order I want
+ * to pick them up. And drop them ... I currently have UCLA at the top, I want to move Oregon
+ * State ahead of Louisiana Tech ... I'd also may want to move the teams I want to drop."
+ *
+ * IT WAS ALREADY THE ORDER, AND HE COULD ONLY SET IT BY FLAGGING IN ORDER. `planRows()` turns
+ * `PLAN.get` into one trade row per team, in array order, and hands every row the teams in
+ * `PLAN.drop` as its drop choices, also in array order. So the two arrays already decide which
+ * team is trade one and which drop is the first choice. The only thing missing was a way to
+ * change them without clearing the plan and flagging everything again in a different order.
+ *
+ * ARROWS, NOT DRAG AND DROP. He offered either. This page is used on a phone, where a drag
+ * gesture inside a scrolling list fights the scroll -- the same class of problem as the floating
+ * bar that trailed the page. Two buttons cannot be mistaken for a scroll.
+ */
+function planMove(n, side, dir){
+  const a = PLAN[side];
+  if (!Array.isArray(a)) return;
+  const i = a.indexOf(n);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= a.length) return;
+  a[i] = a[j]; a[j] = n;
+  watchSave();
+  renderPick();
 }
 function planClear(){ PLAN = {drop: [], get: []}; watchSave(); closeScout(); renderPick(); }
 /* IT ASKS, AND IT NAMES WHAT IT WOULD THROW AWAY. There is no undo on this page and there should
@@ -7691,7 +7754,28 @@ function teamPanel(t, inc, mode, opts){
   const from = (own || scout) ? null : pickFrom(inc);
   const hi = holdIndexFrom(t, from);
   const ownSlot = own ? (DATA.my_slots || []).find(x => x.n === t.n) : null;
-  const past = (t.hist || []).map(g => {
+  /* ---- A BYE THAT HAS PASSED IS DRAWN AMONG THE GAMES THAT HAVE PASSED --------------------
+   *
+   * Casey, 11 Oct 2026: "now your byes are messed up again. UNLV, you have a bye of 9/19 that is
+   * right after 10/10 ... you got to make sure your byes are ordered correctly."
+   *
+   * He is right, and this is the ordering complaint of 21 Sep coming back by a different road.
+   * The panel draws `hist` and then `sched`, two blocks, one after the other. A bye never moves
+   * from one to the other, because there is no game to move -- so a bye already sat through stays
+   * in `sched` and is drawn after every played game however the array is sorted. Sorting `sched`
+   * cannot fix it; the bye is in the wrong half.
+   * On 21 Sep this was answered by deleting those byes, which lost them altogether, which is what
+   * he found on 11 Oct. The answer is neither: the row is MOVED to the half it belongs in.
+   * TWO BLOCKS DRAWN IN SEQUENCE ARE NOT A SORTED LIST. If the order matters, the thing that
+   * decides it has to see every row.
+   */
+  const pastBye = (g) => g.bye && g.d && g.d < azToday();
+  const SCHED = (t.sched || []).filter(g => !pastBye(g));
+  const byeRow = (g) => `<tr class="g-past"><td class="d" title="A bye has no date — there is no
+      game. This is the league week it falls in.">${when(g, t.pool)}</td>
+      <td colspan="4"><span class="pill v-hold">BYE</span> <span class="d">no game — costs a week
+      of the slot without advancing the hold</span> <span class="gtag t-past">PAST</span></td></tr>`;
+  const pastRows = (t.hist || []).map(g => {
     /* Ask the LIVE index before admitting ignorance. Unknown stays a real, printed state --
        but only when the page genuinely does not have the score, not when it has it two tabs
        away in the scoreboard. */
@@ -7719,10 +7803,17 @@ function teamPanel(t, inc, mode, opts){
         : 'Final score.'}">${sc}</td>
       <td class="num d c-model" title="What the model made this game before it was played.">${line}</td>
       <td class="num">${vg}</td></tr>`;
-  }).join('');
+  });
+  /* ONE LIST, SORTED ONCE. The played games and the byes already sat through are interleaved by
+     date, so the history reads in the order the season was played. A row with no date sorts last
+     rather than jumping to the front. */
+  const past = [...(t.hist || []).map((g, i) => ({d: g.d || '9999-99-99', h: pastRows[i]})),
+                ...(t.sched || []).filter(pastBye).map(g => ({d: g.d, h: byeRow(g)}))]
+    .sort((a, b) => String(a.d).localeCompare(String(b.d)))
+    .map(x => x.h).join('');
 
   let owned = 0;
-  const rows = (t.sched || []).map((g, i) => {
+  const rows = SCHED.map((g, i) => {
     /* A BYE HAS NO KICKOFF DATE, because there is no kickoff. Every other NFL row now shows a
        real date, so this one says the WEEK and says why on hover -- a week number sitting in a
        column of dates has to explain itself or it reads as a row the fix missed. */
@@ -7734,10 +7825,10 @@ function teamPanel(t, inc, mode, opts){
          a SCORE in it and missed this one, which has no score and no opponent. What a row's
          colour answers is whether it is still ahead of you. That is a question about the date,
          not about whether anybody played. */
-      const gone = g.d && g.d < azToday();
-      return `<tr class="${gone ? 'g-past' : ''}"><td class="d" title="A bye has no date — there is no game. This is the league week it falls in.">${when(g, t.pool)}</td>
-        <td colspan="4"><span class="pill v-hold">BYE</span> <span class="d">no game — costs a week of the slot without advancing the hold</span>${
-          gone ? ' <span class="gtag t-past">PAST</span>' : ''}</td></tr>`;
+      /* A BYE REACHING HERE IS STILL AHEAD: the ones already sat through were moved into the
+         history above, where they sort in among the played games. `byeRow` draws those. */
+      return `<tr><td class="d" title="A bye has no date — there is no game. This is the league week it falls in.">${when(g, t.pool)}</td>
+        <td colspan="4"><span class="pill v-hold">BYE</span> <span class="d">no game — costs a week of the slot without advancing the hold</span></td></tr>`;
     }
     const yours = !from || g.d > from;
     if (yours) owned++;
@@ -8979,9 +9070,38 @@ function holdIndex(t){
    empty panel: an absence is never an answer. */
 let FROZEN_NOTE = '';           // what the last pickup list had to leave out, and why
 let FROZEN_N = 0;               // how many teams that note is about, for the closed summary line
+/* ---- THE FREEZE IS MEASURED AGAINST THE DAY THE TRADE LANDS, NOT AGAINST TODAY --------------
+ *
+ * Casey, 11 Oct 2026: "Yes, the teams were dropped last week. So they are available to be picked
+ * up this week. They played their games today, and therefore they should be available to be
+ * picked up after their games are played. And along with that, you have to make this so that the
+ * Monday night teams, even though they haven't played, they will have played before the trade
+ * deadline when we run it. And so any team that's going to play this week, even if they haven't
+ * played, should be available to be picked up."
+ *
+ * He is right and this was the wrong comparison. The rule is that a team returned to the pool
+ * must PLAY once before anybody may have it. `claimable_from_drop` is the day after its next
+ * game, which is the correct fact. What this function did with it was compare it to TODAY, which
+ * asks "has it played yet" -- and that is not the question. A trade entered this week takes
+ * effect on the Wednesday after the window closes, so the question is whether the team will have
+ * played BY THEN.
+ *
+ * Two NFL teams playing on the Sunday were hidden from a board read on the Saturday night, and a
+ * Monday night team would have been hidden all the way to the run, even though its game finishes
+ * two days before the trade it is part of starts scoring.
+ *
+ * SO THE DATE IS THE ONE THE BOARD IS ALREADY ABOUT: the effective date of the next trade window,
+ * which the calendar derives and nothing here has to work out. A team whose next game falls after
+ * that date is still frozen, correctly, because it will not have played in time.
+ */
+function nextEffective(){
+  const ws = ((DATA.calendar || {}).trade_windows) || [];
+  for (const w of ws) if (w && w.effective && w.effective > DATA.asof) return w.effective;
+  return DATA.asof;   // no window left: nothing can be planned for, so today is the test
+}
 function frozenUntil(t){
   const d = t && t.claimable_from_drop;
-  return (d && d > DATA.asof) ? d : null;
+  return (d && d > nextEffective()) ? d : null;
 }
 function canClaim(t){ return !!t.claim_ok && !frozenUntil(t); }
 function canTradeAway(t){ return t && t.tradeable_away !== false; }
@@ -9001,10 +9121,14 @@ function frozenNote(list){
   const f = (list || []).filter(t => frozenUntil(t));
   FROZEN_N = f.length;
   if (!f.length) return '';
+  /* THE REASON IS THE DATE, NOT THE WAIT. A dropped team that plays at any point before this
+     week's trades take effect IS on the list -- it will have served the one game by the time it
+     starts scoring for you. The ones left out are the ones whose next game comes after that. */
   return `<div class="note">${f.length} team${f.length === 1 ? ' is' : 's are'} not listed because
-    ${f.length === 1 ? 'it was' : 'they were'} dropped and ${f.length === 1 ? 'has' : 'have'} not
-    played since — a returned team sits out one game before anyone may claim it:
-    ${f.slice(0, 6).map(t => `<b>${esc(t.n)}</b> (free ${pretty(frozenUntil(t))})`).join(', ')}${
+    ${f.length === 1 ? 'it was' : 'they were'} dropped and ${f.length === 1 ? 'its' : 'their'} next
+    game is after this week's trades take effect on ${pretty(nextEffective())}. A dropped team has
+    to play once before anybody may claim it:
+    ${f.slice(0, 6).map(t => `<b>${esc(t.n)}</b> (yours from ${pretty(frozenUntil(t))})`).join(', ')}${
     f.length > 6 ? ` and ${f.length - 6} more` : ''}.</div>`;
 }
 function poolNote(){
