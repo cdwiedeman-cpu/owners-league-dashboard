@@ -3609,7 +3609,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '10 Oct 2026, 11:57 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '11 Oct 2026, 10:14 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -6435,7 +6435,19 @@ function crossPanel(){
    the count of teams left out is on the closed line and not inside. */
 function boardNotes(kind, from, inner){
   if (!inner || !inner.trim()) return '';
-  const left = (SHORT_N || 0);
+  /* ---- THERE ARE TWO REASONS A TEAM IS NOT ON THE BOARD, AND THIS COUNTED ONE -------------
+   * Casey, 11 Oct 2026: "Why on the pickups tab for NFL are you only showing three teams when
+   * five are available?"
+   * Five were unowned and two of them had been dropped that week, so they had to play a game
+   * before anybody could claim them. The board was right. The folded note said so. But this
+   * line, which exists precisely so the note can be read WITHOUT opening it, counted only
+   * `SHORT_N` -- the teams left out for having too few games. A team left out for sitting out a
+   * game was invisible, so the summary read "measured from 17 Oct" and nothing else, and the
+   * only thing on screen was three rows where he knew there were five teams.
+   * A SUMMARY THAT COUNTS ONE OF TWO CAUSES IS WORSE THAN NO SUMMARY, because it is read as
+   * "nothing was left out". Both are counted now, from the same two variables the notes
+   * themselves are built from, so a third reason cannot be added without this line moving. */
+  const left = (SHORT_N || 0) + (FROZEN_N || 0);
   const bits = [`measured from ${pretty(from)}`];
   if (left) bits.push(`${left} team${left === 1 ? '' : 's'} not listed`);
   return `<details class="how boardnotes"><summary><span class="qm" aria-hidden="true">?</span>
@@ -6502,6 +6514,7 @@ function availTable(kind){
   const incPost = mine ? postOf(mine.n) : 0;
 
   const _frozenOut = DATA.teams.filter(t => t.owner == null && want(t) && t.claim_ok && !canClaim(t));
+  FROZEN_N = 0;
   FROZEN_NOTE = frozenNote(_frozenOut);
   /* THE HOLD IS THREE GAMES, COUNTED FROM THE DATE ON SCREEN. `claim_ok` is worked out at build
      time against the first date he could swap. Move that date forward and a team near the end of
@@ -6919,6 +6932,36 @@ function watchStatus(t){
   return {cls: 'v-keep', label: 'FREE', tip: 'Nobody in Predator owns this team. You can pick it up.'};
 }
 
+/* ---- THE SAME ANSWER, AS AN INLINE TAG ------------------------------------------------------
+ *
+ * Casey, 11 Oct 2026: "I also see that you're showing Nebraska with being too late. When I hover
+ * on that, it says Nebraska has too few games to be able to pick up. But they have six games
+ * left. That is wrong. I should be able to pick them up."
+ *
+ * He was right, and this is the Tennessee bug of 28 September in the one place that was not
+ * fixed. Nebraska had been dropped and had not played since, so it was sitting out a game -- the
+ * freeze. `watchStatus` says exactly that and has since 28 September. The PLAN PANEL kept its own
+ * copy of the decision, `!canClaim(t) ? 'TOO LATE'`, which is true for a frozen team as well as
+ * for one short of games, with a title explaining the wrong one of the two.
+ *
+ * TWO STORES OF ONE FACT AND ONE OF THEM LIES. The oldest rule in this project, and the lesson
+ * was written down in `watchStatus` itself in a comment quoting Casey about Tennessee -- three
+ * lines above a second copy that still had the defect. A FIX APPLIED TO ONE OF TWO COPIES IS NOT
+ * A FIX: when a label goes wrong, grep for every place that emits it before editing one of them.
+ *
+ * So there is one decision now. `watchStatus` is it, and this turns its answer into the small
+ * inline tag the Plan panel draws. FREE and YOURS get no tag, because a tag is a warning and
+ * there is nothing to warn about.
+ */
+const TAGCLS = {TAKEN: 't-hold', 'SITS OUT': 't-hold', 'TOO LATE': 't-before'};
+function claimTag(t){
+  if (!t) return '';
+  const st = watchStatus(t);
+  const cls = TAGCLS[st.label];
+  if (!cls) return '';
+  return ` <span class="gtag ${cls}" title="${esc(st.tip)}">${esc(st.label)}</span>`;
+}
+
 /* THE WATCH LIST. Every team he flagged, whatever its situation, measured the same way the
    Pickups table measures a candidate: against the slot he would actually drop, over the same
    weeks, with everything already played excluded from both sides. */
@@ -7018,10 +7061,7 @@ function planPanel(){
        click on those teams and see their schedules like I can on the watch list and Taken
        Elsewhere." It was the one list of teams on this page whose names did nothing. */
     return `<tr><td class="c-team"><span class="pill p-${t.pool.toLowerCase()}">${t.pool}</span>
-        ${teamOpenHTML(n)}${side === 'get' && t.owner != null
-          ? ' <span class="gtag t-hold" title="Another owner in your division holds this team, so you cannot claim it until they let it go.">TAKEN</span>'
-          : ''}${side === 'get' && t.owner == null && !canClaim(t)
-          ? ` <span class="gtag t-before" title="It cannot finish a ${DATA.hold_games}-game hold from the day your slot frees up, so it is not legal to claim this week.">TOO LATE</span>` : ''}</td>
+        ${teamOpenHTML(n)}${side === 'get' ? claimTag(t) : ''}</td>
       <td class="c-cmp"><button class="cbtn ${cmpSlotOf(n) ? 'on' : ''}" data-cmp="${n}"
           onclick="event.stopPropagation();cmpPick('${q}')"
           title="${cmpSlotOf(n) ? 'Remove ' + n + ' from Side by Side'
@@ -7341,6 +7381,9 @@ function watchPanel(){
       <br>A team with no badge beside its name is one you can pick up now.
       <b>TAKEN</b> means another Predator owner holds it. The numbers in the row are still true.
       You cannot act on them until that changes.
+      <b>SITS OUT</b> means it was dropped and has not played since. A team returned to the pool
+      sits out one game before anybody may claim it, so it comes free the day after it next
+      plays.
       <b>TOO LATE</b> means nobody holds it and it still cannot finish a
       ${DATA.hold_games}-game hold from the day your slot frees up, so it is not legal this week.
       <b>YOURS</b> is one of your own eleven.
@@ -8928,6 +8971,7 @@ function holdIndex(t){
    BOTH SAY WHY. A team that vanishes from a list with no explanation is the same defect as an
    empty panel: an absence is never an answer. */
 let FROZEN_NOTE = '';           // what the last pickup list had to leave out, and why
+let FROZEN_N = 0;               // how many teams that note is about, for the closed summary line
 function frozenUntil(t){
   const d = t && t.claimable_from_drop;
   return (d && d > DATA.asof) ? d : null;
@@ -8948,6 +8992,7 @@ function shortNote(list, from){
 }
 function frozenNote(list){
   const f = (list || []).filter(t => frozenUntil(t));
+  FROZEN_N = f.length;
   if (!f.length) return '';
   return `<div class="note">${f.length} team${f.length === 1 ? ' is' : 's are'} not listed because
     ${f.length === 1 ? 'it was' : 'they were'} dropped and ${f.length === 1 ? 'has' : 'have'} not
