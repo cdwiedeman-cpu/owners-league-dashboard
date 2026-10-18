@@ -1233,10 +1233,42 @@ async function handle(request, env) {
       s.seatSeq[mine] = Math.max(cur ? (Number(cur.seq) || 0) : 0, Number(base) || 0);
     }
     const curSeq = Number(s.seatSeq[mine]) || 0;
-    if (!firstEver && base != null && Number(base) !== curSeq) {
-      return out({ ok: false, why: 'stale', seq: curSeq, mine: cur,
-                   note: 'somebody else on your seat sent a list a moment ago, so yours was not '
-                       + 'saved over it.' });
+    /* ---- NOTHING TO OVERWRITE IS NOTHING TO REFUSE ------------------------------------------
+     *
+     * Casey, 18 Oct 2026, relaying Bob Salatino: "he is trying to make a trade and he's getting
+     * an error message that says somebody else on your seat sent a list a moment ago ... But no
+     * one had sent a list for him." And then the detail that settles it: "there are currently no
+     * trades sitting out there on the trades tab or run it tab, so nobody has submitted
+     * anything."
+     *
+     * He is right, and this is mine again. The check compared the page's number against the
+     * SEAT COUNTER, which climbs on every write and keeps climbing after the list it counted has
+     * gone. So a seat with NO LIST AT ALL could still refuse a submission, on the grounds that
+     * the page was behind -- behind what, though? There was nothing there. A version check
+     * exists to stop one device writing over a newer list; where there is no list, there is
+     * nothing it can protect, and refusing is pure loss.
+     *
+     * SO THE CHECK ASKS ABOUT THE LIST, NOT ABOUT THE COUNTER. It fires only when a list is
+     * actually stored for this seat, and it compares against THAT LIST'S OWN version, which is
+     * the thing that must not be clobbered. A list written before this counter existed carries
+     * no version, and an absent version is not a mismatch -- it is nothing to compare, so the
+     * write goes through.
+     *
+     * AND THE MESSAGE NEVER NAMES A PERSON AGAIN. "Somebody else on your seat sent a list"
+     * states something this back end cannot know. It could be the owner's own phone, a
+     * co-owner, or a bug of mine -- and this time it was a bug of mine, so the sentence sent Bob
+     * looking for a teammate who had done nothing. A REFUSAL DESCRIBES WHAT IS STORED, NOT WHO
+     * PUT IT THERE.
+     */
+    const curListSeq = (cur && cur.seq != null) ? Number(cur.seq) : null;
+    if (cur && curListSeq != null && !firstEver && base != null
+        && Number(base) !== curListSeq) {
+      const n = (cur.rows || []).length;
+      return out({ ok: false, why: 'stale', seq: curListSeq, mine: cur,
+                   note: 'the league is already holding a newer list for your seat, with '
+                       + n + ' trade' + (n === 1 ? '' : 's') + ' on it. Yours was not saved over '
+                       + 'it. What you see now is the list the league has. Send yours again if '
+                       + 'you still want it instead.' });
     }
 
     /* ---- AND A LIST THAT DISAPPEARS LEAVES A TRAIL ------------------------------------------
