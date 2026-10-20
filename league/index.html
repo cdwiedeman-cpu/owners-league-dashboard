@@ -3650,7 +3650,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '18 Oct 2026, 10:25 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Oct 2026, 10:02 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -14914,6 +14914,30 @@ function applyLiveTrades(list){
     .filter(t => t && (t['in'] || t.out)).map(_liveKey));
   txs.trades = BAKED_TRADES.filter(b => !_liveSeen.has(
     [b.div || '', b.owner || '', b.old || '', b.new || ''].join('|')));
+  /* A TRADE THE BUILD HAS ALREADY BAKED IS NOT REPLAYED, BECAUSE THE ROSTER IT CAME FROM IS
+   * THE ANSWER ALREADY.
+   *
+   * Casey, 20 Oct 2026: "on the standings page ... you're showing that I still have Miami of
+   * Ohio, that I still have Idaho State ... we should only have 8 college teams. So somehow
+   * your trades, it's like pulling back in teams that I previously had and listing them as
+   * teams I own."
+   *
+   * The back end returns the WHOLE transaction history, and every row of it was being applied
+   * on top of the newest baked roster. The newest baked roster is the league as it stands, so a
+   * trade from week 2 that handed him Miami (OH) put Miami (OH) back on a roster he had since
+   * dropped it from. He came out with more than eleven teams, and so did Bob Tucker, who picked
+   * up Idaho St the same week and dropped it the same week Casey did.
+   *
+   * APPLYING A PAST MOVE TO THE PRESENT IS NOT A NO-OP. It is the move happening a second time,
+   * and the drop that followed it is not in the list to undo it again.
+   *
+   * SO THE LIVE LIST ONLY MOVES WHAT THE BUILD HAS NOT SEEN. A row the baked trade log already
+   * carries is left on the display list, where it still supplies the week and the fee, and it
+   * changes nobody's roster. What is left to apply was settled after the build, which is the
+   * only case the snapshot floor a few lines below was ever true for. */
+  const _bakedSeen = new Set(BAKED_TRADES.map(
+    b => [b.div || '', b.owner || '', b.old || '', b.new || ''].join('|')));
+  const _alreadyIn = t => _bakedSeen.has(_liveKey(t));
   if (BAKED_SLOTS) DATA.slots.lineage = JSON.parse(JSON.stringify(BAKED_SLOTS));
   if (BAKED_MY_SLOTS) DATA.my_slots = BAKED_MY_SLOTS.slice();
   LIVE_TX_N = 0;
@@ -14951,14 +14975,20 @@ function applyLiveTrades(list){
      * The trade ROW keeps its own true week -- that is what the Transactions tab prints -- and
      * only the snapshot is floored, because the snapshot is the thing built from newer data. */
     const snapW = Math.max(ew, last.week || 0);
+    let moved = 0;
     for (const t of byWeek.get(w)){
       const div = t.div, owner = t.owner;
-      if (t.out && labels[t.out])
-        labels[t.out] = labels[t.out].filter(p => !(p[0] === div && p[1] === owner));
-      if (t['in']){
-        if (!labels[t['in']]) labels[t['in']] = [];
-        if (!labels[t['in']].some(p => p[0] === div && p[1] === owner))
-          labels[t['in']].push([div, owner]);
+      /* THE DISPLAY ROW GOES ON EITHER WAY. Only the ROSTER is left alone for a trade the build
+         has already counted. */
+      if (!_alreadyIn(t)){
+        moved++;
+        if (t.out && labels[t.out])
+          labels[t.out] = labels[t.out].filter(p => !(p[0] === div && p[1] === owner));
+        if (t['in']){
+          if (!labels[t['in']]) labels[t['in']] = [];
+          if (!labels[t['in']].some(p => p[0] === div && p[1] === owner))
+            labels[t['in']].push([div, owner]);
+        }
       }
       txs.trades.push({window: null, div: div, owner: owner,
                        old: t.out || '', new: t['in'],
@@ -14991,9 +15021,17 @@ function applyLiveTrades(list){
     }
     /* THE MOVE TAKES EFFECT IN THE WEEK IT WAS SETTLED, so the snapshot is stamped with that
        week and everything before it keeps the old owner. */
-    hist.snapshots.push({asof: null, week: snapW, source: 'trades page',
-                         labels: _copyLabels(labels)});
-    for (const t of byWeek.get(w)){ applyLiveSlot(t, ew); applyLiveMySlot(t, ew); }
+    /* NO SNAPSHOT FOR A WEEK THAT MOVED NOTHING. A snapshot is a statement that the roster
+       changed here, and an extra one saying what the roster already said gave the walk in
+       ownerLineage() a second state to read at the same week. */
+    if (moved){
+      hist.snapshots.push({asof: null, week: snapW, source: 'trades page',
+                           labels: _copyLabels(labels)});
+      for (const t of byWeek.get(w)){
+        if (_alreadyIn(t)) continue;
+        applyLiveSlot(t, ew); applyLiveMySlot(t, ew);
+      }
+    }
   }
   hist.snapshots.sort((a, b) => a.week - b.week);
   /* ONLY THE TEAMS A TRADE ACTUALLY TOUCHED. Rewriting every team's holders from the snapshot
