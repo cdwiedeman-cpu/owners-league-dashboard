@@ -687,6 +687,7 @@ function leftOf(dates, today) {
  *   rosters     {'DIV|Seat': [team name, ...]}
  *   acquiredAt  {'DIV|Seat': {team name: 'YYYY-MM-DD'}}
  *   today       'YYYY-MM-DD'
+ *   claimFrom   'YYYY-MM-DD'   the day a claim made now would start scoring
  *   divisions   ['PFD','VFD','SFD']
  *   rules       {hold_games, claim_min, trade_away_min}
  *
@@ -694,6 +695,18 @@ function leftOf(dates, today) {
  * games left. A team going OUT needs `trade_away_min`, which is one. So a team can be long past
  * its hold and still be stuck on a roster, and calling that "inside its hold" would hand the
  * owner a reason that is not the reason.
+ *
+ * AND THEY ARE COUNTED FROM TWO DIFFERENT DATES, which is the other half of the same point.
+ * Casey, 31 Oct 2026: "North Dakota only has two games remaining after today, and they're still
+ * available to be picked up today. And so since we're past this week's trade window, they
+ * shouldn't be available because there's only two games left."
+ * HE IS RIGHT. The hold runs from TODAY, because a game played today is being served right now.
+ * A CLAIM cannot run from today: it takes effect the day after its window closes, so every game
+ * before `claimFrom` is one the new owner can never play. North Dakota played on 31 Oct and had
+ * 7 and 21 Nov left; counted from today that is three games and counted from the 4 Nov effective
+ * date it is two, and two is the honest answer to "can I claim this team".
+ * `claimFrom` falls back to `today`, which is what every caller used to pass, so a caller that
+ * has not been taught the difference behaves exactly as it did.
  */
 function build(o) {
   var teams = o.teams || [], rules = o.rules || {};
@@ -701,13 +714,16 @@ function build(o) {
   var claimMin = rules.claim_min || 3;
   var awayMin = rules.trade_away_min == null ? 1 : rules.trade_away_min;
   var today = o.today;
-  var byName = {}, pools = {}, claimOK = {}, tradeAwayOK = {};
+  var claimFrom = o.claimFrom || today;
+  var byName = {}, pools = {}, claimOK = {}, tradeAwayOK = {}, claimLeft = {};
   for (var i = 0; i < teams.length; i++) {
     var t = teams[i];
     byName[t.n] = t;
     pools[t.n] = t.pool;
     var left = leftOf(t.dates, today);
-    claimOK[t.n] = left >= claimMin;
+    var leftIn = leftOf(t.dates, claimFrom);
+    claimLeft[t.n] = leftIn;
+    claimOK[t.n] = leftIn >= claimMin;
     tradeAwayOK[t.n] = left >= awayMin;
   }
   var rosters = o.rosters || {}, got = o.acquiredAt || {};
@@ -723,7 +739,9 @@ function build(o) {
     });
   });
   return {divisions: o.divisions, rosters: rosters, pools: pools,
-          holdMet: holdMet, claimOK: claimOK, tradeAwayOK: tradeAwayOK};
+          holdMet: holdMet, claimOK: claimOK, tradeAwayOK: tradeAwayOK,
+          /* HOW MANY, so a refusal can say the number rather than only the word. */
+          claimLeft: claimLeft, claimFrom: claimFrom, claimMin: claimMin};
 }
 
 /* WHICH ENTRIES A SETTLE ACTUALLY TAKES, AND THE SHAPE THE RESOLVER WANTS THEM IN.
@@ -751,6 +769,23 @@ function pending(requests, week) {
   return out.filter(function (r) { return r.rows.length; });
 }
 
+/* ---- THE DAY WEEK N's LISTS CLOSE, AND THE DAY WHAT THEY WON STARTS SCORING ---------------
+ * A league week runs Tuesday to Monday. Week N's lists close on the Monday that ENDS week N, and
+ * a trade takes effect the day AFTER its window closes -- Casey's own wording on the Trades tab:
+ * "a trade takes effect the day after its window closes, so a game played on the Tuesday still
+ * belongs to the old owner." The window runs Monday to Tuesday, so effective is the Wednesday.
+ * BOTH DERIVED, NEVER TYPED, AND BOTH HERE because the page and the back end each need them and
+ * a second copy of either is a second answer to the same question. The worker had `weekCloses`
+ * of its own and the page had neither. */
+function weekCloses(week, week1) {
+  var w1 = Date.parse((week1 || '2026-09-08') + 'T00:00:00Z');
+  return new Date(w1 + ((Number(week) - 1) * 7 + 6) * 86400000).toISOString().slice(0, 10);
+}
+function effectiveOf(week, week1) {
+  return new Date(Date.parse(weekCloses(week, week1) + 'T00:00:00Z') + 2 * 86400000)
+    .toISOString().slice(0, 10);
+}
+
 /* WHICH LEAGUE WEEK A DAY FALLS IN. One implementation, because a settle that disagrees with the
    page about the week number settles the wrong set of entries. */
 function weekOf(day, week1) {
@@ -759,7 +794,8 @@ function weekOf(day, week1) {
   return n < 0 ? 0 : n;
 }
 
-return {holdOf: holdOf, leftOf: leftOf, build: build, pending: pending, weekOf: weekOf};
+return {holdOf: holdOf, leftOf: leftOf, build: build, pending: pending, weekOf: weekOf,
+        weekCloses: weekCloses, effectiveOf: effectiveOf};
 }));
 
 
@@ -1398,9 +1434,14 @@ async function handle(request, env) {
       const s0 = box.state;
       if (!s0) return out({ok: false, why: 'empty', note: 'the league has not been set up yet'});
       const day = azDay();
+      /* THE CLAIM IS DECIDED AGAINST THE DAY IT WOULD START SCORING, not against today. The
+         effective date was already derived below to STAMP the row; it has to decide the row too,
+         or a team with two games left is granted on the strength of a game the new owner can
+         never play. Casey found that on 31 Oct 2026. */
       const league = Board.build({
         teams: board.teams, rosters: s0.rosters, acquiredAt: s0.acquiredAt,
-        today: day, divisions: board.divisions, rules: board.rules,
+        today: day, claimFrom: Board.effectiveOf(claimWeek(null, board.week1), board.week1),
+        divisions: board.divisions, rules: board.rules,
       });
       const res = Peloton.claim({league, div: who.div, seat: who.seat,
                                  pickup, drops});
@@ -1430,9 +1471,7 @@ async function handle(request, env) {
        * The first version stamped both from the claim day, which would have handed the new owner
        * Monday's and Tuesday's games. DERIVED FROM `weekCloses`, never typed: that returns the
        * Monday the window opens, so the Wednesday after it is two days on. */
-      const closes = weekCloses(week, board.week1);
-      const effective = new Date(Date.parse(closes + 'T00:00:00Z') + 2 * 86400000)
-        .toISOString().slice(0, 10);
+      const effective = Board.effectiveOf(week, board.week1);
       const row = Object.assign({when: new Date().toISOString()},
         Peloton.claimRow(who.div, who.seat, res,
                          {week, fee: board.rules.trade_cost, effective}));
@@ -1723,8 +1762,10 @@ function scheduleOK(at) {
  * ENDS week N -- week 1's Tuesday, plus (N-1) weeks, plus six days. Before that day every list is
  * still being edited, so settling them is wrong whoever asked. Derived, never typed. */
 function weekCloses(week, week1) {
-  const w1 = Date.parse((week1 || '2026-09-08') + 'T00:00:00Z');
-  return new Date(w1 + ((Number(week) - 1) * 7 + 6) * 86400000).toISOString().slice(0, 10);
+  /* ONE IMPLEMENTATION, IN board.js, which the page reads too. It lived here and the page had
+     none, so the page could not tell when a claim would take effect -- which is how a claim came
+     to be decided against today instead. */
+  return Board.weekCloses(week, week1);
 }
 
 /* ---- IS THIS MOMENT INSIDE THE FIRST COME WINDOW? -------------------------------------------
@@ -1848,7 +1889,8 @@ async function settleWeek(env, opts) {
 
   const league = Board.build({
     teams: board.teams, rosters: s.rosters, acquiredAt: s.acquiredAt,
-    today: day, divisions: board.divisions, rules: board.rules,
+    today: day, claimFrom: Board.effectiveOf(week, board.week1),
+    divisions: board.divisions, rules: board.rules,
   });
   const res = Peloton.resolve({league, requests: pending, week,
                                seed: s.seed || 'RFL', fee: board.rules.trade_cost});
@@ -1887,6 +1929,11 @@ async function settleWeek(env, opts) {
 /* NAMED SO A SUITE CAN ASK THEM DIRECTLY. A Worker ignores extra named exports; a check written
    against a second copy of this arithmetic would be the bug it is meant to catch. */
 export { scheduleOK, weekCloses, weekOf, azDay, claimWindowOK, claimWeek };
+/* AND THE TWO THE CLAIM IS DECIDED AGAINST. A claim takes effect the day after its window
+   closes, and `Board.build` counts a claim's games from that day, so a suite has to be able to
+   ask both without reimplementing either. */
+export const effectiveOf = (week, week1) => Board.effectiveOf(week, week1);
+export const buildBoard = (o) => Board.build(o);
 
 export default {
   /* MONDAY, 4:00pm ARIZONA. The cron is `0 23 * * MON` in UTC, which is Monday 16:00 AZ all year
