@@ -786,6 +786,18 @@ function effectiveOf(week, week1) {
     .toISOString().slice(0, 10);
 }
 
+/* ---- WHICH WEEK'S WINDOW A TRADE ENTERED ON THIS DAY BELONGS TO ---------------------------
+ * A league week runs Tuesday to Monday, so Tuesday starts a NEW week -- but the trade window
+ * runs Monday to Tuesday, which means a trade entered on the Tuesday is in the window that is
+ * closing, not the one that opens the following Monday. Without the correction a Tuesday claim
+ * is tested against an effective date a week late and refused for games it would really get.
+ * The back end has always had this; the page did not, which is the whole reason it lives here. */
+function claimWeekOf(day, week1) {
+  var n = weekOf(day, week1);
+  var dow = new Date(Date.parse(String(day).slice(0, 10) + 'T00:00:00Z')).getUTCDay();
+  return dow === 2 ? n - 1 : n;
+}
+
 /* WHICH LEAGUE WEEK A DAY FALLS IN. One implementation, because a settle that disagrees with the
    page about the week number settles the wrong set of entries. */
 function weekOf(day, week1) {
@@ -795,7 +807,7 @@ function weekOf(day, week1) {
 }
 
 return {holdOf: holdOf, leftOf: leftOf, build: build, pending: pending, weekOf: weekOf,
-        weekCloses: weekCloses, effectiveOf: effectiveOf};
+        weekCloses: weekCloses, effectiveOf: effectiveOf, claimWeekOf: claimWeekOf};
 }));
 
 
@@ -1803,9 +1815,9 @@ function claimWindowOK(at) {
  * one window cannot write two weeks. This is the same rule `fcfsWeek()` applies on the page.
  */
 function claimWeek(at, week1) {
-  const az = azNow(at);
-  const n = weekOf(azDay(at), week1);
-  return az.getUTCDay() === 2 ? n - 1 : n;
+  /* ONE IMPLEMENTATION, IN board.js, because the page needs the same correction and did not have
+     it: a trade entered on the Tuesday is in the window that is CLOSING. */
+  return Board.claimWeekOf(azDay(at), week1);
 }
 
 function weekOf(day, week1) {

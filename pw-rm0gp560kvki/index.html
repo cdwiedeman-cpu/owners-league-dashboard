@@ -659,7 +659,7 @@ td.sorted{color:var(--ink);background:rgba(96,165,250,.06)}
    gave a 30%-wide Owner column the same room as a 4.0, and "Palma/Wiedeman" came out broken
    across two lines as "Palma/Wied eman". Numbers are narrow and names are not, so the columns
    are sized to their content and the box scrolls. */
-table.standtbl{min-width:660px;table-layout:auto}
+table.standtbl{min-width:704px;table-layout:auto}
 table.standtbl col.c-teamcol{width:34%}
 table.standtbl td, table.standtbl th{overflow-wrap:normal}
 /* The one column that must never break mid-word: a person's name. */
@@ -680,7 +680,7 @@ table.standtbl td:nth-child(2){white-space:nowrap}
      BY CLASS because the division column is absent on a division table, so every nth-child rule
      on this table is off by one there -- the renumbering trap in START_HERE 2.34, which this
      project has already been bitten by once. */
-  table.standtbl{min-width:564px;table-layout:fixed}
+  table.standtbl{min-width:608px;table-layout:fixed}
   /* td.c-own, not .c-own: the base rule is `table.standtbl td:nth-child(2)`, whose specificity
      is (0,2,1), so a class-only override loses to it and the name kept overflowing into the
      division pill. Matching type+class ties the specificity and this rule is later. */
@@ -782,6 +782,10 @@ table.standtbl td:nth-child(2){white-space:nowrap}
      the division and rank columns were left alone. A bold "100.0" needs 45px; 44 and 46 hold
      every figure either column can print. */
   table.standtbl .c-tot{width:44px}
+  /* THIS WEEK IS THE LAST COLUMN THAT LANDS WITHOUT A SWIPE, and only on a 390px phone. Rank,
+     owner, division and Total end at 288px; this one ends at 332, inside the 340px box a 390px
+     phone gives. On a 360px phone it sits just inside the scroll with Proj. */
+  table.standtbl .c-cwk{width:44px}
   table.standtbl .c-proj{width:46px}
   table.standtbl .c-q{width:44px}
   /* The YOU tag is a second line on its own rather than a thing that widens the name column. */
@@ -3665,7 +3669,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '31 Oct 2026, 12:00 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '31 Oct 2026, 6:49 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -11177,8 +11181,8 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
   const key = o.div + '|' + o.owner;
   const teams = o.teams.slice().sort((a, b) => b.pts - a.pts);
   const qs = QKEYS();
-  // #, Owner, [Div], Total, Win%, [Proj], Behind, Bonus, ...quarters..., Post
-  const nCols = (showDiv ? 4 : 3) + qs.length + 4 + (PROJ_ON ? 1 : 0);
+  // #, Owner, [Div], Total, This Wk, Win%, [Proj], Behind, Bonus, ...quarters..., Post
+  const nCols = (showDiv ? 4 : 3) + qs.length + 4 + 1 + (PROJ_ON ? 1 : 0);
   const spell = t => {
     if (!t.weeks) return '';
     const [a, b] = t.weeks;
@@ -11258,9 +11262,10 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
      The rank and division cells on these rows were always empty, so the label takes them and
      wraps inside what it has instead of spilling out of it. */
   const kidSpan = showDiv ? 3 : 2;
-  const kidRow = (label, cls, ptsCell, qOf, tip) => `<tr class="${cls}"${tip ? ` title="${esc(tip)}"` : ''}>
+  const kidRow = (label, cls, ptsCell, qOf, tip, wkCell) => `<tr class="${cls}"${tip ? ` title="${esc(tip)}"` : ''}>
       <td class="c-own kidcell" colspan="${kidSpan}">${label}</td>
       <td class="num c-tot">${ptsCell}</td>
+      <td class="num d c-cwk">${wkCell == null ? '' : wkCell}</td>
       ${PROJ_ON ? '<td class="num d c-proj"></td>' : ''}
       <td class="num d c-pct hide-s"></td>
       <td class="num d c-beh hide-s"></td>
@@ -11289,6 +11294,7 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       <td class="c-own kidcell" colspan="${kidSpan}"><span class="kidarrow">↳</span> ${grpHeadLabel(o, g)}
         <span class="kidtail">${rec}</span></td>
       <td class="num c-tot"><b>${grpPts(g).toFixed(1)}</b></td>
+      <td class="num d c-cwk">${grpWk(g, lastPlayedWeek()).toFixed(1)}</td>
       ${projCell(g)}
       <td class="num d c-pct hide-s"></td>
       <td class="num d c-beh hide-s"></td>
@@ -11304,7 +11310,8 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
       'slot-kid' + (t.held === false ? ' g-before' : ''),
       `<span class="d">${(t.pts || 0).toFixed(1)}</span>`,
       q => ((t.q || {})[q] || 0).toFixed(1),
-      `${t.team} held this slot ${grpSpan(t)}. The points on this row are the ones it earned in those weeks.`)).join('');
+      `${t.team} held this slot ${grpSpan(t)}. The points on this row are the ones it earned in those weeks.`,
+      `<span class="d">${(((t.wk || {})[lastPlayedWeek()]) || 0).toFixed(1)}</span>`)).join('');
     return head + lin;
   }).join('') + `<tr class="own-kid note-kid"><td></td>
       <td colspan="${nCols - 1}" class="d" style="font-size:11px;line-height:1.5">
@@ -11320,7 +11327,10 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
      the Proj column is that slot's projected finish, and the tooltip carries the two parts the
      table has no column for -- the remaining schedule and the postseason. */
   const detail = '';
-  const row = `<tr class="clickable" onclick="toggleOwner('${key.replace(/'/g,"\\'")}')"
+  /* THE ROW SAYS WHOSE SEAT IT IS. A check of a figure in a cell has to be able to ask which
+     owner the row belongs to, and the only other answer was the onclick string. */
+  const row = `<tr class="clickable" data-seat="${esc(key)}"
+      onclick="toggleOwner('${key.replace(/'/g,"\\'")}')"
       title="${OPEN_OWNER === key ? 'Hide' : 'Show'} ${esc(o.owner)}'s eleven roster slots">
       <td class="num d c-rank">${rank}</td>
       <td class="c-own" data-owner="${esc(o.owner)}">${mine
@@ -11331,6 +11341,9 @@ function ownerBlock(o, rank, lead, showDiv, tsep){
         title="${DIVNAME[o.div] || o.div} division"><span class="divlong">${DIVNAME[o.div] || o.div}</span
         ><span class="divshort">${o.div}</span></span></td>` : ''}
       <td class="num c-tot ${SORTBY === 'pts' ? 'sorted' : ''}"><b>${o.pts.toFixed(1)}</b></td>
+      <td class="num c-cwk ${SORTBY === 'cwk' ? 'sorted' : ''}"
+        title="What this owner's teams have scored in league week ${lastPlayedWeek()} so far."
+        >${weekPtsOf(o, lastPlayedWeek()).toFixed(1)}</td>
       ${PROJ_ON ? `<td class="num c-proj ${SORTBY === 'proj' ? 'sorted' : ''}">${proj
         ? `<button class="nlink" onclick="event.stopPropagation();openProjTable(${jsStr(key)})"
             title="${o.pts.toFixed(1)} banked + ${proj.rest.toFixed(1)} from the games still to play + ${proj.post.toFixed(1)} postseason. Tap for the team-by-team breakdown."
@@ -11617,8 +11630,22 @@ function projOf(o){
 }
 function clearProj(){ PROJ_CACHE = new Map(); }
 
+/* ---- WHAT AN OWNER HAS SCORED IN ONE LEAGUE WEEK ------------------------------------------
+ * Casey, 1 Nov 2026: "on the standings page ... have a current week points. So we can easily see
+ * what each owner has scored so far during that week ... I'm trying to see how many points did
+ * Brian Dave score this week compared to what I scored this week."
+ * READ FROM THE ROW'S OWN PER-WEEK MAP, NEVER FROM ITS TOTAL. Every team row on an owner carries
+ * `wk`, already scoped to the weeks that owner held the team, so a traded team pays the week to
+ * whoever owned it that week and nothing is counted twice. That is the same rule the Slots tab
+ * and `spellOf` follow, and it is why Twitchell Fryer's Jacksonville State went wrong in October.
+ * THE WEEK IS THE LEAGUE'S OWN CURRENT WEEK, worked out from the Arizona date, so this column
+ * rolls over on its own every Tuesday morning with nothing rebuilt. */
+function weekPtsOf(o, w){
+  return r2((o.teams || []).reduce((a, t) => a + (((t.wk || {})[w]) || 0), 0));
+}
 const sortVal = (o, k) => k === 'pts' ? o.pts
   : k === 'proj' ? (PROJ_ON ? ((projOf(o) || {}).total || 0) : o.pts)
+  : k === 'cwk' ? weekPtsOf(o, lastPlayedWeek())
   : ((o.q || {})[k] || 0);
 
 function standTable(rows, title, note, showDiv){
@@ -11646,6 +11673,11 @@ function standTable(rows, title, note, showDiv){
       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setSort('${k}')}"
       title="${extra} Tap to rank every table on this page by this column.">${label}${
       SORTBY === k ? ' <span class="d">▼</span>' : ''}</th>`;
+  /* AND THIS WEEK SITS BESIDE TOTAL. Casey, 1 Nov 2026: "right at the front of the grid of the
+     columns, is to have a current week points."
+     Total keeps the first place in the grid, because he asked twice for it to be the number a
+     phone shows without swiping, and This Wk takes the place beside it. On a phone that spends
+     the last of the room: Proj is one swipe to the right now. */
   /* THE TWO NUMBERS THAT MATTER COME FIRST, AND THE QUARTERS SCROLL. Casey, 5 Sep 2026, from
      the iPhone: "when I scroll down to look at those standings, I only see the team names and
      the division and the points are all the way to the right, and I have to scroll over to the
@@ -11694,6 +11726,7 @@ function standTable(rows, title, note, showDiv){
       <thead><tr><th class="num c-rank">#</th><th class="c-own">Owner</th>
         ${showDiv ? '<th class="c-div" title="Which division this owner drafts and trades in. All three compete for the overall title.">Div</th>' : ''}
         ${th('pts', 'Total', 'Every point earned so far this season. A fact, not a projection.', 'c-tot')}
+        ${th('cwk', 'This Wk', `Points scored in league week ${lastPlayedWeek()}, the week being played now. Season to date is in Total. The number rolls over to the new week every Tuesday morning.`, 'c-cwk')}
         ${PROJ_ON ? th('proj', 'Proj', 'PROJECTED FINAL TOTAL — what this owner has banked, plus every remaining game on their eleven teams, plus the postseason bonuses each team is on course for. Tap an owner to see it team by team.', 'c-proj') : ''}
         <!-- THE TIEBREAKER SITS AFTER PROJ, not between it and Total. Casey asked twice for Total
              and Proj to be the two numbers a phone shows without scrolling; a column inserted
@@ -14210,6 +14243,10 @@ function slotGroups(o){
 }
 function grpPts(g){ return g.spells.reduce((a, t) => a + (t.pts || 0), 0); }
 function grpQ(g, q){ return g.spells.reduce((a, t) => a + ((t.q || {})[q] || 0), 0); }
+/* One slot's points in one league week. Every spell's `wk` map is already scoped to the weeks
+   that spell lasted, so adding them up counts each week once even when the same team has held
+   the slot twice. */
+function grpWk(g, w){ return r2(g.spells.reduce((a, t) => a + (((t.wk || {})[w]) || 0), 0)); }
 function grpKey(o, g){ return o.div + '|' + o.owner + '|' + (g.slot != null ? g.slot : g.cur.team); }
 function grpSpan(t){
   if (t.from_week == null) return t.weeks ? `wk ${t.weeks[0]}–${t.weeks[1]}` : '';
