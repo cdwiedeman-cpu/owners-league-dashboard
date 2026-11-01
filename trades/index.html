@@ -2230,7 +2230,19 @@ function leftOf(n){ return B_.leftOf(datesOf(n), today()); }
  * North Dakota read three games on 31 Oct and had two it could ever play for a new owner.
  * `B_.effectiveOf` is the one place that date is worked out; the hold still counts from today,
  * because a game played today is being served right now. */
-function claimFrom(){ return B_.effectiveOf(B_.claimWeekOf(today(), DATA.week1), DATA.week1); }
+/* WHICH WINDOW A SUBMISSION MADE RIGHT NOW BELONGS TO. TUESDAY IS TWO DIFFERENT DAYS.
+ * Casey, 1 Nov 2026: "even a trade on Tuesday after the first come first serve window after
+ * Tuesday at 5 ... if the game is played on Wednesday and I try to put in for that team on
+ * Tuesday night or on Wednesday morning, it won't let me pick up that team."
+ * Before 5:00pm on a Tuesday the first come window is still open, so a claim lands in the week
+ * that has just been settled and starts scoring that same Wednesday. After 5:00pm the clock has
+ * rolled into the new week and a list is for NEXT Monday, so it starts scoring the Wednesday
+ * after that. `clockMode()` is the one store of which window is open, so the window decides the
+ * date and the calendar is never asked a second time. */
+function claimFrom(){
+  var wk = clockMode() === 'fcfs' ? fcfsWeek() : weekNo();
+  return B_.effectiveOf(wk, DATA.week1);
+}
 /* How many games a team has left that a claim could actually get, for a refusal that says the
    number. */
 function claimLeftOf(n){ return B_.leftOf(datesOf(n), claimFrom()); }
