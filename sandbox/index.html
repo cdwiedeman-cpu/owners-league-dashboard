@@ -2107,13 +2107,6 @@ function playWeekStarts(){
 var DAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 var MON_NAME = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
                 'Dec'];
-var MON_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-                'September', 'October', 'November', 'December'];
-function ordinal(d){
-  var t = d % 100;
-  if (t >= 11 && t <= 13) return d + 'th';
-  return d + ({1: 'st', 2: 'nd', 3: 'rd'}[d % 10] || 'th');
-}
 function clockOf(mins){
   var h = Math.floor(mins / 60), m = mins % 60;
   return ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h >= 12 ? 'pm' : 'am');
@@ -2151,15 +2144,15 @@ function pretty(s){
 function said(day, mon, date, mins){
   return DAY_NAME[day] + ', ' + MON_NAME[mon] + ' ' + date + ' at ' + clockOf(mins) + ' AZ';
 }
-/* THE SAME MOMENT, WRITTEN OUT IN FULL, for a table cell with room for it. Casey asked for the
-   trade window to read "Monday, October 5th to Tuesday, October 6th". */
-function prettyDay(s){
-  var t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? s + 'T12:00:00Z' : s);
-  if (isNaN(t)) return String(s || '');
-  var d = new Date(t);
-  return DAY_NAME[d.getUTCDay()] + ', ' + MON_LONG[d.getUTCMonth()] + ' '
-       + ordinal(d.getUTCDate());
-}
+/* THERE WAS A SECOND `prettyDay` HERE, AND IT WAS DEAD. It wrote a date out in full -- "Monday,
+   October 5th" -- and a later declaration of the same name, about 2,200 lines down, replaced it
+   for every caller in this file. Nothing threw, nothing went red, and no output was wrong,
+   because all four callers want the short form the surviving one writes.
+   THE FULL FORM CASEY ASKED FOR IS NOT THIS FILE'S JOB. The trade window table is drawn on the
+   dashboard, by `prettyLong()` in season_template.html, and it has read "Monday, October 5th"
+   since he asked for it. This copy never drew anything.
+   A SECOND DECLARATION OF ONE NAME IS TWO STORES OF ONE FACT, with the added trap that the
+   shadowed one looks live when you read it. `test_peloton.js` refuses a repeated name now. */
 
 /* ---- the league copy ---------------------------------------------------------------------- */
 /* A COPY, NEVER THE PAYLOAD ITSELF. The state is written to as trades are made, and writing
