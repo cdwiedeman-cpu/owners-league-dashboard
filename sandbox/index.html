@@ -2244,7 +2244,7 @@ function claimFrom(){
   return B_.effectiveOf(wk, DATA.week1);
 }
 /* How many games a team has left that a claim could actually get, for a refusal that says the
-   number. */
+   number. `whyNotClaim` is the sentence; this is the figure. */
 function claimLeftOf(n){ return B_.leftOf(datesOf(n), claimFrom()); }
 function league(){
   /* ONE CALL, ONE IMPLEMENTATION. Everything peloton.js is handed is built by the same file the
@@ -4409,12 +4409,25 @@ function prettyDay(s){
   var DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   return DAY[p.day] + ' ' + p.d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
 }
-/* WHY THIS TEAM CANNOT BE PICKED UP, or '' when it can. The rule is games STILL TO PLAY. */
+/* WHY THIS TEAM CANNOT BE PICKED UP, or '' when it can.
+ * THE GAMES THAT COUNT ARE THE ONES THE NEW OWNER WILL ACTUALLY GET, so they are counted from
+ * the day the pickup starts scoring and never from today.
+ * Casey, 1 Nov 2026: "When I go in and try to make a trade on behalf of Bob Tucker, it's still
+ * letting me pick up North Dakota ... after their game is played this week they don't have three
+ * games remaining."
+ * He was right. The claim date was taught to `league()`, which is what settles a week, and this
+ * function was left counting from today -- so the SETTLE would have refused North Dakota while
+ * the FORM accepted it. North Dakota had games on 31 Oct, 7 Nov and 21 Nov: three counted from
+ * Saturday, two counted from the Wednesday a pickup starts.
+ * `claimFrom()` already knows which window is open, so this reads the same date the settle does.
+ * The reason names that date, because "needs 3" over a team showing three games on the schedule
+ * explains nothing. */
 function whyNotClaim(n){
-  var min = DATA.claim_min || 3, left = leftOf(n);
+  var min = DATA.claim_min || 3, from = claimFrom(), left = B_.leftOf(datesOf(n), from);
   if (left >= min) return '';
-  if (!left) return 'its regular season is over';
-  return 'only ' + left + ' game' + (left === 1 ? '' : 's') + ' left — needs ' + min;
+  if (!left) return 'has no games left from ' + prettyDay(from) + ', the day a pickup starts';
+  return 'has only ' + left + ' game' + (left === 1 ? '' : 's') + ' left from '
+    + prettyDay(from) + ' — needs ' + min;
 }
 /* WHY THIS TEAM CANNOT BE DROPPED, or '' when it can. Checked in the SAME ORDER the resolver
    checks them, so the form and the result never give an owner two different reasons. */
