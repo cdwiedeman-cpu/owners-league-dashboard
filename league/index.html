@@ -2084,6 +2084,17 @@ const GUIDE_TAB = [['guide','Commissioner Guide']];
    commissioner's request from an owner's key whatever this browser remembers, so the worst case
    is two tabs that appear for a moment and remove themselves. */
 const COMMISH_MEMO = 'rfl_was_commish';
+/* WHICH DIVISION'S DRAFT THIS DEVICE'S SIGN-IN MAY TYPE, remembered so the tab bar is right on
+   the first paint instead of rearranging itself a second later. The LEAGUE still decides; this
+   only picks what is worth drawing while the answer is on its way, exactly as the commissioner
+   memo does. */
+const DRAFT_MEMO = 'rfl_may_draft';
+function rememberedDraft(){
+  try { return localStorage.getItem(DRAFT_MEMO) || ''; } catch (e) { return ''; }
+}
+function rememberDraft(may){
+  try { localStorage.setItem(DRAFT_MEMO, String(may || '')); } catch (e) {}
+}
 function rememberedCommish(){
   try { return localStorage.getItem(COMMISH_MEMO) === 'yes'; } catch (e) { return false; }
 }
@@ -2120,13 +2131,19 @@ function rememberSignedIn(yes){
    end. Signing in as a commissioner would have pushed Run It and Access List past League Rules.
    So nothing appends to TABS any more: the flags change and the whole bar is composed again. */
 let IS_COMMISH = TRADES_HOME && rememberedCommish();
+/* '' for nobody, a division's name for a typist, 'any' for a commissioner. */
+let MAY_DRAFT = TRADES_HOME ? rememberedDraft() : '';
 let IS_SIGNED  = !!(rememberedSignedIn() || hasKey());
 function composeTabs(){
   return (TRADES_HOME && !IS_SIGNED ? SIGNIN_TAB : [])
     .concat(TABSETS[MODE] || TABSETS.personal)
     .concat(TRADES_HOME ? OWNER_TAB : [])
     .concat(IS_COMMISH ? COMMISH_ONLY_TABS.concat(GUIDE_TAB) : [])
-    .concat(MODE === 'league' && IS_COMMISH ? DRAFT_TAB : [])
+    /* THE DRAFT TAB IS FOR WHOEVER HAS BEEN GIVEN A DIVISION, and for the commissioners.
+       Casey, 2 Nov 2026: "that's the only person that gets to see the draft page." Hiding it is
+       the convenience; the league refusing the pick is the protection, because an address can be
+       typed in by hand. */
+    .concat(MODE === 'league' && (IS_COMMISH || MAY_DRAFT) ? DRAFT_TAB : [])
     .concat(RULES_TAB);
 }
 let TABS = composeTabs();
@@ -3724,7 +3741,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '01 Nov 2026, 12:41 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '01 Nov 2026, 10:47 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -15873,6 +15890,7 @@ if (TRADES_API){
     if (me === null && hasKey()) return;
     setSignInTab(!!(me && me.seat));
     addCommishTabs(!!(me && me.role === 'commissioner'));
+    addDraftTab(me && me.may_draft ? me.may_draft : '');
     if (me && me.div && me.seat) signedInAs(me.div, me.seat);
     /* HIS OWN SETTINGS FOLLOW THE SIGN-IN, not the browser. Asked for here rather than at boot
        because before this answer there is nobody to ask about. */
@@ -15882,6 +15900,21 @@ if (TRADES_API){
      every other tab follow without the dashboard having to be reloaded by hand. */
   window.signedInNow = () => { whoAmI().then(adopt); };
   whoAmI().then(adopt);
+}
+
+/* THE DRAFT TAB APPEARS AND DISAPPEARS WITH THE GRANT, and the league is what says. A grant
+   given during the draft shows up on this page's next ask, with nobody signing in again. */
+function addDraftTab(may){
+  const want = String(may || '');
+  if (want === MAY_DRAFT) return;
+  rememberDraft(want);
+  MAY_DRAFT = want;
+  const open = TABS.map(([k]) => k).find(k => { const n = el(k); return n && !n.hidden; });
+  TABS = composeTabs();
+  buildTabs();
+  /* IF THE TAB THEY WERE LOOKING AT HAS JUST GONE, put them somewhere that exists. */
+  const still = TABS.some(([k]) => k === open);
+  showTab(still ? open : TABS[0][0]);
 }
 
 function addCommishTabs(yes){

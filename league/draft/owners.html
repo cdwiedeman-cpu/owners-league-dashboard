@@ -950,7 +950,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
     <!-- Build stamp. There is no way to tell two downloaded copies of a single HTML file
          apart from the outside, and an hour was lost to a stale copy that looked current.
          This is the fix: the page says what it is. -->
-    <div class="build" id="build" title="Which copy of the dashboard this is">build 02 Nov 2026 02:42 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build" id="build" title="Which copy of the dashboard this is">build 02 Nov 2026 05:47 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <div class="build" id="freshness"></div>
     <!-- HOW LONG SINCE THIS WAS REALLY SAVED. The autosave is per-device and, on an iPad
          served from a local web server, per-PORT -- change the port and the board comes back
@@ -3471,8 +3471,20 @@ function renderDivStrip(){
   const box = el('divStrip'); if (!box) return;
   if (DIVS.length < 2) return;                       // one division needs no choosing
   const now = divRead();
+  /* ONLY THE DIVISIONS THIS PERSON MAY TYPE. Before the league has answered, all three are
+     offered, because hiding them on a guess would strand a commissioner on a slow connection. */
+  const show = (DS_MINE && DS_MINE.length) ? DIVS.filter(d => DS_MINE.indexOf(d) >= 0) : DIVS;
+  if (show.length < 2 && DS_MAY !== null){
+    box.style.display = 'none';
+    const si0 = el('standIn');
+    if (si0 && DATA.stand_in && show.length === 1){
+      si0.textContent = 'Drafting ' + (DATA.season || '') + ' for ' + divLabel(show[0]) + '. '
+        + DATA.stand_in;
+    }
+    return;
+  }
   box.style.display = '';
-  box.innerHTML = DIVS.map(d => `<button data-div="${d}" class="${d === now ? 'on' : ''}"
+  box.innerHTML = show.map(d => `<button data-div="${d}" class="${d === now ? 'on' : ''}"
       title="Type this division's picks. Each division drafts from the same teams separately, so
              a team taken here is still there for the other two.">${divLabel(d)}</button>`).join('');
   box.querySelectorAll('[data-div]').forEach(b => b.onclick = () => divSwitch(b.dataset.div));
@@ -9205,6 +9217,10 @@ let LBOARDS = {};         // the league's three boards, as last read
 let DS_NOTE = '';         // what the last call said, in words
 let DS_BUSY = false;      // one flush at a time
 let DS_ASKED = false;     // has the league been asked at all yet
+/* WHAT THE LEAGUE SAYS THIS SIGN-IN MAY TYPE: '' for nothing, one division's name, or 'any' for
+   a commissioner. Set from the league's answer and from nothing else. */
+let DS_MAY = null;        // null until asked, then '' or a division or 'any'
+let DS_MINE = [];         // the divisions this person may type
 
 function dsLine(){
   const box = el('dsline');
@@ -9220,6 +9236,14 @@ function dsLine(){
   if (!DraftStore.live()){
     box.innerHTML = '<b>Not signed in to the league.</b> Picks are being kept on this device only. '
       + 'Open this page from your dashboard and it signs in by itself.';
+    box.className = 'build warn';
+    return;
+  }
+  /* THE DRAFT IS NOT EVERYBODY'S. Say it plainly rather than leaving somebody pressing a
+     button that will be refused. Casey, 2 Nov 2026, chose one named division per person. */
+  if (DS_MAY === ''){
+    box.innerHTML = '<b>The draft has not been given to you.</b> Your picks would be refused, so '
+      + 'nothing here is being sent. Ask the commissioner to grant you a division.';
     box.className = 'build warn';
     return;
   }
@@ -9279,8 +9303,17 @@ function dsRead(adopt){
     }
     if (!a.ok){ DS_NOTE = a.note || 'the league would not answer'; dsLine(); return null; }
     DS_NOTE = '';
+    DS_MAY = String(a.may == null ? 'any' : a.may);
+    DS_MINE = (a.mine && a.mine.length) ? a.mine.slice() : (DS_MAY === 'any' ? DIVS.slice() : []);
     LBOARDS = a.boards || {};
     Object.keys(LBOARDS).forEach(d => { LSEQ[d] = Number(LBOARDS[d].seq) || 0; });
+    /* AND THE DIVISION THIS DEVICE IS ON HAS TO BE ONE IT MAY TYPE. A page sitting on Predator
+       whose person may only type Viper would send every pick into a refusal. */
+    if (DS_MINE.length && DS_MINE.indexOf(divRead()) < 0){
+      DR_DIV = DS_MINE[0];
+      try { localStorage.setItem(DIVKEY, DR_DIV); } catch (e) {}
+    }
+    renderDivStrip();
     if (adopt) dsAdopt(LBOARDS[divRead()]);
     dsLine();
     return a;
@@ -9292,6 +9325,10 @@ function dsRead(adopt){
 function dsSend(go, onRefuse){
   const d = divRead();
   if (!DraftStore.live()) return Promise.resolve('local');
+  /* NOTHING IS SENT BY SOMEBODY THE LEAGUE HAS ALREADY SAID NO TO. Asking anyway would put a
+     refusal on the screen for every single pick, which reads as a broken board rather than as a
+     permission nobody has given them. */
+  if (DS_MAY === '') return Promise.resolve('local');
   return go(LSEQ[d] == null ? 0 : LSEQ[d]).then(a => {
     if (a.offline){
       DS_NOTE = 'the league could not be reached';
