@@ -102,6 +102,11 @@ var GOT = {won: 1, won_alone: 1};        // the two endings that mean "you have 
  *   claimOK   : {'Navy': true}         -- enough games LEFT to be picked up (3). Nothing to do
  *                                         with how many it has PLAYED: a team in its first week
  *                                         is claimable, it just cannot be dropped for a while.
+ *   claimFrozen:{'Houston': true}      -- returned to the pool and not yet played again. A
+ *                                         THIRD rule, with nothing to do with how many games it
+ *                                         has left or played: the commissioner's rule freezes a
+ *                                         dropped team for one GAME. `frozenSince` and
+ *                                         `frozenGame` carry the two dates a refusal must name.
  *   tradeAwayOK:{'Navy': true}         -- a DIFFERENT rule with a DIFFERENT threshold: the team
  *                                         going out must still have at least one regular season
  *                                         game. A team whose season is over is stuck on the
@@ -395,6 +400,17 @@ function resolve(opts){
              game before anybody can pick it up. Inside one Monday that is absolute -- nothing
              has been played between the two rows. */
           res.outcome = OUTCOME.JUST_DROPPED; res.detail = dropped[row.pickup];
+          out[key][idx] = res; { ptr[r.seat]++; continue; }
+        }
+        if ((league.claimFrozen || {})[row.pickup]){
+          /* DROPPED IN AN EARLIER WEEK AND STILL NOT PLAYED. The same rule as the block above
+             and the other half of it. `dropped` only knows about this afternoon, so a team
+             returned to the pool last Wednesday was claimable by anybody until 2 Nov 2026.
+             `Board.build` decides it, so the form and the settle read one answer. */
+          res.outcome = OUTCOME.JUST_DROPPED;
+          res.detail = 'dropped on ' + ((league.frozenSince || {})[row.pickup] || '?')
+            + ' and has not played since, so it is claimable the day after its game on '
+            + ((league.frozenGame || {})[row.pickup] || '?');
           out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
         var pick = pickDrop(work, key, row, used[r.seat]);
@@ -798,6 +814,53 @@ function build(o) {
     claimOK[t.n] = leftIn >= claimMin;
     tradeAwayOK[t.n] = left >= awayMin;
   }
+  /* ---- A TEAM RETURNED TO THE POOL HAS TO PLAY BEFORE ANYBODY MAY TAKE IT ---------------
+   * The commissioner's written rule: "Any team returned to the pool will be considered inactive
+   * for one week." A week here is A GAME -- Casey, 7 Sep 2026 -- because seven days would free a
+   * team that sat on a bye, and would free a Tuesday drop before the Saturday.
+   *
+   * THIS RULE WAS IN THREE PLACES AND NONE OF THEM WAS THE ONE THAT SETTLES A WEEK. The season
+   * dashboard filtered the team off the Pickups board, `peloton.js` refused a team dropped
+   * earlier in the SAME Monday run, and the pickup form asked only how many games were left. A
+   * team dropped in an EARLIER WEEK was therefore claimable by anybody.
+   * Casey, 2 Nov 2026: "Houston should not be able to be picked up this week." He had dropped it
+   * on 28 October, it had a bye on 31 October so it had not played since, and another owner's
+   * list was an hour from being granted it.
+   *
+   * NO DATE ARITHMETIC. The rule reads "free the day after the qualifying game", so the question
+   * is whether a game falls in [droppedOn, claimFrom). Two string comparisons give the same
+   * answer as adding a day, without a second way to be wrong about a timezone.
+   *
+   * A TEAM WITH NO GAME LEFT AFTER THE DROP IS NOT FROZEN. It has nothing left to wait for, and
+   * calling it frozen would refuse it for the rest of the year on a rule that has run out.
+   *
+   * THE DATE IS `claimFrom`, NOT `today`, for the same reason `claimOK` uses it: the question is
+   * whether the team will have played by the day a claim made now starts scoring.
+   */
+  var dropped = o.droppedAt || {};
+  var claimFrozen = {}, frozenGame = {}, frozenSince = {};
+  for (var fi = 0; fi < teams.length; fi++) {
+    var ft = teams[fi];
+    claimFrozen[ft.n] = false;
+    /* THE LAST DROP THAT HAD ALREADY HAPPENED. A drop dated AFTER the day the claim takes effect
+       has not happened yet, so on that day the team was still on somebody's roster and was never
+       returned to the pool. Reading the newest drop whatever its date froze a team in September
+       on the strength of an October trade -- test_sandbox_ui.js caught it by winding the clock
+       back while the log kept the whole season. */
+    var hist = dropped[ft.n] || [];
+    var on = null;
+    for (var fh = 0; fh < hist.length; fh++) if (hist[fh] <= claimFrom) on = hist[fh];
+    if (!on) continue;
+    var fds = (ft.dates || []).slice().sort();
+    var first = null;
+    for (var fj = 0; fj < fds.length; fj++) if (fds[fj] >= on) { first = fds[fj]; break; }
+    if (first === null) continue;        // nothing left to play: the rule has run out
+    if (first < claimFrom) continue;     // it has played since the drop: free
+    claimFrozen[ft.n] = true;
+    frozenGame[ft.n] = first;
+    frozenSince[ft.n] = on;
+  }
+
   var rosters = o.rosters || {}, got = o.acquiredAt || {};
   var holdMet = {};
   Object.keys(rosters).forEach(function (k) {
@@ -813,7 +876,10 @@ function build(o) {
   return {divisions: o.divisions, rosters: rosters, pools: pools,
           holdMet: holdMet, claimOK: claimOK, tradeAwayOK: tradeAwayOK,
           /* HOW MANY, so a refusal can say the number rather than only the word. */
-          claimLeft: claimLeft, claimFrom: claimFrom, claimMin: claimMin};
+          claimLeft: claimLeft, claimFrom: claimFrom, claimMin: claimMin,
+          /* THE REFUSAL NAMES THE TWO DATES IT IS COUNTING FROM. "Dropped recently" explains
+             nothing; "dropped on 28 Oct, claimable after its game on 7 Nov" is checkable. */
+          claimFrozen: claimFrozen, frozenGame: frozenGame, frozenSince: frozenSince};
 }
 
 /* WHICH ENTRIES A SETTLE ACTUALLY TAKES, AND THE SHAPE THE RESOLVER WANTS THEM IN.
@@ -858,6 +924,38 @@ function effectiveOf(week, week1) {
     .toISOString().slice(0, 10);
 }
 
+/* ---- EVERY DAY EACH TEAM WAS RETURNED TO THE POOL -----------------------------------------
+ * -> {team: ['YYYY-MM-DD', ...]} ascending, one entry per time it left a roster.
+ *
+ * A LIST AND NOT THE LATEST ONE. Which drop matters depends on the day being asked about, and
+ * that day is not known here -- `build` knows it. Returning only the newest date meant a drop
+ * that has not happened yet hid an earlier one that had, so the caller could not ask "had this
+ * team been returned to the pool by then" for any day but today. A team can be dropped, picked
+ * back up and dropped again; all of it is kept and `build` chooses.
+ *
+ * THE LOG DOES NOT ALWAYS CARRY THE DATE. A row settled by a Monday coin flip stores
+ * `effective: null`, because the window object it came from had no date on it; only a first come
+ * claim stamps one. So the date is DERIVED from the row's week when it is missing, through the
+ * same `effectiveOf` every other date here comes from. Reading `effective` alone left every
+ * coin-flip drop undated, which is most of them.
+ */
+function droppedOn(log, week1) {
+  var out = {};
+  var rows = log || [];
+  for (var i = 0; i < rows.length; i++) {
+    var e = rows[i];
+    var team = e && e.out;
+    if (!team) continue;
+    var d = e.effective ? String(e.effective).slice(0, 10)
+          : (e.week != null ? effectiveOf(e.week, week1) : null);
+    if (!d) continue;
+    if (!out[team]) out[team] = [];
+    if (out[team].indexOf(d) === -1) out[team].push(d);
+  }
+  Object.keys(out).forEach(function (k) { out[k].sort(); });
+  return out;
+}
+
 /* ---- WHICH WEEK'S WINDOW A TRADE ENTERED ON THIS DAY BELONGS TO ---------------------------
  * A league week runs Tuesday to Monday, so Tuesday starts a NEW week -- but the trade window
  * runs Monday to Tuesday, which means a trade entered on the Tuesday is in the window that is
@@ -879,7 +977,8 @@ function weekOf(day, week1) {
 }
 
 return {holdOf: holdOf, leftOf: leftOf, build: build, pending: pending, weekOf: weekOf,
-        weekCloses: weekCloses, effectiveOf: effectiveOf, claimWeekOf: claimWeekOf};
+        weekCloses: weekCloses, effectiveOf: effectiveOf, claimWeekOf: claimWeekOf,
+        droppedOn: droppedOn};
 }));
 
 
@@ -1554,6 +1653,9 @@ async function handle(request, env) {
         teams: board.teams, rosters: s0.rosters, acquiredAt: s0.acquiredAt,
         today: day, claimFrom: Board.effectiveOf(claimWeek(null, board.week1), board.week1),
         divisions: board.divisions, rules: board.rules,
+        /* A FIRST COME CLAIM OBEYS THE DROP FREEZE TOO. It is the half of the week where a
+           team returned to the pool is most likely to be grabbed. */
+        droppedAt: Board.droppedOn(s0.log, board.week1),
       });
       const res = Peloton.claim({league, div: who.div, seat: who.seat,
                                  pickup, drops});
@@ -2279,6 +2381,7 @@ async function settleWeek(env, opts) {
     teams: board.teams, rosters: s.rosters, acquiredAt: s.acquiredAt,
     today: day, claimFrom: Board.effectiveOf(week, board.week1),
     divisions: board.divisions, rules: board.rules,
+    droppedAt: Board.droppedOn(s.log, board.week1),
   });
   const res = Peloton.resolve({league, requests: pending, week,
                                seed: s.seed || 'RFL', fee: board.rules.trade_cost});
