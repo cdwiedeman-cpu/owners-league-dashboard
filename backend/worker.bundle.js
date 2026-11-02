@@ -609,7 +609,79 @@ function claimRow(div, seat, res, opts){
           window: opts.window || null, effective: opts.effective || null};
 }
 
+/* ================= THE DRAFT ==============================================================
+ * ONE STORE FOR THE DRAFT RULE, read by the board and by the back end.
+ *
+ * Casey, 1 Nov 2026: "there's three divisions. I think what we would do is have three owners
+ * draft on behalf of the division." Three people typing means the league has to be able to
+ * refuse a pick, and the league refusing on a different rule from the one the board showed is
+ * the worst outcome of all -- the typist is told yes and finds out later. So the rule lives
+ * here, the board's `legalFor` calls it, and the Worker's `fn=draftpick` calls it.
+ *
+ * ELEVEN ROUNDS, EXACTLY THREE NFL AND EIGHT COLLEGE. Nine seats per division. Each division
+ * drafts from the same teams INDEPENDENTLY, so a team taken in Predator is still there for
+ * Viper -- which is why `picks` is one division's picks and never the league's.
+ */
+var DRAFT = {SEATS: 9, ROUNDS: 11, NEED: {NFL: 3, COL: 8}};
+/* TWO BUCKETS, NOT THREE. A roster is 3 NFL and 8 college, and the FBS/FCS split does not
+   matter to the draft rule at all. */
+function draftBucket(pool) { return pool === 'NFL' ? 'NFL' : 'COL'; }
+
+/* '' when the pick is legal, otherwise the reason IN WORDS THE TYPIST READS. A refusal that
+   says "invalid" tells somebody standing at a draft table nothing they can act on. */
+function draftCheck(picks, seat, team, poolOf) {
+  picks = picks || [];
+  if (!team) return 'no team was named';
+  var n = Number(seat);
+  if (!(n >= 0 && n < DRAFT.SEATS)) return 'that is not one of the ' + DRAFT.SEATS + ' seats';
+  if (picks.length >= DRAFT.SEATS * DRAFT.ROUNDS)
+    return 'this division has finished its draft';
+  for (var i = 0; i < picks.length; i++) {
+    if (picks[i] && picks[i].team === team)
+      return team + ' has already been drafted in this division';
+  }
+  var pool = typeof poolOf === 'function' ? poolOf(team) : poolOf;
+  if (!pool) return 'that team is not on this board';
+  var mine = [];
+  for (var j = 0; j < picks.length; j++) if (picks[j] && Number(picks[j].owner) === n) mine.push(picks[j]);
+  if (mine.length >= DRAFT.ROUNDS)
+    return 'that owner already has all ' + DRAFT.ROUNDS + ' of their teams';
+  var want = draftBucket(pool), have = 0;
+  for (var m = 0; m < mine.length; m++) {
+    var mp = typeof poolOf === 'function' ? poolOf(mine[m].team) : null;
+    if (mp && draftBucket(mp) === want) have++;
+  }
+  if (have >= DRAFT.NEED[want])
+    return 'that owner already has their ' + DRAFT.NEED[want] + ' '
+         + (want === 'NFL' ? 'NFL' : 'college') + ' teams';
+  return '';
+}
+
+/* WHOSE PICK IT IS. The draw holds for two rounds and the second of the two runs backwards,
+   which is how this league drafts. Round 11 is a block of its own. Derived from the draws, so
+   the board and the back end cannot disagree about who was on the clock. */
+var DRAFT_BLOCKS = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11]];
+function draftBlockOf(round) {
+  for (var i = 0; i < DRAFT_BLOCKS.length; i++)
+    if (DRAFT_BLOCKS[i].indexOf(round) >= 0) return i;
+  return -1;
+}
+function draftSlot(draws, overall) {
+  /* -> {round, pickInRound, owner} for the 0-based pick number, or null when the draw for that
+     block has not been entered yet. Nobody is on the clock until the order is drawn. */
+  var round = Math.floor(overall / DRAFT.SEATS) + 1;
+  if (round > DRAFT.ROUNDS) return null;
+  var b = draftBlockOf(round);
+  var ord = (draws || {})[b] || (draws || [])[b];
+  if (!ord || ord.length !== DRAFT.SEATS) return null;
+  var seq = DRAFT_BLOCKS[b].indexOf(round) === 1 ? ord.slice().reverse() : ord.slice();
+  var i = overall % DRAFT.SEATS;
+  return {round: round, pickInRound: i + 1, owner: seq[i], overall: overall + 1};
+}
+
 return {resolve: resolve, claim: claim, applyClaim: applyClaim, claimRow: claimRow,
+        DRAFT: DRAFT, draftBucket: draftBucket, draftCheck: draftCheck,
+        draftSlot: draftSlot, draftBlockOf: draftBlockOf, DRAFT_BLOCKS: DRAFT_BLOCKS,
         seatKey: seatKey, heldBy: heldBy,
         OUTCOME: OUTCOME, GOT: GOT, MAX_ROWS: MAX_ROWS, MAX_DROPS: MAX_DROPS,
         condRows: condRows,
@@ -1506,6 +1578,239 @@ async function handle(request, env) {
     return out({ok: false, why: 'busy',
                 note: 'the league was being written to at the same moment, so nothing was '
                     + 'decided. Nothing changed. Try the claim again.'});
+  }
+
+  /* ================= THE DRAFT ============================================================
+   * Casey, 2 Nov 2026: "Are you saying you can't do it with three people drafting at the same
+   * time in three different divisions?"
+   *
+   * Three at once is the EASY case, and this is why. Each division has its own KV record, so
+   * the three typists never write to the same thing and there is nothing to contend over. The
+   * version check below is only ever protecting one division from ITSELF -- two devices typing
+   * for Predator, which is the real risk on the night when somebody's phone dies and a second
+   * person picks it up.
+   *
+   * THE DRAFT RECORDS ARE KEYED BY SEASON AND NOTHING IN THIS SEASON READS THEM. `draft:2027:PFD`
+   * is not inside `state`, so a practice pick cannot move a 2026 roster, standing, trade or
+   * slot. That is what makes it safe for Bob to play with the real board. Casey, 1 Nov 2026:
+   * "I just want a tab that's there that he can look at and play with."
+   *
+   * THE RULE IS NOT WRITTEN HERE. `Peloton.draftCheck` is the one store and the board calls the
+   * same function, so the league can never refuse a pick on a rule the board did not show.
+   */
+  const DRAFT_SEASON = 2027;               // the one place the season is named
+  const DRAFT_DIVS = ['PFD', 'VFD', 'SFD'];
+  const draftKey = (div) => 'draft:' + DRAFT_SEASON + ':' + div;
+  const emptyDraft = (div) => ({season: DRAFT_SEASON, div: div, seq: 0, owners: [],
+                                draws: {}, picks: [], typist: null, at: null, by: null});
+  async function readDraft(env2, div) {
+    const r = await getJSON(env2, draftKey(div), null);
+    return (r && r.div === div) ? r : emptyDraft(div);
+  }
+  /* WHAT GOES BACK TO A PAGE. The draft itself is league-wide information -- every owner may see
+     who has been taken -- so there is nothing to filter out of a board. It is built rather than
+     trimmed anyway, so a field added here later cannot leak by accident. */
+  const draftOut = (r) => ({div: r.div, season: r.season, seq: Number(r.seq) || 0,
+                            owners: r.owners || [], draws: r.draws || {},
+                            picks: r.picks || [], typist: r.typist || null,
+                            at: r.at || null});
+
+  if (fn === 'draft') {
+    const boards = {};
+    for (const d of DRAFT_DIVS) boards[d] = draftOut(await readDraft(env, d));
+    return out({ok: true, season: DRAFT_SEASON, divisions: DRAFT_DIVS, boards: boards,
+                me: {div: who.div, seat: who.seat, role: who.role},
+                at: new Date().toISOString()});
+  }
+
+  /* EVERY DRAFT WRITE GOES THROUGH ONE DOOR, so the version check, the re-read and the honest
+     answer cannot be written four slightly different ways. `change` is handed the record and
+     returns a refusal string, or mutates it and returns ''. */
+  async function draftWrite(env2, div, baseSeq, change, confirm) {
+    if (DRAFT_DIVS.indexOf(div) < 0) {
+      return out({ok: false, why: 'nodiv', note: 'that is not one of the three divisions'});
+    }
+    for (let tries = 0; tries < 4; tries++) {
+      const cur = await readDraft(env2, div);
+      const have = Number(cur.seq) || 0;
+      /* ---- A STALE DEVICE MUST NOT OVERWRITE A NEWER BOARD -------------------------------
+       * This is the lesson the owners' half of the trades page taught twice in one week. Two
+       * devices typing for one division are two writers, and the last one to write would
+       * otherwise win silently. A page sends the seq it last saw; if the league has moved on
+       * the write is REFUSED and the page is handed what the league holds, so the typist sees
+       * the real board instead of believing their own.
+       * FIRST CONTACT IS NOT A REFUSAL: a page that sends no baseSeq at all is a page that has
+       * not read yet, and that is a mistake worth naming rather than a write worth taking. */
+      if (baseSeq == null || baseSeq === '') {
+        return out({ok: false, why: 'noseq',
+                    note: 'the page did not say which version it was changing, so nothing was '
+                        + 'written. Nothing changed.', board: draftOut(cur)});
+      }
+      if (Number(baseSeq) !== have) {
+        return out({ok: true, granted: false, why: 'stale',
+                    note: 'this division\'s board has been changed somewhere else since this '
+                        + 'page read it. Nothing was written. The board below is the league\'s.',
+                    board: draftOut(cur)});
+      }
+      const refuse = await change(cur);
+      if (refuse) {
+        return out({ok: true, granted: false, why: 'refused', note: refuse,
+                    board: draftOut(cur)});
+      }
+      cur.seq = have + 1;
+      cur.at = new Date().toISOString();
+      cur.by = {div: who.div, seat: who.seat};
+      /* STILL THE SAME VERSION? If somebody wrote while this was deciding, decide again. */
+      const again = await readDraft(env2, div);
+      if ((Number(again.seq) || 0) !== have) continue;
+      await putJSON(env2, draftKey(div), cur);
+      /* AND THE LEAGUE'S OWN COPY HAS TO AGREE BEFORE THE TYPIST IS TOLD ANYTHING. KV has no
+         compare and swap, so the only honest confirmation is one that has read the result back.
+         A false yes is the whole bug this handler exists not to have. */
+      const after = await readDraft(env2, div);
+      if ((Number(after.seq) || 0) !== have + 1) continue;
+      if (confirm && !confirm(after)) continue;
+      return out({ok: true, granted: true, board: draftOut(after)});
+    }
+    return out({ok: false, why: 'busy',
+                note: 'this division\'s board was being written to at the same moment, so '
+                    + 'nothing was written. Nothing changed. Try it again.'});
+  }
+
+  if (fn === 'draftpick') {
+    const div = String(p('div') || '');
+    const team = String(p('team') || '');
+    const board = await readBoard();
+    if (!board) {
+      return out({ok: false, why: 'noboard',
+                  note: 'the team list could not be read, so nothing was decided. Nothing '
+                      + 'changed.'});
+    }
+    const poolOf = (() => {
+      const m = {};
+      for (const t of board.teams) m[t.n] = t.pool;
+      return (n) => m[n] || null;
+    })();
+    let seat = p('owner');
+    return draftWrite(env, div, p('baseSeq'), async (rec) => {
+      /* WHOSE PICK IT IS COMES FROM THE DRAW, not from the page, unless the page says plainly
+         that it is typing for somebody out of turn. One store of who is on the clock. */
+      const slot = Peloton.draftSlot(rec.draws, (rec.picks || []).length);
+      const n = (seat == null || seat === '') ? (slot ? slot.owner : null) : Number(seat);
+      if (n == null) {
+        return 'the draw order for this round has not been entered yet, so nobody is on the '
+             + 'clock';
+      }
+      const why = Peloton.draftCheck(rec.picks || [], n, team, poolOf);
+      if (why) return why;
+      rec.picks = rec.picks || [];
+      rec.picks.push({team: team, owner: n,
+                      round: slot ? slot.round : null,
+                      pickInRound: slot ? slot.pickInRound : null,
+                      overall: rec.picks.length + 1,
+                      at: new Date().toISOString(),
+                      by: {div: who.div, seat: who.seat}});
+      return '';
+    }, (after) => (after.picks || []).some((x) => x.team === team));
+  }
+
+  if (fn === 'draftundo') {
+    const div = String(p('div') || '');
+    const team = p('team') == null ? null : String(p('team'));
+    let took = null;
+    return draftWrite(env, div, p('baseSeq'), async (rec) => {
+      const ps = rec.picks || [];
+      if (!ps.length) return 'this division has no picks to take back';
+      /* AN UNDO PUTS BACK WHAT IT UNDID AND NOTHING ELSE. Naming the team is what makes that
+         true with two devices in the room: without it, an undo sent while somebody else was
+         making a pick would take THEIR pick off instead. */
+      if (team != null) {
+        if (ps[ps.length - 1].team !== team) {
+          return team + ' is not the last pick in this division. The last pick is '
+               + ps[ps.length - 1].team + '.';
+        }
+      }
+      took = ps.pop().team;
+      rec.picks = ps;
+      return '';
+    }, (after) => !(after.picks || []).some((x) => x.team === took));
+  }
+
+  if (fn === 'draftset') {
+    const div = String(p('div') || '');
+    const owners = p('owners');
+    const block = p('block');
+    const order = p('order');
+    return draftWrite(env, div, p('baseSeq'), async (rec) => {
+      if (owners != null) {
+        const names = [].concat(owners).map((x) => String(x || '').trim());
+        if (names.length !== Peloton.DRAFT.SEATS) {
+          return 'a division needs exactly ' + Peloton.DRAFT.SEATS + ' owners, and that was '
+               + names.length;
+        }
+        if (names.some((x) => !x)) return 'every one of the nine owners needs a name';
+        if (new Set(names).size !== names.length) return 'two owners have the same name';
+        rec.owners = names;
+      }
+      if (block != null && order != null) {
+        const b = Number(block);
+        const ord = [].concat(order).map(Number);
+        if (!(b >= 0 && b < Peloton.DRAFT_BLOCKS.length)) return 'that is not a draft block';
+        if (ord.length !== Peloton.DRAFT.SEATS
+            || new Set(ord).size !== Peloton.DRAFT.SEATS
+            || ord.some((x) => !(x >= 0 && x < Peloton.DRAFT.SEATS))) {
+          return 'a draw order is each of the nine seats, once';
+        }
+        /* A DRAW CANNOT BE REDRAWN ONCE ITS ROUNDS HAVE BEEN PICKED. Changing it would move
+           picks already made onto other owners. */
+        const first = Peloton.DRAFT_BLOCKS[b][0];
+        const done = (rec.picks || []).length;
+        if (done > (first - 1) * Peloton.DRAFT.SEATS) {
+          return 'that block has already started, so its draw order cannot be changed';
+        }
+        rec.draws = rec.draws || {};
+        rec.draws[b] = ord;
+      }
+      if (owners == null && (block == null || order == null)) {
+        return 'nothing was sent to change';
+      }
+      return '';
+    });
+  }
+
+  if (fn === 'draftreset') {
+    const div = String(p('div') || '');
+    return draftWrite(env, div, p('baseSeq'), async (rec) => {
+      /* THE OWNERS SURVIVE A RESET. They are the same nine every year and retyping them is the
+         step nobody wants on draft night. Casey, 1 Nov 2026: "Reset clears whatever he leaves
+         behind." That is the picks and the draws. */
+      rec.picks = [];
+      rec.draws = {};
+      return '';
+    }, (after) => !(after.picks || []).length);
+  }
+
+  if (fn === 'drafttypist') {
+    /* WHO TYPES IS CLAIMED, NOT CONFIGURED, and the page says who holds each division. Nobody
+       has to be set up in advance and a typist whose phone dies can hand over. */
+    const div = String(p('div') || '');
+    const take = String(p('take') || '') !== 'no';
+    return draftWrite(env, div, p('baseSeq'), async (rec) => {
+      const mine = {div: who.div, seat: who.seat};
+      const held = rec.typist;
+      if (!take) {
+        if (held && (held.div !== mine.div || held.seat !== mine.seat)) {
+          return 'somebody else is typing for this division';
+        }
+        rec.typist = null;
+        return '';
+      }
+      /* TAKING IT OVER IS ALLOWED AND IS RECORDED. A refusal here would strand a division when
+         a phone dies, which is the thing this is for. The page says who held it before. */
+      rec.typist = {div: mine.div, seat: mine.seat, at: new Date().toISOString(),
+                    took_from: held ? {div: held.div, seat: held.seat} : null};
+      return '';
+    });
   }
 
   /* ---------- the commissioner's half ---------------------------------------------------- */
