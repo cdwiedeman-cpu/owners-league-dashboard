@@ -1032,8 +1032,32 @@ async function whois(env, given) {
     return { dead: 'the sign-ins for that person were retired' };
   }
   return { key, div: row.div, seat: row.seat, member: me.id,
-           role: me.role || 'owner', email: me.email || '' };
+           role: me.role || 'owner', email: me.email || '',
+           /* WHICH DIVISION'S DRAFT THIS PERSON MAY TYPE, or '' for none. It is read here, on
+              every single request, which is what makes a grant given during the draft take
+              effect on that person's next pick with nobody signing in again. */
+           drafts: String(me.drafts || '') };
 }
+
+/* ---------- who may type a division's draft ----------------------------------------------
+ *
+ * Casey, 2 Nov 2026, choosing between a plain "can draft" box and a named division: one named
+ * division each. So a Viper typist cannot put a pick into Predator even by accident.
+ *
+ * A COMMISSIONER MAY TYPE FOR ANY DIVISION. Casey and Bob are the two people who will be fixing
+ * things on the night, and a permission that can lock them out is worse than no permission.
+ */
+const DRAFT_DIVS_ALL = ['PFD', 'VFD', 'SFD'];
+function draftsFor(who) {
+  if (!who || who.dead) return '';
+  if (isCommish(who)) return 'any';
+  const g = String(who.drafts || '');
+  return DRAFT_DIVS_ALL.indexOf(g) >= 0 ? g : '';
+}
+const mayDraft = (who, div) => {
+  const g = draftsFor(who);
+  return g === 'any' || (!!g && g === div);
+};
 
 /* WHERE ONE PERSON'S OWN SETTINGS LIVE. Built from the sign-in and nothing else. */
 const prefsKey = (who) => 'prefs|' + who.div + '|' + who.seat + '|' + who.member;
@@ -1212,7 +1236,10 @@ async function handle(request, env) {
   }
   if (who.dead) return out({ ok: false, why: 'dead', note: who.dead });
 
-  if (fn === 'me') return out({ ok: true, me: { div: who.div, seat: who.seat,
+  /* THE DASHBOARD ASKS THIS ONE, and it is what decides whether the Draft tab is drawn. */
+  if (fn === 'me') return out({ ok: true, me: { drafts: who.drafts || '',
+                                                may_draft: draftsFor(who),
+                                                div: who.div, seat: who.seat,
                                 email: who.email, role: who.role } });
 
   /* ---- ONE PERSON'S OWN SETTINGS -------------------------------------------------------
@@ -1255,7 +1282,8 @@ async function handle(request, env) {
     const reqs = s.requests || {};
     return out({
       ok: true, rev: box.rev, at: new Date().toISOString(),
-      me: { div: who.div, seat: who.seat, email: who.email, role: who.role },
+      me: { div: who.div, seat: who.seat, email: who.email, role: who.role,
+            drafts: who.drafts || '', may_draft: draftsFor(who) },
       /* THE SEATS ARE NOT SECRET -- every owner sees the standings. The ADDRESSES are, so this
          is rebuilt with only what a roster needs. */
       seats: access.map((a) => ({ div: a.div, seat: a.seat, status: a.status,
@@ -1616,10 +1644,18 @@ async function handle(request, env) {
                             at: r.at || null});
 
   if (fn === 'draft') {
+    /* THE ANSWER SAYS WHAT THIS PERSON MAY DO, and the boards come with it only if they may do
+       something. A page that is handed the boards and told separately that it may not use them
+       has published the draft to somebody who is not in it. */
+    const may = draftsFor(who);
+    const mine = may === 'any' ? DRAFT_DIVS : (may ? [may] : []);
     const boards = {};
-    for (const d of DRAFT_DIVS) boards[d] = draftOut(await readDraft(env, d));
-    return out({ok: true, season: DRAFT_SEASON, divisions: DRAFT_DIVS, boards: boards,
+    for (const d of mine) boards[d] = draftOut(await readDraft(env, d));
+    return out({ok: true, season: DRAFT_SEASON, divisions: DRAFT_DIVS,
+                /* WHICH ONES THIS PERSON MAY TYPE. '' means none, which is most of the league. */
+                may: may, mine: mine, boards: boards,
                 me: {div: who.div, seat: who.seat, role: who.role},
+                note: may ? '' : 'the draft has not been given to you. Ask the commissioner.',
                 at: new Date().toISOString()});
   }
 
@@ -1629,6 +1665,17 @@ async function handle(request, env) {
   async function draftWrite(env2, div, baseSeq, change, confirm) {
     if (DRAFT_DIVS.indexOf(div) < 0) {
       return out({ok: false, why: 'nodiv', note: 'that is not one of the three divisions'});
+    }
+    /* ---- THE LEAGUE IS WHAT REFUSES, NOT THE HIDDEN TAB -----------------------------------
+     * Casey, 2 Nov 2026, on granting the draft by sign-in: "then that's the only person that
+     * gets to see the draft page." Hiding the tab is worth doing and is not the protection: an
+     * address can be typed in by hand. So every write asks here, and asks for THIS division.
+     */
+    if (!mayDraft(who, div)) {
+      const g = draftsFor(who);
+      return out({ok: false, why: 'notyours', note: g
+        ? 'you are typing ' + g + ', not ' + div + '. Nothing was written.'
+        : 'the draft has not been given to you, so nothing was written. Ask the commissioner.'});
     }
     for (let tries = 0; tries < 4; tries++) {
       const cur = await readDraft(env2, div);
@@ -1913,7 +1960,10 @@ async function handle(request, env) {
     /* ROLE AND ADDRESS BELONG TO A PERSON. Say which one by id or by their current address.
        With one person on the seat there is nothing to choose and it can be left out. */
     const role = p('role'), email = p('email'), label = p('label');
-    if (role != null || email != null || label != null) {
+    /* `drafts` BELONGS TO A PERSON TOO, so it has to get into this block or it is never read.
+       A request that carries only `drafts` used to fall straight through and change nothing,
+       which reads exactly like a permission that will not save. */
+    if (role != null || email != null || label != null || p('drafts') != null) {
       const want = p('member');
       const m = want ? seat.members.find((x) => x.id === want || x.email === want)
                      : (seat.members.length === 1 ? seat.members[0] : null);
@@ -1926,6 +1976,23 @@ async function handle(request, env) {
           said.push(memberLabel(m) + ' made a ' + role);
         }
         m.role = role;
+      }
+      /* WHO MAY TYPE A DIVISION'S DRAFT. One named division, or nothing. A commissioner may type
+         for any of them whatever this says, so there is no way to lock Casey or Bob out.
+         IT TAKES EFFECT ON THEIR NEXT REQUEST because `whois` reads this list every time, which
+         is what makes handing a division over mid-draft possible. */
+      const drafts = p('drafts');
+      if (drafts != null) {
+        const want = String(drafts).trim().toUpperCase();
+        if (want && DRAFT_DIVS_ALL.indexOf(want) < 0) {
+          return out({ ok: false, why: 'nodiv',
+                       note: 'the draft is granted for one division, or for none' });
+        }
+        if (String(m.drafts || '') !== want) {
+          said.push(want ? memberLabel(m) + ' may type the ' + want + ' draft'
+                         : memberLabel(m) + ' may no longer type a draft');
+        }
+        m.drafts = want;
       }
       /* CHANGING AN ADDRESS DOES NOT SIGN ANYBODY OUT. The key points at the id, not the
          address, which is the whole reason the id exists. */
@@ -1991,11 +2058,15 @@ async function handle(request, env) {
                  access: access.map((a) => ({ div: a.div, seat: a.seat, status: a.status,
                    members: membersOf(a).map((m) => ({ member: m.id, email: m.email || '',
                      who: memberLabel(m), role: m.role || 'owner', code: m.code,
+                     /* WHICH DIVISION THIS PERSON MAY TYPE THE DRAFT FOR. The Access List draws
+                        a picker from it, so it has to come back with the row. */
+                     drafts: String(m.drafts || ''),
                      signedIn: perPerson[a.div + '|' + a.seat + '|' + m.id] || 0,
                      signedWhen: whenPerson[a.div + '|' + a.seat + '|' + m.id] || [] })) })),
                  signedIn: counts,
                  accessLog: await getJSON(env, 'accesslog', []),
-                 me: { div: who.div, seat: who.seat, email: who.email, role: who.role },
+                 me: { div: who.div, seat: who.seat, email: who.email, role: who.role,
+                       drafts: who.drafts || '', may_draft: draftsFor(who) },
                  at: new Date().toISOString() });
   }
 
