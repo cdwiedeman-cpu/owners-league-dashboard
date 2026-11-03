@@ -950,7 +950,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
     <!-- Build stamp. There is no way to tell two downloaded copies of a single HTML file
          apart from the outside, and an hour was lost to a stale copy that looked current.
          This is the fix: the page says what it is. -->
-    <div class="build" id="build" title="Which copy of the dashboard this is">build 02 Nov 2026 05:47 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build" id="build" title="Which copy of the dashboard this is">build 03 Nov 2026 02:44 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <div class="build" id="freshness"></div>
     <!-- HOW LONG SINCE THIS WAS REALLY SAVED. The autosave is per-device and, on an iPad
          served from a local web server, per-PORT -- change the port and the board comes back
@@ -1472,7 +1472,7 @@ var OUTCOME = {
   OWNED:        'owned',          // the team is not available in this division
   HAVE_IT:      'have_it',        // the owner already holds it
   WRONG_POOL:   'wrong_pool',     // college trades for college, NFL for NFL -- 8/3 is a rule
-  JUST_DROPPED: 'just_dropped',   // dropped this week; has to play a game before it can be had
+  JUST_DROPPED: 'just_dropped',   // dropped this week; one trade window has to pass first
   NOT_CLAIMABLE:'not_claimable',  // too few games left to be claimed
   DUPLICATE:    'duplicate',      // an earlier row of this owner's already took this team
   INVALID:      'invalid'         // the row itself does not make sense (bad condition, no pickup)
@@ -1487,6 +1487,12 @@ var GOT = {won: 1, won_alone: 1};        // the two endings that mean "you have 
  *   claimOK   : {'Navy': true}         -- enough games LEFT to be picked up (3). Nothing to do
  *                                         with how many it has PLAYED: a team in its first week
  *                                         is claimable, it just cannot be dropped for a while.
+ *   claimFrozen:{'Houston': true}      -- returned to the pool less than a week ago. A THIRD
+ *                                         rule, with nothing to do with how many games it has
+ *                                         left or played: the commissioner's rule makes a
+ *                                         dropped team inactive for SEVEN DAYS, so the other
+ *                                         owners get a chance to see it is free. `frozenSince`
+ *                                         and `frozenUntil` are the two dates a refusal names.
  *   tradeAwayOK:{'Navy': true}         -- a DIFFERENT rule with a DIFFERENT threshold: the team
  *                                         going out must still have at least one regular season
  *                                         game. A team whose season is over is stuck on the
@@ -1780,6 +1786,17 @@ function resolve(opts){
              game before anybody can pick it up. Inside one Monday that is absolute -- nothing
              has been played between the two rows. */
           res.outcome = OUTCOME.JUST_DROPPED; res.detail = dropped[row.pickup];
+          out[key][idx] = res; { ptr[r.seat]++; continue; }
+        }
+        if ((league.claimFrozen || {})[row.pickup]){
+          /* DROPPED LESS THAN A WEEK AGO. The same rule as the block above and the other half of
+             it: `dropped` only knows about this afternoon, so a team returned to the pool last
+             Wednesday was claimable by anybody until 2 Nov 2026. `Board.build` decides it, so
+             the form and the settle read one answer. */
+          res.outcome = OUTCOME.JUST_DROPPED;
+          res.detail = 'dropped on ' + ((league.frozenSince || {})[row.pickup] || '?')
+            + ', so it cannot be picked up until the next trade window, from '
+            + ((league.frozenUntil || {})[row.pickup] || '?');
           out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
         var pick = pickDrop(work, key, row, used[r.seat]);
