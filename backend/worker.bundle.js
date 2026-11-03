@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: '6cd97d699bbd', at: '2026-11-03 01:19 UTC'};
+const WORKER_BUILD = {id: '0fee98bf5260', at: '2026-11-03 02:44 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -89,7 +89,7 @@ var OUTCOME = {
   OWNED:        'owned',          // the team is not available in this division
   HAVE_IT:      'have_it',        // the owner already holds it
   WRONG_POOL:   'wrong_pool',     // college trades for college, NFL for NFL -- 8/3 is a rule
-  JUST_DROPPED: 'just_dropped',   // dropped this week; has to play a game before it can be had
+  JUST_DROPPED: 'just_dropped',   // dropped this week; one trade window has to pass first
   NOT_CLAIMABLE:'not_claimable',  // too few games left to be claimed
   DUPLICATE:    'duplicate',      // an earlier row of this owner's already took this team
   INVALID:      'invalid'         // the row itself does not make sense (bad condition, no pickup)
@@ -412,7 +412,7 @@ function resolve(opts){
              the form and the settle read one answer. */
           res.outcome = OUTCOME.JUST_DROPPED;
           res.detail = 'dropped on ' + ((league.frozenSince || {})[row.pickup] || '?')
-            + ', so it is inactive for a week and can be picked up from '
+            + ', so it cannot be picked up until the next trade window, from '
             + ((league.frozenUntil || {})[row.pickup] || '?');
           out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
@@ -819,30 +819,39 @@ function build(o) {
   }
   /* ---- A TEAM RETURNED TO THE POOL IS UNAVAILABLE FOR ONE WEEK -------------------------
    * The commissioner's written rule: "Any team returned to the pool will be considered inactive
-   * for one week." A WEEK IS SEVEN DAYS.
+   * for one week." THE UNIT IS A TRADE WINDOW, NOT A COUNT OF DAYS.
    *
    * Casey, 3 Nov 2026, relaying Bob: "when a team is dropped, they don't have to actually play a
    * game to be picked back up. They just have to be 1 week has to pass so that the rest of the
-   * owners have a chance to see that they're available before they can be picked up again. So
-   * it's just 1 week, not that they played a game."
+   * owners have a chance to see that they're available before they can be picked up again."
    *
-   * THE REASON SETTLES THE SHAPE. The freeze exists so the other twenty-six owners get a chance
-   * to notice the team is free. That is a window of time for the READERS, not something the team
-   * serves. So a bye does not extend it and a Saturday does not end it.
+   * Casey, 3 Nov 2026, correcting the first reading of that: "It's not 7 calendar days that a
+   * team is unavailable. Basically, just one trade cycle has to pass. So I guess 7 days would
+   * fall within that. But essentially, once the trade window opens and closes for 1 week after
+   * they're dropped, then they'd be available per pickup the next week."
+   *
+   * SO IT IS A CYCLE AND NOT A CLOCK. A team dropped in one settle is claimable in the next one.
+   * The freeze exists so the other twenty-six owners get a chance to notice the team is free,
+   * and the thing they get the chance in is a window. A bye does not extend it and a Saturday
+   * does not end it.
+   *
+   * THE ARITHMETIC IS A WINDOW COUNT, EVEN THOUGH IT ADDS DAYS. Both dates here are window
+   * dates: `on` is the Wednesday a drop took effect and `claimFrom` is the Wednesday a claim
+   * made now takes effect, and `weekCloses` puts every window exactly seven days from the last.
+   * So adding seven days per window lands on that window, and the 7 is the length of a league
+   * week that this file already uses everywhere. It is not a calendar count from an arbitrary
+   * day, which is what the first version was.
+   *
+   * THE DATE IS `claimFrom`, NOT `today`, for the same reason `claimOK` uses it: the question is
+   * whether the window will have passed by the day a claim made now starts scoring.
    *
    * THIS REPLACED A GAME-BASED READING, built and shipped on 2 Nov 2026 from an inference about
    * what "a week" meant, which refused a pickup the league had intended to allow -- Houston went
    * to Steve Eriksson in the week 8 settle and the game rule would have taken it back. A rule
    * read out of the commissioner's wording is a rule to ASK about, not to build.
-   *
-   * THE DATE IS `claimFrom`, NOT `today`, for the same reason `claimOK` uses it: the question is
-   * whether the week will have passed by the day a claim made now starts scoring.
-   *
-   * A league week is seven days and a window is weekly, so this is exactly one window: a team
-   * dropped in one settle is claimable in the next one.
    */
   var dropped = o.droppedAt || {};
-  var freezeDays = (rules.drop_freeze_days == null) ? 7 : Number(rules.drop_freeze_days);
+  var freezeWins = (rules.drop_freeze_windows == null) ? 1 : Number(rules.drop_freeze_windows);
   var claimFrozen = {}, frozenUntil = {}, frozenSince = {};
   for (var fi = 0; fi < teams.length; fi++) {
     var ft = teams[fi];
@@ -856,8 +865,8 @@ function build(o) {
     var on = null;
     for (var fh = 0; fh < hist.length; fh++) if (hist[fh] <= claimFrom) on = hist[fh];
     if (!on) continue;
-    var free = dayPlus(on, freezeDays);
-    if (claimFrom >= free) continue;     // the week has passed, so it is free
+    var free = dayPlus(on, 7 * freezeWins);
+    if (claimFrom >= free) continue;     // the window has passed, so it is free
     claimFrozen[ft.n] = true;
     frozenUntil[ft.n] = free;
     frozenSince[ft.n] = on;
