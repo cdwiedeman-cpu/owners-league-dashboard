@@ -3741,7 +3741,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '02 Nov 2026, 7:28 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '02 Nov 2026, 7:54 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -7133,8 +7133,11 @@ function watchStatus(t){
      that it cannot finish the three-game hold. How does that make any sense? I dropped them last
      week. They've played a game."
      It made no sense because it was not true: Tennessee had eight games left. It was frozen, which
-     is the OTHER rule -- a team returned to the pool sits out one game before anyone may claim it.
-     One message for two causes told him the wrong thing about his own team. */
+     is the OTHER rule -- a team returned to the pool cannot be picked up until the next trade
+     window. One message for two causes told him the wrong thing about his own team.
+     THAT RULE WAS READ AS A GAME UNTIL 3 NOV 2026 and this line said so. It is a window now, and
+     a comment left describing a rule the code no longer follows is the next person's wrong
+     answer. */
   /* THE WORD "SITS OUT" READS AS A BYE, AND THAT IS WHAT IT SOUNDED LIKE TO HIM.
      Casey, 11 Oct 2026: "next to East Carolina you say it sits out. What is sits out? They don't
      have a bye that you're showing, so I don't know what sits out means."
