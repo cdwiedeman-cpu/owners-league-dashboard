@@ -6,6 +6,8 @@
  * Editing this file means the next build silently throws your change away.
  */
 
+const WORKER_BUILD = {id: 'b1427cc172fa', at: '2026-11-03 00:00 UTC'};
+
 
 /* ===== peloton.js ===== */
 /* THE PELOTON RESOLVER — the one implementation, used by three things.
@@ -1238,6 +1240,16 @@ async function handle(request, env) {
     return out({ ok: true, at: new Date().toISOString(), seats: access.length,
                  ready: !!box.state, rev: box.rev, store: 'cloudflare',
                  admin_set: !!env.ADMIN,
+                 /* ---- WHICH BUILD IS ACTUALLY RUNNING ------------------------------------
+                  * Casey pushed the drop-freeze fix at 3:22pm AZ on 2 Nov 2026 and the 4:00pm
+                  * settle granted a team the fix refuses. The rule was in the page and not in
+                  * the Worker, because the bundle had been built and never committed -- and
+                  * NOTHING THE WORKER SERVED SAID WHICH CODE IT WAS RUNNING, so neither of us
+                  * could tell before the deadline. `cron_asked_for` already carries that lesson
+                  * about the schedule; this is the same lesson about the code.
+                  * The stamp is injected by build_worker.py from the md5 of the three sources,
+                  * so it changes if and only if the deployed code changes. */
+                 build: (typeof WORKER_BUILD === 'undefined' ? null : WORKER_BUILD),
                  cron_asked_for: '0 23 * * MON (Mon 4:00pm AZ)',
                  az_now: now.az, settle_now: now.ok,
                  settle_rule: 'Monday, 4:00pm AZ or later',
