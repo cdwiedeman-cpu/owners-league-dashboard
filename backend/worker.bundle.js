@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: 'b1427cc172fa', at: '2026-11-03 00:00 UTC'};
+const WORKER_BUILD = {id: '6cd97d699bbd', at: '2026-11-03 01:19 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -104,11 +104,12 @@ var GOT = {won: 1, won_alone: 1};        // the two endings that mean "you have 
  *   claimOK   : {'Navy': true}         -- enough games LEFT to be picked up (3). Nothing to do
  *                                         with how many it has PLAYED: a team in its first week
  *                                         is claimable, it just cannot be dropped for a while.
- *   claimFrozen:{'Houston': true}      -- returned to the pool and not yet played again. A
- *                                         THIRD rule, with nothing to do with how many games it
- *                                         has left or played: the commissioner's rule freezes a
- *                                         dropped team for one GAME. `frozenSince` and
- *                                         `frozenGame` carry the two dates a refusal must name.
+ *   claimFrozen:{'Houston': true}      -- returned to the pool less than a week ago. A THIRD
+ *                                         rule, with nothing to do with how many games it has
+ *                                         left or played: the commissioner's rule makes a
+ *                                         dropped team inactive for SEVEN DAYS, so the other
+ *                                         owners get a chance to see it is free. `frozenSince`
+ *                                         and `frozenUntil` are the two dates a refusal names.
  *   tradeAwayOK:{'Navy': true}         -- a DIFFERENT rule with a DIFFERENT threshold: the team
  *                                         going out must still have at least one regular season
  *                                         game. A team whose season is over is stuck on the
@@ -405,14 +406,14 @@ function resolve(opts){
           out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
         if ((league.claimFrozen || {})[row.pickup]){
-          /* DROPPED IN AN EARLIER WEEK AND STILL NOT PLAYED. The same rule as the block above
-             and the other half of it. `dropped` only knows about this afternoon, so a team
-             returned to the pool last Wednesday was claimable by anybody until 2 Nov 2026.
-             `Board.build` decides it, so the form and the settle read one answer. */
+          /* DROPPED LESS THAN A WEEK AGO. The same rule as the block above and the other half of
+             it: `dropped` only knows about this afternoon, so a team returned to the pool last
+             Wednesday was claimable by anybody until 2 Nov 2026. `Board.build` decides it, so
+             the form and the settle read one answer. */
           res.outcome = OUTCOME.JUST_DROPPED;
           res.detail = 'dropped on ' + ((league.frozenSince || {})[row.pickup] || '?')
-            + ' and has not played since, so it is claimable the day after its game on '
-            + ((league.frozenGame || {})[row.pickup] || '?');
+            + ', so it is inactive for a week and can be picked up from '
+            + ((league.frozenUntil || {})[row.pickup] || '?');
           out[key][idx] = res; { ptr[r.seat]++; continue; }
         }
         var pick = pickDrop(work, key, row, used[r.seat]);
@@ -816,31 +817,33 @@ function build(o) {
     claimOK[t.n] = leftIn >= claimMin;
     tradeAwayOK[t.n] = left >= awayMin;
   }
-  /* ---- A TEAM RETURNED TO THE POOL HAS TO PLAY BEFORE ANYBODY MAY TAKE IT ---------------
+  /* ---- A TEAM RETURNED TO THE POOL IS UNAVAILABLE FOR ONE WEEK -------------------------
    * The commissioner's written rule: "Any team returned to the pool will be considered inactive
-   * for one week." A week here is A GAME -- Casey, 7 Sep 2026 -- because seven days would free a
-   * team that sat on a bye, and would free a Tuesday drop before the Saturday.
+   * for one week." A WEEK IS SEVEN DAYS.
    *
-   * THIS RULE WAS IN THREE PLACES AND NONE OF THEM WAS THE ONE THAT SETTLES A WEEK. The season
-   * dashboard filtered the team off the Pickups board, `peloton.js` refused a team dropped
-   * earlier in the SAME Monday run, and the pickup form asked only how many games were left. A
-   * team dropped in an EARLIER WEEK was therefore claimable by anybody.
-   * Casey, 2 Nov 2026: "Houston should not be able to be picked up this week." He had dropped it
-   * on 28 October, it had a bye on 31 October so it had not played since, and another owner's
-   * list was an hour from being granted it.
+   * Casey, 3 Nov 2026, relaying Bob: "when a team is dropped, they don't have to actually play a
+   * game to be picked back up. They just have to be 1 week has to pass so that the rest of the
+   * owners have a chance to see that they're available before they can be picked up again. So
+   * it's just 1 week, not that they played a game."
    *
-   * NO DATE ARITHMETIC. The rule reads "free the day after the qualifying game", so the question
-   * is whether a game falls in [droppedOn, claimFrom). Two string comparisons give the same
-   * answer as adding a day, without a second way to be wrong about a timezone.
+   * THE REASON SETTLES THE SHAPE. The freeze exists so the other twenty-six owners get a chance
+   * to notice the team is free. That is a window of time for the READERS, not something the team
+   * serves. So a bye does not extend it and a Saturday does not end it.
    *
-   * A TEAM WITH NO GAME LEFT AFTER THE DROP IS NOT FROZEN. It has nothing left to wait for, and
-   * calling it frozen would refuse it for the rest of the year on a rule that has run out.
+   * THIS REPLACED A GAME-BASED READING, built and shipped on 2 Nov 2026 from an inference about
+   * what "a week" meant, which refused a pickup the league had intended to allow -- Houston went
+   * to Steve Eriksson in the week 8 settle and the game rule would have taken it back. A rule
+   * read out of the commissioner's wording is a rule to ASK about, not to build.
    *
    * THE DATE IS `claimFrom`, NOT `today`, for the same reason `claimOK` uses it: the question is
-   * whether the team will have played by the day a claim made now starts scoring.
+   * whether the week will have passed by the day a claim made now starts scoring.
+   *
+   * A league week is seven days and a window is weekly, so this is exactly one window: a team
+   * dropped in one settle is claimable in the next one.
    */
   var dropped = o.droppedAt || {};
-  var claimFrozen = {}, frozenGame = {}, frozenSince = {};
+  var freezeDays = (rules.drop_freeze_days == null) ? 7 : Number(rules.drop_freeze_days);
+  var claimFrozen = {}, frozenUntil = {}, frozenSince = {};
   for (var fi = 0; fi < teams.length; fi++) {
     var ft = teams[fi];
     claimFrozen[ft.n] = false;
@@ -853,13 +856,10 @@ function build(o) {
     var on = null;
     for (var fh = 0; fh < hist.length; fh++) if (hist[fh] <= claimFrom) on = hist[fh];
     if (!on) continue;
-    var fds = (ft.dates || []).slice().sort();
-    var first = null;
-    for (var fj = 0; fj < fds.length; fj++) if (fds[fj] >= on) { first = fds[fj]; break; }
-    if (first === null) continue;        // nothing left to play: the rule has run out
-    if (first < claimFrom) continue;     // it has played since the drop: free
+    var free = dayPlus(on, freezeDays);
+    if (claimFrom >= free) continue;     // the week has passed, so it is free
     claimFrozen[ft.n] = true;
-    frozenGame[ft.n] = first;
+    frozenUntil[ft.n] = free;
     frozenSince[ft.n] = on;
   }
 
@@ -881,7 +881,7 @@ function build(o) {
           claimLeft: claimLeft, claimFrom: claimFrom, claimMin: claimMin,
           /* THE REFUSAL NAMES THE TWO DATES IT IS COUNTING FROM. "Dropped recently" explains
              nothing; "dropped on 28 Oct, claimable after its game on 7 Nov" is checkable. */
-          claimFrozen: claimFrozen, frozenGame: frozenGame, frozenSince: frozenSince};
+          claimFrozen: claimFrozen, frozenUntil: frozenUntil, frozenSince: frozenSince};
 }
 
 /* WHICH ENTRIES A SETTLE ACTUALLY TAKES, AND THE SHAPE THE RESOLVER WANTS THEM IN.
@@ -917,6 +917,14 @@ function pending(requests, week) {
  * BOTH DERIVED, NEVER TYPED, AND BOTH HERE because the page and the back end each need them and
  * a second copy of either is a second answer to the same question. The worker had `weekCloses`
  * of its own and the page had neither. */
+/* N DAYS AFTER A DATE, as a date. The only arithmetic here that is not a week boundary, and it
+   lives in this file so the page and the back end add days the same way. UTC throughout, like
+   weekCloses: a date plus seven days has no timezone in it. */
+function dayPlus(day, n) {
+  return new Date(Date.parse(String(day).slice(0, 10) + 'T00:00:00Z') + n * 86400000)
+    .toISOString().slice(0, 10);
+}
+
 function weekCloses(week, week1) {
   var w1 = Date.parse((week1 || '2026-09-08') + 'T00:00:00Z');
   return new Date(w1 + ((Number(week) - 1) * 7 + 6) * 86400000).toISOString().slice(0, 10);
@@ -980,7 +988,7 @@ function weekOf(day, week1) {
 
 return {holdOf: holdOf, leftOf: leftOf, build: build, pending: pending, weekOf: weekOf,
         weekCloses: weekCloses, effectiveOf: effectiveOf, claimWeekOf: claimWeekOf,
-        droppedOn: droppedOn};
+        droppedOn: droppedOn, dayPlus: dayPlus};
 }));
 
 
