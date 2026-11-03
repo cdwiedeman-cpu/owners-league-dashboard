@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: '0fee98bf5260', at: '2026-11-03 02:44 UTC'};
+const WORKER_BUILD = {id: 'e81699df21a5', at: '2026-11-03 07:43 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -1782,9 +1782,24 @@ async function handle(request, env) {
     const mine = may === 'any' ? DRAFT_DIVS : (may ? [may] : []);
     const boards = {};
     for (const d of mine) boards[d] = draftOut(await readDraft(env, d));
+    /* ---- THE NINE NAMES COME FROM THE ACCESS LIST, WHICH IS WHERE THEY ARE MANAGED --------
+     * Casey, 3 Nov 2026: "all the team names should come from the access list. So Bob and I
+     * manage that. They're already pre-populated. All they have to do is start with setting
+     * the draft order."
+     * They were, but from a list BAKED INTO THE PAGE at build time out of his league workbook.
+     * That is two stores of one fact: change a seat here and the draft board would not know
+     * until somebody rebuilt it. The access list is the one he and Bob keep, so it is the one
+     * the draft board asks. The baked list stays as the answer when the league cannot be
+     * reached, and the page says which of the two it used.
+     * ONLY THE DIVISIONS THIS PERSON MAY TYPE, the same gate the boards go through. */
+    const acc = await getJSON(env, 'access', []);
+    const owners = {};
+    for (const d of mine) {
+      owners[d] = acc.filter((a) => a.div === d && a.status !== 'inactive').map((a) => a.seat);
+    }
     return out({ok: true, season: DRAFT_SEASON, divisions: DRAFT_DIVS,
                 /* WHICH ONES THIS PERSON MAY TYPE. '' means none, which is most of the league. */
-                may: may, mine: mine, boards: boards,
+                may: may, mine: mine, boards: boards, owners: owners,
                 me: {div: who.div, seat: who.seat, role: who.role},
                 note: may ? '' : 'the draft has not been given to you. Ask the commissioner.',
                 at: new Date().toISOString()});
