@@ -1,26 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<!-- THIS PAGE IS ITS OWN WINDOW, AND IT SAYS SO. `#app` is a full-height shell with its own
+     scrolling, and every panel on the page is pinned to the middle of the window. A dashboard
+     that frames this page must give it a window and leave it alone: growing the frame to fit the
+     document makes the document taller, which grows the frame again, and every panel walks down
+     the screen a dozen pixels at a time until it is gone. Casey found exactly that on
+     3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
+<html lang="en" data-selfsized="yes">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Owners League — Live Draft Dashboard</title>
 <style>
 :root{
-  --bg:#0f1720; --panel:#16212d; --panel2:#1c2937; --line:#2a3a4b;
+  /* ---- ONE LOOK, AND IT IS THE DASHBOARDS' LOOK -----------------------------------------
+     Casey, 3 Nov 2026, opening the draft board inside his dashboard: "let's not go with all the
+     black coloring ... it should have the same color scheme as what we have throughout the rest
+     of the draft." It was near-black sitting in the middle of a page that is not, so it read as
+     a slab dropped into the page rather than part of it.
+     AND IT IS LIGHT ON EVERY DEVICE, with no switch, which is the rule the dashboards already
+     follow. Casey, 15 Sep 2026: "the light background looks way better than the dark background.
+     Just make that the standard. I don't know why we'd even give them the theme of light versus
+     dark ... it doesn't matter what their phone says."
+     EVERY COLOUR ON THIS PAGE IS NAMED HERE. Eighty-five were typed at the point of use, which
+     is how a page ends up half converted -- the text flips and the panel behind it does not.
+     `test_draftcss.js` fails the build on a raw colour anywhere outside this block. */
+  --bg:#ccdaeb; --panel:#ffffff; --panel2:#f2f4f7; --line:#d3dde7;
+  /* Ink on a filled control, and ink on a pale swatch. These were ONE value, #05121f, doing
+     both jobs: it was dark ink on a pale blue button and dark ink on a pale tier chip. The
+     button is solid blue now, so the two part company. */
+  --onaccent:#ffffff; --onswatch:#0d1622;
+  --rowhover:#e9eff6; --sunk:#eef2f7; --sunkline:#dde5ee; --dotline:#d9e2ec;
+  --tsep:#dce6f1; --tsepline:#b9ccdf; --scroll:#b7c6d6; --scrollhot:#93a8bd;
+  --shadow:rgba(13,22,34,.20); --shade:rgba(20,28,38,.45);
+  --warnbg:#fdf3dd; --warnline:#e0c98a; --warntx:#7a5600;
+  --goodbg:#e6f6ec; --goodline:#8fd3ad; --goodtx:#0b5c30;
+  --badbg:#fdeceb;  --badline:#e8b0ab;  --badtx:#8f1d16;
+  --accbg:#e7f0fa;  --accline:#a9c9ea;  --acctx:#0d4d94;
+  --vbg:#f0ebfb;    --vline:#c4b2ef;    --vtx:#4a2a95;
+  /* The seven tier swatches were already pale, because they always carried dark ink. */
+  --t1:#8fd694; --t2:#b7e3b3; --t3:#d3e7c4; --t4:#f2dda0; --t5:#f0c9a8; --t6:#e0b49a;
+  --t7:#4a5866; --t7ink:#eef3f8;
   /* Ink tokens. Every one of these is >=4.5:1 on the darkest surface it sits on
      (checked with scripts, not by eye). --faint used to be #63758a at 3.1:1 on
      --panel2, which is what made the confidence-split paragraph and the KPI tile
      labels hard to read. Anything dimmer than --faint is a BORDER, never text. */
-  --ink:#e8eef4; --dim:#a8b8c8; --faint:#8fa0b4;
-  --accent:#6fb5ff; --gold:#f5c25c; --good:#5fd69c; --bad:#f08279; --violet:#c0a0f5;
-  --nfl:#7aa7ff; --fbs:#f0a75c; --fcs:#9fd47e; --cus:#c9b8a0;
+  --ink:#0d1622; --dim:#41566b; --faint:#6d8095;
+  --accent:#1462b8; --gold:#8a6100; --good:#0b7a3e; --bad:#b3261e; --violet:#5b34b5;
+  /* The four pool chips are BACKGROUNDS here, not text, so they are pale and take dark ink. */
+  --nfl:#cfe3f7; --fbs:#f7e0c4; --fcs:#d8ecc8; --cus:#e8e0d2;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 button{font:inherit;cursor:pointer;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:7px 12px}
 button:hover{border-color:var(--accent)}
-button.primary{background:var(--accent);border-color:var(--accent);color:#05121f;font-weight:700}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--onaccent);font-weight:700}
 button.ghost{background:transparent}
 button:disabled{opacity:.4;cursor:not-allowed}
 input,select{font:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
@@ -37,16 +71,16 @@ header{background:var(--panel);border-bottom:1px solid var(--line);padding:9px 1
 #standIn,#build,#freshness,#saveState,#dsline{white-space:normal;max-width:100%;line-height:1.5}
 #divStrip{flex-wrap:wrap}
 .savechip{cursor:pointer}
-.savechip.ok{color:var(--good);border-color:#2f6b46}
-.savechip.due{color:var(--gold);border-color:#8a6d24;background:#3a2d10}
-.savechip.loud{color:#f7e7c4;border-color:var(--bad);background:#4a1d1d;font-weight:700}
+.savechip.ok{color:var(--good);border-color:var(--goodline)}
+.savechip.due{color:var(--gold);border-color:var(--warnline);background:var(--warnbg)}
+.savechip.loud{color:var(--warntx);border-color:var(--bad);background:var(--badbg);font-weight:700}
 header h1{font-size:15px;letter-spacing:.03em;white-space:nowrap}
 .clock{display:flex;gap:14px;align-items:center;margin-left:auto;flex-wrap:wrap}
 .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:12px;color:var(--dim);white-space:nowrap}
 .chip b{color:var(--ink);font-size:13px}
-.onclock{background:linear-gradient(90deg,#1d3a5c,#16212d);border-color:var(--accent)}
+.onclock{background:linear-gradient(90deg,var(--accbg),var(--panel));border-color:var(--accent)}
 .onclock b{color:var(--accent)}
-.onclock.me{border-color:var(--gold);background:linear-gradient(90deg,#4a3a12,#16212d)}
+.onclock.me{border-color:var(--gold);background:linear-gradient(90deg,var(--warnbg),var(--panel))}
 .onclock.me b{color:var(--gold)}
 
 /* The board gave up Reg pts, Post pts and Open SOS at Casey's request -- "to create more
@@ -76,7 +110,7 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 360px;min-height:0}
 .toolbar .grow{flex:1;min-width:140px}
 .seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .seg button{border:0;border-radius:0;padding:6px 11px;background:transparent;font-size:12px;color:var(--dim)}
-.seg button.on{background:var(--accent);color:#05121f;font-weight:700}
+.seg button.on{background:var(--accent);color:var(--onaccent);font-weight:700}
 thead th:hover{color:var(--accent)}
 thead th.sorted{color:var(--accent)}
 
@@ -95,7 +129,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
    leaves the board exactly as it was. */
 thead th{cursor:pointer;position:sticky;top:0;z-index:2;background:var(--panel2);color:var(--ink);font-size:11px;letter-spacing:.05em;
   text-transform:uppercase;text-align:left;padding:8px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
-tbody td{padding:6px 7px;border-bottom:1px solid #1e2a37;white-space:nowrap}
+tbody td{padding:6px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
 /* ...AND THOSE TWO RULES STOP AT THE BOARD. They are written for the 239-row board, where a
    wrapping cell would be a disaster, but they were never limited to it -- so every table on the
    page inherited them, including the ones inside a 360px drawer. A four-word column header,
@@ -126,7 +160,7 @@ tbody td{padding:6px 7px;border-bottom:1px solid #1e2a37;white-space:nowrap}
    blocks carry a formula with several terms in it, which is exactly the kind of content that
    refuses to wrap unless told to. overflow-wrap covers a long unbroken token; the min-width
    reset stops a flex/table ancestor from sizing itself to the widest line instead. */
-.exrun{margin:2px 0 12px 14px;padding:7px 11px;background:#16202b;border-left:3px solid var(--accent);
+.exrun{margin:2px 0 12px 14px;padding:7px 11px;background:var(--sunk);border-left:3px solid var(--accent);
   border-radius:0 4px 4px 0;font-size:12.5px;color:var(--ink);
   overflow-wrap:anywhere;word-break:break-word;min-width:0}
 #mhBody, #mhBody p, #mhBody div{min-width:0;overflow-wrap:anywhere}
@@ -143,10 +177,10 @@ tbody td{padding:6px 7px;border-bottom:1px solid #1e2a37;white-space:nowrap}
   border:1px solid var(--accent);border-radius:3px;padding:1px 5px;margin-left:8px;cursor:help}
 .softcut{font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--gold);
   border:1px solid var(--gold);border-radius:3px;padding:1px 5px;margin-left:8px;cursor:help}
-tbody tr:hover{background:#1b2836}
+tbody tr:hover{background:var(--rowhover)}
 tbody tr.taken{opacity:.58}   /* .32 rendered drafted rows at 2.66:1 — unreadable */
 tbody tr.taken .nm{text-decoration:line-through}
-tbody tr.mine{background:#2a2410}
+tbody tr.mine{background:var(--warnbg)}
 /* THE TEAM CELL WRAPS. It is the only cell on the board with a max-width, and a max-width on a
    `white-space:nowrap` cell does not clamp anything -- the text simply overflows the box, which
    is how "Furman BYE in first 5" came to be 131px of content inside a 115px cell and how the
@@ -154,7 +188,7 @@ tbody tr.mine{background:#2a2410}
    could not. Wrapping is what the max-width was always assuming. Every other cell on this board
    stays nowrap: a wrapped number is worse than a wide one. */
 .nm{font-weight:600;white-space:normal}
-.pool{font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border-radius:4px;color:#05121f}
+.pool{font-size:10px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border-radius:4px;color:var(--onswatch)}
 /* DIVISION / CONFERENCE. Quieter than the team name beside it -- it is context, not the thing
    you are reading down the column for -- and it never wraps, because a two-line conference
    would set the height of every row it appears in. */
@@ -166,10 +200,10 @@ td.emptyq b{color:var(--ink)}
 .fastnote{padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel);
   font-size:12px;line-height:1.55;color:var(--dim)}
 .fastnote .fnwhat{color:var(--faint);font-size:11.5px}
-.fastnote .fndropped{margin-top:7px;padding:9px 11px;background:#241f14;
+.fastnote .fndropped{margin-top:7px;padding:9px 11px;background:var(--warnbg);
   border-left:3px solid var(--gold);border-radius:0 5px 5px 0;color:var(--dim)}
 .fastnote .fndropped b{color:var(--gold)}
-.fastnote .fnverdict{margin-top:7px;padding:9px 11px;background:#131d27;
+.fastnote .fnverdict{margin-top:7px;padding:9px 11px;background:var(--sunk);
   border-left:3px solid var(--accent);border-radius:0 5px 5px 0;color:var(--dim)}
 /* HEADINGS WRAP AND CENTRE ON THIS BOARD. Casey, 27 Aug 2026: "the only reason that column is
    so wide is because of the heading." Exactly right -- "Odds of opening 3-0" held a bar and a
@@ -192,7 +226,7 @@ table.fastview #tb td.nm{white-space:nowrap}
 .colopt:hover{border-color:var(--accent)}
 .colopt.locked{cursor:not-allowed;opacity:.55}
 .colopt .box{width:16px;height:16px;flex:0 0 16px;border-radius:3px;border:1px solid var(--faint);
-  display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#05121f}
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--onaccent)}
 .colopt.on .box{background:var(--accent);border-color:var(--accent)}
 .colopt .sub{color:var(--faint);font-size:10.5px;margin-left:auto;text-align:right}
 .carryover{margin-top:12px;padding:10px 12px;border-radius:6px;font-size:12px;line-height:1.55;
@@ -212,29 +246,29 @@ table.fastview #tb td.nm{white-space:nowrap}
       border-bottom:1px dotted transparent}
 tr:hover .conf{color:var(--ink);border-bottom-color:var(--faint)}
 .p-NFL{background:var(--nfl)} .p-FBS{background:var(--fbs)} .p-FCS{background:var(--fcs)} .p-CUSTOM{background:var(--cus)}
-.tier{font-size:10px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:4px;color:#05121f;white-space:nowrap}
+.tier{font-size:10px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:4px;color:var(--onswatch);white-space:nowrap}
 /* On a board row the chip sits right after the team name and needs its own air; in the
    drawer header it is a flex child and gets spacing from the row. */
 .nm .tier{margin-left:7px;display:inline-block;min-width:20px;text-align:center}
-.t1{background:#8fd694} .t2{background:#b7e3b3} .t3{background:#d3e7c4}
-.t4{background:#f2dda0} .t5{background:#f0c9a8} .t6{background:#e0b49a}
-.t7{background:#4a5866;color:#eef3f8}
+.t1{background:var(--t1)} .t2{background:var(--t2)} .t3{background:var(--t3)}
+.t4{background:var(--t4)} .t5{background:var(--t5)} .t6{background:var(--t6)}
+.t7{background:var(--t7);color:var(--t7ink)}
 /* Tiers are SEPARATED, not painted. A banner row between groups plus a thin colour rail
    on the rank cell. Tinting every row washed the whole grid and made the muted ink work
    harder than it should. */
 tbody tr td:first-child{border-left:4px solid transparent}
-tr.tr1 td:first-child{border-left-color:#8fd694}
-tr.tr2 td:first-child{border-left-color:#b7e3b3}
-tr.tr3 td:first-child{border-left-color:#d3e7c4}
-tr.tr4 td:first-child{border-left-color:#f2dda0}
-tr.tr5 td:first-child{border-left-color:#f0c9a8}
-tr.tr6 td:first-child{border-left-color:#e0b49a}
-tr.tr7 td:first-child{border-left-color:#4a5866}
-tr.tsep td{background:#111b25;border-top:2px solid #33465a;border-bottom:1px solid #22303e;
+tr.tr1 td:first-child{border-left-color:var(--t1)}
+tr.tr2 td:first-child{border-left-color:var(--t2)}
+tr.tr3 td:first-child{border-left-color:var(--t3)}
+tr.tr4 td:first-child{border-left-color:var(--t4)}
+tr.tr5 td:first-child{border-left-color:var(--t5)}
+tr.tr6 td:first-child{border-left-color:var(--t6)}
+tr.tr7 td:first-child{border-left-color:var(--t7)}
+tr.tsep td{background:var(--tsep);border-top:2px solid var(--tsepline);border-bottom:1px solid var(--rowhover);
   padding:5px 9px;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
   white-space:normal}
 tr.tsep .sw{display:inline-block;width:22px;height:8px;border-radius:2px;margin-right:8px;vertical-align:0}
-tbody tr:hover td{background:#22303e}
+tbody tr:hover td{background:var(--rowhover)}
 /* Drag affordances. The drop line is 3px and full width so it reads as "the row lands here",
    and the grip only appears on hover so it does not add noise to 239 rows at rest. */
 tbody tr.dragover td{border-top:3px solid var(--accent)}
@@ -251,8 +285,8 @@ tbody tr.rowdrag:hover .grip{opacity:.75}
 .bar{display:inline-block;height:7px;border-radius:4px;background:var(--accent);vertical-align:middle}
 .muted{color:var(--faint)}
 .warn{color:var(--gold)}
-td.act{width:1%;position:sticky;right:0;background:var(--bg);box-shadow:-8px 0 8px -8px #000}
-tbody tr:hover td.act{background:#22303e}
+td.act{width:1%;position:sticky;right:0;background:var(--bg);box-shadow:-8px 0 8px -8px var(--shadow)}
+tbody tr:hover td.act{background:var(--rowhover)}
 thead th.act{position:sticky;right:0;background:var(--panel2);z-index:3}
 td.act button{padding:3px 10px;font-size:12px}
 
@@ -261,7 +295,7 @@ td.act button{padding:3px 10px;font-size:12px}
 .rec{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:7px;padding:9px 11px;margin-bottom:7px}
 .rec .t{font-weight:700}
 .rec .s{font-size:12.5px;color:var(--dim);margin-top:3px;line-height:1.55}
-.verdict{background:linear-gradient(100deg,#153048,#16212d);border:1px solid var(--accent);border-radius:9px;padding:11px 12px;margin-bottom:10px}
+.verdict{background:linear-gradient(100deg,var(--accbg),var(--panel));border:1px solid var(--accent);border-radius:9px;padding:11px 12px;margin-bottom:10px}
 .verdict .hd{font-size:11px;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;margin-bottom:4px}
 .verdict .bg{font-size:16px;font-weight:800}
 .verdict .why{font-size:12.5px;color:var(--dim);margin-top:5px;line-height:1.6}
@@ -276,15 +310,15 @@ table.mini.indent{width:calc(100% - 14px);margin-left:14px}
 #tb td.opp{white-space:normal;line-height:1.45}
 table.mini th{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;text-align:right;padding:3px 5px;border-bottom:1px solid var(--line)}
 table.mini th:first-child{text-align:left}
-table.mini td{padding:4px 5px;border-bottom:1px solid #1e2a37;text-align:right;font-variant-numeric:tabular-nums}
+table.mini td{padding:4px 5px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
 table.mini td:first-child{text-align:left}
-table.mini tr.best td{background:#1f3348}
+table.mini tr.best td{background:var(--accbg)}
 .drop{font-weight:800}
 .owner{border:1px solid var(--line);border-radius:8px;margin-bottom:8px;overflow:hidden}
 .owner.me{border-color:var(--gold)}
 .owner .oh{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--panel2);font-size:13px}
 .owner .ob{padding:6px 10px;font-size:12px;color:var(--dim)}
-.slot{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px dotted #24313f}
+.slot{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px dotted var(--dotline)}
 .slot:last-child{border:0}
 .slot .sn{color:var(--ink)}
 .cnt{font-size:11.5px;color:var(--dim)}
@@ -300,7 +334,23 @@ table.mini tr.best td{background:#1f3348}
    screen) and the gesture belongs to the overlay, which has almost nothing to scroll, so
    nothing moves. The card is the only scroller now, and overscroll-behavior stops a gesture
    that reaches the end of it from chaining outward. */
-.overlay{position:fixed;inset:0;background:rgba(6,11,17,.86);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;overflow:hidden}
+/* THE DIVISION PICKER IS A CONTROL WITH A NAME ON IT. Three grey words beside the heading read
+   as part of the heading, which is why Casey asked for a thing he already had. */
+.divpick{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
+.divlbl{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--faint)}
+/* THE WORD COMES OFF A NARROW SCREEN, THE CHOICE STAYS. A folded phone is 280px wide and the
+   label was worth 33px of it, which is the whole page's sideways-scroll budget and then some.
+   Three division names in a row say what they are without it. */
+@media (max-width:420px){
+  .divlbl{display:none}
+  /* AND THE HEADING WRAPS RATHER THAN PUSHING THE PAGE SIDEWAYS. It is `nowrap` by default,
+     which was safe while it read "OWNERS LEAGUE — LIVE DRAFT" and is 33px too wide now that it
+     carries the league's real name. A wrapped heading costs a line; a page that scrolls
+     sideways is the one thing this file may never do. */
+  header h1{white-space:normal}
+}
+.overlay{position:fixed;inset:0;background:var(--shade);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;overflow:hidden}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;max-width:820px;width:100%;max-height:92vh;
   overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 /* Every inner scroller in a popup contains its own overscroll for the same reason. */
@@ -321,10 +371,10 @@ table.mini tr.best td{background:#1f3348}
    three times over. A confirmation has to differ from its surroundings in SHAPE, not only in
    wording: its own panel, its own border, a tick, and the button itself changing state. */
 .savedbox{display:none;align-items:flex-start;gap:10px;margin-top:12px;padding:11px 13px;
-  border:1px solid var(--good);border-radius:10px;background:rgba(95,214,156,.10)}
+  border:1px solid var(--good);border-radius:10px;background:var(--goodbg)}
 .savedbox.on{display:flex}
 .savedtick{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--good);
-  color:#0b1a12;font-weight:700;font-size:14px;line-height:22px;text-align:center}
+  color:var(--onaccent);font-weight:700;font-size:14px;line-height:22px;text-align:center}
 .savedmain{font-size:13.5px;font-weight:600;color:var(--good);margin-bottom:2px}
 .savedsub{font-size:11.5px;color:var(--dim);line-height:1.5}
 #btnSaveOwners.justsaved{border-color:var(--good);color:var(--good)}
@@ -339,7 +389,7 @@ table.mini tr.best td{background:#1f3348}
   border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer;
   min-height:34px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .omblk:hover{border-color:var(--accent)}
-.omblk.on{border-color:var(--accent);color:var(--ink);background:rgba(111,181,255,.14)}
+.omblk.on{border-color:var(--accent);color:var(--ink);background:var(--accbg)}
 .omblk .dot{width:7px;height:7px;border-radius:50%;background:var(--line);flex:0 0 auto}
 .omblk.set .dot{background:var(--good)}
 .omblk.drafted .dot{background:var(--gold)}
@@ -372,7 +422,7 @@ table.mini tr.best td{background:#1f3348}
 .lb td{padding:5px 0;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .lb td:nth-child(1){color:var(--faint);width:20px;text-align:left}
 .lb td:nth-child(2){text-align:left;color:var(--ink);white-space:normal}
-.lb tr.me td{background:rgba(111,181,255,.10)}
+.lb tr.me td{background:var(--accbg)}
 .lb tr.me td:nth-child(2){font-weight:700}
 .lb .ed{font-weight:700;color:var(--good)} .lb .ed.lo{color:var(--bad)}
 .lb .cnt2{font-size:10.5px;color:var(--faint)}
@@ -474,7 +524,7 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
 .edopt{display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;
   border-bottom:1px solid var(--line);font-size:13px;min-height:38px}
 .edopt:last-child{border-bottom:none}
-.edopt:hover,.edopt.on{background:rgba(111,181,255,.16)}
+.edopt:hover,.edopt.on{background:var(--accbg)}
 .edopt b{color:var(--ink);font-weight:600}
 .edopt .taken{margin-left:auto;font-size:11px;color:var(--gold);white-space:nowrap}
 .edmatchnone{padding:10px 11px;font-size:12px;color:var(--dim);line-height:1.5}
@@ -512,7 +562,7 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
   padding:7px 14px;font-size:13px;font-weight:600;cursor:grab;user-select:none;
   display:inline-flex;align-items:center;gap:6px}
 .omchip:active{cursor:grabbing}
-.omchip.sel{background:var(--accent);color:#05121f;border-color:var(--accent)}
+.omchip.sel{background:var(--accent);color:var(--onaccent);border-color:var(--accent)}
 .omchip.drag{opacity:.4}
 .omslots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 @media (max-width:640px){ .omslots{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -523,7 +573,7 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
 .omslot .who{font-weight:700;color:var(--ink);font-size:13.5px}
 .omslot .who.blank{font-weight:400;color:var(--faint);font-style:italic}
 .omslot.filled{border-style:solid;border-color:var(--line);background:var(--panel)}
-.omslot.over{border-color:var(--accent);background:#16293b}
+.omslot.over{border-color:var(--accent);background:var(--accbg)}
 .omslot.armed{border-color:var(--gold)}
 .omhint{font-size:12px;color:var(--dim);margin:0 0 9px;line-height:1.55}
 .orderrow span{color:var(--dim);font-size:12px}
@@ -569,10 +619,10 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
 .dsec{padding:12px 14px;border-top:1px solid var(--line);margin-top:10px}
 .dsec h4{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
 .bd{font-size:12.5px;line-height:1.7}
-.bd div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted #24313f;padding:2px 0}
+.bd div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted var(--dotline);padding:2px 0}
 .bd div:last-child{border:0;font-weight:800;color:var(--ink);margin-top:3px}
-.caveat{background:#3a2d10;border:1px solid #8a6d24;border-left:3px solid var(--gold);border-radius:7px;
-  padding:10px 12px;font-size:12.5px;color:#f7e7c4;line-height:1.6;margin-top:8px}
+.caveat{background:var(--warnbg);border:1px solid var(--warnline);border-left:3px solid var(--gold);border-radius:7px;
+  padding:10px 12px;font-size:12.5px;color:var(--warntx);line-height:1.6;margin-top:8px}
 /* THE W AND THE L MUST NEVER BE THE THING THAT FALLS OFF. Casey: "Wins and losses are now
    getting cutoff in the right panel."
    The table was auto-layout, so the browser sized column 2 to the longest opponent name it
@@ -580,7 +630,7 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
    the right edge of a 360px panel. Fixed layout instead: the three narrow columns get exact
    widths they always fit in, the opponent gets whatever is left and wraps inside it. */
 .sch{font-size:12px;width:100%;border-collapse:collapse;table-layout:fixed}
-.sch td{padding:3px 5px;border-bottom:1px solid #1e2a37}
+.sch td{padding:3px 5px;border-bottom:1px solid var(--line)}
 /* Wide enough for the header AND its help badge. At 42px "Win?" measured 47px and the ? was
    sliced down the middle, which is the one control in this table a reader is meant to click. */
 .sch col.cwk{width:44px} .sch col.cwp{width:54px} .sch col.cres{width:28px}
@@ -592,8 +642,8 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
    (no W/L, no probability, no click target) but it must not be skimmed past either, because
    the thing it is telling you is that a week of the season is empty. The tint plus the tag
    does that; a bare italic line did not survive a squint test on a phone at arm's length. */
-.sch tr.byerow td{background:rgba(148,163,184,.10);color:var(--dim);font-size:11px;
-  border-bottom:1px dashed #22303f;padding-top:2px;padding-bottom:2px}
+.sch tr.byerow td{background:var(--sunk);color:var(--dim);font-size:11px;
+  border-bottom:1px dashed var(--dotline);padding-top:2px;padding-bottom:2px}
 .sch tr.byerow td:first-child{border-left:3px solid var(--gold)}
 .byetag{display:inline-block;font-weight:800;letter-spacing:.08em;font-size:10px;
   color:var(--gold);border:1px solid var(--gold);border-radius:3px;padding:0 4px;margin-right:5px}
@@ -608,19 +658,19 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
 .cmphead .verdicttxt{font-size:13px;color:var(--dim);margin-top:6px;line-height:1.6;max-width:820px}
 .cmpbody{overflow:auto;padding:16px 20px 22px}
 .cmpgrid{display:grid;grid-template-columns:210px 1fr 1fr;gap:0 18px;align-items:start}
-.cmpgrid .rowlbl{font-size:12.5px;color:var(--dim);padding:7px 0;border-bottom:1px solid #22303e}
-.cmpgrid .val{font-size:13.5px;color:var(--ink);padding:7px 0;border-bottom:1px solid #22303e;
+.cmpgrid .rowlbl{font-size:12.5px;color:var(--dim);padding:7px 0;border-bottom:1px solid var(--rowhover)}
+.cmpgrid .val{font-size:13.5px;color:var(--ink);padding:7px 0;border-bottom:1px solid var(--rowhover);
   text-align:right;font-variant-numeric:tabular-nums}
 .cmpgrid .hd{font-size:14px;font-weight:800;padding:0 0 8px;border-bottom:2px solid var(--accent);text-align:right}
 .cmpgrid .val.better{color:var(--good);font-weight:800}
 .cmpcols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:20px}
 .flags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 14px 0}
-.flag{background:#3a2d10;border:1px solid #8a6d24;color:#f7e7c4;border-radius:999px;
+.flag{background:var(--warnbg);border:1px solid var(--warnline);color:var(--warntx);border-radius:999px;
   padding:3px 10px;font-size:11.5px;font-weight:700;letter-spacing:.02em}
-.flag.warn{background:#33251f;border-color:#8a5a3a;color:#f6d8c6}
-.flag.fkeep,b.fkeep{background:#3a2f14;color:#e8c46a;border:1px solid #6b5420;
+.flag.warn{background:var(--badbg);border-color:var(--badline);color:var(--badtx)}
+.flag.fkeep,b.fkeep{background:var(--warnbg);color:var(--warntx);border:1px solid var(--warnline);
   border-radius:3px;padding:1px 4px;font-weight:700;letter-spacing:.02em}
-.scout div{padding:7px 0;border-bottom:1px solid #22303e}
+.scout div{padding:7px 0;border-bottom:1px solid var(--rowhover)}
 .scout div:last-child{border:0}
 .scout .k{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}
 .scout .t{font-size:12.5px;color:var(--ink);line-height:1.6}
@@ -636,9 +686,9 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
 /* Correcting a past draw order moves real teams between owners, so the consequence is
    shown in full before it is committed rather than summarised in a confirm box. */
 .edrow{display:flex;gap:10px;align-items:center;padding:7px 9px;border:1px solid transparent;
-  border-bottom:1px solid #1e2a37;font-size:12.5px}
-.edrow:hover{background:#16222e;border-color:var(--line);border-radius:6px}
-.edrow.editing{background:#131d27;border:1px solid var(--accent);border-radius:6px;
+  border-bottom:1px solid var(--line);font-size:12.5px}
+.edrow:hover{background:var(--rowhover);border-color:var(--line);border-radius:6px}
+.edrow.editing{background:var(--sunk);border:1px solid var(--accent);border-radius:6px;
   align-items:flex-start}
 .edslot{min-width:52px;color:var(--faint);font-size:11px}
 #edList{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:8px;
@@ -709,7 +759,7 @@ thead th.sorted.asc::after{content:'\25B2'}
    spare (see 2.15u). Panels have room; the board does not. */
 .mhbody,.cmpbody,#edList,#omScroll,#detail,#edMatch,
 #askModal .card>p.lede,#rosterModal .card>div{
-  scrollbar-width:thin; scrollbar-color:#3a5069 transparent;
+  scrollbar-width:thin; scrollbar-color:var(--scroll) transparent;
 }
 .mhbody::-webkit-scrollbar,.cmpbody::-webkit-scrollbar,#edList::-webkit-scrollbar,
 #omScroll::-webkit-scrollbar,#detail::-webkit-scrollbar,#edMatch::-webkit-scrollbar,
@@ -724,13 +774,13 @@ thead th.sorted.asc::after{content:'\25B2'}
 .mhbody::-webkit-scrollbar-thumb,.cmpbody::-webkit-scrollbar-thumb,#edList::-webkit-scrollbar-thumb,
 #omScroll::-webkit-scrollbar-thumb,#detail::-webkit-scrollbar-thumb,#edMatch::-webkit-scrollbar-thumb,
 #askModal .card>p.lede::-webkit-scrollbar-thumb,#rosterModal .card>div::-webkit-scrollbar-thumb{
-  background:#3a5069; border-radius:6px; border:2px solid transparent; background-clip:content-box;
+  background:var(--scroll); border-radius:6px; border:2px solid transparent; background-clip:content-box;
 }
 .mhbody::-webkit-scrollbar-thumb:hover,.cmpbody::-webkit-scrollbar-thumb:hover,
 #edList::-webkit-scrollbar-thumb:hover,#omScroll::-webkit-scrollbar-thumb:hover,
 #detail::-webkit-scrollbar-thumb:hover,#edMatch::-webkit-scrollbar-thumb:hover,
 #askModal .card>p.lede::-webkit-scrollbar-thumb:hover,
-#rosterModal .card>div::-webkit-scrollbar-thumb:hover{ background:#4d6a89; background-clip:content-box; }
+#rosterModal .card>div::-webkit-scrollbar-thumb:hover{ background:var(--scrollhot); background-clip:content-box; }
 /* And the gutter is reserved on every one of them, not just the metric panel, so a line of text
    never runs under the bar and nothing reflows when a short panel becomes a long one. */
 .cmpbody,#edList,#omScroll,#detail,#askModal .card>p.lede,#rosterModal .card>div{
@@ -757,7 +807,7 @@ thead th.sorted.asc::after{content:'\25B2'}
   border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:6px}
 .ovrow{display:flex;flex-wrap:wrap;gap:7px}
 .ov{display:inline-flex;align-items:baseline;gap:5px;font-size:13px;font-weight:800;color:var(--ink);
-  background:#0e1822;border:1px solid var(--line);border-radius:5px;padding:3px 8px}
+  background:var(--sunk);border:1px solid var(--line);border-radius:5px;padding:3px 8px}
 .ov i{font-style:normal;font-size:9px;letter-spacing:.07em;color:var(--faint);font-weight:700}
 .ov u{text-decoration:none;font-size:9.5px;color:var(--faint);font-weight:600}
 .ov.model{border-color:var(--accent)}
@@ -768,27 +818,27 @@ thead th.sorted.asc::after{content:'\25B2'}
 .ovv.split{color:var(--gold)}
 .urg{display:inline-block;margin-left:5px;font-size:8.5px;font-weight:800;letter-spacing:.05em;cursor:help}
 .brk{cursor:pointer;display:inline-block;margin-right:5px;font-size:8.5px;font-weight:800;padding:1px 4px;
-  border-radius:3px;background:#1d2f3f;border:1px solid #3d6180;color:#8fc4ef;letter-spacing:.03em;cursor:help}
-.brk.hot{background:#3a2a12;border-color:#8a6420;color:#f0c069}
+  border-radius:3px;background:var(--accbg);border:1px solid var(--accline);color:var(--acctx);letter-spacing:.03em;cursor:help}
+.brk.hot{background:var(--warnbg);border-color:var(--warnline);color:var(--warntx)}
 .dpill{display:inline-block;padding:1px 5px;border-radius:9px;font-weight:800;cursor:pointer;
-  background:#3a3212;border:1px solid #7a6a20;color:#f5d98a}
-.dpill.hot{background:#4a1d1d;border-color:#8a3a3a;color:#f7a6a0}
-.adjbox{margin-top:9px;padding:9px 10px;border-radius:8px;background:#101a24;border:1px solid #23323f}
+  background:var(--warnbg);border:1px solid var(--warnline);color:var(--warntx)}
+.dpill.hot{background:var(--badbg);border-color:var(--badline);color:var(--badtx)}
+.adjbox{margin-top:9px;padding:9px 10px;border-radius:8px;background:var(--sunk);border:1px solid var(--sunkline)}
 .adjh{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
 .adjrow{margin-bottom:7px}
 .adjrow:last-of-type{margin-bottom:0}
 .adjn{display:inline-block;min-width:38px;font-weight:800;font-variant-numeric:tabular-nums}
 .adjl{font-weight:700;color:var(--ink)}
 .adjd{margin-left:38px;color:var(--dim);line-height:1.5;font-size:11.5px}
-.adjf{margin-top:9px;padding-top:8px;border-top:1px solid #23323f;color:var(--faint);font-size:11px;line-height:1.55}
+.adjf{margin-top:9px;padding-top:8px;border-top:1px solid var(--sunkline);color:var(--faint);font-size:11px;line-height:1.55}
 .intl{display:inline-block;margin-left:5px;font-size:9px;font-weight:700;padding:1px 4px;
-  border-radius:3px;background:#1b2733;border:1px solid #3b5266;color:#9fc2dd;cursor:help;
+  border-radius:3px;background:var(--accbg);border:1px solid var(--accline);color:var(--acctx);cursor:help;
   letter-spacing:.02em}
 .rstar{color:var(--violet);font-weight:900;margin-left:2px;cursor:pointer;font-size:15px;
   display:inline-block;padding:0 4px;line-height:1;vertical-align:-1px}
 .rstar:hover{color:var(--ink)}
 .rent{display:inline-block;margin-left:5px;font-size:8.5px;font-weight:800;padding:1px 3px;
-  border-radius:3px;background:#2a1f3d;border:1px solid #5a4a7a;color:#c4b0e8;letter-spacing:.04em}
+  border-radius:3px;background:var(--vbg);border:1px solid var(--vline);color:var(--vtx);letter-spacing:.04em}
 .tiny{margin-left:5px;font-size:9px;color:var(--faint)}
 .ofoot{margin-top:5px;padding-top:5px;border-top:1px solid var(--line);font-size:10px;
   color:var(--dim);letter-spacing:.02em}
@@ -796,18 +846,18 @@ thead th.sorted.asc::after{content:'\25B2'}
   border:1px solid var(--line);font-size:11px;color:var(--dim)}
 .strip b{color:var(--ink)}
 .redge{cursor:pointer;display:inline-block;margin-left:5px;font-size:9.5px;font-weight:800;
-  padding:1px 4px;border-radius:4px;background:#12301f;border:1px solid #2f6b46;color:#9fe0a4;
+  padding:1px 4px;border-radius:4px;background:var(--goodbg);border:1px solid var(--goodline);color:var(--goodtx);
   letter-spacing:.02em;white-space:nowrap}
-.redge.neg{background:#26201a;border-color:#5a4a3a;color:#c8b49c}
-.tfall{cursor:pointer;display:inline-block;margin-left:3px;font-size:9px;font-weight:800;color:#f0c9a8;
-  background:#3a2418;border:1px solid #5c3a24;border-radius:3px;padding:0 3px;vertical-align:1px}
+.redge.neg{background:var(--warnbg);border-color:var(--warnline);color:var(--warntx)}
+.tfall{cursor:pointer;display:inline-block;margin-left:3px;font-size:9px;font-weight:800;color:var(--t5);
+  background:var(--warnbg);border:1px solid var(--warnline);border-radius:3px;padding:0 3px;vertical-align:1px}
 .remapbox{border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:6px;
-  background:#131d27;padding:10px 12px;margin:9px 0 0;font-size:12px;color:var(--dim);
+  background:var(--sunk);padding:10px 12px;margin:9px 0 0;font-size:12px;color:var(--dim);
   line-height:1.55;max-height:240px;overflow:auto}
 table.remap{width:100%;border-collapse:collapse;margin-top:7px;font-size:11.5px}
 table.remap td{padding:2px 6px 2px 0;white-space:nowrap}
 /* Per-game reasoning, collapsed until asked for. */
-tr.gx:hover td{background:#16222e}
+tr.gx:hover td{background:var(--rowhover)}
 .qm{display:inline-block;width:13px;height:13px;line-height:13px;text-align:center;font-size:9px;
   border:1px solid var(--line);border-radius:50%;color:var(--faint);vertical-align:1px}
 tr.gx:hover .qm{color:var(--accent);border-color:var(--accent)}
@@ -815,7 +865,7 @@ tr.gx:hover .qm{color:var(--accent);border-color:var(--accent)}
    is a PARAGRAPH inside a table cell, so it has to opt back out or it renders as one
    long clipped line. */
 tr.whyrow td{white-space:normal!important;padding:0 5px}
-.whybox{background:#0e1822;border-left:2px solid var(--accent);padding:8px 10px;margin:2px 0 6px;
+.whybox{background:var(--sunk);border-left:2px solid var(--accent);padding:8px 10px;margin:2px 0 6px;
   font-size:11.5px;line-height:1.6;color:var(--dim);white-space:normal}
 /* Sleepers & surprises. One row per team: a rank chip, the name and the numbers on one line,
    then the reasoning underneath in full. The reasoning is the point of the panel -- Casey asked
@@ -825,13 +875,13 @@ tr.whyrow td{white-space:normal!important;padding:0 5px}
   margin:0 0 4px;font-weight:700}
 .surwhat{font-size:12.5px;color:var(--dim);line-height:1.6;margin:0 0 14px;max-width:80ch}
 .surrow{display:grid;grid-template-columns:38px 1fr;gap:12px;padding:12px 0;
-  border-top:1px solid #22303e}
+  border-top:1px solid var(--rowhover)}
 .surrow:first-of-type{border-top:0}
-.surn{font-size:13px;font-weight:800;color:#05121f;background:var(--accent);border-radius:6px;
+.surn{font-size:13px;font-weight:800;color:var(--onaccent);background:var(--accent);border-radius:6px;
   text-align:center;padding:3px 0;height:fit-content;font-variant-numeric:tabular-nums}
 .surn.plain{background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
-.surn.bull{background:var(--good);color:#05121f}
-.surn.bear{background:var(--bad);color:#05121f}
+.surn.bull{background:var(--good);color:var(--onaccent)}
+.surn.bear{background:var(--bad);color:var(--onaccent)}
 .surhd{display:flex;flex-wrap:wrap;align-items:baseline;gap:9px;margin-bottom:4px}
 .surhd b{font-size:15px;color:var(--ink)}
 .surmeta{font-size:11.5px;color:var(--faint)}
@@ -936,13 +986,19 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
 <body>
 <div id="app">
   <header>
-    <h1>OWNERS LEAGUE — LIVE DRAFT</h1>
+    <!-- THE LEAGUE WAS RENAMED ON 9 SEP 2026 and this heading still said the old name. -->
+    <h1>REALITY FOOTBALL LEAGUE — DRAFT</h1>
     <!-- WHICH DIVISION THIS DEVICE IS TYPING FOR. Casey, 1 Nov 2026: "there's three divisions. I
          think what we would do is have three owners draft on behalf of the division." Each
          division drafts from the same teams, separately, so one team can be taken in all three
          and one board cannot hold them. THE THREE DRAFTS ARE KEPT APART, one saved board each,
          so two typists never overwrite each other. -->
-    <div class="seg" id="divStrip" style="display:none"></div>
+    <!-- Casey, 3 Nov 2026, asking whether he could reach the other two: "can Bob and I have
+         access to like, to first, you know, go in and basically see each and every division if
+         we choose to do so?" He could, and had been looking straight at the control. It was
+         three grey words beside the heading with nothing saying what they were for. -->
+    <div class="divpick" id="divPick" style="display:none"><span class="divlbl">Division</span>
+      <span class="seg" id="divStrip"></span></div>
     <div class="build" id="standIn"></div>
     <!-- WHAT THE LEAGUE HOLDS, AND WHETHER THIS DEVICE HAS REACHED IT. A page that looks shared
          and is not is how a pick gets lost, so this line is never empty and never optimistic. -->
@@ -950,7 +1006,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
     <!-- Build stamp. There is no way to tell two downloaded copies of a single HTML file
          apart from the outside, and an hour was lost to a stale copy that looked current.
          This is the fix: the page says what it is. -->
-    <div class="build" id="build" title="Which copy of the dashboard this is">build 03 Nov 2026 02:54 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build" id="build" title="Which copy of the dashboard this is">build 03 Nov 2026 07:44 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <div class="build" id="freshness"></div>
     <!-- HOW LONG SINCE THIS WAS REALLY SAVED. The autosave is per-device and, on an iPad
          served from a local web server, per-PORT -- change the port and the board comes back
@@ -1111,8 +1167,11 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
 <!-- ============ setup ============ -->
 <div class="overlay" id="setup">
   <div class="card">
-    <h2>Set Up the Draft</h2>
-    <p class="lede">Nine owners, eleven rounds, three NFL and eight college teams each. Enter the names once — you will enter each draw order as you go.</p>
+    <!-- WHICH DIVISION THIS IS. Casey, 3 Nov 2026: "it starts out with set the draft for me,
+         and I'm just seeing the predator division." The nine names on this card are one
+         division's, and the card never said which. -->
+    <h2 id="setupHead">Set Up the Draft</h2>
+    <p class="lede" id="setupLede">Nine owners, eleven rounds, three NFL and eight college teams each. You will enter each draw order as you go.</p>
     <div class="grid9" id="ownerInputs"></div>
     <div class="orderrow" style="margin-top:14px"><span>Which is you?</span><select id="meSel"></select></div>
     <div class="rowbtns">
@@ -3183,7 +3242,7 @@ const waitCostDetail = dropDetail;
 
 /* Tier comes from PRESEASON VORP so the badge always matches the workbook's
    DRAFT DASHBOARD tab. Live VORP moves during the draft; the tier label does not. */
-const TIERCOL={1:'#8fd694',2:'#b7e3b3',3:'#d3e7c4',4:'#f2dda0',5:'#f0c9a8',6:'#e0b49a',7:'#4a5866'};
+const TIERCOL={1:'var(--t1)',2:'var(--t2)',3:'var(--t3)',4:'var(--t4)',5:'var(--t5)',6:'var(--t6)',7:'var(--t7)'};
 const TIER_BAND={1:'ELITE',2:'PREMIUM',3:'STRONG STARTER',4:'SOLID VALUE',5:'DEPTH',
                  6:'FLIER',7:'UNDRAFTED'};
 /* Boundaries are computed in unify.py, not hardcoded here: it starts at each round-pair
@@ -3486,13 +3545,17 @@ function divKey(){ const d = divRead(); return d ? AUTOKEY + ':' + d : AUTOKEY; 
 function divLabel(d){ return DIV_NAMES[d] || d; }
 function renderDivStrip(){
   const box = el('divStrip'); if (!box) return;
+  const wrap = el('divPick');
   if (DIVS.length < 2) return;                       // one division needs no choosing
   const now = divRead();
   /* ONLY THE DIVISIONS THIS PERSON MAY TYPE. Before the league has answered, all three are
      offered, because hiding them on a guess would strand a commissioner on a slow connection. */
   const show = (DS_MINE && DS_MINE.length) ? DIVS.filter(d => DS_MINE.indexOf(d) >= 0) : DIVS;
   if (show.length < 2 && DS_MAY !== null){
-    box.style.display = 'none';
+    /* HIDDEN AND EMPTY, NOT JUST HIDDEN. Three buttons left sitting in a hidden box are three
+       buttons one CSS mistake away from being offered to somebody who may not type them. */
+    box.innerHTML = '';
+    if (wrap) wrap.style.display = 'none';
     const si0 = el('standIn');
     if (si0 && DATA.stand_in && show.length === 1){
       si0.textContent = 'Drafting ' + (DATA.season || '') + ' for ' + divLabel(show[0]) + '. '
@@ -3500,11 +3563,12 @@ function renderDivStrip(){
     }
     return;
   }
-  box.style.display = '';
+  if (wrap) wrap.style.display = '';
   box.innerHTML = show.map(d => `<button data-div="${d}" class="${d === now ? 'on' : ''}"
       title="Type this division's picks. Each division drafts from the same teams separately, so
              a team taken here is still there for the other two.">${divLabel(d)}</button>`).join('');
   box.querySelectorAll('[data-div]').forEach(b => b.onclick = () => divSwitch(b.dataset.div));
+  setupHeading();
   const si = el('standIn');
   /* SAY WHERE THE PICKS ARE KEPT. A page that looks shared and is not is how a pick gets lost,
      which is exactly what happened to the trades page on 5 Oct 2026. Three typists sharing one
@@ -3545,12 +3609,50 @@ function divSwitch(d){
 }
 /* THE NINE NAMES COME FROM THE LEAGUE, not from this device. They are the owners the season
    dashboard already shows, so nobody retypes twenty-seven names on draft night. */
+/* WHAT THE LEAGUE'S ACCESS LIST HOLDS, once it has answered. Empty until then. */
+let LOWNERS = {};
+/* ---- THREE ANSWERS, NOT TWO, FOR WHERE THE NINE NAMES CAME FROM --------------------------
+ * The access list is the one Casey and Bob keep, so it wins. The list baked into this page at
+ * build time is the answer when the league has not been reached, which is a real state on
+ * draft night and must not look like the live one. Neither is the same as having no names.
+ */
+function ownerSource(){
+  const d = divRead();
+  if ((LOWNERS[d] || []).length) return 'league';
+  if (((DATA.div_owners || {})[d] || []).length) return 'build';
+  return 'none';
+}
 function fillDivOwners(){
-  const names = (DATA.div_owners || {})[divRead()] || [];
+  setupHeading();
+  const d = divRead();
+  const names = (LOWNERS[d] || []).length ? LOWNERS[d] : ((DATA.div_owners || {})[d] || []);
   if (!names.length) return;
   const ins = [...el('ownerInputs').querySelectorAll('input')];
   ins.forEach((inp, i) => { if (names[i]) inp.value = names[i]; });
   if (typeof refreshMeSel === 'function') refreshMeSel();
+}
+/* THE CARD SAYS WHOSE DRAFT IT IS SETTING UP, AND WHERE THE NINE NAMES CAME FROM. Casey asked
+   for both on 3 Nov 2026: "all the team names should come from the access list. So Bob and I
+   manage that. They're already pre-populated. All they have to do is start with setting the
+   draft order." They are, and they always were -- the card just never said so, so it read as
+   nine boxes to fill in. */
+function setupHeading(){
+  const h = el('setupHead'), p = el('setupLede');
+  const d = divRead();
+  if (h) h.textContent = DIVS.length > 1 && d
+    ? 'Set Up the ' + divLabel(d) + ' Draft' : 'Set Up the Draft';
+  const lede = 'Nine owners, eleven rounds, three NFL and eight college teams each. ';
+  const src = ownerSource();
+  if (p) p.innerHTML =
+      src === 'league'
+    ? lede + '<b>The nine names below are the ones on the league&rsquo;s access list right '
+           + 'now, so there is nothing to type here.</b> Press Start Draft, then set the first '
+           + 'round&rsquo;s draw order.'
+    : src === 'build'
+    ? lede + '<b>The nine names below came with this copy of the page, because the league has '
+           + 'not answered yet.</b> Check them against the access list before you start. Press '
+           + 'Start Draft, then set the first round&rsquo;s draw order.'
+    : lede + 'Enter the names once &mdash; you will enter each draw order as you go.';
 }
 const OWNWKEY = 'owners-league-ownwins-2026';
 /* THE OLD COPIES HAVE TO BE READ TOO. Casey, 27 Aug 2026: "I had actually had wins typed in
@@ -4705,7 +4807,7 @@ function showCompare(names){
     }).join('');
   };
   const scoutCol = T => (T.scout||[]).slice(0,7).map(r=>
-    `<div style="padding:6px 0;border-bottom:1px solid #22303e">
+    `<div style="padding:6px 0;border-bottom:1px solid var(--rowhover)">
        <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:2px">${r[0]}</div>
        <div style="font-size:12.5px;color:var(--ink);line-height:1.55">${
          Array.isArray(r[1]) ? '<ul class="slist">'+r[1].map(x=>`<li>${x}</li>`).join('')+'</ul>' : r[1]}</div></div>`).join('')
@@ -6629,7 +6731,7 @@ function tieTip(t){
     + `${sr?` against the ${sr==1?'hardest':(sr==32?'easiest':sr+'th-hardest')} schedule in the league`:''}`
     + `. Click for the full comparison. `;
 }
-const TIER_HEX = ['#8fd694','#b7e3b3','#d3e7c4','#f2dda0','#f0c9a8','#e0b49a','#4a5866'];
+const TIER_HEX = ['var(--t1)','var(--t2)','var(--t3)','var(--t4)','var(--t5)','var(--t6)','var(--t7)'];
 function renderLegend(){
   const seen = new Map();
   TEAMS.forEach(t => { if(t.tier && !seen.has(t.tier)) seen.set(t.tier, t.tier_label||''); });
@@ -8808,7 +8910,7 @@ el('ownerInputs').addEventListener('input', ()=>{
     el('ownersTick').textContent = '!';
     el('ownersTick').style.background = 'var(--gold)';
     el('ownersSaved').style.borderColor = 'var(--gold)';
-    el('ownersSaved').style.background = 'rgba(245,194,92,.10)';
+    el('ownersSaved').style.background = 'var(--warnbg)';
     el('ownersSub').innerHTML = 'Press <b style="color:var(--ink)">Save These Owners</b> to keep '
       + 'the new list, or Start draft — starting also saves them.';
   }
@@ -9206,6 +9308,16 @@ el('btnReset').onclick = ()=>{
     S.picks=[]; S.orders={}; S.custom=[]; _rankCache=null;
     render();        // render() rewrites the autosave, so the cleared board is what persists
     dsReset();
+    /* ---- AND IT PUTS HIM BACK WHERE A DRAFT STARTS ---------------------------------------
+     * Casey, 3 Nov 2026: "I thought when I reset the draft that it would take me back to the
+     * beginning to set the draft order and all that. But like now that I've started it, like I
+     * can't get back to a clean start."
+     * Reset cleared the picks and left him looking at an empty board. The setup screen only
+     * came back if he closed the page and opened it again, which is a step nobody would guess
+     * at and nothing on the page mentioned. Clearing a draft and starting one are the same
+     * moment, so Reset ends where Start Draft begins. */
+    el('setup').classList.remove('hide');
+    fillDivOwners();
   });
 };
 
@@ -9324,6 +9436,15 @@ function dsRead(adopt){
     DS_MINE = (a.mine && a.mine.length) ? a.mine.slice() : (DS_MAY === 'any' ? DIVS.slice() : []);
     LBOARDS = a.boards || {};
     Object.keys(LBOARDS).forEach(d => { LSEQ[d] = Number(LBOARDS[d].seq) || 0; });
+    /* THE NINE NAMES AS THE ACCESS LIST HOLDS THEM RIGHT NOW. Only kept when the league sent a
+       full nine for a division: a short list would quietly blank names on the setup card, and
+       a blank name is worse than a name a week out of date. */
+    LOWNERS = {};
+    Object.keys(a.owners || {}).forEach(d => {
+      const list = (a.owners[d] || []).filter(Boolean);
+      if (list.length === NOWNERS) LOWNERS[d] = list;
+    });
+    if (!el('setup').classList.contains('hide')) fillDivOwners();
     /* AND THE DIVISION THIS DEVICE IS ON HAS TO BE ONE IT MAY TYPE. A page sitting on Predator
        whose person may only type Viper would send every pick into a refusal. */
     if (DS_MINE.length && DS_MINE.indexOf(divRead()) < 0){

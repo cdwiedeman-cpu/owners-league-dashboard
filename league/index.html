@@ -230,6 +230,17 @@ header .tabs{gap:0;padding-bottom:0}
 #infoBody .chip-action{color:#ffffff;background:var(--blue);border:none;font-weight:700}
 #infoBody .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0}
 main{padding:12px 14px 60px;max-width:1100px;margin:0 auto}
+/* ---- THE DRAFT TAB TAKES THE WHOLE SCREEN -------------------------------------------------
+ * Casey, 3 Nov 2026: "it feels like you're trying to fit the draft board in a smaller window
+ * than what the screen provides ... it seems like you could make this wider on the draft board
+ * because you have more screen space."
+ * He is right. The draft board is a wide table and it was being squeezed into the 1100px column
+ * the rest of this page reads in. Measured on a 1512px screen it had 1072px and left 440px of
+ * empty margin either side.
+ * THE CAP IS LIFTED FOR THAT ONE TAB, not broken out of with viewport units. `100vw` includes
+ * the scrollbar, and a page that scrolls sideways is the one thing this file may never do. */
+main.wide{max-width:none}
+main.wide #draft{overflow:hidden}
 .bar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 /* Every clickable mark is at least 12x12px and carries hover text -- standing rule. */
 .cbtn{min-width:26px;min-height:26px;width:26px;border-radius:7px;border:1px solid var(--line);
@@ -2620,6 +2631,10 @@ function showTab(which){
   if (which === 'weekly') renderWeekly();
   if (which === 'summary') renderSummary();
   if (which === 'draft') openDraft();
+  /* THE WIDE COLUMN BELONGS TO THE DRAFT TAB AND IS TAKEN BACK BY EVERY OTHER ONE. */
+  const mn = document.querySelector('main');
+  if (mn) mn.classList.toggle('wide', which === 'draft');
+  if (FRAME_SIZERS[which]) setTimeout(FRAME_SIZERS[which], 0);
   if (which === 'ctrades') renderTrades();
   else if (COMMISH_PAGE[which]){
     /* ---- RUN IT AND THE ACCESS LIST LIVE IN THE TRADES SECTION TOO ------------------------
@@ -2965,16 +2980,54 @@ function openDoc(which, src, title){
   f.style.cssText = 'width:100%;border:0;display:block;min-height:70vh;background:transparent';
   f.addEventListener('load', () => {
     const n = host.querySelector('.card'); if (n) n.remove();
-    const fit = () => {
+    /* ---- A PAGE THAT IS ITS OWN WINDOW IS GIVEN A WINDOW, NOT GROWN --------------------
+     * Casey, 3 Nov 2026: "the set draft window at the very start is continuing to shift down
+     * my screen one row at a time to where it's now disappeared from my screen", and then
+     * again about the Edit panel: "the little edit window continues to shift down the page."
+     * BOTH WERE THE SAME RUNAWAY. `fit()` set the frame's height to the document's
+     * scrollHeight every 700ms. The draft board sizes its own shell to the window it is in,
+     * so the taller frame made a taller document, which made `fit()` grow it again -- 24px a
+     * tick, for ever. Measured on 3 Nov: 726px, 798, 846, 918, 990 and climbing. Every panel
+     * on that page is pinned to the middle of its own window, so each tick moved every one of
+     * them a dozen pixels further down until they were off the screen.
+     * SO A PAGE LIKE THAT IS SIZED, ONCE, TO THE ROOM ON SCREEN, and it scrolls inside itself
+     * the way it does when it is opened on its own. A document that is simply long -- the
+     * trades page, the rules -- is still grown to fit, because it has nothing pinned in it.
+     * THE TELL IS IN THE PAGE, NOT IN THE TAB'S NAME. `fits()` asks the frame's own document
+     * whether it sizes itself to the window; a second list of which tabs are which is a
+     * second store of the same fact. */
+    const selfSized = () => {
+      try {
+        const d = f.contentDocument;
+        return !!(d && d.documentElement
+                  && d.documentElement.getAttribute('data-selfsized') === 'yes');
+      } catch (e) { return false; }
+    };
+    const room = () => {
+      const hdr = document.querySelector('header');
+      const hh = hdr ? hdr.getBoundingClientRect().height : 0;
+      return Math.max(520, Math.round(window.innerHeight - hh - 30));
+    };
+    const grow = () => {
       try {
         const d = f.contentDocument;
         if (d && d.body) f.style.height = Math.max(400, d.body.scrollHeight + 24) + 'px';
       } catch (e) {}
     };
-    fit(); setInterval(fit, 700);
+    if (selfSized()){
+      const size = () => { f.style.minHeight = '0'; f.style.height = room() + 'px'; };
+      size();
+      window.addEventListener('resize', size);
+      FRAME_SIZERS[which] = size;
+    } else {
+      grow(); setInterval(grow, 700);
+    }
   });
   host.appendChild(f);
 }
+/* A FRAME SIZED TO THE ROOM HAS TO BE RE-SIZED WHEN ITS TAB IS SHOWN. It is measured while the
+   section is hidden on the very first open, and a hidden section has no height to measure. */
+const FRAME_SIZERS = {};
 
 /* ---------------- header chips ---------------- */
 /* WHAT TIME IS IT WHERE CASEY IS. He asked on 31 Aug 2026 for the time in ARIZONA next to the
@@ -3741,7 +3794,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '02 Nov 2026, 7:54 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '03 Nov 2026, 12:44 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
