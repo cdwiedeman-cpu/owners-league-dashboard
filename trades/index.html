@@ -1593,7 +1593,14 @@ var Store = (function () {
    * The claim form is also cleared on every load, in the `ready` hook, so a state already
    * carrying one does not keep showing it.
    */
-  var LOCAL_ONLY = ['fcp', 'fcd', 'open'];
+  /* `actingAs` IS ON THIS LIST FOR THE SAME REASON THE CLAIM FORM IS. Entering for somebody
+     else is a thing one commissioner is doing on one device for one trade. It was travelling to
+     the league, so pressing Edit wrote "entering for Steve Eriksson" into the shared state --
+     Bob would have loaded it and found himself acting as that seat, exactly the Cleveland Browns
+     bug in a new place. And the load hook clears it on arrival, so the setting Edit had just
+     made was wiped the moment anything re-read the league. Casey, 2 Nov 2026: "when I go to
+     Ericsson and try to click edit, it doesn't pop up anything to let me edit it." */
+  var LOCAL_ONLY = ['fcp', 'fcd', 'open', 'actingAs'];
   function shared(st) {
     var out = {};
     Object.keys(st || {}).forEach(function (k) {
@@ -5649,15 +5656,38 @@ function viewRun(){
       return (r.rows.length > 1 ? (i + 1) + '. ' : '') + txt;
     };
     h += '<div class="card"><h2>Waiting to Be Settled</h2><div class="scr">'
+    /* ---- THE COMMISSIONER'S BUTTONS GO SECOND, NOT LAST ---------------------------------
+     * Casey, 2 Nov 2026: "I didn't have the ability to click the edit button."
+     * MEASURED: at 390px the Edit button sat 318 pixels PAST the right edge of the screen. The
+     * table has a 760px minimum inside a sideways scroller, the scroller gets 340px on a phone,
+     * and Change was the last of six columns. Nothing was wrong with the button -- it drew, the
+     * commissioner check answered yes, and it was simply not on the screen.
+     * SECOND COLUMN FIXES IT AT EVERY WIDTH. Seat plus Change is 33% of 760px, which is 251px,
+     * so both are visible before any scrolling. It also puts the action beside the name of the
+     * seat it acts on. Dropping columns on a phone was the other option and it costs the reader
+     * two columns; this costs nobody anything.
+     */
       + '<table class="waittbl">'
-      + '<colgroup><col style="width:17%"><col style="width:7%"><col style="width:20%">'
-      + '<col style="width:20%"><col style="width:20%"><col style="width:16%"></colgroup>'
-      + '<thead><tr><th>Seat</th><th class="num">Rows</th><th>Wants</th>'
-      + '<th>Drops</th><th>Rule</th><th>Change</th></tr></thead><tbody>'
+      + '<colgroup><col style="width:17%"><col style="width:16%"><col style="width:7%">'
+      + '<col style="width:20%"><col style="width:20%"><col style="width:20%"></colgroup>'
+      + '<thead><tr><th>Seat</th><th>Change</th><th class="num">Rows</th><th>Wants</th>'
+      + '<th>Drops</th><th>Rule</th></tr></thead><tbody>'
       + byDivision(reqs).map(function(g){
         return '<tr><td class="divband" colspan="6">' + esc(g.name) + '</td></tr>'
           + g.seats.map(function(r){
-          return '<tr><td>' + esc(r.seat) + '</td><td class="num">' + r.rows.length + '</td>'
+          return '<tr><td>' + esc(r.seat) + '</td>'
+            + '<td>' + (isCommish()
+                ? '<button class="f" style="padding:3px 8px;font-size:11px" '
+                  + 'onclick="editWaiting(' + jq(r.div) + ',' + jq(r.seat) + ')" '
+                  + 'title="Open this seat\'s own trade form and change what it asked for.">'
+                  + 'Edit</button> '
+                  + '<button class="f dang" style="padding:3px 8px;font-size:11px" '
+                  + 'onclick="askTakeOut(' + jq(r.div) + ',' + jq(r.seat) + ')" '
+                  + 'title="Take this list out of the week entirely. Nothing is settled for this '
+                  + 'seat on Monday.">Take It Out</button>'
+                : '<span class="d">&mdash;</span>')
+            + '</td>'
+            + '<td class="num">' + r.rows.length + '</td>'
             + '<td class="d">' + r.rows.map(function(x, i){
                 return esc(wline(r, i, x.pickup));
               }).join('<br>')
@@ -5687,17 +5717,7 @@ function viewRun(){
              * Trades tab, gives a commissioner that seat's own form. What was missing was a way
              * in from the table where the problem is actually visible, and any way at all to
              * take a list back out. Both are here now, one press each. */
-            + '<td>' + (isCommish()
-                ? '<button class="f" style="padding:3px 8px;font-size:11px" '
-                  + 'onclick="editWaiting(' + jq(r.div) + ',' + jq(r.seat) + ')" '
-                  + 'title="Open this seat\'s own trade form and change what it asked for.">'
-                  + 'Edit</button> '
-                  + '<button class="f dang" style="padding:3px 8px;font-size:11px" '
-                  + 'onclick="askTakeOut(' + jq(r.div) + ',' + jq(r.seat) + ')" '
-                  + 'title="Take this list out of the week entirely. Nothing is settled for this '
-                  + 'seat on Monday.">Take It Out</button>'
-                : '<span class="d">&mdash;</span>')
-            + '</td></tr>';
+            + '</tr>';
         }).join('');
       }).join('') + '</tbody></table></div>'
       + (isCommish()
@@ -8305,21 +8325,27 @@ function viewRosters(){
     + '</div>';
   var boss = isCommish();
   h += S.log.length ? '<div class="card"><h2>What Has Moved</h2><div class="scr"><table>'
-      + '<colgroup><col style="width:20%"><col style="width:18%"><col style="width:18%">'
+      /* PUT RIGHT GOES SECOND, for the reason written over the Waiting table: last of six
+         inside a sideways scroller is off the screen on a phone. This is the button that
+         corrects a wrong trade, so it is the last one that should be hard to reach. */
+      + '<colgroup><col style="width:20%">'
+      + (boss ? '<col style="width:12%">' : '')
+      + '<col style="width:18%"><col style="width:18%">'
       + '<col style="width:' + (boss ? '20' : '44') + '%">'
-      + (boss ? '<col style="width:12%"><col style="width:12%">' : '') + '</colgroup>'
-      + '<thead><tr><th>Seat</th><th>In</th><th>Out</th><th>How</th>'
-      + (boss ? '<th class="num">Cost</th><th>Put Right</th>' : '') + '</tr></thead><tbody>'
+      + (boss ? '<col style="width:12%">' : '') + '</colgroup>'
+      + '<thead><tr><th>Seat</th>' + (boss ? '<th>Put Right</th>' : '')
+      + '<th>In</th><th>Out</th><th>How</th>'
+      + (boss ? '<th class="num">Cost</th>' : '') + '</tr></thead><tbody>'
       + S.log.map(function(e){
-          return '<tr><td>' + esc(e.owner) + '</td><td class="g">'
-            + esc(e['in'] || '—') + '</td>'
-            + '<td class="d">' + esc(e.out || '—') + '</td><td class="d">wk ' + e.week
-            + ' · ' + esc(e.how) + (e.by ? ' · entered by ' + esc(e.by) : '') + '</td>'
-            + (boss ? '<td class="num">' + feeCell(e) + '</td>'
-                + '<td><button class="f" style="padding:3px 8px;font-size:11px" '
+          return '<tr><td>' + esc(e.owner) + '</td>'
+            + (boss ? '<td><button class="f" style="padding:3px 8px;font-size:11px" '
                 + 'onclick="openFix(' + jq(feeKeyOf(e)) + ')" '
                 + 'title="Take this one trade back, or give the seat a different team instead. '
-                + 'Every other trade is left alone.">Fix</button></td>' : '') + '</tr>';
+                + 'Every other trade is left alone.">Fix</button></td>' : '')
+            + '<td class="g">' + esc(e['in'] || '—') + '</td>'
+            + '<td class="d">' + esc(e.out || '—') + '</td><td class="d">wk ' + e.week
+            + ' · ' + esc(e.how) + (e.by ? ' · entered by ' + esc(e.by) : '') + '</td>'
+            + (boss ? '<td class="num">' + feeCell(e) + '</td>' : '') + '</tr>';
         }).join('') + '</tbody></table></div>'
       + (boss ? '<p class="note">Every trade costs ' + money(FEE()) + ' and the total each owner '
           + 'owes is the sum of these lines. Putting one trade right can take two or three moves, '
