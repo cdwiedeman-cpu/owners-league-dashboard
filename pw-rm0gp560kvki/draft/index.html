@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes">
+<html lang="en" data-selfsized="yes" data-build="build 03 Nov 2026 22:06 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -79,6 +79,18 @@ header{background:var(--panel);border-bottom:1px solid var(--line);padding:9px 1
 #standIn,#build,#freshness,#saveState,#dsline{white-space:normal;max-width:100%;line-height:1.5}
 #divStrip{flex-wrap:wrap}
 .savechip{cursor:pointer}
+.qmark{font-size:11px;font-weight:800;line-height:1;padding:3px 7px;border-radius:999px;
+  color:var(--acctx);background:var(--accbg);border:1px solid var(--accline)}
+/* The commissioners' control reads as one thing, with the state it is acting on inside it. */
+.runbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 9px;border-radius:9px;
+  border:1px solid var(--accline);background:var(--accbg)}
+.runbar button{padding:5px 10px;font-size:12px}
+.runstate{font-size:11.5px;font-weight:800;letter-spacing:.03em;color:var(--acctx)}
+.typebar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11.5px;
+  color:var(--dim)}
+.typebar button{padding:4px 9px;font-size:11.5px}
+.runbar.on{border-color:var(--goodline);background:var(--goodbg)}
+.runbar.on .runstate{color:var(--goodtx)}
 .savechip.ok{color:var(--good);border-color:var(--goodline)}
 .savechip.due{color:var(--gold);border-color:var(--warnline);background:var(--warnbg)}
 .savechip.loud{color:var(--warntx);border-color:var(--bad);background:var(--badbg);font-weight:700}
@@ -1046,21 +1058,55 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
     <!-- WHAT THE LEAGUE HOLDS, AND WHETHER THIS DEVICE HAS REACHED IT. A page that looks shared
          and is not is how a pick gets lost, so this line is never empty and never optimistic. -->
     <div class="build" id="dsline"></div>
+    <!-- ---- WHO IS TYPING THIS DIVISION, AND HOW TO BECOME THEM -------------------------
+         Casey, 3 Nov 2026: "if I do the draft in terms of I'm the one in my division
+         designated, I would use my personal dashboard and it will record the results in the
+         back end. And if someone else in my division drafts, then I can still use my draft
+         dashboard as a view only mode."
+         BOTH OF THOSE NEED A SWITCH. A commissioner opens in watching mode, because that is
+         what Casey and Bob will be doing most nights -- so without this button a commissioner
+         could never type at all, which is the opposite of the rule that they can never be
+         locked out. The person the league DESIGNATED types without claiming anything. -->
+    <div class="typebar hide" id="typeBar">
+      <span id="typeWho"></span>
+      <button class="ghost" id="btnTakeTyping"></button>
+    </div>
+    <!-- ---- THE COMMISSIONERS START THE DRAFT, FOR ALL THREE DIVISIONS AT ONCE ----------
+         Casey, 3 Nov 2026: "There needs to be a separate control somewhere else where Bob and
+         I would start the draft or stop and reset the draft and we can start over. And then
+         ... once we've started the draft, then they have the ability to set the order."
+         It is drawn for a commissioner only, and the league refuses the write from anybody
+         else whatever is drawn -- the same rule as every other draft write here. -->
+    <div class="runbar hide" id="runBar">
+      <span class="runstate" id="runState"></span>
+      <button class="primary" id="btnDraftStart">Start the Draft</button>
+      <button class="ghost" id="btnDraftStop">Stop It</button>
+      <button class="ghost" id="btnDraftClear">Start Over</button>
+    </div>
     <div class="build" id="freshness"></div>
     <!-- HOW LONG SINCE THIS WAS REALLY SAVED. The autosave is per-device and, on an iPad
          served from a local web server, per-PORT -- change the port and the board comes back
          empty with no error. So the page counts picks since the last real save and says so,
          out loud, rather than leaving Casey to remember. Click it to save. -->
     <div class="build savechip" id="saveState" title="Click to save this draft"></div>
-    <!-- Build stamp. There is no way to tell two downloaded copies of a single HTML file
-         apart from the outside, and an hour was lost to a stale copy that looked current.
-         This is the fix: the page says what it is.
-         IT SITS ON THE RIGHT WITH THE OTHER INFORMATION. Casey, 3 Nov 2026: "then you have
-         build November 3rd. I mean, I think that should go up more in the upper right-hand
-         corner, like we have some of the other things ... that's more of an informational
-         thing." -->
+    <!-- Casey, 3 Nov 2026: "the nothing to save yet, right? So should we have something like a
+         question mark or something next to that that explains what that means? That because
+         they don't need to save anything if we got an internet connection, right? It would only
+         be if we're drafting without an internet connection, and then we need to save the
+         draft." -->
+    <button class="qmark" id="saveWhy" title="What saving is for">?</button>
     <div class="clock" id="clock"></div>
-    <div class="build buildstamp" id="build" title="Which copy of the draft board this is">build 03 Nov 2026 19:44 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <!-- ---- THE BUILD STAMP IS NOT ON THE PAGE ANY MORE -----------------------------------
+         Casey, 3 Nov 2026: "is there any reason that we actually need the build card on here?
+         Like, what's the value of telling me the build? And nobody else is going to care about
+         that."
+         It was there because two downloaded copies of one HTML file cannot be told apart from
+         the outside, and an hour was lost to a stale one. That reason is gone: the page checks
+         `version.txt` on load, on wake and every ten minutes, and reloads itself when the
+         league has a newer build. Nobody has to read a date to find out.
+         IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
+         and what to ask for when a copy looks wrong. -->
+    <div class="build buildstamp hide" id="build">build 03 Nov 2026 22:06 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
@@ -2317,6 +2363,9 @@ var DraftStore = (function () {
     typist: function (div, take, baseSeq) {
       return call({fn: 'drafttypist', div: div, take: take ? 'yes' : 'no', baseSeq: baseSeq});
     },
+    /* THE COMMISSIONERS' OWN ACT, ALL THREE DIVISIONS AT ONCE. Not a per-division write, so it
+       carries no baseSeq: there is one state and the league is the only copy of it. */
+    setPhase: function (phase) { return call({fn: 'draftphase', phase: phase}); },
 
     queueAdd: qAdd,
     queueFor: qFor,
@@ -9034,6 +9083,153 @@ el('btnSaveOwners').onclick = ()=> saveOwners(false);
  * has not drafted, and showing the league's picks if it has. Start Draft is still the only
  * thing that begins one. The card comes back from the Reset button, which is where it belongs
  * and where he looked for it. */
+/* ---- WHO IS TYPING, AND TAKING IT OVER ---------------------------------------------------
+ * THREE STATES, NOT TWO. Nobody has claimed it and the league designated somebody; this device
+ * has claimed it; somebody else has claimed it. Each one needs a different button, and the one
+ * that matters most is the third -- a typist's phone dies at round four and the night does not
+ * stop while everybody works out what to press.
+ */
+function renderTypeBar(){
+  const bar = el('typeBar'); if (!bar) return;
+  const d = divRead();
+  const live = (typeof DraftStore !== 'undefined') && DraftStore.live();
+  /* ONLY SOMEBODY THE LEAGUE WOULD ACTUALLY LET TYPE. Drawing it for anybody else is offering
+     a button that collects a refusal, which is the thing this project does not do. */
+  if (!live || DS_MINE.indexOf(d) < 0 || DS_PHASE !== 'running'){
+    bar.classList.add('hide'); return;
+  }
+  bar.classList.remove('hide');
+  const b = LBOARDS[d] || DWATCH[d] || null;
+  const t = b && b.typist && b.typist.seat;
+  const me = (DS_ME && DS_ME.seat) || '';
+  const who = el('typeWho'), btn = el('btnTakeTyping');
+  if (t === me){
+    who.innerHTML = '<b>You are typing ' + divLabel(d) + '.</b>';
+    btn.textContent = 'Hand It Over';
+    btn.hidden = false;
+    btn.onclick = ()=> claimTyping(false);
+  } else if (t){
+    who.innerHTML = _esc(t) + ' is typing ' + divLabel(d) + '.';
+    btn.textContent = 'Take It Over';
+    btn.hidden = false;
+    btn.onclick = ()=> ask('Take the typing over from ' + _esc(t) + '?',
+      'Their board stops sending picks and yours starts. Do this when they cannot carry on '
+      + '&mdash; a flat phone, a lost connection &mdash; not to make one pick.',
+      'Take it over', ()=> claimTyping(true));
+  } else if (amTyping()){
+    who.innerHTML = '<b>You are typing ' + divLabel(d) + '.</b> The league gave you this one.';
+    btn.hidden = true;
+  } else {
+    who.textContent = 'Nobody has taken ' + divLabel(d) + ' yet.';
+    btn.textContent = 'I Am Typing ' + divLabel(d);
+    btn.hidden = false;
+    btn.onclick = ()=> claimTyping(true);
+  }
+}
+function claimTyping(take){
+  const d = divRead();
+  const b = LBOARDS[d] || DWATCH[d] || null;
+  return DraftStore.typist(d, take, (b && b.seq) || 0).then(a => {
+    if (!a || !a.ok){
+      showHelpPanel('The League Did Not Take That',
+        '<p>' + _esc((a && a.note) || 'The league could not be reached, so nothing was changed.')
+        + '</p><p>Who is typing has not changed. Try it again in a moment.</p>');
+      return false;
+    }
+    return dsRead(true).then(()=> { renderTypeBar(); return true; });
+  });
+}
+
+/* ---- THE COMMISSIONERS' CONTROL ----------------------------------------------------------
+ * Drawn only for a commissioner, and only when this board is actually talking to the league --
+ * a Start button on a page that cannot reach the league would start nothing and say it had.
+ */
+function renderRunBar(){
+  const bar = el('runBar'); if (!bar) return;
+  const live = (typeof DraftStore !== 'undefined') && DraftStore.live();
+  if (!DS_COMMISH || !live){ bar.classList.add('hide'); return; }
+  bar.classList.remove('hide');
+  bar.classList.toggle('on', DS_PHASE === 'running');
+  const who = DS_PHASE_BY ? ' by ' + _esc(DS_PHASE_BY) : '';
+  el('runState').textContent =
+      DS_PHASE === 'running' ? 'The draft is running' + who
+    : DS_PHASE === 'done'    ? 'The draft is finished' + who
+    :                          'The draft has not started';
+  el('btnDraftStart').hidden = DS_PHASE === 'running';
+  el('btnDraftStart').textContent = DS_PHASE === 'done' ? 'Open It Again' : 'Start the Draft';
+  el('btnDraftStop').hidden  = DS_PHASE !== 'running';
+  /* START OVER IS THE DESTRUCTIVE ONE and it is not offered when there is nothing to destroy. */
+  el('btnDraftClear').hidden = DS_PHASE === 'notstarted' && !draftedAnywhere();
+}
+/* HOW MANY PICKS THE LEAGUE IS HOLDING, ACROSS ALL THREE. What Start Over would throw away. */
+function draftedAnywhere(){
+  let n = 0;
+  DIVS.forEach(d => { const b = DWATCH[d] || LBOARDS[d]; n += ((b && b.picks) || []).length; });
+  return n;
+}
+function setPhase(phase){
+  return DraftStore.setPhase(phase).then(a => {
+    if (!a || !a.ok){
+      showHelpPanel('The League Did Not Take That',
+        '<p>' + _esc((a && a.note) || 'The league could not be reached, so nothing was changed.')
+        + '</p><p>Nothing on this page has changed either. Try it again in a moment.</p>');
+      return false;
+    }
+    DS_PHASE = a.phase; DS_PHASE_BY = a.phase_by || '';
+    DWATCH = a.watch || DWATCH;
+    renderRunBar();
+    dsRead(true);
+    return true;
+  });
+}
+el('btnDraftStart').onclick = ()=> setPhase('running');
+el('btnDraftStop').onclick  = ()=> setPhase('done');
+el('btnDraftClear').onclick = ()=>{
+  const n = draftedAnywhere();
+  ask('Clear the draft and start over?',
+      'This clears <b>all three divisions</b> in the league &mdash; '
+      + (n ? '<b>' + n + ' pick' + (n === 1 ? '' : 's') + '</b> and every draw order that has '
+             + 'been set' : 'nothing has been drafted yet, so there is nothing to lose')
+      + '. Every board goes back to the beginning and the draft reads as not started. '
+      + 'This cannot be undone.',
+      'Clear all three', ()=> setPhase('notstarted'));
+};
+
+/* ---- WHAT SAVING IS FOR, SINCE THE LEAGUE HOLDS THE DRAFT NOW ---------------------------
+ * Casey, 3 Nov 2026: "should we have something like a question mark or something next to that
+ * that explains what that means? That because they don't need to save anything if we got an
+ * internet connection ... It would only be if we're drafting without an internet connection,
+ * and then we need to save the draft."
+ * THE PANEL SAYS WHICH OF THE THREE STATES THIS DEVICE IS IN, because the answer to "do I need
+ * to save" is different in each one and a general explanation would be wrong twice. */
+el('saveWhy').onclick = ()=>{
+  const live = (typeof DraftStore !== 'undefined') && DraftStore.live();
+  const queued = live ? DraftStore.queueFor(divRead()).length : 0;
+  const now = live && !queued
+    ? '<p><b>Right now you do not need to save anything.</b> This board is signed in to the '
+      + 'league and every pick is being written there as it is typed. The rosters at the end of '
+      + 'the draft come from the league, not from a file.</p>'
+    : live
+    ? '<p><b>There are ' + queued + ' pick' + (queued === 1 ? '' : 's') + ' waiting to reach the '
+      + 'league.</b> They are on this device and they go as soon as it can reach the league '
+      + 'again. Saving now gives you a copy you can carry to another device if this one '
+      + 'cannot.</p>'
+    : '<p><b>This board is not signed in to the league, so saving is the only copy.</b> Picks '
+      + 'typed here stay in this browser. Save gives you a file to download and the same draft '
+      + 'as text you can paste into another device.</p>';
+  showHelpPanel('What Saving Is For', now
+    + '<p>Save was written when a file was the only place a draft could live. The league holds '
+    + 'the draft now, so the file is a backup for one case: drafting somewhere with no '
+    + 'connection. If that happens, press <b>Save</b> before you close the page.</p>');
+};
+/* ONE PANEL, OPENED BY NAME. The board already has a panel for explaining a column; this is the
+   same one, so there is one place a panel is drawn and not two. */
+function showHelpPanel(title, html){
+  el('mhTitle').textContent = title;
+  el('mhBody').innerHTML = html;
+  const more = el('mhMore'); if (more) more.classList.add('hide');
+  el('mhModal').classList.remove('hide');
+}
 el('btnSetupClose').onclick = ()=>{
   /* NOTHING BEHIND THE CARD MEANS NOTHING TO CLOSE TO. `render()` draws the board out of `S`,
      and `S` is null until a draft is started, so closing the card on a division nobody has
@@ -9467,6 +9663,34 @@ let DS_ASKED = false;     // has the league been asked at all yet
    a commissioner. Set from the league's answer and from nothing else. */
 let DS_MAY = null;        // null until asked, then '' or a division or 'any'
 let DS_MINE = [];         // the divisions this person may type
+/* ---- WHAT THE DRAFT IS DOING, AND WHAT THIS READER IS DOING IN IT -------------------------
+ * Casey, 3 Nov 2026: "it would just be a view only draft for everyone that's not actually in
+ * doing the draft ... they can see what that division drafter is drafting for everybody and see
+ * what's still available on the board, and then verbally give their pick to the drafter."
+ * TWO ROLES AND ONLY TWO. Typing, which one person per division does, and watching, which is
+ * everybody else. A watcher's board is live and sends nothing. There is no third thing: two
+ * boards in one division that disagree is the shape of every lost pick this project has had.
+ */
+let DS_ME = null;              // the seat the league says this sign-in is
+let DS_PHASE = 'notstarted';   // what the league says: notstarted | running | done
+let DS_PHASE_BY = '';
+let DS_COMMISH = false;
+let DWATCH = {};               // every division's board, for watching
+/* WHETHER THIS DEVICE IS THE ONE TYPING THIS DIVISION. The league decides who MAY; this is
+   about who IS, which is claimed on the night and can change when a phone dies. */
+function amTyping(){
+  const d = divRead();
+  if (DS_MINE.indexOf(d) < 0) return false;        // the league would refuse the write
+  const b = LBOARDS[d] || DWATCH[d] || null;
+  const t = b && b.typist && b.typist.seat;
+  const me = (DS_ME && DS_ME.seat) || '';
+  /* NOBODY HAS CLAIMED IT: the person the league granted it to is the one typing. A
+     commissioner is NOT put in the chair just for being a commissioner -- Casey and Bob will
+     be watching most nights, and a page that starts them typing is a page that will record a
+     pick one of them did not mean to make. */
+  if (!t) return DS_MAY !== 'any';
+  return t === me;
+}
 
 function dsLine(){
   const box = el('dsline');
@@ -9485,15 +9709,31 @@ function dsLine(){
     box.className = 'build warn';
     return;
   }
-  /* THE DRAFT IS NOT EVERYBODY'S. Say it plainly rather than leaving somebody pressing a
-     button that will be refused. Casey, 2 Nov 2026, chose one named division per person. */
-  if (DS_MAY === ''){
-    box.innerHTML = '<b>The draft has not been given to you.</b> Your picks would be refused, so '
-      + 'nothing here is being sent. Ask the commissioner to grant you a division.';
-    box.className = 'build warn';
-    return;
-  }
+  /* ---- HAVING NO GRANT IS THE NORMAL CASE NOW, AND IT IS NOT A PROBLEM ------------------
+   * This used to read "the draft has not been given to you ... ask the commissioner to grant
+   * you a division", which was right when the only thing to do on this page was type. It is
+   * wrong now: twenty-six of the twenty-seven are MEANT to be here without a grant, watching.
+   * Casey, 3 Nov 2026: "it would just be a view only draft for everyone that's not actually
+   * in doing the draft."
+   * So no-grant falls through to the typing-or-watching sentence below like everybody else.
+   * The one thing still worth saying out loud is when somebody has asked to type and cannot. */
   const bits = [];
+  /* ---- TYPING OR WATCHING, SAID ON THE PAGE AT ALL TIMES --------------------------------
+   * Casey, 3 Nov 2026: "most likely I will be the one doing the drafting, but if not, again, I
+   * would then be in view mode." The same page does both, so which one it is doing is never
+   * left to be worked out. A page that looks like it is recording and is not is the whole
+   * class of bug this project has paid for twice. */
+  if (DS_PHASE === 'running'){
+    bits.push(amTyping()
+      ? '<b>You are typing ' + divLabel(d) + '.</b> Your picks go to the league.'
+      : '<b>Watching ' + divLabel(d) + '.</b> Nothing you do here is sent. Give your pick to '
+        + 'whoever is typing.');
+  } else if (DS_PHASE === 'done'){
+    bits.push('<b>The draft is finished.</b>');
+  } else {
+    bits.push('<b>The draft has not started.</b> A commissioner starts it. Anything you do here '
+            + 'now stays on this device.');
+  }
   /* ---- WHAT THE LEAGUE IS HOLDING, IN WORDS --------------------------------------------
    * Casey, 3 Nov 2026: "I don't know why you then have Scorpion is at version 15 in the
    * league. I don't think we need that."
@@ -9560,6 +9800,13 @@ function dsRead(adopt){
     if (!a.ok){ DS_NOTE = a.note || 'the league would not answer'; dsLine(); return null; }
     DS_NOTE = '';
     DS_MAY = String(a.may == null ? 'any' : a.may);
+    /* WHAT THE LEAGUE SAYS THE DRAFT IS DOING, and whether this reader runs it. */
+    DS_PHASE = String(a.phase || 'notstarted');
+    DS_PHASE_BY = String(a.phase_by || '');
+    DS_COMMISH = !!a.commish;
+    DS_ME = a.me || null;
+    /* EVERY DIVISION'S BOARD TO LOOK AT, not just the ones this person may type. */
+    DWATCH = a.watch || {};
     DS_MINE = (a.mine && a.mine.length) ? a.mine.slice() : (DS_MAY === 'any' ? DIVS.slice() : []);
     LBOARDS = a.boards || {};
     Object.keys(LBOARDS).forEach(d => { LSEQ[d] = Number(LBOARDS[d].seq) || 0; });
@@ -9580,6 +9827,8 @@ function dsRead(adopt){
     }
     renderDivStrip();
     if (adopt) dsAdopt(LBOARDS[divRead()]);
+    renderRunBar();
+    renderTypeBar();
     dsLine();
     return a;
   });
