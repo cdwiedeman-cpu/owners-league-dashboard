@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: 'e81699df21a5', at: '2026-11-03 07:43 UTC'};
+const WORKER_BUILD = {id: '0fd0247e771b', at: '2026-11-03 22:06 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -1760,6 +1760,20 @@ async function handle(request, env) {
   const DRAFT_SEASON = 2027;               // the one place the season is named
   const DRAFT_DIVS = ['PFD', 'VFD', 'SFD'];
   const draftKey = (div) => 'draft:' + DRAFT_SEASON + ':' + div;
+  /* ---- WHETHER THE DRAFT HAS STARTED IS ONE FACT, HELD BY THE LEAGUE ---------------------
+   * Casey, 3 Nov 2026: "There needs to be a separate control somewhere else where Bob and I
+   * would start the draft or stop and reset the draft and we can start over. And then ... once
+   * we've started the draft, then they have the ability to set the order."
+   * It used to be answered three times, by three devices, each with its own Start button on its
+   * own setup card. A draft night where two divisions think it has begun and one does not is a
+   * draft night nobody can referee. One key, three states, and only a commissioner moves it. */
+  const PHASE_KEY = 'draft:' + DRAFT_SEASON + ':state';
+  const PHASES = ['notstarted', 'running', 'done'];
+  const emptyPhase = () => ({season: DRAFT_SEASON, phase: 'notstarted', at: null, by: null});
+  async function readPhase(env2) {
+    const r = await getJSON(env2, PHASE_KEY, null);
+    return (r && PHASES.indexOf(r.phase) >= 0) ? r : emptyPhase();
+  }
   const emptyDraft = (div) => ({season: DRAFT_SEASON, div: div, seq: 0, owners: [],
                                 draws: {}, picks: [], typist: null, at: null, by: null});
   async function readDraft(env2, div) {
@@ -1797,9 +1811,22 @@ async function handle(request, env) {
     for (const d of mine) {
       owners[d] = acc.filter((a) => a.div === d && a.status !== 'inactive').map((a) => a.seat);
     }
+    /* THE BOARDS A WATCHER MAY SEE ARE ALL OF THEM. Casey, 3 Nov 2026: "it would just be a
+       view only draft for everyone that's not actually in doing the draft ... they can see what
+       that division drafter is drafting for everybody and see what's still available on the
+       board, and then verbally give their pick to the drafter."
+       So `boards` is what this person may TYPE and `watch` is what they may SEE, which is the
+       whole league. Who has been taken is not a secret from the people in the room. */
+    const watch = {};
+    for (const d of DRAFT_DIVS) {
+      watch[d] = mine.indexOf(d) >= 0 ? boards[d] : draftOut(await readDraft(env, d));
+    }
+    const ph = await readPhase(env);
     return out({ok: true, season: DRAFT_SEASON, divisions: DRAFT_DIVS,
                 /* WHICH ONES THIS PERSON MAY TYPE. '' means none, which is most of the league. */
-                may: may, mine: mine, boards: boards, owners: owners,
+                may: may, mine: mine, boards: boards, owners: owners, watch: watch,
+                phase: ph.phase, phase_at: ph.at, phase_by: ph.by,
+                commish: isCommish(who),
                 me: {div: who.div, seat: who.seat, role: who.role},
                 note: may ? '' : 'the draft has not been given to you. Ask the commissioner.',
                 at: new Date().toISOString()});
@@ -1868,6 +1895,42 @@ async function handle(request, env) {
     return out({ok: false, why: 'busy',
                 note: 'this division\'s board was being written to at the same moment, so '
                     + 'nothing was written. Nothing changed. Try it again.'});
+  }
+
+  /* ---- THE COMMISSIONERS' OWN CONTROL: START, STOP, START OVER -------------------------
+   * One act, all three divisions. Only a commissioner, and the league is what refuses -- the
+   * control being drawn for somebody is the convenience, never the protection.
+   * `draftphase` SAYS WHAT IT DID AND READS IT BACK, like every other draft write here. KV has
+   * no compare and swap, so a yes that has not re-read the result is a guess.
+   */
+  if (fn === 'draftphase') {
+    const want = String(p('phase') || '');
+    if (PHASES.indexOf(want) < 0) {
+      return out({ok: false, why: 'nophase', note: 'that is not a state the draft can be in'});
+    }
+    if (!isCommish(who)) {
+      return out({ok: false, why: 'notcommish',
+                  note: 'only a commissioner can start, stop or clear the draft. Nothing was '
+                      + 'changed.'});
+    }
+    const rec = {season: DRAFT_SEASON, phase: want, at: new Date().toISOString(),
+                 by: (who && who.seat) || ''};
+    /* STARTING OVER CLEARS ALL THREE BOARDS, which is the whole point of it. It is the one
+       destructive act here, so it is its own phase word and the page asks before sending it. */
+    if (want === 'notstarted') {
+      for (const d of DRAFT_DIVS) await putJSON(env, draftKey(d), emptyDraft(d));
+    }
+    await putJSON(env, PHASE_KEY, rec);
+    const after = await readPhase(env);
+    if (after.phase !== want) {
+      return out({ok: false, why: 'busy',
+                  note: 'the league did not take that change, so nothing is certain. Open the '
+                      + 'page again and see what it says before you do anything else.'});
+    }
+    const boards = {};
+    for (const d of DRAFT_DIVS) boards[d] = draftOut(await readDraft(env, d));
+    return out({ok: true, phase: after.phase, phase_at: after.at, phase_by: after.by,
+                watch: boards, boards: boards});
   }
 
   if (fn === 'draftpick') {
