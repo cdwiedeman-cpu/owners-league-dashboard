@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes" data-build="build 03 Nov 2026 22:06 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
+<html lang="en" data-selfsized="yes" data-build="build 03 Nov 2026 22:54 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -77,6 +77,21 @@ header{background:var(--panel);border-bottom:1px solid var(--line);padding:9px 1
 /* THE SEASON LINE IS A SENTENCE, NOT A CHIP. `.build` is nowrap, which is right for a one-word
    stamp and wrong for a sentence: on a phone it made the page 1088px wide. It wraps. */
 #standIn,#build,#freshness,#saveState,#dsline{white-space:normal;max-width:100%;line-height:1.5}
+/* ---- THE HEADER IS A HEADER, NOT A PAGE --------------------------------------------------
+ * Casey, 3 Nov 2026: "you've got to clean up the top of this ... half of the page is taken up
+ * before you even start seeing the teams to draft. We need to see more of the draft board
+ * itself and less of this stuff that you have at the top."
+ * Two things were eating it. The standing description of the board is three sentences nobody
+ * needs after the first read, so it folds behind a question mark. And the status line is the
+ * one thing on this header that changes minute to minute, so it keeps its place and everything
+ * else is sized down around it. */
+header{padding:7px 14px;gap:10px}
+#standIn{display:none}
+#standIn.open{display:block;flex-basis:100%;font-size:11px}
+#dsline{font-size:12px;font-weight:600;border:0;padding:2px 0}
+#dsline.warn{color:var(--warntx)}
+header h1{font-size:13.5px}
+.build{padding:1px 7px}
 #divStrip{flex-wrap:wrap}
 .savechip{cursor:pointer}
 .qmark{font-size:11px;font-weight:800;line-height:1;padding:3px 7px;border-radius:999px;
@@ -1055,6 +1070,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
     <div class="divpick" id="divPick" style="display:none"><span class="divlbl">Division</span>
       <span class="seg" id="divStrip"></span></div>
     <div class="build" id="standIn"></div>
+    <button class="qmark" id="standWhy" title="What this board is">?</button>
     <!-- WHAT THE LEAGUE HOLDS, AND WHETHER THIS DEVICE HAS REACHED IT. A page that looks shared
          and is not is how a pick gets lost, so this line is never empty and never optimistic. -->
     <div class="build" id="dsline"></div>
@@ -1106,7 +1122,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
          league has a newer build. Nobody has to read a date to find out.
          IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
          and what to ask for when a copy looks wrong. -->
-    <div class="build buildstamp hide" id="build">build 03 Nov 2026 22:06 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build buildstamp hide" id="build">build 03 Nov 2026 22:54 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
@@ -1257,6 +1273,24 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
     </div>
     </div>
     <div class="rowbtns" style="padding-top:10px"><button class="primary" id="rosterClose">Close</button></div>
+  </div>
+</div>
+
+<!-- ============ the draft is not open ============
+     Casey, 3 Nov 2026: "if you stop the draft, it should probably bring up a window that
+     prevents anybody from doing anything until we restart the draft, right?" And on the
+     not-started side: "shouldn't the start the draft be something that is like pops up first
+     before anybody can do anything, nothing's happening, and then you press the start the
+     draft button."
+     IT COVERS THE BOARD AND IT IS NOT DISMISSIBLE. A panel with a way out would be a sign, and
+     a sign is what the page already had: it said the draft had not started and let him draft
+     anyway. The league refuses these writes as well -- this is the half that stops the press,
+     not the half that stops the pick. -->
+<div class="overlay hide" id="shutModal">
+  <div class="card" style="max-width:560px;text-align:center">
+    <h2 id="shutTitle"></h2>
+    <p class="lede" id="shutBody"></p>
+    <div class="rowbtns" id="shutBtns" style="justify-content:center"></div>
   </div>
 </div>
 
@@ -8056,7 +8090,23 @@ function render(){
 }
 
 /* ---------------- actions ---------------- */
+/* ---- WHETHER THIS DEVICE MAY PUT A PICK INTO THE LEAGUE ----------------------------------
+ * Two things have to be true: the commissioners have started the draft, and this device is the
+ * one typing this division. Casey, 3 Nov 2026: "I am in right now under Scorpion and it's
+ * letting me draft. So I shouldn't be able to do that, right? Even though I'm a commissioner."
+ * He is right. Being ALLOWED to type a division and BEING the one typing it are different
+ * questions, and the board was asking neither -- it was drawing a Draft button on every row
+ * whatever the league had said. THE LEAGUE REFUSES THESE WRITES TOO; this is the half that
+ * stops somebody pressing a button that was never going to work.
+ * A BOARD THAT IS NOT SIGNED IN IS NOT GATED. Opened from a file, with no league to ask, it is
+ * the practice board it has always been and everything stays on the device.
+ */
+function canType(){
+  if (typeof DraftStore === 'undefined' || !DraftStore.live()) return true;
+  return DS_PHASE === 'running' && amTyping();
+}
 function draft(teamName, ownerOverride){
+  if (!canType()) return false;
   const slot = currentSlot();
   const owner = ownerOverride!==undefined ? ownerOverride : (slot ? slot.owner : null);
   if(owner===null) return false;
@@ -9083,6 +9133,43 @@ el('btnSaveOwners').onclick = ()=> saveOwners(false);
  * has not drafted, and showing the league's picks if it has. Start Draft is still the only
  * thing that begins one. The card comes back from the Reset button, which is where it belongs
  * and where he looked for it. */
+/* ---- THE PANEL THAT HOLDS THE ROOM WHILE THE DRAFT IS NOT OPEN ---------------------------
+ * Drawn over the board whenever the league says the draft is not running. A commissioner gets
+ * the button that opens it; everybody else is told who can. It has no way out on purpose: the
+ * page already tried saying this in a sentence and Casey drafted straight past it.
+ */
+function renderShut(){
+  const m = el('shutModal'); if (!m) return;
+  const live = (typeof DraftStore !== 'undefined') && DraftStore.live();
+  /* A BOARD WITH NO LEAGUE TO ASK IS THE PRACTICE BOARD IT HAS ALWAYS BEEN. */
+  if (!live || DS_PHASE === 'running'){ m.classList.add('hide'); return; }
+  /* ---- THIS ONE COMES FIRST, EVEN BEFORE THE NINE NAMES --------------------------------
+   * Casey, 3 Nov 2026: "shouldn't the start the draft be something that is like pops up first
+   * before anybody can do anything, nothing's happening, and then you press the start the
+   * draft button."
+   * An earlier version of this stood aside for the setup card, on the "one panel at a time"
+   * rule. That got the order backwards: the setup card is the first step OF a draft, so it
+   * belongs after the draft has been opened, not in front of the thing that opens it. The
+   * card is put away here and comes back the moment the draft starts. */
+  el('setup').classList.add('hide');
+  const done = DS_PHASE === 'done';
+  el('shutTitle').textContent = done ? 'The Draft Is Stopped' : 'The Draft Has Not Started';
+  el('shutBody').innerHTML = done
+    ? 'A commissioner stopped the draft, so nothing can be picked. Everything already drafted '
+      + 'is safe in the league. A commissioner can open it again.'
+    : 'Nobody can pick until a commissioner starts the draft. The board behind this is the real '
+      + 'one and it is worth reading — but nothing typed into it now would be recorded.';
+  const btns = el('shutBtns');
+  btns.innerHTML = DS_COMMISH
+    ? '<button class="primary" id="shutStart">' + (done ? 'Open It Again' : 'Start the Draft')
+      + '</button>'
+    : '<span class="note">Ask Casey or Bob to '
+      + (done ? 'open it again' : 'start it') + '.</span>';
+  const sb = el('shutStart');
+  if (sb) sb.onclick = ()=> setPhase('running');
+  m.classList.remove('hide');
+}
+
 /* ---- WHO IS TYPING, AND TAKING IT OVER ---------------------------------------------------
  * THREE STATES, NOT TWO. Nobody has claimed it and the league designated somebody; this device
  * has claimed it; somebody else has claimed it. Each one needs a different button, and the one
@@ -9178,8 +9265,17 @@ function setPhase(phase){
     DS_PHASE = a.phase; DS_PHASE_BY = a.phase_by || '';
     DWATCH = a.watch || DWATCH;
     renderRunBar();
-    dsRead(true);
-    return true;
+    renderShut();
+    /* AND THE FIRST STEP OF A DRAFT COMES BACK. The panel put the setup card away; opening the
+       draft is exactly the moment it is wanted again. */
+    return dsRead(true).then(()=>{
+      if (DS_PHASE === 'running' && !S){
+        el('setup').classList.remove('hide');
+        fillDivOwners();
+      }
+      renderShut();
+      return true;
+    });
   });
 }
 el('btnDraftStart').onclick = ()=> setPhase('running');
@@ -9202,6 +9298,8 @@ el('btnDraftClear').onclick = ()=>{
  * and then we need to save the draft."
  * THE PANEL SAYS WHICH OF THE THREE STATES THIS DEVICE IS IN, because the answer to "do I need
  * to save" is different in each one and a general explanation would be wrong twice. */
+/* The standing description of the board, folded away until somebody asks for it. */
+el('standWhy').onclick = ()=> el('standIn').classList.toggle('open');
 el('saveWhy').onclick = ()=>{
   const live = (typeof DraftStore !== 'undefined') && DraftStore.live();
   const queued = live ? DraftStore.queueFor(divRead()).length : 0;
@@ -9829,6 +9927,7 @@ function dsRead(adopt){
     if (adopt) dsAdopt(LBOARDS[divRead()]);
     renderRunBar();
     renderTypeBar();
+    renderShut();
     dsLine();
     return a;
   });
