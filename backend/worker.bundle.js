@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: '0fd0247e771b', at: '2026-11-03 22:06 UTC'};
+const WORKER_BUILD = {id: 'a27230a53197', at: '2026-11-03 22:54 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -1835,9 +1835,31 @@ async function handle(request, env) {
   /* EVERY DRAFT WRITE GOES THROUGH ONE DOOR, so the version check, the re-read and the honest
      answer cannot be written four slightly different ways. `change` is handed the record and
      returns a refusal string, or mutates it and returns ''. */
-  async function draftWrite(env2, div, baseSeq, change, confirm) {
+  async function draftWrite(env2, div, baseSeq, change, confirm, whenStopped) {
     if (DRAFT_DIVS.indexOf(div) < 0) {
       return out({ok: false, why: 'nodiv', note: 'that is not one of the three divisions'});
+    }
+    /* ---- NOTHING IS DRAFTED BEFORE THE COMMISSIONERS START IT -----------------------------
+     * Casey, 3 Nov 2026: "I do see the draft has not started, start the draft button, but I'm
+     * already on the draft page. And if I click draft, it's actually letting me draft. So I
+     * don't understand what it's drafting to and how it knows what the draft order is, because
+     * nothing's been set."
+     * The phase was being REPORTED and nothing was asked to honour it, which is this project's
+     * oldest mistake in a new place: a convention is not a permission. The league refuses the
+     * write now, so a page that has not caught up, or an address typed in by hand, cannot
+     * record a pick into a draft that has not begun or has been stopped.
+     * CLAIMING THE TYPING IS THE EXCEPTION. Working out who is at the keyboard is settled
+     * BEFORE the draft starts, not after. */
+    if (!whenStopped) {
+      const ph0 = await readPhase(env2);
+      if (ph0.phase !== 'running') {
+        return out({ok: false, why: 'notrunning', phase: ph0.phase,
+          note: ph0.phase === 'done'
+            ? 'the draft has been stopped, so nothing was written. A commissioner can open it '
+              + 'again.'
+            : 'the draft has not been started, so nothing was written. A commissioner starts '
+              + 'it.'});
+      }
     }
     /* ---- THE LEAGUE IS WHAT REFUSES, NOT THE HIDDEN TAB -----------------------------------
      * Casey, 2 Nov 2026, on granting the draft by sign-in: "then that's the only person that
@@ -2066,7 +2088,7 @@ async function handle(request, env) {
       rec.typist = {div: mine.div, seat: mine.seat, at: new Date().toISOString(),
                     took_from: held ? {div: held.div, seat: held.seat} : null};
       return '';
-    });
+    }, null, true);
   }
 
   /* ---------- the commissioner's half ---------------------------------------------------- */
