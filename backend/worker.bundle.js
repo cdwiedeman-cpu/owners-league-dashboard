@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: 'a27230a53197', at: '2026-11-03 22:54 UTC'};
+const WORKER_BUILD = {id: 'd5c12fd1ac08', at: '2026-11-04 01:42 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -1827,6 +1827,15 @@ async function handle(request, env) {
                 may: may, mine: mine, boards: boards, owners: owners, watch: watch,
                 phase: ph.phase, phase_at: ph.at, phase_by: ph.by,
                 commish: isCommish(who),
+                /* ---- WHAT THE ACCESS LIST SAYS THIS PERSON IS DOING ON THE NIGHT -------
+                 * Separate from `may`, and it has to be. `may` is the PERMISSION and it is
+                 * 'any' for a commissioner, because Casey and Bob can never be locked out.
+                 * `designated` is the JOB, which a commissioner picks for themselves like
+                 * everybody else. Casey, 3 Nov 2026: "if I'm the drafter and the commissioner,
+                 * I should be setting to both ... If I set to no draft for myself, then I
+                 * can't draft. I'm just watching."
+                 * The page opens somebody typing only where this names their division. */
+                designated: String((who && who.drafts) || ''),
                 me: {div: who.div, seat: who.seat, role: who.role},
                 note: may ? '' : 'the draft has not been given to you. Ask the commissioner.',
                 at: new Date().toISOString()});
