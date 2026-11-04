@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: '03c4bc61273a', at: '2026-11-04 02:43 UTC'};
+const WORKER_BUILD = {id: '9458f2e4491b', at: '2026-11-04 06:48 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -1826,6 +1826,15 @@ async function handle(request, env) {
                 /* WHICH ONES THIS PERSON MAY TYPE. '' means none, which is most of the league. */
                 may: may, mine: mine, boards: boards, owners: owners, watch: watch,
                 phase: ph.phase, phase_at: ph.at, phase_by: ph.by,
+                /* ---- THE ADDRESS GOES TO A COMMISSIONER AND TO NOBODY ELSE ---------------
+                 * Casey, 3 Nov 2026, on the seat name: "it's not controlled by Palma, it's
+                 * controlled by me ... shouldn't you have, like, almost use the email address
+                 * that it's being controlled by?" A seat can hold two people, so its name does
+                 * not answer who did a thing.
+                 * `fn=draft` is called by EVERY owner, so the address is attached only when
+                 * the reader is a commissioner -- the same half of this back end that already
+                 * carries the access list. No owner's address ever reaches another owner. */
+                phase_by_email: isCommish(who) ? String(ph.by_email || '') : '',
                 commish: isCommish(who),
                 /* ---- WHAT THE ACCESS LIST SAYS THIS PERSON IS DOING ON THE NIGHT -------
                  * Separate from `may`, and it has to be. `may` is the PERMISSION and it is
@@ -1945,7 +1954,10 @@ async function handle(request, env) {
                       + 'changed.'});
     }
     const rec = {season: DRAFT_SEASON, phase: want, at: new Date().toISOString(),
-                 by: (who && who.seat) || ''};
+                 by: (who && who.seat) || '',
+                 /* Stored so a commissioner can be told WHICH person opened it. It is only
+                    ever handed back to a commissioner; see `fn=draft`. */
+                 by_email: (who && who.email) || ''};
     /* STARTING OVER CLEARS THE BOARDS, which is the whole point of it. It is the one
        destructive act here, so it is its own phase word and the page asks before sending it.
        ONE DIVISION OR ALL THREE. Casey, 3 Nov 2026: "it says clear all three. It probably
@@ -1966,6 +1978,34 @@ async function handle(request, env) {
                     cleared: onlyDiv, watch: b1, boards: b1});
       }
       for (const d of DRAFT_DIVS) await putJSON(env, draftKey(d), emptyDraft(d));
+    }
+    /* ---- STARTING THE DRAFT SEATS WHOEVER THE ACCESS LIST NAMES ------------------------
+     * Casey, 4 Nov 2026: "I had set myself as the person to be able to draft for Predator. When
+     * I started the draft, it comes up with takeover drafting. It didn't set me as the drafter."
+     * Who may type was a STORED fact and who IS typing was worked out from it on each page, so
+     * a page that had not re-read the access list drew the wrong button. Opening the draft
+     * writes the answer down instead: for each division the access list names exactly one
+     * person for, that person is recorded as its typist. A division with nobody named, or with
+     * two, is left for somebody to claim on the night, which is what the claim is for.
+     * A DIVISION ALREADY BEING TYPED IS LEFT ALONE. */
+    if (want === 'running') {
+      const access = await getJSON(env, 'access', []);
+      for (const d of DRAFT_DIVS) {
+        const named = [];
+        for (const a of access) {
+          if (a.status === 'inactive' || a.status === 'removed') continue;
+          for (const m of membersOf(a)) {
+            if (String(m.drafts || '') === d) named.push({div: a.div, seat: a.seat});
+          }
+        }
+        if (named.length !== 1) continue;
+        const r0 = await readDraft(env, d);
+        if (r0.typist && r0.typist.seat) continue;
+        r0.typist = {div: named[0].div, seat: named[0].seat,
+                     at: new Date().toISOString(), took_from: null};
+        r0.seq = (Number(r0.seq) || 0) + 1;
+        await putJSON(env, draftKey(d), r0);
+      }
     }
     await putJSON(env, PHASE_KEY, rec);
     const after = await readPhase(env);
