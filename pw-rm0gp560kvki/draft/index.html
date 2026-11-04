@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes" data-build="build 03 Nov 2026 22:54 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
+<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 01:42 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -389,6 +389,22 @@ table.mini tr.best td{background:var(--accbg)}
 .owner .oh{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--panel2);font-size:13px}
 .owner .ob{padding:6px 10px;font-size:12px;color:var(--dim)}
 .slot{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px dotted var(--dotline)}
+/* WHICH PICK IT WAS, beside the team. Casey, 3 Nov 2026: "it would be good to put the pick
+   number, the round and the pick number next to each pick that they've made." */
+.pickat{display:inline-block;min-width:42px;margin-right:7px;font-size:10.5px;font-weight:800;
+  letter-spacing:.02em;color:var(--faint);font-variant-numeric:tabular-nums}
+/* ---- THE LEAGUE'S ROSTER PANEL IS A LIST OF PICKS, SO IT IS BUILT LIKE ONE ---------------
+ * Casey, 3 Nov 2026: "I think you could make these rows more narrow and clean up some stuff so
+ * that you're just seeing the teams that they've picked." With the numbers gone there is
+ * nothing on the right of a row, so the rows tighten and three columns of owners fit where two
+ * did. */
+.rostgrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px}
+/* With the standings gone the rosters take the whole width and fall into columns of their own,
+   so more of the draft is on screen at once rather than in a tall single file. */
+.rostgrid.wide{grid-template-columns:minmax(0,1fr)}
+.rostgrid.wide #rosters{column-width:300px;column-gap:22px}
+.ownersonly .slot{padding:1px 0}
+.ownersonly .owner{break-inside:avoid}
 .slot:last-child{border:0}
 .slot .sn{color:var(--ink)}
 .cnt{font-size:11.5px;color:var(--dim)}
@@ -1122,7 +1138,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
          league has a newer build. Nobody has to read a date to find out.
          IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
          and what to ask for when a copy looks wrong. -->
-    <div class="build buildstamp hide" id="build">build 03 Nov 2026 22:54 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build buildstamp hide" id="build">build 04 Nov 2026 01:42 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
@@ -1264,11 +1280,17 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
       <button class="ghost" id="rosterCloseTop">Close</button>
     </div>
     <div style="overflow:auto;flex:1;padding-top:10px">
-    <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px">
+    <!-- ---- STANDINGS COME OUT OF THIS PANEL ON THE LEAGUE'S COPY ----------------------
+         Casey, 3 Nov 2026: "I think you can get rid of the standings on the right-hand side
+         completely, because we don't need that. And then let's make more space."
+         Standings during a draft are a ranking of who is winning the draft, which is exactly
+         the analysis the league's board does not carry. Recent Picks stays, because that is
+         the draft happening. The column it sat in goes with it, so the rosters take the room. -->
+    <div class="rostgrid" id="rostGrid">
       <div><div id="rosters"></div></div>
-      <div><h3 style="margin-top:0">Standings</h3>
+      <div id="rostSide"><h3 style="margin-top:0">Standings</h3>
         <div id="lboard"></div>
-        <h3>Recent Picks</h3>
+        <h3 id="recentH">Recent Picks</h3>
         <div id="log" style="font-size:12px;color:var(--dim)"></div></div>
     </div>
     </div>
@@ -1303,7 +1325,12 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
     <h2 id="setupHead">Set Up the Draft</h2>
     <p class="lede" id="setupLede">Nine owners, eleven rounds, three NFL and eight college teams each. You will enter each draw order as you go.</p>
     <div class="grid9" id="ownerInputs"></div>
-    <div class="orderrow" style="margin-top:14px"><span>Which is you?</span><select id="meSel"></select></div>
+    <!-- Casey, 3 Nov 2026: "The which one is you shouldn't really play a factor because it
+         should know who we are, right? Which one's our team, because it's based upon how we've
+         signed in, right? So doesn't it know who we are already?"
+         It does, once this device is signed in to the league. The question is only asked on a
+         board that is standing on its own with nobody to ask. -->
+    <div class="orderrow" id="meRow" style="margin-top:14px"><span>Which is you?</span><select id="meSel"></select></div>
     <div class="rowbtns">
       <button class="primary" id="btnStart">Start Draft</button>
       <button class="ghost" id="btnSaveOwners">Save These Owners</button>
@@ -2424,6 +2451,48 @@ const DATA = {"teams": [{"scout": [["Phil Steele power rating", "130 on Phil Ste
  */
 const DRAFT_MODE = 'personal';
 const OWNERS_ONLY = DRAFT_MODE === 'owners';
+/* ---- THE DRAFT'S LIVE STATE, DECLARED BEFORE ANYTHING DRAWS -----------------------------
+ * These were declared down beside the code that talks to the league, which read fine until the
+ * BOARD started asking them: `canType()` is called while every row is drawn, and a `let` read
+ * before its declaration line has run throws rather than coming back undefined. The owners'
+ * board rendered zero rows. Anything the render asks for is declared up here with the rest of
+ * the page's state. */
+let DS_MAY = null;        // null until asked, then '' or a division or 'any'
+let DS_MINE = [];         // the divisions this person may type
+/* ---- WHAT THE DRAFT IS DOING, AND WHAT THIS READER IS DOING IN IT -------------------------
+ * Casey, 3 Nov 2026: "it would just be a view only draft for everyone that's not actually in
+ * doing the draft ... they can see what that division drafter is drafting for everybody and see
+ * what's still available on the board, and then verbally give their pick to the drafter."
+ * TWO ROLES AND ONLY TWO. Typing, which one person per division does, and watching, which is
+ * everybody else. A watcher's board is live and sends nothing. There is no third thing: two
+ * boards in one division that disagree is the shape of every lost pick this project has had.
+ */
+let DS_ME = null;              // the seat the league says this sign-in is
+let DS_PHASE = 'notstarted';   // what the league says: notstarted | running | done
+let DS_PHASE_BY = '';
+let DS_COMMISH = false;
+let DS_DESIG = '';             // the division the access list names for this person, or ''
+let DWATCH = {};               // every division's board, for watching
+/* WHETHER THIS DEVICE IS THE ONE TYPING THIS DIVISION. The league decides who MAY; this is
+   about who IS, which is claimed on the night and can change when a phone dies. */
+function amTyping(){
+  const d = divRead();
+  if (DS_MINE.indexOf(d) < 0) return false;        // the league would refuse the write
+  const b = LBOARDS[d] || DWATCH[d] || null;
+  const t = b && b.typist && b.typist.seat;
+  const me = (DS_ME && DS_ME.seat) || '';
+  /* NOBODY HAS CLAIMED IT: the person the league granted it to is the one typing. A
+     commissioner is NOT put in the chair just for being a commissioner -- Casey and Bob will
+     be watching most nights, and a page that starts them typing is a page that will record a
+     pick one of them did not mean to make. */
+  /* NOBODY HAS CLAIMED IT: the person the access list NAMES for this division is the one
+     typing. That is `designated`, not `may` -- a commissioner's permission is 'any', and
+     reading the permission here put Casey and Bob in the chair for all three divisions at
+     once, or (once that was fixed) out of it for the one they had asked for. */
+  if (!t) return DS_DESIG === d;
+  return t === me;
+}
+
 const DRAFT_SEASON = DATA.season || null;
 const BASE_TEAMS = DATA.teams;
 const POOL_SPREAD = DATA.pool_spread || {};
@@ -3764,6 +3833,20 @@ function ownerSource(){
 }
 function fillDivOwners(){
   setupHeading();
+  /* ---- THE SETUP SCREEN BELONGS TO WHOEVER IS TYPING THIS DIVISION ---------------------
+   * Casey, 3 Nov 2026: "Everybody else that's in draft only mode, they shouldn't see these
+   * screens, right? They would only just see the draft page when they come in."
+   * He is right, and it was worse than clutter: a watcher was being shown nine boxes and a
+   * Start Draft button for a draft they cannot start, on a page where nothing they press is
+   * sent. The card is for the person who is about to type, and for a commissioner, who sets
+   * the three divisions up before the night. */
+  const asked = DS_MAY !== null;
+  /* NOT BEFORE THE LEAGUE HAS ANSWERED. Hiding on a guess puts the typist's own screen away a
+     second before the answer arrives that says it is theirs, and nothing brings it back. Three
+     answers, not two: yes, no, and not asked yet. */
+  const forMe = (typeof DraftStore === 'undefined') || !DraftStore.live() || !asked
+                || DS_COMMISH || amTyping();
+  if (!forMe){ el('setup').classList.add('hide'); return; }
   /* THE WAY OUT IS OFFERED ONLY WHERE THERE IS SOMEWHERE TO GO. Casey asked to be able to look
      at a division without starting its draft, and that is exactly what this allows -- but on a
      division nobody has drafted yet there is no board underneath, so the button would close the
@@ -3785,6 +3868,10 @@ function fillDivOwners(){
 function setupHeading(){
   const h = el('setupHead'), p = el('setupLede');
   const d = divRead();
+  /* THE SIGN-IN ALREADY ANSWERED THIS. Asked only where there is no league to ask. */
+  const mr = el('meRow');
+  if (mr) mr.hidden = (typeof DraftStore !== 'undefined') && DraftStore.live()
+                      && !!(DS_ME && DS_ME.seat);
   if (h) h.textContent = DIVS.length > 1 && d
     ? 'Set Up the ' + divLabel(d) + ' Draft' : 'Set Up the Draft';
   const lede = 'Nine owners, eleven rounds, three NFL and eight college teams each. ';
@@ -7025,7 +7112,12 @@ function renderFast(){
     + (verdict ? `<div class="fnverdict">${verdict}</div>` : '');
   el('tb').innerHTML =
     (rows.length ? rows.map(t=>{
-      const canPick = slot && legalFor(slot.owner, t);
+      /* NO DRAFT BUTTON WHERE THERE IS NO DRAFTING. Casey, 3 Nov 2026: "for those that are
+         watching, the draft button should not be available. Right. It should only, because
+         that's only for the drafter." He found it the hard way: as a commissioner who had not
+         taken the keyboard, every row still carried a Draft button and pressing one did
+         nothing at all. A button that does nothing is worse than no button. */
+      const canPick = canType() && slot && legalFor(slot.owner, t);
       const pct = Math.round(t.k*100);
       const w = Math.max(2, Math.round(pct*0.9));
       const col = pct>=65?'var(--good)':pct>=45?'var(--gold)':'var(--faint)';
@@ -7074,7 +7166,7 @@ function renderFast(){
           (g.l==='Away'?'@':(g.l==='Neutral'?'n ':'')) + g.o).join(' · ')}</td>
         <td class="act">${canPick
             ? `<button class="primary" data-pick="${t.n}">Draft</button>`
-            : `<span class="warn" style="font-size:11px">full</span>`}</td>
+            : `<span class="warn" style="font-size:11px">${noPickWhy()}</span>`}</td>
       </tr>`;
     }).join('')
     : `<tr><td colspan="15" class="emptyq">${filters.q
@@ -7381,7 +7473,7 @@ function renderTable(){
   el('tb').innerHTML = rows.slice(0,400).map(t=>{
     const altc = (_alt++ % 2) ? ' alt' : '';
     const owner = tb.get(t.n), taken = owner!==undefined, mine = taken && owner===S.me;
-    const canPick = slot && !taken && legalFor(slot.owner, t);
+    const canPick = canType() && slot && !taken && legalFor(slot.owner, t);
     const lv = liveVorp(t);
     const wc = UNRATED(t) ? null : dropOff(t);
     const dd = wc==null ? null : dropDetail(t);
@@ -7500,7 +7592,7 @@ function renderTable(){
       <td class="act" data-col="act">${taken
           ? `<button class="ghost" data-undo="${t.n}" title="Drafted by ${S.owners[owner]}">undo</button>`
           : (canPick ? `<button class="primary" data-pick="${t.n}">Draft</button>`
-                     : `<span class="warn" style="font-size:11px">full</span>`)}</td>
+                     : `<span class="warn" style="font-size:11px">${noPickWhy()}</span>`)}</td>
     </tr>`;
   }).join('');
   document.querySelectorAll('thead th.help').forEach(th=>{
@@ -7802,7 +7894,21 @@ function renderRosters(){
              p.useRent?'':'lose'}"><i>rent</i> ${
              p.useRent?`<b>${p.rent.toFixed(1)}</b>`:p.rent.toFixed(1)}</span></span>`
         : `<span class="kv" title="${why}"><b>${p.keep.toFixed(1)}</b></span>`;
-      return `<div class="slot"><span class="sn">${p.t.n}${
+      /* ---- THE LEAGUE'S COPY CARRIES NO ANALYSIS, AND THAT INCLUDES THIS PANEL ---------
+       * Casey, 3 Nov 2026: "when I click on rosters, it's giving them points and edge. We
+       * don't need that. So you can take off points and edge from that one. That's only for
+       * me." The allow-list in `draft_payload.TEAM_FIELDS` governs the team ROWS and never
+       * reached here, because this panel works out its numbers from what it was given.
+       * WHAT STAYS IS THE DRAFT: which team, which pool, and which pick it was. Casey:
+       * "I think it would be good to put the pick number, the round and the pick number next
+       * to each pick that they've made, so we know what round and what pick it was." */
+      const pk = pickOf(name, p.t.n);
+      const at = pk ? `<span class="pickat" title="Round ${pk.round}, pick ${pk.pickInRound
+                        }">R${pk.round}&middot;${pk.pickInRound}</span>` : '';
+      if (OWNERS_ONLY)
+        return `<div class="slot"><span class="sn">${at}${p.t.n}</span>
+          <span class="muted">${p.t.p}</span></div>`;
+      return `<div class="slot"><span class="sn">${at}${p.t.n}${
         p.useRent?`<span class="rent" title="${why}">RENT</span>`:''}</span>
         <span class="muted">${p.t.p} &middot; ${nums}</span></div>`;
     }).join('') || '<div class="muted">—</div>';
@@ -7810,12 +7916,14 @@ function renderRosters(){
     return `<div class="${o===S.me?'owner me':'owner'}">
       <div class="oh"><b>${name}${o===S.me?' (you)':''}</b>
         <span class="cnt"><span class="${nf===NFL_MAX?'full':'need'}">NFL ${nf}/3</span> ·
-          <span class="${cl===COL_MAX?'full':'need'}">COL ${cl}/8</span> ·
+          <span class="${cl===COL_MAX?'full':'need'}">COL ${cl}/8</span>${OWNERS_ONLY
+          ? ` · <span class="muted">${plan.filled}/11 picks</span>`
+          : ` ·
           <b class="edgeno ${plan.dEdge>=0?'hi':'lo'}" title="How much this draft beats spending every pick on a leftover. The sum is printed under the roster.">${
             plan.dEdge>=0?'+':''}${plan.dEdge.toFixed(1)}<span class="edgesub"> edge · ${
-            plan.filled}/11 picks</span></b></span></div>
+            plan.filled}/11 picks</span></b>`}</span></div>
       <div class="ob">${rows}</div>
-      ${(() => {
+      ${OWNERS_ONLY ? '' : (() => {
         const tot = Math.max(0.001, plan.total);
         const sPct = Math.max(0, Math.min(100, 100 * plan.secured / tot));
         const nNfl = plan.parts.filter(x => isNFL(x.t)).length;
@@ -7841,7 +7949,7 @@ function renderRosters(){
           <span><b style="color:${plan.atRisk>0?'var(--gold)':'var(--faint)'}">${
             plan.atRisk.toFixed(1)}</b> needs waiver claims</span></div>`;
       })()}
-      ${plan.rented?`<div class="ofoot" title="Each rented slot needs about four in-season pickups, so this plan is ${plan.rented*4} waiver moves across the year. The points assume you win those claims.">Best plan: hold ${plan.parts.length-plan.rented} team${plan.parts.length-plan.rented===1?'':'s'} all season, rent ${plan.rented}. Renting those ${plan.rented} is worth <b style="color:var(--ink)">${(gap>0?'+':'')+gap.toFixed(1)} points</b> more than holding them.${plan.rented>4?' That is a heavy waiver load.':''}</div>`:''}
+      ${(!OWNERS_ONLY && plan.rented)?`<div class="ofoot" title="Each rented slot needs about four in-season pickups, so this plan is ${plan.rented*4} waiver moves across the year. The points assume you win those claims.">Best plan: hold ${plan.parts.length-plan.rented} team${plan.parts.length-plan.rented===1?'':'s'} all season, rent ${plan.rented}. Renting those ${plan.rented} is worth <b style="color:var(--ink)">${(gap>0?'+':'')+gap.toFixed(1)} points</b> more than holding them.${plan.rented>4?' That is a heavy waiver load.':''}</div>`:''}
       </div>`;
   }).join('');
   /* THE ROSTERS ARE WHAT THIS PANEL IS FOR. Casey, 26 Aug 2026: "you now have a ton of text at
@@ -7849,14 +7957,29 @@ function renderRosters(){
      drafting, not all that text." One line stays; the rest is a click away, in the same in-page
      panel everything else uses -- not hover, because he drafts on an iPad where there is no
      hover, and because hover text is not an answer. */
-  el('rosters').insertAdjacentHTML('afterbegin',
+  /* AND THE EDGE EXPLAINER ABOVE THEM. Casey, 3 Nov 2026: "You can remove the edge stuff at
+     the top where it says edge equals your point 0.0 with the worst possible draft would score.
+     I think we can remove that." On the league's copy there is no edge to explain. */
+  if (!OWNERS_ONLY) el('rosters').insertAdjacentHTML('afterbegin',
     `<div class="whatbar">
        <span><b style="color:var(--ink)">Edge</b> = your points &minus;
          <b style="color:var(--ink)">${L.floor.toFixed(1)}</b>, what the worst possible draft
          would score.</span>
        <button class="ghost" id="btnWhatEdge">How is that worked out?</button>
      </div>`);
-  el('btnWhatEdge').onclick = () => tell('How Edge is worked out', EDGE_HELP(L));
+  const bwe = el('btnWhatEdge');
+  if (bwe) bwe.onclick = () => tell('How Edge is worked out', EDGE_HELP(L));
+}
+/* WHICH PICK A TEAM WENT AT. The draft record already carries the round and the pick within
+   it on every entry, so this is a lookup and not a count -- a count would go wrong the moment
+   a pick is undone. */
+function pickOf(ownerName, teamName){
+  const list = (S && S.picks) || [];
+  for (let i = 0; i < list.length; i++){
+    const x = list[i];
+    if (x.team === teamName && S.owners[x.owner] === ownerName) return x;
+  }
+  return null;
 }
 function EDGE_HELP(L){
   const cy = (L.cycles || []).map(x => x.toFixed(2));
@@ -8101,6 +8224,13 @@ function render(){
  * A BOARD THAT IS NOT SIGNED IN IS NOT GATED. Opened from a file, with no league to ask, it is
  * the practice board it has always been and everything stays on the device.
  */
+/* WHY THERE IS NO DRAFT BUTTON ON THIS ROW. "Full" was the only answer this column had, and
+   it is the wrong one when the reason is that this device is not the one typing. An absence is
+   never an answer. */
+function noPickWhy(){
+  if (!canType()) return 'watching';
+  return 'full';
+}
 function canType(){
   if (typeof DraftStore === 'undefined' || !DraftStore.live()) return true;
   return DS_PHASE === 'running' && amTyping();
@@ -8326,7 +8456,29 @@ el('colList').addEventListener('click', e=>{
   renderColPicker();          // re-measure: the width line has to reflect the click just made
 });
 el('btnPost').onclick = () => showPostseason('nfl');
-el('btnRosters').onclick = () => { render(); el('rosterModal').classList.remove('hide'); };
+el('btnRosters').onclick = () => {
+  render();
+  /* THE PANEL IS BUILT FOR WHICHEVER BOARD THIS IS, once, here -- not by two copies of the
+     markup. The league's copy loses the standings column and spreads the rosters into it. */
+  const g = el('rostGrid'), side = el('rostSide');
+  if (OWNERS_ONLY){
+    if (side){
+      /* RECENT PICKS IS THE DRAFT HAPPENING, so it stays -- it just moves under the rosters
+         now that the column it lived in has gone. */
+      const keep = el('recentH'), lg = el('log');
+      if (keep && lg && g && !el('recentMoved')){
+        const box = document.createElement('div');
+        box.id = 'recentMoved';
+        box.appendChild(keep); box.appendChild(lg);
+        g.appendChild(box);
+      }
+      side.remove();
+    }
+    if (g) g.classList.add('wide');
+    el('rosters').classList.add('ownersonly');
+  }
+  el('rosterModal').classList.remove('hide');
+};
 el('rosterClose').onclick = () => el('rosterModal').classList.add('hide');
 el('rosterCloseTop').onclick = () => el('rosterModal').classList.add('hide');
 el('btnCompare').onclick = ()=>{
@@ -9090,6 +9242,11 @@ function refreshMeSel(keep){
   const names = ownerInputs();
   const was = keep == null ? el('meSel').value : keep;
   el('meSel').innerHTML = names.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+  /* THE SIGN-IN PICKS IT WHEN THERE IS ONE. The seat the league says this device is becomes
+     the selection, so the question below the names answers itself and is hidden. A seat that
+     is not among the nine -- a commissioner setting up another division -- leaves it alone. */
+  const mine = (DS_ME && DS_ME.seat) ? names.indexOf(DS_ME.seat) : -1;
+  if (mine >= 0){ el('meSel').value = String(mine); return; }
   if(was != null && was !== '') el('meSel').value = was;
 }
 el('ownerInputs').addEventListener('input', ()=>{
@@ -9159,14 +9316,32 @@ function renderShut(){
       + 'is safe in the league. A commissioner can open it again.'
     : 'Nobody can pick until a commissioner starts the draft. The board behind this is the real '
       + 'one and it is worth reading — but nothing typed into it now would be recorded.';
+  /* ---- EVERY ACTION THAT MAKES SENSE HERE IS ON HERE ------------------------------------
+   * Casey, 3 Nov 2026: "the first thing I got was a panel that says to open the draft again.
+   * But there was no option to start the draft over. Shouldn't that be an option on that
+   * screen, especially while we're playing around with it here?"
+   * He is right, and the reason it was missing is the panel itself: it covers the board, so
+   * the Start Over in the header behind it cannot be reached. A panel that holds the room has
+   * to carry everything the room needs. */
   const btns = el('shutBtns');
+  const n = draftedAnywhere();
   btns.innerHTML = DS_COMMISH
     ? '<button class="primary" id="shutStart">' + (done ? 'Open It Again' : 'Start the Draft')
       + '</button>'
+      + (n || done
+          ? '<button class="ghost" id="shutClear">Start Over</button>'
+          : '')
     : '<span class="note">Ask Casey or Bob to '
       + (done ? 'open it again' : 'start it') + '.</span>';
   const sb = el('shutStart');
   if (sb) sb.onclick = ()=> setPhase('running');
+  const cb2 = el('shutClear');
+  if (cb2) cb2.onclick = ()=> ask('Clear the draft and start over?',
+      'This clears <b>all three divisions</b> in the league &mdash; '
+      + (n ? '<b>' + n + ' pick' + (n === 1 ? '' : 's') + '</b> and every draw order that has '
+             + 'been set' : 'nothing has been drafted yet, so there is nothing to lose')
+      + '. Every board goes back to the beginning. This cannot be undone.',
+      'Clear all three', ()=> setPhase('notstarted'));
   m.classList.remove('hide');
 }
 
@@ -9759,36 +9934,6 @@ let DS_BUSY = false;      // one flush at a time
 let DS_ASKED = false;     // has the league been asked at all yet
 /* WHAT THE LEAGUE SAYS THIS SIGN-IN MAY TYPE: '' for nothing, one division's name, or 'any' for
    a commissioner. Set from the league's answer and from nothing else. */
-let DS_MAY = null;        // null until asked, then '' or a division or 'any'
-let DS_MINE = [];         // the divisions this person may type
-/* ---- WHAT THE DRAFT IS DOING, AND WHAT THIS READER IS DOING IN IT -------------------------
- * Casey, 3 Nov 2026: "it would just be a view only draft for everyone that's not actually in
- * doing the draft ... they can see what that division drafter is drafting for everybody and see
- * what's still available on the board, and then verbally give their pick to the drafter."
- * TWO ROLES AND ONLY TWO. Typing, which one person per division does, and watching, which is
- * everybody else. A watcher's board is live and sends nothing. There is no third thing: two
- * boards in one division that disagree is the shape of every lost pick this project has had.
- */
-let DS_ME = null;              // the seat the league says this sign-in is
-let DS_PHASE = 'notstarted';   // what the league says: notstarted | running | done
-let DS_PHASE_BY = '';
-let DS_COMMISH = false;
-let DWATCH = {};               // every division's board, for watching
-/* WHETHER THIS DEVICE IS THE ONE TYPING THIS DIVISION. The league decides who MAY; this is
-   about who IS, which is claimed on the night and can change when a phone dies. */
-function amTyping(){
-  const d = divRead();
-  if (DS_MINE.indexOf(d) < 0) return false;        // the league would refuse the write
-  const b = LBOARDS[d] || DWATCH[d] || null;
-  const t = b && b.typist && b.typist.seat;
-  const me = (DS_ME && DS_ME.seat) || '';
-  /* NOBODY HAS CLAIMED IT: the person the league granted it to is the one typing. A
-     commissioner is NOT put in the chair just for being a commissioner -- Casey and Bob will
-     be watching most nights, and a page that starts them typing is a page that will record a
-     pick one of them did not mean to make. */
-  if (!t) return DS_MAY !== 'any';
-  return t === me;
-}
 
 function dsLine(){
   const box = el('dsline');
@@ -9903,6 +10048,7 @@ function dsRead(adopt){
     DS_PHASE_BY = String(a.phase_by || '');
     DS_COMMISH = !!a.commish;
     DS_ME = a.me || null;
+    DS_DESIG = String(a.designated || '');
     /* EVERY DIVISION'S BOARD TO LOOK AT, not just the ones this person may type. */
     DWATCH = a.watch || {};
     DS_MINE = (a.mine && a.mine.length) ? a.mine.slice() : (DS_MAY === 'any' ? DIVS.slice() : []);
@@ -9924,7 +10070,13 @@ function dsRead(adopt){
       try { localStorage.setItem(DIVKEY, DR_DIV); } catch (e) {}
     }
     renderDivStrip();
-    if (adopt) dsAdopt(LBOARDS[divRead()]);
+    /* ---- A WATCHER'S BOARD COMES FROM THE LEAGUE'S RECORD --------------------------------
+     * `LBOARDS` is what this person may TYPE, which for most of the league is nothing at all.
+     * So a watcher had no board to adopt, `S` stayed null, and the page drew zero rows -- they
+     * were handed a blank screen and told they were watching. `DWATCH` is every division's
+     * board, which is what watching means. Casey, 3 Nov 2026: "they can see what that division
+     * drafter is drafting for everybody and see what's still available on the board." */
+    if (adopt) dsAdopt(LBOARDS[divRead()] || DWATCH[divRead()]);
     renderRunBar();
     renderTypeBar();
     renderShut();
