@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: 'd5c12fd1ac08', at: '2026-11-04 01:42 UTC'};
+const WORKER_BUILD = {id: '03c4bc61273a', at: '2026-11-04 02:43 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -1946,9 +1946,25 @@ async function handle(request, env) {
     }
     const rec = {season: DRAFT_SEASON, phase: want, at: new Date().toISOString(),
                  by: (who && who.seat) || ''};
-    /* STARTING OVER CLEARS ALL THREE BOARDS, which is the whole point of it. It is the one
-       destructive act here, so it is its own phase word and the page asks before sending it. */
+    /* STARTING OVER CLEARS THE BOARDS, which is the whole point of it. It is the one
+       destructive act here, so it is its own phase word and the page asks before sending it.
+       ONE DIVISION OR ALL THREE. Casey, 3 Nov 2026: "it says clear all three. It probably
+       should give that as an option or an option to clear an individual division." A division
+       that has gone wrong on the night should not cost the other two their drafts. Clearing
+       ONE leaves the draft running; clearing all three stops it. */
+    const onlyDiv = String(p('div') || '');
     if (want === 'notstarted') {
+      if (onlyDiv) {
+        if (DRAFT_DIVS.indexOf(onlyDiv) < 0) {
+          return out({ok: false, why: 'nodiv', note: 'that is not one of the three divisions'});
+        }
+        await putJSON(env, draftKey(onlyDiv), emptyDraft(onlyDiv));
+        const keep = await readPhase(env);
+        const b1 = {};
+        for (const d of DRAFT_DIVS) b1[d] = draftOut(await readDraft(env, d));
+        return out({ok: true, phase: keep.phase, phase_at: keep.at, phase_by: keep.by,
+                    cleared: onlyDiv, watch: b1, boards: b1});
+      }
       for (const d of DRAFT_DIVS) await putJSON(env, draftKey(d), emptyDraft(d));
     }
     await putJSON(env, PHASE_KEY, rec);
