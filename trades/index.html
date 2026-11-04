@@ -7313,13 +7313,15 @@ function liveAccessTable(){
         + '>Watches the draft</option>'
         + ['PFD', 'VFD', 'SFD'].map(function (d) {
             return '<option value="' + d + '"' + (m.drafts === d ? ' selected' : '') + '>'
-              + 'Types the ' + esc((DATA.div_names && DATA.div_names[d]) || d)
-              + ' draft</option>';
+              /* Casey, 4 Nov 2026: "Quit using the word typing. We're not typing ... you are
+                 drafting for predator. That is probably the best thing." */
+              + 'Drafts for ' + esc((DATA.div_names && DATA.div_names[d]) || d)
+              + '</option>';
           }).join('')
         + '</select>'
         + (m.role === 'commissioner'
             ? '<div class="f" style="font-size:11px;margin-top:4px">A commissioner can take '
-              + 'the keyboard for any division during the draft, whatever this says.</div>'
+              + 'over the drafting for any division during the draft, whatever this says.</div>'
             : '')
         + '</td>'
         + '<td>' + (m.signedIn
