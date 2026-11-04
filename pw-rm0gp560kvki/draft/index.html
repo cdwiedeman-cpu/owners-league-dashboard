@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 02:43 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
+<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 06:49 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -98,12 +98,24 @@ header{padding:7px 14px;gap:10px}
  *   row 2  what the league is doing and who is typing
  *   row 3  the clock: round, pick, who is up
  */
-#dsline, #typeBar{flex-basis:100%;order:8}
+/* ---- AND IT IS TWO ROWS, NOT FOUR --------------------------------------------------------
+ * Casey, 3 Nov 2026: "you've cut off so much of the space for looking at the draft board ...
+ * create more space. Like, get rid of a lot of that text that you have. And if you kind of
+ * reorganize some of those boxes up above the draft board, I think that will help."
+ * The status line, the typing line and the save chip were each taking a row and each saying a
+ * version of the same thing. They share row one with the controls now; the clock keeps row two
+ * to itself, because it is the only part that must never move while he is drafting.
+ */
+#typeBar, #dsline, #freshness, #saveState, #saveWhy{order:5}
 .clock{flex-basis:100%;order:9;margin-left:0}
-#freshness, #saveState, #saveWhy{order:9}
 .buildstamp{order:10}
 #standIn{display:none}
-#standIn.open{display:block;flex-basis:100%;font-size:11px}
+/* IT OPENS ON A ROW OF ITS OWN, BELOW. Casey, 3 Nov 2026: "when you click the question mark,
+   then the question mark comes down below the text verbiage ... So it's hard to find to close
+   that text." The text comes before the button in the document, so opening it pushed the
+   button onto the next line. An `order` past everything in the first row fixes it without
+   moving anything in the markup. */
+#standIn.open{display:block;flex-basis:100%;font-size:11px;order:7}
 #dsline{font-size:12px;font-weight:600;border:0;padding:2px 0}
 #dsline.warn{color:var(--warntx)}
 header h1{font-size:13.5px}
@@ -150,7 +162,12 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 360px;align-items:s
 #boardcol{display:flex;flex-direction:column;border-right:1px solid var(--line)}
 /* THE SIDE PANEL FOLLOWS THE SCROLL rather than scrolling on its own. It is only taller than
    the window when a team is open in it, and then it takes its own scroll back. */
-#side{position:sticky;top:0;max-height:100vh;overflow:auto;background:var(--panel);min-width:0}
+/* NO BACKGROUND OF ITS OWN. Casey, 3 Nov 2026: "there's also, like, this big blue bar at the
+   bottom ... it's just empty blue space down there. Like, there was supposed to be buttons or
+   something, but it's not needed." That was this column, painted full height whether it had
+   anything in it or not -- and on the league's board the advisor is hidden, so it usually does
+   not. The cards inside it carry their own. */
+#side{position:sticky;top:0;max-height:100vh;overflow:auto;background:transparent;min-width:0}
 /* ON A NARROW SCREEN THE SIDE PANEL GOES UNDER THE BOARD, not beside it. A fixed 360px column
    next to the board is wider than any phone, and that is what made this page scroll sideways at
    every width below about 740px. Nothing is dropped: the panel is still there, underneath. */
@@ -465,6 +482,12 @@ table.mini tr.best td{background:var(--accbg)}
 /* The save/load textareas scroll too, and a scroller without this chains its overscroll to
    whatever is behind the popup -- the same gesture bug, in the one panel used under pressure. */
 #saveText,#loadText,#omScroll,#edMatch{overscroll-behavior:contain}
+/* THE HEADING AND ITS CLOSE BUTTON STAY PUT while a long explanation is scrolled. The card is
+   the scroller, so the bar sticks to the top of it and carries the card's own background. */
+.mhcard{padding-top:0}
+.mhhead{position:sticky;top:0;z-index:3;background:var(--panel);display:flex;
+  align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 0 10px}
+.mhhead h2{margin:0}
 /* A tall card on a short screen should start at the top rather than be centred and clipped. */
 @media (max-height:700px){ .overlay{align-items:flex-start} }
 /* The in-page confirm sits ON TOP of whatever asked the question -- it is opened from inside
@@ -758,6 +781,23 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
 .sch tr.byerow td:first-child{border-left:3px solid var(--gold)}
 .byetag{display:inline-block;font-weight:800;letter-spacing:.08em;font-size:10px;
   color:var(--gold);border:1px solid var(--gold);border-radius:3px;padding:0 4px;margin-right:5px}
+/* ---- THE SCHEDULE ON THE LEAGUE'S COPY --------------------------------------------------
+ * Casey, 4 Nov 2026: "when I click on a team like the Minnesota Vikings, it does pop up with
+ * the schedule, but it slightly scrolls left and right ... you have massive gaps between the
+ * week, the opponent, and the where. And then you have the team names that they're playing
+ * left justified and the column name centered."
+ * Three separate causes, one per complaint. The table was auto-layout inside a 1000px panel,
+ * so three short columns were stretched across the whole width. The cells were left aligned
+ * and the headers took the table's own centre default. And a long opponent name with nowhere
+ * to wrap pushed the last column past the edge, which is where the sideways scroll came from.
+ * Fixed widths, a column the opponent can wrap inside, one alignment per column, and the whole
+ * table held to a readable width instead of the panel's.
+ */
+.schplain{padding:12px 14px 0;max-width:560px}
+table.schp{table-layout:fixed;width:100%}
+table.schp col.cwhen{width:70px} table.schp col.cwhere{width:84px}
+table.schp th, table.schp td{text-align:left}
+table.schp td:nth-child(2){white-space:normal;overflow-wrap:anywhere}
 .sch .W{color:var(--good)} .sch .L{color:var(--bad)}
 .cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 /* Compare opens as a WIDE overlay, not inside the 380px side panel — two teams cannot
@@ -1163,7 +1203,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
          league has a newer build. Nobody has to read a date to find out.
          IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
          and what to ask for when a copy looks wrong. -->
-    <div class="build buildstamp hide" id="build">build 04 Nov 2026 02:43 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build buildstamp hide" id="build">build 04 Nov 2026 06:49 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
@@ -1454,8 +1494,14 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
 
 <!-- ============ what does this column mean ============ -->
 <div class="overlay hide" id="mhModal">
-  <div class="card" style="max-width:680px">
-    <h2 id="mhTitle"></h2>
+  <!-- THE WAY OUT IS WHERE THE READER ARRIVES. Casey, 4 Nov 2026: "when you click the question
+       mark, then the question mark comes down below the text verbiage. So it's hard to find to
+       close that text." The only Close was under the explanation, so a long one pushed it off
+       the screen. There is one beside the heading now, and it stays there while the panel is
+       scrolled. "Got it" is still at the end for anybody who reads to the end. -->
+  <div class="card mhcard" style="max-width:680px">
+    <div class="mhhead"><h2 id="mhTitle"></h2>
+      <button class="ghost" id="mhX">Close</button></div>
     <div id="mhBody" class="mhbody"></div>
     <div class="rowbtns"><button class="primary" id="mhClose">Got it</button>
       <button class="ghost hide" id="mhMore"></button></div>
@@ -2521,6 +2567,7 @@ let DS_MINE = [];         // the divisions this person may type
 let DS_ME = null;              // the seat the league says this sign-in is
 let DS_PHASE = 'notstarted';   // what the league says: notstarted | running | done
 let DS_PHASE_BY = '';
+let DS_PHASE_EMAIL = '';       // only ever sent to a commissioner
 let DS_COMMISH = false;
 let DS_DESIG = '';             // the division the access list names for this person, or ''
 let DWATCH = {};               // every division's board, for watching
@@ -3852,8 +3899,7 @@ function divSwitch(d){
       const s2 = autoRead();
       if (s2){ adoptState(s2); renderDivStrip(); return; }
       S = null;
-      el('setup').classList.remove('hide');
-      fillDivOwners();
+      if (DS_PHASE === 'running') boardFromLeague(); else openSetup();
       renderDivStrip();
     });
     return;
@@ -3863,8 +3909,7 @@ function divSwitch(d){
   /* NOTHING SAVED FOR THIS DIVISION YET, so it starts where any draft starts: the setup screen,
      with that division's nine owners already in it. */
   S = null;
-  el('setup').classList.remove('hide');
-  fillDivOwners();
+  openSetup();
   renderDivStrip();
 }
 /* THE NINE NAMES COME FROM THE LEAGUE, not from this device. They are the owners the season
@@ -3891,6 +3936,7 @@ function fillDivOwners(){
    * Start Draft button for a draft they cannot start, on a page where nothing they press is
    * sent. The card is for the person who is about to type, and for a commissioner, who sets
    * the three divisions up before the night. */
+  if (!setupAllowed()){ el('setup').classList.add('hide'); return; }
   const asked = DS_MAY !== null;
   /* NOT BEFORE THE LEAGUE HAS ANSWERED. Hiding on a guess puts the typist's own screen away a
      second before the answer arrives that says it is theirs, and nothing brings it back. Three
@@ -4604,7 +4650,7 @@ function showDetailPlain(name){
   const rows = (t.sched || []).map(g =>
     `<tr><td class="muted" style="white-space:nowrap">${_esc(g.w || '')}</td>`
   + `<td>${_esc(g.l === 'Away' ? 'at ' : g.l === 'Neutral' ? 'vs ' : '')}${_esc(g.o || '')}</td>`
-  + `<td class="muted">${_esc(g.l || '')}</td></tr>`).join('');
+  + `<td class="muted" style="white-space:nowrap">${_esc(g.l || '')}</td></tr>`).join('');
   el('detailWrap').classList.remove('hide');
   d.scrollTop = 0;
   d.innerHTML = `
@@ -4616,8 +4662,10 @@ function showDetailPlain(name){
         owner !== undefined ? ` &middot; <b style="color:var(--gold)">drafted by ${_esc(S.owners[owner])}</b>` : ''}</div>
       <div class="sub">${_esc(t.src || '')}</div>
     </div>
-    ${rows ? `<table class="mini"><thead><tr><th>When</th><th style="text-align:left">Opponent</th>
-      <th>Where</th></tr></thead><tbody>${rows}</tbody></table>`
+    ${rows ? `<div class="schplain"><table class="mini schp">
+      <colgroup><col class="cwhen"><col><col class="cwhere"></colgroup>
+      <thead><tr><th>When</th><th>Opponent</th><th>Where</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`
     : `<div class="empty">No schedule is in this copy of the board for ${_esc(t.n)}.</div>`}`;
   const c = el('dClose'); if (c) c.onclick = hideDetail;
 }
@@ -8312,8 +8360,15 @@ function render(){
 /* WHY THERE IS NO DRAFT BUTTON ON THIS ROW. "Full" was the only answer this column had, and
    it is the wrong one when the reason is that this device is not the one typing. An absence is
    never an answer. */
+/* WHY THERE IS NO DRAFT BUTTON ON THIS ROW -- AND NOTHING AT ALL WHEN THE READER IS WATCHING.
+ * Casey, 3 Nov 2026: "you have in the draft line for every team that it's watching instead of
+ * the draft button. I think you just take that off because it's confusing. Minnesota Vikings,
+ * like they're being watched ... That's not what we mean."
+ * He is right -- a word in the team's own row reads as a fact about the team. Whether this
+ * reader can draft is said once, at the top, and a row with no button says the rest. "Full" is
+ * different: that IS about the team, for a roster that cannot take it. */
 function noPickWhy(){
-  if (!canType()) return 'watching';
+  if (!canType()) return '';
   return 'full';
 }
 function canType(){
@@ -9240,6 +9295,7 @@ el('btnOwners').onclick = ()=>{
 };
 el('ownCancel').onclick = ()=> el('ownModal').classList.add('hide');
 el('mhClose').onclick = ()=> el('mhModal').classList.add('hide');
+el('mhX').onclick = ()=> el('mhModal').classList.add('hide');
 el('ownSave').onclick = ()=>{
   /* [data-ow] and not "input", because the row now also carries the "this is me" radio. */
   const names = [...el('ownRows').querySelectorAll('input[data-ow]')]
@@ -9384,6 +9440,89 @@ el('btnSaveOwners').onclick = ()=> saveOwners(false);
  * has not drafted, and showing the league's picks if it has. Start Draft is still the only
  * thing that begins one. The card comes back from the Reset button, which is where it belongs
  * and where he looked for it. */
+/* ---- WHICH BUTTONS A PERSON GETS, BY WHAT THEY ARE DOING ---------------------------------
+ * Casey, 3 Nov 2026: "if I am one that is not drafting and I'm just watching, the buttons at
+ * the top, like type a pick, undo, save, load, draw, edit owners, I shouldn't have those ...
+ * for the actual drafter, they should have type a pick, undo, save, load, and draw order. They
+ * should not be able to edit owners or edit the draft. The reset should probably only be
+ * available to me and Bob as commissioners."
+ * THREE SETS, AND THE REASON EACH BUTTON IS IN ITS SET:
+ *   TYPING   acts on the draft -- Type a Pick, Undo, Draw Order. Follows `canType()`, so a
+ *            commissioner who has not taken the keyboard does not get them either. That is
+ *            what made Draw Order do nothing when he pressed it: it was drawn and then the
+ *            handler refused it in silence.
+ *   RUNNING  changes the draft rather than playing it -- Edit Owners, Edit Draft, Reset. The
+ *            commissioners'.
+ *   ANYBODY  Save and Load take a copy. They harm nothing and a watcher may want one.
+ */
+function syncDraftButtons(){
+  const typing = canType();
+  const boss = DS_COMMISH || (typeof DraftStore === 'undefined') || !DraftStore.live();
+  const show = (id, on) => { const n = el(id); if (n) n.classList.toggle('hide', !on); };
+  ['btnManual', 'btnUndo', 'btnOrder'].forEach(id => show(id, typing));
+    /* LOAD IS A COMMISSIONER'S. Casey, 4 Nov 2026: "I would probably want us to do that as a
+     commissioner because it's going to be confusing for everybody else if that situation ever
+     did occur where we didn't have Wi-Fi and we had to save the draft and then load a draft."
+     Save is still everybody's: taking a copy harms nothing. */
+  ['btnOwners', 'btnEditDraft', 'btnReset', 'btnLoad'].forEach(id => show(id, boss));
+}
+
+/* ---- THE SETUP CARD BELONGS TO A BOARD WITH NO LEAGUE BEHIND IT --------------------------
+ * Casey, 4 Nov 2026: "I don't think those boxes should be editable anymore because they're
+ * coming from the access list. So if we are going to have a different team name drafting, then
+ * we need to change them on the access list first before the draft ... if we start the draft,
+ * then that's it, right? It doesn't need to come to this setup draft page."
+ * He is right. Every field on that card is now decided somewhere else: the nine names come from
+ * the access list, the draft is opened by a commissioner on the panel, and a saved draft is
+ * loaded from the same panel. So the card is only ever drawn on a board that is standing on its
+ * own with no league to ask -- which is what the page does on a laptop with no sign-in.
+ */
+function setupAllowed(){
+  return (typeof DraftStore === 'undefined') || !DraftStore.live();
+}
+function openSetup(){
+  if (!setupAllowed()) return false;
+  el('setup').classList.remove('hide');
+  fillDivOwners();
+  return true;
+}
+/* ---- A LIVE DRAFT STARTS ON THE BOARD, NOT ON A FORM -------------------------------------
+ * The nine names are the league's, so there is nothing to fill in. This builds the division's
+ * board from them and goes straight to it. `me` is matched to this reader's own seat, which is
+ * the one thing the card used to ask and the sign-in already answers.
+ */
+function boardFromLeague(){
+  const d = divRead();
+  const names = (LOWNERS[d] || []).length ? LOWNERS[d] : ((DATA.div_owners || {})[d] || []);
+  if (names.length !== NOWNERS) return false;
+  const mine = (DS_ME && DS_ME.seat) ? names.indexOf(DS_ME.seat) : -1;
+  S = {owners: names.slice(), me: mine >= 0 ? mine : 0, orders: {}, picks: [], custom: [],
+       own: loadOwnWins(), board: loadBoardOrder(),
+       fastpins: loadFastOrder(), fastrec: loadFastRecs()};
+  el('setup').classList.add('hide');
+  render();
+  if (canType()) dsOwners(names);
+  return true;
+}
+/* ---- LOADING A SAVED DRAFT, ONE DIVISION AT A TIME --------------------------------------- */
+function askLoadDivision(){
+  const rows = DIVS.map(d => '<button class="ghost" data-loaddiv="' + d + '">'
+    + divLabel(d) + '</button>').join(' ');
+  showHelpPanel('Load a Saved Draft',
+    '<p>A saved draft is one division\'s board. Say which division this file is for, then pick '
+    + 'the file or paste the text.</p>'
+    + '<p class="note">The picks go to the league as soon as the draft is running, so the other '
+    + 'owners see them. Loading replaces whatever that division is holding now.</p>'
+    + '<div class="rowbtns">' + rows + '</div>');
+  document.querySelectorAll('[data-loaddiv]').forEach(b => b.onclick = ()=>{
+    el('mhModal').classList.add('hide');
+    const d = b.dataset.loaddiv;
+    if (d === divRead()){ openLoad(); return; }
+    divSwitch(d);
+    setTimeout(openLoad, 350);
+  });
+}
+
 /* ---- THE PANEL THAT HOLDS THE ROOM WHILE THE DRAFT IS NOT OPEN ---------------------------
  * Drawn over the board whenever the league says the draft is not running. A commissioner gets
  * the button that opens it; everybody else is told who can. It has no way out on purpose: the
@@ -9408,8 +9547,11 @@ function renderShut(){
   el('shutBody').innerHTML = done
     ? 'A commissioner stopped the draft, so nothing can be picked. Everything already drafted '
       + 'is safe in the league. A commissioner can open it again.'
-    : 'Nobody can pick until a commissioner starts the draft. The board behind this is the real '
-      + 'one and it is worth reading — but nothing typed into it now would be recorded.';
+    /* ONE SENTENCE. Casey, 4 Nov 2026: "nobody can pick until the commissioner starts the
+       draft. That makes sense. The next sentence, the board behind this is the real one and is
+       worth reading, but nothing typed into it would be recorded. That makes no sense to me.
+       Why do we need that sentence at all? Just keep it simple." */
+    : 'Nobody can pick until a commissioner starts the draft.';
   /* ---- EVERY ACTION THAT MAKES SENSE HERE IS ON HERE ------------------------------------
    * Casey, 3 Nov 2026: "the first thing I got was a panel that says to open the draft again.
    * But there was no option to start the draft over. Shouldn't that be an option on that
@@ -9417,6 +9559,12 @@ function renderShut(){
    * He is right, and the reason it was missing is the panel itself: it covers the board, so
    * the Start Over in the header behind it cannot be reached. A panel that holds the room has
    * to carry everything the room needs. */
+  /* ---- AND LOADING A SAVED DRAFT IS ON HERE TOO ----------------------------------------
+   * Casey, 4 Nov 2026: "on that same start the draft original page, we can load a draft. And
+   * then when we load the draft, we need to be able to select the division that we load the
+   * draft for ... let's keep that limited to commissioners."
+   * This is the screen a night that went wrong comes back to, so the file that saved it is
+   * opened from here. It asks which division first, because a draft file does not say. */
   const btns = el('shutBtns');
   const n = draftedAnywhere();
   btns.innerHTML = DS_COMMISH
@@ -9425,12 +9573,15 @@ function renderShut(){
       + (n || done
           ? '<button class="ghost" id="shutClear">Start Over</button>'
           : '')
+      + '<button class="ghost" id="shutLoad">Load a Saved Draft</button>'
     : '<span class="note">Ask Casey or Bob to '
       + (done ? 'open it again' : 'start it') + '.</span>';
   const sb = el('shutStart');
   if (sb) sb.onclick = ()=> setPhase('running');
   const cb2 = el('shutClear');
   if (cb2) cb2.onclick = askStartOver;
+  const lb2 = el('shutLoad');
+  if (lb2) lb2.onclick = askLoadDivision;
   m.classList.remove('hide');
 }
 
@@ -9502,7 +9653,9 @@ function claimTyping(take){
        Every Draft button on the board is drawn from `canType()`, so moving the keyboard
        changes 300 rows. Re-drawing the one bar that announced it was never going to be
        enough. */
-    return dsRead(true).then(()=> { renderTypeBar(); render(); dsLine(); return true; });
+    return dsRead(true).then(()=> {
+      renderTypeBar(); syncDraftButtons(); render(); dsLine(); return true;
+    });
   });
 }
 
@@ -9516,10 +9669,16 @@ function renderRunBar(){
   if (!DS_COMMISH || !live){ bar.classList.add('hide'); return; }
   bar.classList.remove('hide');
   bar.classList.toggle('on', DS_PHASE === 'running');
-  const who = DS_PHASE_BY ? ' by ' + _esc(DS_PHASE_BY) : '';
+  /* WHO OPENED IT, BY THE NAME THAT IDENTIFIES A PERSON. Casey, 3 Nov 2026: "it's not
+     controlled by Palma, it's controlled by me ... shouldn't you have, like, almost use the
+     email address that it's being controlled by?" A seat can hold two people, so the seat name
+     does not answer "who did this". The league sends the address to a COMMISSIONER ONLY, which
+     is the half of the back end that may carry one, and falls back to the seat otherwise. */
+  const byWhom = DS_PHASE_EMAIL || DS_PHASE_BY;
+  const who = byWhom ? ', opened by ' + _esc(byWhom) : '';
   el('runState').textContent =
-      DS_PHASE === 'running' ? 'The draft is running' + who
-    : DS_PHASE === 'done'    ? 'The draft is finished' + who
+      DS_PHASE === 'running' ? 'The draft is open' + who
+    : DS_PHASE === 'done'    ? 'The draft is stopped' + who
     :                          'The draft has not started';
   el('btnDraftStart').hidden = DS_PHASE === 'running';
   el('btnDraftStart').textContent = DS_PHASE === 'done' ? 'Open It Again' : 'Start the Draft';
@@ -9542,6 +9701,7 @@ function setPhase(phase, onlyDiv){
       return false;
     }
     DS_PHASE = a.phase; DS_PHASE_BY = a.phase_by || '';
+    DS_PHASE_EMAIL = a.phase_by_email || DS_PHASE_EMAIL;
     DWATCH = a.watch || DWATCH;
     /* ---- STARTING OVER STARTS THIS PAGE OVER TOO -----------------------------------------
      * Casey, 3 Nov 2026: "when I clear all three, okay, now it says the draft is not started.
@@ -9552,25 +9712,21 @@ function setPhase(phase, onlyDiv){
      * Start Draft found a board already here and went straight to it. Clearing means
      * clearing: the local board goes, and the next start begins where a draft begins. */
     if (phase === 'notstarted'){
-      if (!onlyDiv || onlyDiv === divRead()){
-        S = null;
-        try { localStorage.removeItem(divKey()); } catch (e) {}
-      }
-      if (!onlyDiv){
-        DIVS.forEach(d => {
-          try { localStorage.removeItem(AUTOKEY + ':' + d); } catch (e) {}
-        });
-      }
+      /* THE LOCAL COPY OF EVERY DIVISION THAT WAS CLEARED GOES TOO, not just the one on screen.
+         Clearing Viper from the Predator board and then switching to Viper would otherwise show
+         the board this device had been holding all along, which the league no longer has. */
+      const gone = onlyDiv ? [onlyDiv] : DIVS.slice();
+      gone.forEach(d => { try { localStorage.removeItem(AUTOKEY + ':' + d); } catch (e) {} });
+      if (gone.indexOf(divRead()) >= 0) S = null;
     }
     renderRunBar();
     renderShut();
     /* AND THE FIRST STEP OF A DRAFT COMES BACK. The panel put the setup card away; opening the
        draft is exactly the moment it is wanted again. */
     return dsRead(true).then(()=>{
-      if (DS_PHASE === 'running' && !S){
-        el('setup').classList.remove('hide');
-        fillDivOwners();
-      }
+      /* AND IT GOES STRAIGHT TO THE BOARD. The names are the access list's, so there is
+         nothing to set up: starting the draft is the whole of starting the draft. */
+      if (DS_PHASE === 'running' && !S) boardFromLeague();
       renderShut();
       return true;
     });
@@ -9583,26 +9739,45 @@ function setPhase(phase, onlyDiv){
  * three stops it, which is what "start over" means.
  * ONE PANEL, TWO BUTTONS, AND BOTH SAY WHAT THEY TAKE. */
 function askStartOver(){
-  const d = divRead();
-  const one = ((DWATCH[d] || LBOARDS[d] || {}).picks || []).length;
+  /* EVERY DIVISION BY NAME, NOT JUST THE ONE ON SCREEN. Casey, 4 Nov 2026: "shouldn't it allow
+     me to clear Predator? Clear Scorpion or clear Viper as a commissioner? I should be able to
+     clear each one individually so that we're only starting over one draft or the other ... I
+     may want to clear Viper and keep Predator going."
+     The first version offered "this division" and "all three", which meant switching the board
+     over to Viper just to clear Viper -- and on a draft night the board you are looking at is
+     the one you are running. */
+  const picksIn = (d) => ((DWATCH[d] || LBOARDS[d] || {}).picks || []).length;
+  const count = (n) => n ? ' <span class="muted">(' + n + ' pick' + (n === 1 ? '' : 's')
+                            + ')</span>' : ' <span class="muted">(empty)</span>';
   const all = draftedAnywhere();
   showHelpPanel('Start Over',
     '<p>Clearing puts a board back to the beginning: no picks, no draw order, and the nine '
     + 'names come fresh from the access list. It cannot be undone.</p>'
-    + '<div class="rowbtns" style="margin-top:12px">'
-    + '<button class="ghost" id="soOne">Clear ' + _esc(divLabel(d)) + ' only'
-    + (one ? ' (' + one + ' pick' + (one === 1 ? '' : 's') + ')' : '') + '</button>'
-    + '<button class="primary" id="soAll">Clear all three and stop the draft'
-    + (all ? ' (' + all + ' pick' + (all === 1 ? '' : 's') + ')' : '') + '</button>'
+    + '<p class="note">Clearing one division leaves the draft running for the other two. '
+    + 'Clearing all three stops the draft.</p>'
+    + '<div class="rowbtns" style="margin-top:12px;flex-direction:column;align-items:stretch">'
+    + DIVS.map(d => '<button class="ghost" data-clear="' + d + '">Clear '
+        + _esc(divLabel(d)) + count(picksIn(d)) + '</button>').join('')
+    + '<button class="primary" id="soAll" style="margin-top:6px">Clear all three and stop '
+    + 'the draft' + count(all) + '</button>'
     + '<button class="ghost" id="soNo">Leave it alone</button></div>');
   el('soNo').onclick = ()=> el('mhModal').classList.add('hide');
-  el('soOne').onclick = ()=>{
-    el('mhModal').classList.add('hide');
-    setPhase('notstarted', d);
-  };
+  el('mhBody').querySelectorAll('[data-clear]').forEach(b => {
+    b.onclick = ()=>{
+      const d = b.getAttribute('data-clear');
+      el('mhModal').classList.add('hide');
+      ask('Clear the ' + divLabel(d) + ' draft?',
+          'Only ' + divLabel(d) + ' goes back to the beginning. The other two carry on and the '
+          + 'draft stays open. This cannot be undone.',
+          'Clear ' + divLabel(d), ()=> setPhase('notstarted', d));
+    };
+  });
   el('soAll').onclick = ()=>{
     el('mhModal').classList.add('hide');
-    setPhase('notstarted');
+    ask('Clear all three and stop the draft?',
+        'Every division goes back to the beginning and the draft reads as not started, so '
+        + 'nobody can pick until a commissioner opens it again. This cannot be undone.',
+        'Clear all three', ()=> setPhase('notstarted'));
   };
 }
 el('btnDraftStart').onclick = ()=> setPhase('running');
@@ -9645,6 +9820,7 @@ function showHelpPanel(title, html){
   el('mhBody').innerHTML = html;
   const more = el('mhMore'); if (more) more.classList.add('hide');
   el('mhModal').classList.remove('hide');
+  el('mhModal').querySelector('.card').scrollTop = 0;
 }
 el('btnSetupClose').onclick = ()=>{
   /* NOTHING BEHIND THE CARD MEANS NOTHING TO CLOSE TO. `render()` draws the board out of `S`,
@@ -9841,6 +10017,7 @@ function adoptState(s){
   _rankCache = null; _tierCut = null;
   el('setup').classList.add('hide');
   render();
+  dsReplay();
 }
 
 let _downloads;                    // undefined = not asked, null = this page has none
@@ -10025,12 +10202,22 @@ el('fileIn').onchange = e=>{
   rd.readAsText(f); e.target.value='';
 };
 el('btnReset').onclick = ()=>{
-  ask('Clear all picks and start over?',
-      'Every pick and every round&rsquo;s draw order goes. <b>Three things stay: your nine owner '
-    + 'names, every CW and DP win total you have typed, and your own board order.</b> Each of '
-    + 'those is kept separately from the draft, and your ranking has its own button &mdash; '
-    + '<b>Reset My Order</b>, beside the search box &mdash; which is the only thing that '
-    + 'discards it. Save first if you want a backup of the board as it stands.',
+  /* ---- THE SAME BUTTON, TWO PAGES, TWO LISTS OF WHAT SURVIVES -------------------------------
+   * Casey, 3 Nov 2026: "the wording in there says these three things stay, your 9 owner names,
+   * every CW and DP win total. Well, this is more generically for everyone, so you need to
+   * clean up the wording inside that box."
+   * CW, DP and his drag-and-drop order are columns only his own page has. Naming them on the
+   * league's copy describes something the reader cannot see, so each page lists what IT keeps. */
+  const keeps = OWNERS_ONLY
+    ? 'Every pick and every round&rsquo;s draw order goes. <b>The nine owner names stay.</b> '
+      + 'They are kept separately from the draft. Save first if you want a copy of the board as '
+      + 'it stands.'
+    : 'Every pick and every round&rsquo;s draw order goes. <b>Three things stay: your nine owner '
+      + 'names, every CW and DP win total you have typed, and your own board order.</b> Each of '
+      + 'those is kept separately from the draft, and your ranking has its own button &mdash; '
+      + '<b>Reset My Order</b>, beside the search box &mdash; which is the only thing that '
+      + 'discards it. Save first if you want a backup of the board as it stands.';
+  ask('Clear all picks and start over?', keeps,
       'Clear the draft', ()=>{
     /* S.board is deliberately NOT cleared here. Reset draft resets the DRAFT. His ranking has
        its own button, two feet to the left, that says exactly what it discards. */
@@ -10045,8 +10232,7 @@ el('btnReset').onclick = ()=>{
      * came back if he closed the page and opened it again, which is a step nobody would guess
      * at and nothing on the page mentioned. Clearing a draft and starting one are the same
      * moment, so Reset ends where Start Draft begins. */
-    el('setup').classList.remove('hide');
-    fillDivOwners();
+    openSetup();
   });
 };
 
@@ -10110,11 +10296,21 @@ function dsLine(){
    * left to be worked out. A page that looks like it is recording and is not is the whole
    * class of bug this project has paid for twice. */
   if (DS_PHASE === 'running'){
+    /* SHORT, BECAUSE EVERYTHING ELSE IN THIS HEADER SAYS THE REST. Casey, 3 Nov 2026: "saying
+       five picks saved in the league, you always already say that down below ... it seems like
+       it's just extra stuff." The save chip carries the count, the typing bar carries who is
+       at the keyboard; this says which of the two things THIS reader is doing, and stops. */
     bits.push(amTyping()
-      ? '<b>You are typing ' + divLabel(d) + '.</b> Your picks go to the league.'
-      : '<b>Watching ' + divLabel(d) + '.</b> Nothing you do here is sent. Give your pick to '
-        + 'whoever is typing.');
-  } else if (DS_PHASE === 'done'){
+      ? '<b>You are drafting ' + divLabel(d) + '</b>'
+      : '<b>Watching ' + divLabel(d) + '</b> &mdash; your picks are not sent');
+    box.innerHTML = bits.join(' &middot; ');
+    box.className = (q || DS_NOTE) ? 'build warn' : 'build';
+    if (q) box.innerHTML += ' &middot; <b>' + q + ' pick' + (q === 1 ? '' : 's')
+                            + ' not in the league yet</b>';
+    if (DS_NOTE) box.innerHTML += ' &middot; ' + _esc(DS_NOTE);
+    return;
+  }
+  if (DS_PHASE === 'done'){
     bits.push('<b>The draft is finished.</b>');
   } else {
     bits.push('<b>The draft has not started.</b> A commissioner starts it. Anything you do here '
@@ -10133,7 +10329,8 @@ function dsLine(){
                      : 'nothing drafted yet, and the league is holding the board')
               : (DS_ASKED ? divLabel(d) + ': the league has no board for this division yet'
                           : divLabel(d) + ': asking the league'));
-  if (b && b.typist && b.typist.seat) bits.push('typed by ' + _esc(b.typist.seat));
+  /* Casey, 3 Nov 2026: "instead of saying typed, it should be called drafted by Tom." */
+  if (b && b.typist && b.typist.seat) bits.push('drafted by ' + _esc(b.typist.seat));
   if (q) bits.push('<b>' + q + ' pick' + (q === 1 ? '' : 's') + ' not in the league yet</b>');
   if (DS_NOTE) bits.push(_esc(DS_NOTE));
   box.innerHTML = bits.join(' &middot; ');
@@ -10189,6 +10386,7 @@ function dsRead(adopt){
     /* WHAT THE LEAGUE SAYS THE DRAFT IS DOING, and whether this reader runs it. */
     DS_PHASE = String(a.phase || 'notstarted');
     DS_PHASE_BY = String(a.phase_by || '');
+    DS_PHASE_EMAIL = String(a.phase_by_email || '');
     DS_COMMISH = !!a.commish;
     DS_ME = a.me || null;
     DS_DESIG = String(a.designated || '');
@@ -10223,6 +10421,7 @@ function dsRead(adopt){
     renderRunBar();
     renderTypeBar();
     renderShut();
+    syncDraftButtons();
     dsLine();
     return a;
   });
@@ -10310,6 +10509,24 @@ function dsUndo(team){
     return;
   }
   dsSend(seq => DraftStore.undo(d, team, seq));
+}
+/* ---- A LOADED DRAFT GOES TO THE LEAGUE ----------------------------------------------------
+ * A draft loaded from a file and kept on one device is the lost-trade bug again: the board says
+ * nine owners have drafted and the league has nothing. So a load is replayed through the same
+ * three doors a live draft uses -- the owners, each round's draw, then every pick in order.
+ * The picks go through the queue, which already handles a refusal and a stale version.
+ * NOTHING IS SENT when the draft is not running or this device is not the one typing, because
+ * the league would refuse every line of it.
+ */
+function dsReplay(){
+  if (!DraftStore.live() || !S) return;
+  if (DS_PHASE !== 'running' || !canType()) return;
+  const d = divRead();
+  dsOwners(S.owners);
+  Object.keys(S.orders || {}).forEach(k => dsDraw(+k, S.orders[k]));
+  (S.picks || []).forEach(p => DraftStore.queueAdd(d, p.team, p.owner));
+  dsLine();
+  dsFlush();
 }
 function dsOwners(names){
   if (!DraftStore.live()) return;
@@ -10410,7 +10627,12 @@ function dsBoot(){
   const start = code ? DraftStore.redeem(code) : Promise.resolve(null);
   start.then(() => {
     if (!DraftStore.live()){ dsLine(); return; }
-    return dsRead(true).then(() => dsFlush());
+    return dsRead(true).then(() => {
+      /* A RUNNING DRAFT AND NOTHING ON THIS DEVICE YET. Happens to every reader who opens the
+         page after the draft was started, so it must not land on a form. */
+      if (DS_PHASE === 'running' && !S) boardFromLeague();
+      return dsFlush();
+    });
   });
   setInterval(() => { dsFlush().then(dsPoll); }, 12000);
 }
@@ -10424,7 +10646,17 @@ dsBoot();
   if (!readOwners()) fillDivOwners();
 })();
 (function showCarryOver(){
+  /* ---- IT IS ABOUT COLUMNS ONLY HIS OWN PAGE HAS ---------------------------------------
+   * Casey, 4 Nov 2026: "at the bottom, you have a box that says no CWDP totals and no board
+   * order found on this device ... I don't know what that means or why we need it ... If we
+   * are keeping that box in that description for some reason, then it would need to be more
+   * generic for every draft, every person."
+   * CW, DP and the drag-and-drop order are three columns on his own board and nowhere else.
+   * The league's copy has none of them, so the box is not drawn there at all. On his own copy
+   * it is drawn only when there IS something to carry over; a first run needs no paragraph
+   * about a thing that has never existed. */
   const box = el('carryOver'); if(!box) return;
+  if (OWNERS_ONLY){ box.innerHTML = ''; return; }
   const wins = ownCount(loadOwnWins());
   const order = loadBoardOrder();
   const bits = [];
@@ -10435,11 +10667,7 @@ dsBoot();
       keeps ${bits.length>1?'both':'it'}, and so does a Reset — only <b>Reset My Order</b>
       discards the ranking, and the totals stay until you clear them yourself.`;
   } else {
-    box.innerHTML = `<b>No CW or DP totals and no board order found on this device.</b> That is
-      normal for a first run. If you HAVE typed totals before and expected them here, this copy
-      of the file is being opened from a different place than the one you typed them into &mdash;
-      browsers keep this per file location. Open the earlier copy, press <b>Save</b>, and load
-      that text into this one; it carries the totals and the order with it.`;
+    box.innerHTML = '';
   }
 })();
 (function offerResume(){
