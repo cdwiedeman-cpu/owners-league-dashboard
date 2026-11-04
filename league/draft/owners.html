@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 08:02 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
+<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 08:23 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1230,7 +1230,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
          league has a newer build. Nobody has to read a date to find out.
          IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
          and what to ask for when a copy looks wrong. -->
-    <div class="build buildstamp hide" id="build">build 04 Nov 2026 08:02 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build buildstamp hide" id="build">build 04 Nov 2026 08:23 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
@@ -2667,6 +2667,11 @@ function amTyping(){
   if (!t) return DS_DESIG === d;
   return t === me;
 }
+
+/* DECLARED HERE, NOT BESIDE dsRead(). `maybePromptOrder()` reads it on the first render, and a
+   `let` read before its own declaration line throws -- which takes the whole render with it.
+   That exact fault blanked the owners' board on 3 Nov 2026. */
+let DS_ASKED = false;          // has the league been asked at all yet
 
 const DRAFT_SEASON = DATA.season || null;
 const BASE_TEAMS = DATA.teams;
@@ -9198,6 +9203,17 @@ el('btnOrder').onclick = ()=>{
   openOrder((need !== null && need !== undefined) ? need : blockOf(r), true);
 };
 function maybePromptOrder(){
+  /* ---- NOT BEFORE THE LEAGUE HAS ANSWERED ---------------------------------------------
+   * Casey, 4 Nov 2026: "I went over to the Palma Wiedemann draft dashboard after I had
+   * already set the draft order and started two rounds of the draft ... it had the draft, set
+   * the draft order for probably about 10, 15 seconds before it finally went away."
+   * The page draws itself the moment it loads, from whatever this device happens to hold,
+   * and only then does the league answer. With nothing held here that is a board with no draw
+   * order in it, so this threw up the draw-order screen over a draft that was two rounds in.
+   * A BOARD THAT IS WAITING FOR AN ANSWER KNOWS NOTHING, and a screen built on knowing
+   * nothing is a wrong answer shown confidently. Three states, not two: asked and answered,
+   * asked and waiting, and no league to ask. */
+  if (typeof DraftStore !== 'undefined' && DraftStore.live() && !DS_ASKED) return;
   if(!el('cmpModal').classList.contains('hide')) return;
   if(!el('orderModal').classList.contains('hide')) return;
   if(!el('manModal').classList.contains('hide')) return;
@@ -9814,7 +9830,10 @@ function renderTypeBar(){
      That makes no sense ... I think you should say take over drafting or handover drafting is
      what that button should be called." A button named after a state reads as a label. */
   if (t === me || (!t && amTyping())){
-    who.innerHTML = '<b>You are typing ' + divLabel(d) + '.</b>';
+    /* Casey, 4 Nov 2026: "you keep using the wording, you are typing in predator ... Quit
+       using the word typing. We're not typing. We're entering the draft, or we're controlling
+       the draft ... Or you are drafting for predator. That is probably the best thing." */
+    who.innerHTML = '<b>You are drafting for ' + divLabel(d) + '.</b>';
     btn.textContent = 'Hand Over Drafting';
     btn.hidden = false;
     btn.onclick = ()=> ask('Hand over the ' + divLabel(d) + ' drafting?',
@@ -9822,7 +9841,7 @@ function renderTypeBar(){
       + ' takes it back, and you can take it again from here.',
       'Hand it over', ()=> claimTyping(false));
   } else if (t){
-    who.innerHTML = _esc(t) + ' is typing ' + divLabel(d) + '.';
+    who.innerHTML = _esc(t) + ' is drafting for ' + divLabel(d) + '.';
     btn.textContent = 'Take Over Drafting';
     btn.hidden = false;
     btn.onclick = ()=> ask('Take the ' + divLabel(d) + ' drafting over from ' + _esc(t) + '?',
@@ -9830,7 +9849,7 @@ function renderTypeBar(){
       + '&mdash; a flat phone, a lost connection &mdash; not to make one pick.',
       'Take it over', ()=> claimTyping(true));
   } else {
-    who.textContent = 'Nobody is typing ' + divLabel(d) + ' yet.';
+    who.textContent = 'Nobody is drafting for ' + divLabel(d) + ' yet.';
     btn.textContent = 'Take Over Drafting';
     btn.hidden = false;
     btn.onclick = ()=> claimTyping(true);
@@ -9843,7 +9862,8 @@ function claimTyping(take){
     if (!a || !a.ok){
       showHelpPanel('The League Did Not Take That',
         '<p>' + _esc((a && a.note) || 'The league could not be reached, so nothing was changed.')
-        + '</p><p>Who is typing has not changed. Try it again in a moment.</p>');
+        + '</p><p>Who is drafting for this division has not changed. Try it again in a '
+        + 'moment.</p>');
       return false;
     }
     /* AND THE BOARD IS REDRAWN. Casey, 3 Nov 2026: "when I click the I am taking over button,
@@ -10667,7 +10687,6 @@ let LSEQ = {};            // the version of each division's board this page last
 let LBOARDS = {};         // the league's three boards, as last read
 let DS_NOTE = '';         // what the last call said, in words
 let DS_BUSY = false;      // one flush at a time
-let DS_ASKED = false;     // has the league been asked at all yet
 /* WHAT THE LEAGUE SAYS THIS SIGN-IN MAY TYPE: '' for nothing, one division's name, or 'any' for
    a commissioner. Set from the league's answer and from nothing else. */
 
@@ -10714,7 +10733,7 @@ function dsLine(){
      * you're watching predator. It's just a draft board to look at."
      * He is right. That sentence was written for a page that still had Draft buttons on it; a
      * board with no Draft button anywhere does not need a line explaining why. */
-    if (amTyping()) bits.push('<b>You are drafting ' + divLabel(d) + '</b>');
+    if (amTyping()) bits.push('<b>You are drafting for ' + divLabel(d) + '</b>');
     box.innerHTML = bits.join(' &middot; ');
     box.className = (q || DS_NOTE) ? 'build warn' : 'build';
     if (q) box.innerHTML += ' &middot; <b>' + q + ' pick' + (q === 1 ? '' : 's')
