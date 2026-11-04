@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 07:21 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
+<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 08:02 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -532,6 +532,10 @@ table.mini tr.best td{background:var(--accbg)}
 .omblk.set .dot{background:var(--good)}
 .omblk.drafted .dot{background:var(--gold)}
 .omblkkey{font-size:11px;color:var(--faint);margin:-8px 0 14px;line-height:1.5}
+/* The Fix a Pick filters. One line on a laptop, stacked on a phone. */
+.edfilters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 9px}
+.edfilters input{flex:1 1 220px;min-width:0}
+.edfilters select{flex:0 1 auto;max-width:100%}
 /* PICKS BY ROUND. The same block strip the draft order uses, over a plain list per round. */
 .rndh{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
   margin:14px 0 6px}
@@ -1226,7 +1230,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
          league has a newer build. Nobody has to read a date to find out.
          IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
          and what to ask for when a copy looks wrong. -->
-    <div class="build buildstamp hide" id="build">build 04 Nov 2026 07:21 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build buildstamp hide" id="build">build 04 Nov 2026 08:02 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
@@ -1611,12 +1615,22 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
 <!-- ============ edit a pick already made ============ -->
 <div class="overlay hide" id="edModal">
   <div class="card" style="max-width:660px">
-    <h2>Edit Draft</h2>
+    <h2>Fix a Pick</h2>
     <p class="lede">Fix a pick that was recorded wrong, without undoing everything after it.
       Click any pick to change the team or the owner. Everything else stays exactly where
       it is.</p>
-    <input id="edFind" placeholder="Find a pick — team, owner or round…" autocomplete="off"
-           style="width:100%;margin:0 0 9px">
+    <!-- ---- THREE WAYS TO NARROW IT, NOT ONE ------------------------------------------
+         Casey, 4 Nov 2026: "instead of just doing a search, in addition to the search, can
+         you make it so that you can pick like a team from a drop down or a round from a drop
+         down and filter according based on that?"
+         Typing works when you remember the name. On draft night the thing you remember is
+         usually the round, and the two lists only ever offer what is actually in this draft,
+         so neither can be set to something that shows nothing. -->
+    <div class="edfilters" id="edFilters">
+      <input id="edFind" placeholder="Find a pick — team, owner or round…" autocomplete="off">
+      <select id="edRound" title="Show one round only"></select>
+      <select id="edTeamPick" title="Show one team only"></select>
+    </div>
     <div id="edList"></div>
     <div class="rowbtns"><button class="ghost" id="edClose">Done</button></div>
   </div>
@@ -9255,8 +9269,12 @@ function edRows(){
       as well.
     </div>`;
   const q = norm(el('edFind').value || '');
+  const onlyR = (el('edRound') || {}).value || '';
+  const onlyT = (el('edTeamPick') || {}).value || '';
   const rows = S.picks.map((p,i)=>({p,i})).filter(({p})=>{
     if(edRounds && !edRounds.includes(p.round)) return false;
+    if(onlyR && p.round !== +onlyR) return false;
+    if(onlyT && p.team !== onlyT) return false;
     if(!q) return true;
     return norm(p.team).includes(q) || norm(S.owners[p.owner]||'').includes(q)
         || norm('r'+p.round).includes(q) || norm('round'+p.round).includes(q);
@@ -9335,7 +9353,24 @@ function edDrawMatches(){
        ${taken ? `<span class="taken">already at R${taken.round}.${taken.pickInRound
          } — choosing it offers a swap</span>` : ''}</div>`).join('');
 }
+/* THE TWO LISTS OFFER ONLY WHAT IS IN THIS DRAFT, so neither can be set to something that
+   shows nothing. They are rebuilt every time the panel opens, because a draft grows. */
+function edFillFilters(){
+  const rSel = el('edRound'), tSel = el('edTeamPick');
+  if (!rSel || !tSel) return;
+  const keepR = rSel.value, keepT = tSel.value;
+  const rounds = [...new Set((S.picks || []).map(p => p.round))].sort((a, b) => a - b);
+  rSel.innerHTML = '<option value="">Every round</option>'
+    + rounds.map(r => '<option value="' + r + '">Round ' + r + '</option>').join('');
+  const teams = [...new Set((S.picks || []).map(p => p.team))]
+    .sort((a, b) => a.localeCompare(b));
+  tSel.innerHTML = '<option value="">Every team</option>'
+    + teams.map(t => '<option value="' + _esc(t) + '">' + _esc(t) + '</option>').join('');
+  if (rounds.indexOf(+keepR) >= 0) rSel.value = keepR;
+  if (teams.indexOf(keepT) >= 0) tSel.value = keepT;
+}
 function edRender(){
+  edFillFilters();
   el('edList').innerHTML = edRows();
   const inp = el('edTeam');
   if(inp){
@@ -9349,13 +9384,17 @@ el('btnEditDraft').onclick = ()=>{
   edEditing = null;
   edRounds = null;          // the toolbar button always means "the whole draft"
   /* A find box over an empty list is furniture that does nothing. */
-  el('edFind').classList.toggle('hide', !S.picks.length);
+  el('edFilters').classList.toggle('hide', !S.picks.length);
   el('edFind').value = '';
+  if (el('edRound')) el('edRound').value = '';
+  if (el('edTeamPick')) el('edTeamPick').value = '';
   edRender();
   el('edModal').classList.remove('hide');
 };
 el('edClose').onclick = ()=>{ edEditing=null; el('edModal').classList.add('hide'); };
 el('edFind').oninput = ()=>{ edEditing=null; edRender(); };
+el('edRound').onchange = ()=>{ edEditing=null; edRender(); };
+el('edTeamPick').onchange = ()=>{ edEditing=null; edRender(); };
 el('edList').onclick = e=>{
   const opt = e.target.closest('[data-pick-team]');
   if(opt){
@@ -10272,10 +10311,27 @@ function savedPicks(){
   const d = allSnapshot().divs;
   return Object.keys(d).reduce((n, k) => n + (d[k].picks || []).length, 0);
 }
+/* ---- A ONE-DIVISION FILE SAYS WHICH DIVISION IT IS ---------------------------------------
+ * Casey, 4 Nov 2026: "for the typist, we need to provide them the ability to save the draft
+ * individually so that they can then send it to Bob or myself, and we can then upload the
+ * final results."
+ * That is what makes the division name load-bearing. The typist's file leaves their device and
+ * is opened on somebody else's, and nothing in the old file said whose draft it was -- so
+ * loading Viper's night while sitting on Predator would have written it into Predator. The
+ * file carries its division now, and a file that does not carry one is asked about.
+ */
 const saveName = ()=> canSaveAll()
   ? `reality-football-draft-all-${savedPicks()}picks.json`
-  : `owners-draft-${S.picks.length}picks.json`;
-const saveBody = ()=> JSON.stringify(canSaveAll() ? allSnapshot() : S, null, 1);
+  : `reality-football-draft-${String(divRead() || 'draft').toLowerCase()}-${S.picks.length}picks.json`;
+function oneBody(){
+  const out = JSON.parse(JSON.stringify(S));
+  out.div = divRead();
+  out.div_name = divLabel(divRead());
+  out.season = DATA.season || null;
+  out.at = new Date().toISOString();
+  return out;
+}
+const saveBody = ()=> JSON.stringify(canSaveAll() ? allSnapshot() : oneBody(), null, 1);
 
 /* ---- what this page is allowed to do, where it is running ----
    Casey, 25 Aug 2026: "when it downloads the json file, where does it put it on the ipad. I
@@ -10321,8 +10377,12 @@ el('btnSave').onclick = ()=>{
       + `total &mdash; ${per || 'nothing drafted yet'}. Loading it back puts any one of them, `
       + 'or all three, back into the league.';
   } else {
-    el('saveLede').textContent =
-      `${S.picks.length} pick${S.picks.length===1?'':'s'} recorded, ${S.owners.length} owners. `
+    /* AND IT NAMES THE DIVISION, because this file is the one that gets emailed to somebody
+       else and opened on their machine. */
+    el('saveLede').innerHTML =
+      `<b>${_esc(divLabel(divRead()))}</b> &mdash; ${S.picks.length} pick`
+      + `${S.picks.length === 1 ? '' : 's'} recorded, ${S.owners.length} owners. `
+      + 'The file says which division it is, so a commissioner can load it into the right one. '
       + 'Take a copy any way that suits the device you are on.';
   }
   const r = saveRoutes();
@@ -10453,6 +10513,19 @@ function takeSaved(text){
   if(!s || !s.owners || !s.picks) return 'That file opened, but it is not a saved draft: '
     + 'it has no owners and no picks in it.';
   el('loadModal').classList.add('hide');
+  /* ---- A ONE-DIVISION FILE GOES INTO THE DIVISION IT NAMES ---------------------------
+   * The typist's file is written on their device and opened on a commissioner's, so the
+   * division it belongs to is a fact about the FILE and not about whoever is loading it.
+   * A file that names one is treated as a one-division version of the all-three file, so
+   * there is one restore path and not two. An older file names none and is asked about. */
+  const named = (s.div && DIVS.indexOf(s.div) >= 0) ? s.div : null;
+  if (named && DraftStore.live()){
+    askRestore({kind: 'rfl-draft-all', at: s.at || null,
+                own: s.own, board: s.board, fastpins: s.fastpins, fastrec: s.fastrec,
+                divs: {[named]: {owners: s.owners, orders: s.orders || {},
+                                 picks: s.picks || [], custom: s.custom || []}}}, [named]);
+    return null;
+  }
   adoptState(s);
   return null;
 }
