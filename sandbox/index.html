@@ -7285,20 +7285,42 @@ function liveAccessTable(){
            a sixth column on a table this wide is a column that falls off a phone.
            A COMMISSIONER MAY TYPE ANY DIVISION whatever this says, so the picker is replaced by
            a line saying so rather than offering a choice that means nothing. */
+        /* ---- IT READS AS TWO ROLES, BECAUSE THAT IS WHAT IT IS ---------------------------
+           Casey, 3 Nov 2026: "I don't see how you're doing the view only option, because
+           shouldn't there be a drop down to within there where it's like ... whether it's, I
+           would call it drafting or viewing."
+           The control was already this and its words were wrong. "no draft" reads as a
+           punishment and as four options; it is the NORMAL setting and it means watching. So
+           the list says which of the two roles the person has, and names the division in the
+           one that needs it. */
+        /* ---- A COMMISSIONER GETS THE SAME CHOICE AS EVERYBODY ELSE --------------------
+           Casey, 3 Nov 2026: "in the access list, I only have a commissioner option. I don't
+           have a no draft or division option. So if I'm the drafter and the commissioner, I
+           should be setting to both ... If I set to no draft for myself, then I can't draft.
+           I'm just watching."
+           This row used to say "any division, because they are a commissioner" and offer no
+           choice, on the reasoning that the choice meant nothing for somebody who may type
+           anything. That was wrong: it is not about what they MAY do, it is about what they
+           are DOING on the night, which is the whole point of the setting. Being a
+           commissioner is what lets them take the keyboard back at any time, and the line
+           under the picker says so. */
+        + '<label class="lb" style="font-size:11px;margin-top:5px" for="dr-'
+        + esc(a.div + '-' + a.seat + '-' + m.member) + '">In the draft</label>'
+        + '<select id="dr-' + esc(a.div + '-' + a.seat + '-' + m.member) + '" '
+        + 'style="min-height:30px" onchange="setDrafts(' + jsq(a.div) + ','
+        + jsq(a.seat) + ',' + jsq(m.member) + ',this.value)">'
+        + '<option value=""' + (m.drafts ? '' : ' selected')
+        + '>Watches the draft</option>'
+        + ['PFD', 'VFD', 'SFD'].map(function (d) {
+            return '<option value="' + d + '"' + (m.drafts === d ? ' selected' : '') + '>'
+              + 'Types the ' + esc((DATA.div_names && DATA.div_names[d]) || d)
+              + ' draft</option>';
+          }).join('')
+        + '</select>'
         + (m.role === 'commissioner'
-            ? '<div class="f" style="font-size:11px;margin-top:5px">Drafts: any division, '
-              + 'because they are a commissioner</div>'
-            : '<label class="lb" style="font-size:11px;margin-top:5px" for="dr-'
-              + esc(a.div + '-' + a.seat + '-' + m.member) + '">Drafts</label>'
-              + '<select id="dr-' + esc(a.div + '-' + a.seat + '-' + m.member) + '" '
-              + 'style="min-height:30px" onchange="setDrafts(' + jsq(a.div) + ','
-              + jsq(a.seat) + ',' + jsq(m.member) + ',this.value)">'
-              + '<option value=""' + (m.drafts ? '' : ' selected') + '>no draft</option>'
-              + ['PFD', 'VFD', 'SFD'].map(function (d) {
-                  return '<option value="' + d + '"' + (m.drafts === d ? ' selected' : '') + '>'
-                    + esc((DATA.div_names && DATA.div_names[d]) || d) + '</option>';
-                }).join('')
-              + '</select>')
+            ? '<div class="f" style="font-size:11px;margin-top:4px">A commissioner can take '
+              + 'the keyboard for any division during the draft, whatever this says.</div>'
+            : '')
         + '</td>'
         + '<td>' + (m.signedIn
             ? '<span class="pill good">' + m.signedIn + ' sign-in'
