@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 06:54 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
+<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 07:21 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -168,6 +168,14 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 360px;align-items:s
    anything in it or not -- and on the league's board the advisor is hidden, so it usually does
    not. The cards inside it carry their own. */
 #side{position:sticky;top:0;max-height:100vh;overflow:auto;background:transparent;min-width:0}
+/* AND THE CARDS INSIDE IT CARRY THEIR OWN, which is what the note above promised and `.sec`
+   never did. Casey, 4 Nov 2026: "on the right hand side, the best available is a solid blue
+   box. Seems like that should be different formatting. It looks kind of wonky. It looked
+   better how you had it before." Taking the column's background away left Best Available
+   sitting straight on the page, so it read as a slab of page with a heading on it instead of
+   a panel. It is a card again; the empty space below it stays empty. */
+#side > .sec{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  margin:10px 10px 0;padding:12px 14px}
 /* ON A NARROW SCREEN THE SIDE PANEL GOES UNDER THE BOARD, not beside it. A fixed 360px column
    next to the board is wider than any phone, and that is what made this page scroll sideways at
    every width below about 740px. Nothing is dropped: the panel is still there, underneath. */
@@ -524,6 +532,11 @@ table.mini tr.best td{background:var(--accbg)}
 .omblk.set .dot{background:var(--good)}
 .omblk.drafted .dot{background:var(--gold)}
 .omblkkey{font-size:11px;color:var(--faint);margin:-8px 0 14px;line-height:1.5}
+/* PICKS BY ROUND. The same block strip the draft order uses, over a plain list per round. */
+.rndh{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+  margin:14px 0 6px}
+table.rndt col.rndn{width:62px} table.rndt col.rndo{width:34%}
+table.rndt th, table.rndt td{text-align:left}
 /* DRAFT EDGE. The headline on a roster is no longer the plan total -- see leaguePlan() for
    why a total is mostly a floor everyone shares. */
 .edgeno{font-size:17px;font-weight:800;letter-spacing:-.3px}
@@ -727,6 +740,8 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
   width:100%;max-width:1000px;max-height:94vh;position:relative;
   overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch}
+/* The schedule-only panel holds three narrow columns and nothing else. */
+#detail.slim{max-width:620px}
 #side.locked{overflow:hidden}
 /* THE HEADER STAYS PUT. Casey: "The team name and close button on the top of the panel
    disappear after scrolling and is not holding as the header."
@@ -793,7 +808,7 @@ th .sub{display:block;font-size:9px;letter-spacing:.3px;color:var(--faint);font-
  * Fixed widths, a column the opponent can wrap inside, one alignment per column, and the whole
  * table held to a readable width instead of the panel's.
  */
-.schplain{padding:12px 14px 0;max-width:560px}
+.schplain{padding:12px 14px 16px;max-width:560px}
 table.schp{table-layout:fixed;width:100%}
 table.schp col.cwhen{width:70px} table.schp col.cwhere{width:84px}
 table.schp th, table.schp td{text-align:left}
@@ -1211,16 +1226,26 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
          league has a newer build. Nobody has to read a date to find out.
          IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
          and what to ask for when a copy looks wrong. -->
-    <div class="build buildstamp hide" id="build">build 04 Nov 2026 06:54 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build buildstamp hide" id="build">build 04 Nov 2026 07:21 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
       <button class="ghost" id="btnUndo">Undo</button>
       <button class="ghost" id="btnSave">Save</button>
       <button class="ghost" id="btnLoad">Load</button>
-      <button class="ghost" id="btnOrder">Draw Order</button>
+      <!-- Casey, 4 Nov 2026: "instead of it being called draw order, it should be draft
+           order, both within the edit draft button and the draw order button." -->
+      <button class="ghost" id="btnOrder">Draft Order</button>
       <button class="ghost" id="btnOwners">Edit Owners</button>
-      <button class="ghost" id="btnEditDraft">Edit Draft</button>
+      <!-- ---- THREE BUTTONS, THREE DIFFERENT JOBS -------------------------------------
+           Casey, 4 Nov 2026: "why do I still have the edit draft button, but then I also have
+           the draw, a separate draw order and a separate edit owners button? ... either have
+           one button to do both or get rid of the other two buttons."
+           The overlap was in the NAME. This panel does one thing the other two cannot: it
+           changes a pick that was already recorded, the team written down or the owner it
+           went to. Calling it Edit Draft made it read as the parent of the other two, and it
+           carried links to them, which sealed the impression. Both are gone. -->
+      <button class="ghost" id="btnEditDraft">Fix a Pick</button>
       <button class="ghost" id="btnReset">Reset</button>
     </div>
   </header>
@@ -1273,6 +1298,14 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
         </div>
         <button class="ghost" id="btnCompare" title="Pick two teams to compare side by side">Compare Teams</button>
           <button id="btnRosters" class="ghost" title="Every owner's roster so far, and the recent picks. Moved off the side panel so the board has room for your own win-total columns.">Rosters</button>
+          <!-- ---- WHAT WAS TAKEN, IN THE ORDER IT WAS TAKEN -----------------------------
+               Casey, 4 Nov 2026: "we have a button that shows roster. We need to have a
+               button that shows them what was picked in each round ... you could pick round
+               one and two, round two and three ... to see the 1 through 9 and then 10 through
+               18 picks for the first round. And it would help if somebody drafted the wrong
+               team. One of the drafters drafted the wrong team, they can go and see what was
+               drafted previously to correct it." -->
+          <button id="btnRounds" class="ghost" title="Every pick in the order it was made, a round at a time.">Picks by Round</button>
           <button id="btnPost" class="ghost" title="The projected postseason: the NFL bracket through the Super Bowl, the projected College Football Playoff field, and the projected FCS field.">Postseason</button>
           <button id="btnSurprise" class="ghost" title="Sleepers and surprise teams: the model's NFL bounce-back candidates, and Phil Steele's FBS surprise, Top Group of Five and Most Improved lists with his reasoning. Plus what he publishes for the FCS instead — he has no surprise list there.">Sleepers &amp; Surprises</button>
         <button class="ghost" id="btnCols" title="Choose which columns the board shows. Everything except the rank, the team and the Draft button can be turned off.">Columns</button>
@@ -1370,6 +1403,16 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
   </div>
 </div>
 
+<!-- ============ picks by round ============ -->
+<div class="overlay hide" id="roundModal">
+  <div class="card mhcard" style="max-width:720px">
+    <div class="mhhead"><h2>Picks by Round</h2>
+      <button class="ghost" id="roundClose">Close</button></div>
+    <div class="omblocks" id="rndBlocks"></div>
+    <div id="rndBody"></div>
+  </div>
+</div>
+
 <!-- ============ a team, opened ============
      Casey, 3 Nov 2026: "when you click on a team, on the right-hand side, it does give their
      schedule, which is nice, but it'd be nice to be able to scroll and see the whole schedule
@@ -1417,7 +1460,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
     <div class="divpick hide" id="setupDivPick"><span class="divlbl">Set up</span>
       <span class="seg" id="setupDivStrip"></span></div>
     <h2 id="setupHead">Set Up the Draft</h2>
-    <p class="lede" id="setupLede">Nine owners, eleven rounds, three NFL and eight college teams each. You will enter each draw order as you go.</p>
+    <p class="lede" id="setupLede">Nine owners, eleven rounds, three NFL and eight college teams each. You will enter each draft order as you go.</p>
     <div class="grid9" id="ownerInputs"></div>
     <!-- Casey, 3 Nov 2026: "The which one is you shouldn't really play a factor because it
          should know who we are, right? Which one's our team, because it's based upon how we've
@@ -1466,7 +1509,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
 <!-- ============ draw order ============ -->
 <div class="overlay hide" id="orderModal">
   <div class="card">
-    <h2 id="omTitle">Draw Order</h2>
+    <h2 id="omTitle">Draft Order</h2>
     <div class="omblocks" id="omBlocks"></div>
     <div class="omblkkey" id="omBlocksKey"></div>
     <p class="lede" id="omLede"></p>
@@ -1689,7 +1732,8 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
   <div class="card" style="max-width:660px">
     <h2>Load a Saved Draft</h2>
     <p class="lede">Paste the text you copied from your other device, or open a file you
-      downloaded. Both carry the same draft, and both replace whatever is on screen now.
+      downloaded. Both carry the same draft. A file saved by a commissioner holds all three
+      divisions, and you choose which of them to put back.
       <br><br>
       If you just want to carry on where you left off <b>on this device</b>, you do not need
       either: close this, reload the page, and press <b>Resume</b>.</p>
@@ -4662,6 +4706,11 @@ function lockSide(on){
    than the full drawer with its numbers taken out. */
 function showDetailPlain(name){
   const t = TEAMS.find(x => x.n === name); if (!t) return;
+  /* SIZED TO WHAT IS IN IT. Casey, 4 Nov 2026: "you've made it look a lot cleaner by bringing
+     the columns closer together, but now the window is way too big. There's a whole bunch of
+     white space over to the right-hand side." Three narrow columns in a 1000px panel is most
+     of a panel with nothing in it. His own copy keeps the wide one; it has a lot more in it. */
+  el('detail').classList.add('slim');
   openTeam = name;
   lockSide(true);
   const d = el('detail');
@@ -4706,6 +4755,7 @@ function renderBest(){
 function showDetail(name){
   if (OWNERS_ONLY) return showDetailPlain(name);
   const t = BYNAME.get(name); if(!t) return;
+  el('detail').classList.remove('slim');
   const reopening = (openTeam === name);
   openTeam = name;
   lockSide(true);
@@ -7318,7 +7368,7 @@ function renderFast(){
           (g.l==='Away'?'@':(g.l==='Neutral'?'n ':'')) + g.o).join(' · ')}</td>
         <td class="act">${canPick
             ? `<button class="primary" data-pick="${t.n}">Draft</button>`
-            : `<span class="warn" style="font-size:11px">${noPickWhy()}</span>`}</td>
+            : pickNote()}</td>
       </tr>`;
     }).join('')
     : `<tr><td colspan="15" class="emptyq">${filters.q
@@ -7744,7 +7794,7 @@ function renderTable(){
       <td class="act" data-col="act">${taken
           ? `<button class="ghost" data-undo="${t.n}" title="Drafted by ${S.owners[owner]}">undo</button>`
           : (canPick ? `<button class="primary" data-pick="${t.n}">Draft</button>`
-                     : `<span class="warn" style="font-size:11px">${noPickWhy()}</span>`)}</td>
+                     : pickNote())}</td>
     </tr>`;
   }).join('');
   document.querySelectorAll('thead th.help').forEach(th=>{
@@ -7845,7 +7895,7 @@ function renderClock(){
   const slot = currentSlot(), need = needsOrderForRound(), c = el('clock');
   if(!slot){
     c.innerHTML = (need!==null && need!==undefined)
-      ? `<div class="chip onclock"><b>Draw needed</b> for round${BLOCKS[need].length>1?'s':''} ${BLOCKS[need].join(' & ')}</div>`
+      ? `<div class="chip onclock"><b>Draft Order Needed</b> for round${BLOCKS[need].length>1?'s':''} ${BLOCKS[need].join(' & ')}</div>`
       : `<div class="chip onclock"><b>Draft complete</b> — ${S.picks.length} picks</div>`;
     return;
   }
@@ -8279,6 +8329,65 @@ function renderLeaderboard(){
        : `Nothing drafted yet, so every owner is level.`}</p>`;
 }
 
+/* ---- EVERY PICK, IN THE ORDER IT WAS MADE, A BLOCK AT A TIME ------------------------------
+ * Casey, 4 Nov 2026: "we need to have a button that shows them what was picked in each round
+ * ... to see the 1 through 9 and then 10 through 18 picks for the first round, and so on ...
+ * And it would help if somebody drafted the wrong team ... they can go and see what was drafted
+ * previously to correct it."
+ * The blocks are the same `BLOCKS` the draft order uses, because a block is how this draft is
+ * run: two rounds drawn together, nine picks out and nine picks back. One store of that, so a
+ * round can never be grouped one way here and another way there.
+ * IT OPENS ON THE BLOCK BEING DRAFTED, which is the one somebody checking a mistake wants.
+ */
+let RND_BLOCK = null;
+function roundsOpenBlock(){
+  if (RND_BLOCK != null) return RND_BLOCK;
+  const last = (S && S.picks && S.picks.length) ? S.picks[S.picks.length - 1].round : 1;
+  const b = blockOf(last);
+  return b < 0 ? 0 : b;
+}
+function renderRounds(){
+  if (!S) return;
+  const now = roundsOpenBlock();
+  const strip = el('rndBlocks');
+  strip.innerHTML = BLOCKS.map((rs, i) => {
+    const n = (S.picks || []).filter(p => rs.includes(p.round)).length;
+    return '<button class="omblk' + (i === now ? ' on' : '') + (n ? ' set' : '')
+      + '" data-rnd="' + i + '"><span class="dot"></span>'
+      + (rs.length > 1 ? 'Rounds ' + rs[0] + ' &amp; ' + rs[1] : 'Round ' + rs[0])
+      + ' <span class="muted">' + n + '</span></button>';
+  }).join('');
+  strip.querySelectorAll('[data-rnd]').forEach(b => b.onclick = ()=>{
+    RND_BLOCK = +b.dataset.rnd; renderRounds();
+  });
+  const rs = BLOCKS[now];
+  const body = el('rndBody');
+  /* AN ABSENCE IS NEVER AN ANSWER. A round nobody has reached says so, and says which round
+     the draft is actually on. */
+  const any = (S.picks || []).some(p => rs.includes(p.round));
+  if (!any){
+    const done = (S.picks || []).length;
+    body.innerHTML = '<div class="empty">Nothing has been drafted in '
+      + (rs.length > 1 ? 'rounds ' + rs[0] + ' and ' + rs[1] : 'round ' + rs[0]) + ' yet. '
+      + (done ? done + ' pick' + (done === 1 ? '' : 's') + ' have been made so far.'
+              : 'The draft has not started.') + '</div>';
+    return;
+  }
+  body.innerHTML = rs.map(r => {
+    const got = (S.picks || []).filter(p => p.round === r)
+      .sort((a, b) => (a.pickInRound || 0) - (b.pickInRound || 0));
+    if (!got.length) return '<h3 class="rndh">Round ' + r + '</h3>'
+      + '<div class="empty">No picks in round ' + r + ' yet.</div>';
+    return '<h3 class="rndh">Round ' + r + '</h3>'
+      + '<table class="mini rndt"><colgroup><col class="rndn"><col><col class="rndo"></colgroup>'
+      + '<thead><tr><th>Pick</th><th>Team</th><th>Owner</th></tr></thead><tbody>'
+      + got.map(p => '<tr><td class="muted">' + r + '.' + (p.pickInRound || 0) + '</td>'
+          + '<td><b>' + _esc(p.team) + '</b></td>'
+          + '<td>' + _esc(S.owners[p.owner] == null ? '' : S.owners[p.owner]) + '</td></tr>')
+          .join('')
+      + '</tbody></table>';
+  }).join('');
+}
 function renderLog(){
   el('log').innerHTML = S.picks.slice(-12).reverse().map(p=>
     `R${p.round}.${p.pickInRound} &nbsp;<b style="color:var(--ink)">${p.team}</b> → ${S.owners[p.owner]}`
@@ -8293,12 +8402,19 @@ function renderLog(){
    not in a file yet is. Zero unsaved picks reads green, one or more reads amber, five or more
    reads red -- because five picks is the point at which redoing them from memory stops being
    a nuisance and starts being an argument between nine owners. */
+/* THE CHIP'S COLOUR AND WHETHER IT IS DRAWN AT ALL ARE TWO DIFFERENT FACTS. Writing the whole
+   className set the first and silently cleared the second, so a draft viewer kept a chip
+   `syncDraftButtons` had just taken away. */
+function chipClass(c, state){
+  const hidden = c.classList.contains('hide');
+  c.className = 'build savechip ' + state + (hidden ? ' hide' : '');
+}
 function renderSaveState(){
   const c = el('saveState'); if(!c) return;
   const n = S.picks.length - (S.savedAt || 0);
-  if(!S.picks.length){ c.className = 'build savechip ok'; c.textContent = 'Nothing to save yet'; return; }
+  if(!S.picks.length){ chipClass(c, 'ok'); c.textContent = 'Nothing to save yet'; return; }
   if(n <= 0){
-    c.className = 'build savechip ok';
+    chipClass(c, 'ok');
     c.textContent = `Saved · ${S.savedAt} pick${S.savedAt===1?'':'s'}`;
     return;
   }
@@ -8313,11 +8429,11 @@ function renderSaveState(){
   const held = (typeof DraftStore !== 'undefined') && DraftStore.live()
                && !DraftStore.queueFor(divRead()).length;
   if (held){
-    c.className = 'build savechip ok';
+    chipClass(c, 'ok');
     c.textContent = `Saved in the league · ${S.picks.length} pick${S.picks.length===1?'':'s'}`;
     return;
   }
-  c.className = 'build savechip ' + (n >= 5 ? 'loud' : 'due');
+  chipClass(c, n >= 5 ? 'loud' : 'due');
   c.textContent = `${n} pick${n===1?'':'s'} not saved to a file`;
 }
 
@@ -8386,9 +8502,19 @@ function render(){
  * He is right -- a word in the team's own row reads as a fact about the team. Whether this
  * reader can draft is said once, at the top, and a row with no button says the rest. "Full" is
  * different: that IS about the team, for a roster that cannot take it. */
+/* WHAT A ROW SAYS WHEN THIS READER CANNOT DRAFT IT. Casey, 4 Nov 2026, on the first attempt:
+   "you have in the draft line for every team that it's watching instead of the draft button. I
+   think you just take that off because it's confusing. Minnesota Vikings, like they're being
+   watched. That's not what we mean." The heading already says this reader is watching, so the
+   cell says nothing at all. `pickNote()` is the one place that is decided, and it returns the
+   whole cell so there is no empty box left behind either. */
 function noPickWhy(){
   if (!canType()) return '';
   return 'full';
+}
+function pickNote(){
+  const w = noPickWhy();
+  return w ? '<span class="warn" style="font-size:11px">' + w + '</span>' : '';
 }
 function canType(){
   if (typeof DraftStore === 'undefined' || !DraftStore.live()) return true;
@@ -8615,6 +8741,13 @@ el('colList').addEventListener('click', e=>{
   renderColPicker();          // re-measure: the width line has to reflect the click just made
 });
 el('btnPost').onclick = () => showPostseason('nfl');
+el('btnRounds').onclick = ()=>{
+  if (!S) return;
+  RND_BLOCK = null;
+  renderRounds();
+  el('roundModal').classList.remove('hide');
+};
+el('roundClose').onclick = ()=> el('roundModal').classList.add('hide');
 el('btnRosters').onclick = () => {
   render();
   /* THE PANEL IS BUILT FOR WHICHEVER BOARD THIS IS, once, here -- not by two copies of the
@@ -8750,7 +8883,7 @@ function openOrder(b, cancellable){
   omBlock = b;
   const rs = BLOCKS[b];
   omBlockTabs();
-  el('omTitle').textContent = rs.length>1 ? `Draw order — rounds ${rs[0]} and ${rs[1]}` : `Draw order — round ${rs[0]}`;
+  el('omTitle').textContent = rs.length>1 ? `Draft Order — Rounds ${rs[0]} and ${rs[1]}` : `Draft Order — Round ${rs[0]}`;
   el('omLede').textContent = rs.length>1
     ? `Enter who drew each position. Position 1 picks first in round ${rs[0]} and last in round ${rs[1]} (serpentine).`
     : `Round ${rs[0]} has its own draw. Position 1 picks first.`;
@@ -8783,7 +8916,7 @@ function omBlockTabs(){
       <span class="dot"></span>${lab}</button>`;
   }).join('');
   const nset = BLOCKS.filter((_, i) => Array.isArray(S.orders[i])).length;
-  el('omBlocksKey').innerHTML = `<b style="color:var(--good)">&#9679;</b> draw set &nbsp;
+  el('omBlocksKey').innerHTML = `<b style="color:var(--good)">&#9679;</b> order set &nbsp;
     <b style="color:var(--gold)">&#9679;</b> set, and these rounds already have picks &nbsp;
     <b style="color:var(--faint)">&#9679;</b> not entered yet &nbsp;&nbsp;
     <span style="color:var(--dim)">${nset} of ${BLOCKS.length} entered.</span>
@@ -9117,12 +9250,9 @@ function edRows(){
       <b>Nothing has been drafted yet, so there is no pick to correct.</b><br>
       This panel changes a pick that was already recorded &mdash; the team written down, or which
       owner it went to. It fills up as the draft runs, and stays empty until the first pick.
-      <div class="edemptyacts">
-        <button class="ghost" data-edgo="owners">Edit owner names</button>
-        <button class="ghost" data-edgo="order">Change the draw order</button>
-      </div>
-      Those two are what there is to change before the draft starts. Both stay available
-      afterwards as well.
+      Before the first pick there are two things to change, and both are buttons along the
+      top of the board: <b>Draft Order</b> and <b>Edit Owners</b>. Both stay there afterwards
+      as well.
     </div>`;
   const q = norm(el('edFind').value || '');
   const rows = S.picks.map((p,i)=>({p,i})).filter(({p})=>{
@@ -9479,7 +9609,17 @@ function syncDraftButtons(){
   const typing = canType();
   const boss = isBoss() || (typeof DraftStore === 'undefined') || !DraftStore.live();
   const show = (id, on) => { const n = el(id); if (n) n.classList.toggle('hide', !on); };
+  /* ---- AND SAVE GOES WITH THEM ------------------------------------------------------
+   * Casey, 4 Nov 2026: "As a draft viewer or an owner, you still have a save button ...
+   * you're only viewing. There's nothing to save, so you should remove that button. And then
+   * also for the viewers, they don't need the nothing to save yet little box that you have at
+   * the top, or the question mark next to it."
+   * Save was in the everybody set on the reasoning that a copy harms nobody. That was wrong:
+   * what a viewer would save is a board they did not type, offered under a chip counting
+   * picks they did not make. The chip and its question mark go with the button, because all
+   * three are about one thing. A commissioner keeps them whether or not they are typing. */
   ['btnManual', 'btnUndo', 'btnOrder'].forEach(id => show(id, typing));
+  ['btnSave', 'saveState', 'saveWhy'].forEach(id => show(id, typing || boss));
     /* LOAD IS A COMMISSIONER'S. Casey, 4 Nov 2026: "I would probably want us to do that as a
      commissioner because it's going to be confusing for everybody else if that situation ever
      did occur where we didn't have Wi-Fi and we had to save the draft and then load a draft."
@@ -9717,10 +9857,13 @@ function renderPreviewBar(){
   if (!DS_COMMISH || !live){ bar.classList.add('hide'); return; }
   bar.classList.remove('hide');
   bar.classList.toggle('on', DS_PREVIEW);
+  /* Casey, 4 Nov 2026: "I think it should say see it as draft viewer instead of owner,
+     because there are some owners that are drafters." He is right -- most of the league are
+     owners AND viewers, and one owner in each division is the drafter. Viewer is the job. */
   el('previewWho').innerHTML = DS_PREVIEW
-    ? '<b>You are seeing this as an owner who is not drafting.</b> Nothing you press is sent.'
-    : 'Want to see what the other owners see?';
-  el('btnPreview').textContent = DS_PREVIEW ? 'Back to My View' : 'See It as an Owner';
+    ? '<b>You are seeing this as a draft viewer.</b> Nothing you press is sent.'
+    : 'Want to see what a draft viewer sees?';
+  el('btnPreview').textContent = DS_PREVIEW ? 'Back to My View' : 'See It as a Draft Viewer';
 }
 function setPreview(on){
   DS_PREVIEW = !!on;
@@ -10076,8 +10219,63 @@ async function hostDownloads(){
   return _downloads;
 }
 
-const saveName = ()=> `owners-draft-${S.picks.length}picks.json`;
-const saveBody = ()=> JSON.stringify(S,null,1);
+/* ---- A COMMISSIONER'S SAVE IS THE LEAGUE'S SAVE, ALL THREE DIVISIONS IN ONE FILE ----------
+ * Casey, 4 Nov 2026: "the save should save all the drafts in one, not individual drafts. So if
+ * an outage like that happened, I would go in as commissioner, save the draft, would save all
+ * the division's drafts, and then I would load them back in if needed. So I would rather, as
+ * commissioner, I have control to just save the drafts for everybody."
+ * He is right, and the reason is the one he gives: on the night the person who can reach all
+ * three boards is not the person typing any one of them. A per-division save would have him
+ * asking three typists for three files, and the one whose connection dropped is the one who
+ * cannot send theirs.
+ * HIS PAGE ALREADY HOLDS ALL THREE. `DWATCH` is every division's board and it is re-read every
+ * twelve seconds, so the file is the league's record as of the last answer this page got.
+ */
+function canSaveAll(){
+  return isBoss() && (typeof DraftStore !== 'undefined') && DraftStore.live() && DIVS.length > 1;
+}
+/* ONE DIVISION, IN THE SHAPE A LOAD PUTS BACK. The division on screen comes from the BOARD and
+   not from the last read, because a pick typed since then is on the board and not yet in the
+   league's record -- and that difference is the whole point of saving during an outage. */
+function divSnapshot(d){
+  if (d === divRead() && S && (S.owners || []).length === NOWNERS){
+    return {owners: S.owners.slice(),
+            orders: JSON.parse(JSON.stringify(S.orders || {})),
+            picks: (S.picks || []).map(p => ({team: p.team, owner: p.owner,
+                     round: p.round || 0, pickInRound: p.pickInRound || 0})),
+            custom: (S.custom || []).slice()};
+  }
+  const b = LBOARDS[d] || DWATCH[d] || null;
+  if (!b || (b.owners || []).length !== NOWNERS) return null;
+  const orders = {};
+  Object.keys(b.draws || {}).forEach(k => { orders[+k] = (b.draws[k] || []).slice(); });
+  return {owners: (b.owners || []).slice(), orders: orders,
+          picks: (b.picks || []).map(p => ({team: p.team, owner: p.owner,
+                   round: p.round || 0, pickInRound: p.pickInRound || 0})),
+          custom: []};
+}
+function allSnapshot(){
+  const divs = {};
+  DIVS.forEach(d => { const one = divSnapshot(d); if (one) divs[d] = one; });
+  const out = {kind: 'rfl-draft-all', season: DATA.season || null,
+               at: new Date().toISOString(), divs: divs};
+  /* HIS OWN COLUMNS GO IN ONCE, NOT ONCE PER DIVISION. They are three columns on his own board
+     and they belong to the device, not to any division's draft. */
+  if (!OWNERS_ONLY && S){
+    out.own = S.own; out.board = S.board;
+    out.fastpins = S.fastpins; out.fastrec = S.fastrec;
+  }
+  return out;
+}
+function savedPicks(){
+  if (!canSaveAll()) return (S && S.picks ? S.picks.length : 0);
+  const d = allSnapshot().divs;
+  return Object.keys(d).reduce((n, k) => n + (d[k].picks || []).length, 0);
+}
+const saveName = ()=> canSaveAll()
+  ? `reality-football-draft-all-${savedPicks()}picks.json`
+  : `owners-draft-${S.picks.length}picks.json`;
+const saveBody = ()=> JSON.stringify(canSaveAll() ? allSnapshot() : S, null, 1);
 
 /* ---- what this page is allowed to do, where it is running ----
    Casey, 25 Aug 2026: "when it downloads the json file, where does it put it on the ipad. I
@@ -10113,9 +10311,20 @@ el('saveState').onclick = ()=> el('btnSave').click();
 el('btnSave').onclick = ()=>{
   el('saveText').value = saveBody();
   el('saveMsg').textContent = '';
-  el('saveLede').textContent =
-    `${S.picks.length} pick${S.picks.length===1?'':'s'} recorded, ${S.owners.length} owners. `
-    + 'Take a copy any way that suits the device you are on.';
+  if (canSaveAll()){
+    const divs = allSnapshot().divs;
+    const per = DIVS.filter(d => divs[d])
+      .map(d => divLabel(d) + ' ' + (divs[d].picks || []).length).join(' &middot; ');
+    const n = savedPicks();
+    el('saveLede').innerHTML =
+      `<b>This saves all three divisions in one file.</b> ${n} pick${n === 1 ? '' : 's'} in `
+      + `total &mdash; ${per || 'nothing drafted yet'}. Loading it back puts any one of them, `
+      + 'or all three, back into the league.';
+  } else {
+    el('saveLede').textContent =
+      `${S.picks.length} pick${S.picks.length===1?'':'s'} recorded, ${S.owners.length} owners. `
+      + 'Take a copy any way that suits the device you are on.';
+  }
   const r = saveRoutes();
   el('saveWhere').innerHTML =
     '<colgroup><col style="width:38%"><col></colgroup>'
@@ -10228,11 +10437,90 @@ el('loadPick').onclick = ()=> el('fileIn').click();
 function takeSaved(text){
   let s;
   try{ s = JSON.parse(text); }catch(_){ return 'That is not a saved draft — it is not valid JSON.'; }
+  /* ---- TWO SHAPES, AND THE FILE SAYS WHICH IT IS -------------------------------------
+   * A commissioner's file holds all three divisions; an older file, and anybody else's,
+   * holds one. Both load. A page that only understood the new shape would refuse every
+   * file saved before today, which is the one moment a reader needs it to work. */
+  if (s && s.kind === 'rfl-draft-all'){
+    const divs = s.divs || {};
+    const have = DIVS.filter(d => divs[d] && (divs[d].owners || []).length === NOWNERS);
+    if (!have.length) return 'That file is a saved draft, but there is no division in it that '
+      + 'matches this board.';
+    el('loadModal').classList.add('hide');
+    askRestore(s, have);
+    return null;
+  }
   if(!s || !s.owners || !s.picks) return 'That file opened, but it is not a saved draft: '
     + 'it has no owners and no picks in it.';
   el('loadModal').classList.add('hide');
   adoptState(s);
   return null;
+}
+/* ---- WHICH OF THE THREE TO PUT BACK -----------------------------------------------------
+ * Casey, 4 Nov 2026: "then I would load them back in if needed." Usually one division has gone
+ * wrong and the other two are mid-draft, so putting all three back would undo work nobody asked
+ * about. Each one is offered by name with its pick count, and all three together is one button.
+ */
+function askRestore(file, have){
+  const when = file.at ? prettyWhen(file.at) : '';
+  const rows = have.map(d => '<button class="ghost" data-rst="' + d + '">'
+    + divLabel(d) + ' &middot; ' + ((file.divs[d].picks || []).length) + ' pick'
+    + (((file.divs[d].picks || []).length) === 1 ? '' : 's') + '</button>').join(' ');
+  showHelpPanel('Load a Saved Draft',
+    '<p>This file holds <b>' + have.length + ' division'
+    + (have.length === 1 ? '' : 's') + '</b>' + (when ? ', saved ' + _esc(when) : '') + '.</p>'
+    + '<p>Put back the one that needs it, or all of them. Whatever you choose replaces what the '
+    + 'league is holding for that division. The others are left exactly as they are.</p>'
+    + '<div class="rowbtns">' + rows
+    + (have.length > 1 ? '<button class="primary" data-rst="*">Put All '
+        + have.length + ' Back</button>' : '')
+    + '</div>');
+  document.querySelectorAll('[data-rst]').forEach(b => b.onclick = ()=>{
+    el('mhModal').classList.add('hide');
+    const pick = b.dataset.rst;
+    doRestore(file, pick === '*' ? have : [pick]);
+  });
+}
+function doRestore(file, list){
+  /* THE DEVICE'S OWN COLUMNS COME BACK ONCE, before any division, so a board drawn during the
+     restore already has them. */
+  if (!OWNERS_ONLY){
+    if (file.own) { S = S || {}; S.own = file.own; saveOwnWins(); }
+    if (file.board) { S = S || {}; S.board = file.board; saveBoardOrder(); }
+    if (file.fastpins) { S = S || {}; S.fastpins = file.fastpins; saveFastOrder(); }
+    if (file.fastrec) { S = S || {}; S.fastrec = file.fastrec; saveFastRecs(); }
+  }
+  const here = divRead();
+  const done = [];
+  const chain = list.reduce((pr, d) => pr.then(() => {
+    const snap = file.divs[d];
+    /* THE DIVISION ON SCREEN IS ADOPTED ONTO THE PAGE AS WELL AS SENT, because that is the one
+       the reader is looking at and a board that did not change would read as a failed load. */
+    if (d === here){
+      adoptState({owners: snap.owners.slice(), orders: snap.orders || {},
+                  picks: (snap.picks || []).slice(), custom: (snap.custom || []).slice()});
+      done.push(d);
+      return Promise.resolve();
+    }
+    return dsReplayDiv(d, snap).then(()=> { done.push(d); });
+  }), Promise.resolve());
+  return chain.then(()=> dsRead(false)).then(()=>{
+    showHelpPanel('Put Back',
+      '<p>' + done.map(d => divLabel(d)).join(', ') + ' '
+      + (done.length === 1 ? 'is' : 'are') + ' back in the league.</p>'
+      + (DS_PHASE === 'running' ? ''
+          : '<p class="note">The draft is not running, so nothing could be sent. Start the draft '
+            + 'and load this file again.</p>'));
+  });
+}
+/* A DATE A READER CAN CHECK AGAINST THEIR OWN MEMORY OF THE NIGHT. */
+function prettyWhen(iso){
+  try {
+    const t = new Date(iso);
+    if (isNaN(+t)) return '';
+    return t.toLocaleString(undefined,
+      {weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'});
+  } catch (e) { return ''; }
 }
 el('loadPaste').onclick = ()=>{
   const txt = el('loadText').value.trim();
@@ -10346,9 +10634,14 @@ function dsLine(){
        five picks saved in the league, you always already say that down below ... it seems like
        it's just extra stuff." The save chip carries the count, the typing bar carries who is
        at the keyboard; this says which of the two things THIS reader is doing, and stops. */
-    bits.push(amTyping()
-      ? '<b>You are drafting ' + divLabel(d) + '</b>'
-      : '<b>Watching ' + divLabel(d) + '</b> &mdash; your picks are not sent');
+    /* ---- AND A VIEWER IS TOLD NOTHING, BECAUSE THERE IS NOTHING TO TELL THEM -----------
+     * Casey, 4 Nov 2026: "for a draft viewer, up at the top, it says watching predator, which
+     * is fine. But next to it, it says your picks are not sent. There's nothing they can pick,
+     * so you don't need to say your picks are not sent. And I don't think you need to say that
+     * you're watching predator. It's just a draft board to look at."
+     * He is right. That sentence was written for a page that still had Draft buttons on it; a
+     * board with no Draft button anywhere does not need a line explaining why. */
+    if (amTyping()) bits.push('<b>You are drafting ' + divLabel(d) + '</b>');
     box.innerHTML = bits.join(' &middot; ');
     box.className = (q || DS_NOTE) ? 'build warn' : 'build';
     if (q) box.innerHTML += ' &middot; <b>' + q + ' pick' + (q === 1 ? '' : 's')
@@ -10570,14 +10863,29 @@ function dsUndo(team){
  * the league would refuse every line of it.
  */
 function dsReplay(){
-  if (!DraftStore.live() || !S) return;
-  if (DS_PHASE !== 'running' || !canType()) return;
-  const d = divRead();
-  dsOwners(S.owners);
-  Object.keys(S.orders || {}).forEach(k => dsDraw(+k, S.orders[k]));
-  (S.picks || []).forEach(p => DraftStore.queueAdd(d, p.team, p.owner));
-  dsLine();
-  dsFlush();
+  if (!S) return Promise.resolve();
+  return dsReplayDiv(divRead(),
+    {owners: S.owners, orders: S.orders, picks: S.picks});
+}
+/* ONE NAMED DIVISION, PUT BACK IN ORDER. A commissioner may do this for any of the three, which
+   is what makes the all-three file worth having; anybody else may do it only for the division
+   they are typing, because that is all the league would accept from them anyway. */
+function dsReplayDiv(d, snap){
+  if (!DraftStore.live() || DS_PREVIEW || !snap) return Promise.resolve();
+  if (DS_PHASE !== 'running') return Promise.resolve();
+  if (!isBoss() && !(d === divRead() && canType())) return Promise.resolve();
+  const seq = () => (LSEQ[d] == null ? 0 : LSEQ[d]);
+  const keep = (a) => { if (a && a.board) dsRemember(d, a.board); return a; };
+  const blocks = Object.keys(snap.orders || {});
+  return DraftStore.setOwners(d, snap.owners, seq()).then(keep)
+    .then(() => blocks.reduce(
+      (pr, k) => pr.then(() => DraftStore.setDraw(d, +k, snap.orders[k], seq()).then(keep)),
+      Promise.resolve()))
+    .then(() => {
+      (snap.picks || []).forEach(p => DraftStore.queueAdd(d, p.team, p.owner));
+      dsLine();
+      return dsFlush(d);
+    });
 }
 function dsOwners(names){
   if (!DraftStore.live()) return;
@@ -10597,9 +10905,11 @@ function dsReset(){
 }
 
 /* ---- the picks the league has not seen yet ------------------------------------------------- */
-function dsFlush(){
+/* `only` names a division. Without it this flushes the one on screen, which is what the draft
+   itself does; a restore from a saved file names each division it is putting back. */
+function dsFlush(only){
   if (!DraftStore.live() || DS_BUSY) return Promise.resolve();
-  const d = divRead();
+  const d = only || divRead();
   const q = DraftStore.queueFor(d);
   if (!q.length) return Promise.resolve();
   DS_BUSY = true;
