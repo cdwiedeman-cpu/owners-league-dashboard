@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes" data-build="build 04 Nov 2026 08:23 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
+<html lang="en" data-selfsized="yes" data-build="build 08 Nov 2026 19:43 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -116,7 +116,16 @@ header{padding:7px 14px;gap:10px}
    button onto the next line. An `order` past everything in the first row fixes it without
    moving anything in the markup. */
 #standIn.open{display:block;flex-basis:100%;font-size:11px;order:7}
-#dsline{font-size:12px;font-weight:600;border:0;padding:2px 0}
+/* ---- THE STATUS LINE OWNS ITS ROW -------------------------------------------------------
+ * Casey, 8 Nov 2026: "you are drafting for Predator and then see it as a draft viewer keeps
+ * shifting up and down. So sometimes it'll move below on the next row. Sometimes it stays up on
+ * the top row."
+ * This line shared a row with the typing bar and the preview button, and its text changes
+ * length as you draft -- the league's refusal sentence gets appended to it and then cleared. A
+ * longer sentence pushed the button onto the next row and a shorter one pulled it back. The
+ * same remedy `.clock` already has: a full-width basis, so this line can never move a sibling
+ * however long it gets. */
+#dsline{font-size:12px;font-weight:600;border:0;padding:2px 0;flex-basis:100%}
 #dsline.warn{color:var(--warntx)}
 header h1{font-size:13.5px}
 .build{padding:1px 7px}
@@ -1230,7 +1239,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
          league has a newer build. Nobody has to read a date to find out.
          IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
          and what to ask for when a copy looks wrong. -->
-    <div class="build buildstamp hide" id="build">build 04 Nov 2026 08:23 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build buildstamp hide" id="build">build 08 Nov 2026 19:43 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
@@ -2879,6 +2888,22 @@ function roster(o){
    draft table being told yes. `Peloton.draftCheck` is the store; this is a reader of it. */
 function legalFor(o, team){
   return !Peloton.draftCheck(S.picks, o, team.n, n => { const t = findTeam(n); return t ? t.p : null; });
+}
+/* ---- THE CELL IS ONE COLUMN WIDE, SO THE SENTENCE GOES IN THE HOVER TEXT -----------------
+ * Every branch here matches one of `Peloton.draftCheck`'s own answers. A rule added there that
+ * this does not know shows up as "cannot pick" rather than being quietly called a full roster,
+ * so a new refusal can never hide behind an old label. */
+function shortWhy(w){
+  w = String(w || '');
+  if(/\bNFL teams\b/.test(w))            return 'NFL full';
+  if(/\bcollege teams\b/.test(w))        return 'college full';
+  if(/all \d+ of their teams/.test(w))   return 'roster full';
+  if(/already been drafted/.test(w))     return 'taken';
+  if(/not one of the \d+ seats/.test(w)) return 'no turn set';
+  if(/finished its draft/.test(w))       return 'draft over';
+  if(/not on this board/.test(w))        return 'not rated';
+  if(/no team was named/.test(w))        return 'no team';
+  return 'cannot pick';
 }
 /* AND THE REASON, IN WORDS, FOR WHEN SOMETHING HAS TO BE SAID OUT LOUD. */
 function whyNotLegal(o, team){
@@ -7698,9 +7723,17 @@ function renderTable(){
     const lv = liveVorp(t);
     const wc = UNRATED(t) ? null : dropOff(t);
     const dd = wc==null ? null : dropDetail(t);
+    /* ---- WHY A TEAM CANNOT BE TAKEN, IN THE WORDS OF THE RULE THAT REFUSED IT ----------
+     * This cell printed "roster full" for every reason a pick can be refused, and the rule has
+     * six. Three of them are not a full roster at all, and two mean the board does not know
+     * whose turn it is. Casey, 8 Nov 2026: "there are no available teams to pick. They're all
+     * showing full, so I can't pick anyone." The rosters were not full. A label that can only
+     * say one thing says it even when it is wrong. */
+    const why = (slot && !taken && canType()) ? whyNotLegal(slot.owner, t) : '';
     const status = taken
       ? `<b style="color:${mine?'var(--gold)':'var(--dim)'}">${S.owners[owner]}</b>`
-      : (slot && !canPick ? `<span class="warn">roster full</span>` : `<span class="muted">available</span>`);
+      : (why ? `<span class="warn" title="${_esc(why)}">${_esc(shortWhy(why))}</span>`
+             : `<span class="muted">available</span>`);
     const ti = tierOf(t);
     const selc = (COMPARE.on && COMPARE.teams.includes(t.n)) ? ' sel' : '';
     let sep='';
@@ -8552,12 +8585,39 @@ function draft(teamName, ownerOverride){
   render();
   /* AND THE LEAGUE IS TOLD. The click lands on the board straight away, because a draft room
      cannot wait for a round trip, and `dsPick` takes it back off if the league refuses it. */
-  dsPick(t.n, owner);
+  /* ---- WHOSE PICK IT IS GOES OVER THE WIRE ONLY WHEN THE DRAW CANNOT SAY -----------------
+   * The league works the owner out from its own draw, and uses the page's number whenever the
+   * page sends one. The page sent one on EVERY pick, so the league's draw was never consulted
+   * and this device's answer -- derived from the position in its own list of picks -- was
+   * written down as fact. Two stores of who is on the clock, with the authoritative one
+   * deferring to the derived one, which is the shape of bug this project has already paid for.
+   * A seat is sent ONLY for a deliberate out-of-turn entry, which is the one case the league
+   * genuinely cannot work out for itself. */
+  dsPick(t.n, owner, ownerOverride !== undefined);
   return true;
 }
+/* ---- A PICK COMES OFF THE END, NEVER OUT OF THE MIDDLE -----------------------------------
+ * Whose pick it is comes from the POSITION in this list: `currentSlot()` indexes into the draw
+ * by how many picks exist. So taking one out of the middle silently moves every later slot onto
+ * a different owner and the draft carries on recording picks against the wrong people.
+ * The league has always refused an undo of anything but the last pick, so this was also a thing
+ * the page did that the league would reject. Correcting an earlier pick is what Fix a Pick is
+ * for, and it changes the pick in place rather than removing it. */
 function undoTeam(name){
   const i = S.picks.findIndex(p=>p.team===name);
-  if(i>=0){ S.picks.splice(i,1); render(); dsUndo(name); }
+  if(i < 0) return false;
+  if(i !== S.picks.length - 1){
+    const last = S.picks[S.picks.length - 1];
+    tell('That Is Not the Last Pick',
+         '<b>' + _esc(name) + '</b> is not the most recent pick. Taking it back here would move '
+       + 'every pick made after it onto a different owner, so the board will not do it. The last '
+       + 'pick is <b>' + _esc(last ? last.team : '') + '</b>.'
+       + '<p>To change a pick made earlier, use <b>Fix a Pick</b>. That changes the team or the '
+       + 'owner on the pick itself and leaves everything after it where it is.</p>');
+    return false;
+  }
+  S.picks.pop(); render(); dsUndo(name);
+  return true;
 }
 /* Drag a rank cell to reorder. Only meaningful while the table is in board order — in any
    other sort the rows are not a sequence, so dropping between two of them has no defined
@@ -10775,11 +10835,27 @@ function dsAdopt(b){
   if (!b) return false;
   const names = (b.owners || []).slice();
   if (names.length !== NOWNERS) return false;
-  const orders = {};
+  /* ---- A DRAW IS THE NINE SEATS, ONCE EACH, AND IT IS CHECKED HERE TOO -----------------
+   * The draw-order form checks this and so does the league. This checked the LENGTH and nothing
+   * else, so a draw holding one seat twice and another not at all would be adopted and
+   * believed. That draw gives one owner two picks a round and another none in BOTH rounds of
+   * the block, because the second round is the first reversed and reversing cannot change who
+   * is in it. Three places decide the same thing and only two of them were asking.
+   * A DRAW THAT FAILS IS NAMED, NOT DROPPED. Silently leaving it out truncates the slot list,
+   * and then nobody is on the clock and every team reads as unavailable. */
+  const orders = {}, badDraws = [];
   Object.keys(b.draws || {}).forEach(k => {
     const ord = b.draws[k];
-    if (ord && ord.length === NOWNERS) orders[+k] = ord.slice();
+    if (!ord || ord.length !== NOWNERS || new Set(ord).size !== NOWNERS
+        || ord.some(x => !(Number(x) >= 0 && Number(x) < NOWNERS))){ badDraws.push(+k); return; }
+    orders[+k] = ord.slice();
   });
+  if (badDraws.length){
+    DS_NOTE = 'the league\'s draw order for round'
+      + (badDraws.length === 1 ? ' ' : 's ')
+      + badDraws.map(x => (BLOCKS[x] || []).join(' and ')).join(', ')
+      + ' is not the nine seats once each, so it has not been used. Set it again from Draft Order.';
+  }
   const me = (S && S.me != null && S.me >= 0 && S.me < NOWNERS) ? S.me : 0;
   S = {
     owners: names, me: me, orders: orders,
@@ -10859,9 +10935,38 @@ function dsRead(adopt){
   });
 }
 
+/* ---- EVERY WRITE TO THE LEAGUE GOES THROUGH HERE, ONE AT A TIME, SPACED ------------------
+ * Cloudflare's own documentation: "Workers KV has a maximum of 1 write to the same key per
+ * second. Writes made to the same key within 1 second will cause rate limiting (429) errors to
+ * be thrown", and it recommends waiting at least a second between writes. A division's draft is
+ * ONE key, so this is the board's own problem to solve and not the league's.
+ * Serialising also removes the stale answers, because the next write cannot be built on a
+ * version that is already being replaced. */
+/* A HARNESS MAY LOWER THIS, and `verify_draftlive.js` does: it answers over a local wire with
+   no KV behind it, so the only thing the gap would add there is nine seconds of waiting. It
+   asserts the SHIPPED value separately, so the pacing cannot be quietly removed. */
+let DS_MIN_GAP = 1100;
+let DS_CHAIN = Promise.resolve();
+let DS_LAST_WRITE = 0;
+function dsGap(){
+  const wait = Math.max(0, DS_MIN_GAP - (Date.now() - DS_LAST_WRITE));
+  return new Promise(res => setTimeout(res, wait));
+}
+function dsWrite(fn){
+  const run = DS_CHAIN.then(() => dsGap().then(() => { DS_LAST_WRITE = Date.now(); return fn(); }),
+                            () => dsGap().then(() => { DS_LAST_WRITE = Date.now(); return fn(); }));
+  DS_CHAIN = run.then(() => {}, () => {});
+  return run;
+}
+
 /* ONE DOOR FOR EVERY WRITE, so the three answers cannot be handled five slightly different ways.
    `go(seq)` makes the call; `onRefuse` undoes whatever this page did on its own. */
-function dsSend(go, onRefuse){
+/* `onStale(a)` is called when a stale answer is the LAST word, after this page has taken the
+   league's board. There is nothing to undo at that point -- the local state has just been
+   replaced by the league's -- but the typist still has to be told that the press they made did
+   not become their pick. Going quiet is the failure; it is how a pick vanishes with nothing
+   said and a roster ends up one short. */
+function dsSend(go, onRefuse, onStale){
   const d = divRead();
   if (!DraftStore.live()) return Promise.resolve('local');
   /* A PREVIEW SENDS NOTHING. The whole point of it is to be the reader who cannot write, so the
@@ -10872,9 +10977,35 @@ function dsSend(go, onRefuse){
      refusal on the screen for every single pick, which reads as a broken board rather than as a
      permission nobody has given them. */
   if (DS_MAY === '') return Promise.resolve('local');
-  return go(LSEQ[d] == null ? 0 : LSEQ[d]).then(a => {
-    if (a.offline){
-      DS_NOTE = 'the league could not be reached';
+  /* ---- ONE AT A TIME, AND NOT FASTER THAN THE LEAGUE CAN STORE -------------------------
+   * Casey, 8 Nov 2026: "USC is not drafted. KV put failed. 429 too many requests."
+   * Two separate things were losing picks and both end here. Cloudflare KV takes ONE WRITE PER
+   * SECOND PER KEY and a division's whole draft is one key, so a draft room entering picks
+   * quickly is rate limited and the write never lands. Separately, two picks sent before the
+   * first answer came back both carried the same version, so the league correctly called the
+   * second one stale. Spacing the writes fixes both, and a stale answer is now tried again
+   * instead of being thrown away.
+   * A STALE ANSWER IS NOT A REFUSED PICK. The queue has always retried one; the single-pick
+   * path adopted the league's board and dropped the pick on the floor, which is how a division
+   * ends up with one owner on ten teams and another on eight. */
+  const attempt = (left) => go(LSEQ[d] == null ? 0 : LSEQ[d]).then(a => {
+    if (!a) return {ok: false, why: 'offline', offline: true};
+    if (a.why === 'stale' && left > 0){
+      dsRemember(d, a.board);
+      return dsGap().then(() => attempt(left - 1));
+    }
+    return a;
+  });
+  return dsWrite(() => attempt(1)).then(a => {
+    /* ---- A WRITE THE LEAGUE COULD NOT STORE IS A LEAGUE IT COULD NOT REACH ------------
+     * From the typist's side those are one situation: the pick is legal, it is wanted, and the
+     * league does not have it. So it takes the same road -- the pick stays on the board and
+     * goes into the queue, which already retries and already says how many are waiting. What
+     * it must never do is read as the league refusing the pick, because it is not a refusal. */
+    if (a.offline || a.retry === true || a.why === 'retry'){
+      DS_NOTE = (a.retry === true || a.why === 'retry')
+        ? 'the league cannot store picks that fast, so they are queueing and will go by themselves'
+        : 'the league could not be reached';
       dsLine(); return 'offline';
     }
     if (a.why === 'noseq'){
@@ -10887,8 +11018,20 @@ function dsSend(go, onRefuse){
       dsRemember(d, a.board);
       DS_NOTE = a.note || 'the league said no';
       /* A STALE PAGE IS NOT A REFUSED PICK. Somebody else wrote, so this page takes the league's
-         board -- which already holds their pick -- instead of arguing with it. */
-      if (a.why === 'stale') dsAdopt(a.board);
+         board -- which may already hold the very change this page was making -- instead of
+         arguing with it.
+         BUT A STALE WRITE THAT DID NOT HAPPEN IS STILL A WRITE THAT DID NOT HAPPEN, and going
+         quiet about it is how a pick disappears off a board with nothing said. So when the
+         caller can tell us the change is NOT in the league's board, this is handled as the
+         refusal it actually is. */
+      if (a.why === 'stale'){
+        dsAdopt(a.board);
+        /* THE BOARD CONTAINING THE TEAM IS NOT PROOF THE PRESS WORKED. Somebody else's copy of
+           that same pick may be what is in it -- that is exactly what a stale answer means --
+           and asking "is the team there" answers yes to the wrong question. So the typist is
+           told either way and the message names the team. */
+        if (onStale) onStale(a);
+      }
       else if (onRefuse) onRefuse(a);
       /* ---- A REFUSED CHANGE LEAVES THIS PAGE AGREEING WITH THE LEAGUE --------------------
        * Casey, 3 Nov 2026: "I did a bunch of undos ... now I click draft, and it says South
@@ -10918,19 +11061,39 @@ function dsSend(go, onRefuse){
 }
 
 /* ---- the five things this page tells the league ------------------------------------------- */
-function dsPick(team, owner){
+function dsPick(team, owner, outOfTurn){
   if (!DraftStore.live()) return;
   const d = divRead();
-  dsSend(seq => DraftStore.pick(d, team, owner, seq), () => {
+  /* `null` is this page saying "you work it out", which is what the league's own draw is for. */
+  const seat = outOfTurn ? owner : null;
+  dsSend(seq => DraftStore.pick(d, team, seat, seq), () => {
     /* A PICK THE LEAGUE REFUSED IS NOT A PICK. It comes off this board and the typist is told
        which team and why, rather than being left believing it landed. */
     const i = S.picks.findIndex(p => p.team === team);
     if (i >= 0){ S.picks.splice(i, 1); render(); }
-    tell('The league did not take that pick', '<b>' + _esc(team) + '</b> is not drafted. '
-       + _esc(DS_NOTE || 'the league said no') + '.');
+    /* TITLE CASE ON THE HEADING, AND THE REASON IS ITS OWN SENTENCE. The league writes its
+       reasons in lower case because they are normally read mid-sentence; dropped in after a
+       full stop it came out as "Ohio State is not drafted. that team is spoken for". */
+    const rsn = String(DS_NOTE || 'the league said no');
+    tell('The League Did Not Take That Pick',
+         '<b>' + _esc(team) + '</b> is not drafted. '
+       + _esc(rsn.charAt(0).toUpperCase() + rsn.slice(1)) + '.');
+  }, () => {
+    /* THE BOARD MOVED UNDER THIS PRESS. The page is now showing the league's own record, so
+       whether this team is drafted is already right on screen. What the typist cannot see is
+       that THEIR press is not what recorded it, and at a draft table that is the difference
+       between moving on and entering it twice. */
+    const got = (((LBOARDS[divRead()] || {}).picks) || []).find(x => x.team === team);
+    tell('The Board Moved While You Were Pressing',
+         '<b>' + _esc(team) + '</b> was entered somewhere else at the same moment, so your press '
+       + 'did not record it.'
+       + (got ? ' The league has it against <b>' + _esc(S.owners[got.owner] != null
+                   ? S.owners[got.owner] : ('seat ' + got.owner)) + '</b>.' : '')
+       + '<p>The board above is the league\'s own record. Check whose pick it should be, and use '
+       + '<b>Fix a Pick</b> if it needs to change.</p>');
   }).then(r => {
     if (r === 'offline'){
-      DraftStore.queueAdd(d, team, owner);
+      DraftStore.queueAdd(d, team, seat);
       dsLine();
     }
   });

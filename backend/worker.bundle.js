@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: '9458f2e4491b', at: '2026-11-04 06:48 UTC'};
+const WORKER_BUILD = {id: '46c69e77c688', at: '2026-11-08 19:15 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -1923,7 +1923,39 @@ async function handle(request, env) {
       /* STILL THE SAME VERSION? If somebody wrote while this was deciding, decide again. */
       const again = await readDraft(env2, div);
       if ((Number(again.seq) || 0) !== have) continue;
-      await putJSON(env2, draftKey(div), cur);
+      /* ---- A KV WRITE THAT WAS RATE LIMITED IS NOT A REFUSED PICK -----------------------
+       * Cloudflare: "Workers KV has a maximum of 1 write to the same key per second. Writes
+       * made to the same key within 1 second will cause rate limiting (429) errors to be
+       * thrown", and the thrown message is "KV PUT failed: 429 Too Many Requests". A division's
+       * whole draft is ONE key, so a draft room entering picks quickly hits that limit.
+       * Casey, 8 Nov 2026: "USC is not drafted. KV put failed. 429 too many requests." The pick
+       * was legal and it was wanted. The write threw, and the page was told the LEAGUE had
+       * refused the pick -- so it came off the board and was lost. That is what made one owner
+       * end up with ten teams and another with eight.
+       * Cloudflare's own advice for this error is to retry with backoff, so that is what this
+       * does. And because the documentation does NOT say whether a 429 means the write was
+       * stored, the last word is a RE-READ rather than an assumption in either direction. */
+      let putErr = null;
+      for (let t = 0; t < 3; t++) {
+        try { await putJSON(env2, draftKey(div), cur); putErr = null; break; }
+        catch (e) {
+          putErr = e;
+          if (t < 2) await new Promise((r) => setTimeout(r, 1000 * (t + 1)));
+        }
+      }
+      if (putErr) {
+        /* IT MAY HAVE LANDED ANYWAY. Ask, rather than telling the typist something either way. */
+        const landed = await readDraft(env2, div);
+        if ((Number(landed.seq) || 0) === have + 1 && (!confirm || confirm(landed))) {
+          return out({ok: true, granted: true, board: draftOut(landed)});
+        }
+        /* NOT A REFUSAL, AND IT MUST NOT READ AS ONE. `retry` tells the page to keep what it
+           has and send it again, which is the same road a pick takes when the league cannot be
+           reached at all. */
+        return out({ok: false, why: 'retry', retry: true,
+                    note: 'the league could not store that quickly enough. Nothing was written, '
+                        + 'and the board still has it to send again.'});
+      }
       /* AND THE LEAGUE'S OWN COPY HAS TO AGREE BEFORE THE TYPIST IS TOLD ANYTHING. KV has no
          compare and swap, so the only honest confirmation is one that has read the result back.
          A false yes is the whole bug this handler exists not to have. */
