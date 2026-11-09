@@ -5,7 +5,7 @@
      document makes the document taller, which grows the frame again, and every panel walks down
      the screen a dozen pixels at a time until it is gone. Casey found exactly that on
      3 Nov 2026. THE TELL BELONGS TO THE PAGE, not to a list kept in the dashboard. -->
-<html lang="en" data-selfsized="yes" data-build="build 08 Nov 2026 19:43 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
+<html lang="en" data-selfsized="yes" data-build="build 09 Nov 2026 06:20 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -106,7 +106,24 @@ header{padding:7px 14px;gap:10px}
  * version of the same thing. They share row one with the controls now; the clock keeps row two
  * to itself, because it is the only part that must never move while he is drafting.
  */
-#typeBar, #previewBar, #dsline, #freshness, #saveState, #saveWhy{order:5}
+/* ---- THE ORDER HE ASKED FOR ---------------------------------------------------------------
+ * Casey, 9 Nov 2026: "can we somehow get the you are drafting for Predator, handed over, saved
+ * in the league 16 picks, up on the same row as either the reality football league draft title
+ * with division ... Because if we can gain two more rows, that's going to give the draft, make
+ * the draft board look better."
+ * Flex wrapping fills a row and then breaks, so WHAT SHARES A ROW IS DECIDED BY ORDER. The
+ * state of the draft and the save chip now follow the heading and the division immediately, so
+ * they fill the first row before anything else can take it. The typing bar is next, then the
+ * commissioners' buttons, then the preview switch.
+ * THE CLOCK KEEPS ITS OWN ROW. It is the one part that must never move while he is drafting,
+ * and that rule predates this one. */
+#runBar{order:2}
+#saveState{order:3}
+#saveWhy{order:4}
+#typeBar{order:5}
+#previewBar{order:6}
+#freshness{order:7}
+#dsline{order:8}
 .clock{flex-basis:100%;order:9;margin-left:0}
 .buildstamp{order:10}
 #standIn{display:none}
@@ -1239,7 +1256,7 @@ tbody tr.sel{outline:2px solid var(--accent);outline-offset:-2px}
          league has a newer build. Nobody has to read a date to find out.
          IT IS STILL IN THE PAGE, just not on it. `data-build` on <html> is what a check reads
          and what to ask for when a copy looks wrong. -->
-    <div class="build buildstamp hide" id="build">build 08 Nov 2026 19:43 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
+    <div class="build buildstamp hide" id="build">build 09 Nov 2026 06:20 &middot; 296 teams (138 FBS, 126 FCS, 32 NFL) &middot; drafting 2027</div>
     <!-- EIGHT BUTTONS ON ONE LINE IS 536px, and that is wider than a phone. They wrap. -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="ghost" id="btnManual">+ Type a Pick</button>
@@ -4424,6 +4441,8 @@ function schedTable(t){
           A bye counts as a <b style="color:var(--ink)">non-win</b> in the fast-start odds: you cannot win a
           game you do not play.</div>`;
       })()
+    /* WHICH SEASON THESE FIXTURES ARE. One sentence, shared with the league's plain panel. */
+    + standInNote()
     + (ups?`<div class="note"><b style="color:var(--ink)">Click any game</b> for the reasoning behind the pick.
     <b style="color:var(--ink)">WIN</b> is this team's probability of winning that game.
     Hover an opponent for the projected margin.
@@ -4777,10 +4796,30 @@ function showDetailPlain(name){
     ${rows ? `<div class="schplain"><table class="mini schp">
       <colgroup><col class="cwhen"><col><col class="cwhere"></colgroup>
       <thead><tr><th>When</th><th>Opponent</th><th>Where</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`
+      <tbody>${rows}</tbody></table></div>` + standInNote()
     : `<div class="empty">No schedule is in this copy of the board for ${_esc(t.n)}.</div>`}`;
   const c = el('dClose'); if (c) c.onclick = hideDetail;
 }
+/* ---- WHOSE SEASON THE FIXTURES ARE, WRITTEN ONCE ------------------------------------------
+ * Casey, 8 Nov 2026: "You can't have the schedules for next year already, so are you just using
+ * this year's schedules?" He is right, and the board did say so -- in the sentence behind the
+ * question mark at the top of the page. That is the wrong place for it. The confusion happens in
+ * the schedule panel, looking at a 2026 date under a 2027 heading, so the answer belongs there.
+ * A PAGE THAT ANSWERS A QUESTION SOMEWHERE ELSE HAS NOT ANSWERED IT.
+ * TWO PANELS DRAW A SCHEDULE -- his copy's and the league's plain one -- so the sentence lives
+ * here and both of them call it. Written twice it would be corrected once. */
+function standIn(){
+  return !!(DATA.built_from && DATA.season && DATA.built_from !== DATA.season);
+}
+function standInNote(){
+  if (!standIn()) return '';
+  return '<div class="note"><b style="color:var(--gold)">These are the ' + DATA.built_from
+       + ' fixtures.</b> The ' + DATA.season + ' schedules are not published yet, so last '
+       + 'season\'s are standing in to make the board usable now. The dates and the opponents '
+       + 'are real, they are just a year old. They are replaced with the ' + DATA.season
+       + ' schedules before the draft.</div>';
+}
+
 /* BEST AVAILABLE, read off the board itself so the panel and the list can never disagree. */
 function renderBest(){
   const box = el('bestavail'); if (!box || !OWNERS_ONLY) return;
@@ -7871,7 +7910,15 @@ function renderTable(){
   });
   syncResetOrder();
   syncClearQ();
-  el('count').textContent = `${isCustom()?'YOUR board · ':''}sorted by ${S_.label} · ${rows.length} shown${rows.length>400?' (first 400)':''} · repl NFL ${REP.nfl.toFixed(1)} / COL ${REP.col.toFixed(1)}`;
+  /* ---- THE READOUT IS NOT WORTH A ROW ON THE DRAFT BOARD --------------------------------
+   * Casey, 9 Nov 2026: "you have this sorted by board rank, 280 shown, REPL, NFL, 0.0, college
+   * 0.0. I don't know why we need that. That would give you a whole row to move up."
+   * He is right, and the replacement figures are the reason: on the 2027 board there is no
+   * model behind them, so both read 0.0. A number that is always zero is not information, and
+   * the sort is named on the column heading that is doing the sorting. It stays on the 2026
+   * board, where the figures are real and the row is not competing with a live draft. */
+  el('count').textContent = standIn() ? ''
+    : `${isCustom()?'YOUR board · ':''}sorted by ${S_.label} · ${rows.length} shown${rows.length>400?' (first 400)':''} · repl NFL ${REP.nfl.toFixed(1)} / COL ${REP.col.toFixed(1)}`;
 }
 
 /* PROJECTED FINISH — where the team lands in its own division or conference.
@@ -9877,7 +9924,16 @@ function renderTypeBar(){
    * you got to make sure that anybody that's not a commissioner does not have that option."
    * The designated typist needs no button: the access list already put them in the chair. The
    * only people who move the chair are Casey and Bob. */
-  if (!live || !isBoss() || DS_PHASE !== 'running'){
+  /* ---- TWO DECISIONS, NOT ONE, AND THEY ARE NOT THE SAME DECISION -----------------------
+   * WHO IS DRAFTING is a sentence the drafter must see. MOVING THE CHAIR is a commissioner's
+   * button. Those were one test, so the whole bar was drawn for a commissioner only -- and when
+   * the status line stopped repeating the sentence, an ordinary drafter was left with nothing
+   * at all telling them they were the one entering picks. That is the worst state this page can
+   * be in: a page that is recording and does not say so.
+   * A VIEWER STILL SEES NOTHING. Casey, 4 Nov 2026, on the viewer's header: "there's nothing
+   * they can pick ... It's just a draft board to look at." So the bar is drawn for whoever is
+   * drafting and for a commissioner, and for nobody else. */
+  if (!live || DS_PHASE !== 'running' || !(isBoss() || amTyping())){
     bar.classList.add('hide'); return;
   }
   bar.classList.remove('hide');
@@ -9895,7 +9951,8 @@ function renderTypeBar(){
        the draft ... Or you are drafting for predator. That is probably the best thing." */
     who.innerHTML = '<b>You are drafting for ' + divLabel(d) + '.</b>';
     btn.textContent = 'Hand Over Drafting';
-    btn.hidden = false;
+    /* THE BUTTON IS THE COMMISSIONERS'. The sentence above it is everybody's who is drafting. */
+    btn.hidden = !isBoss();
     btn.onclick = ()=> ask('Hand over the ' + divLabel(d) + ' drafting?',
       'Your board stops sending picks. Whoever the access list names for ' + divLabel(d)
       + ' takes it back, and you can take it again from here.',
@@ -9953,8 +10010,14 @@ function renderRunBar(){
      email address that it's being controlled by?" A seat can hold two people, so the seat name
      does not answer "who did this". The league sends the address to a COMMISSIONER ONLY, which
      is the half of the back end that may carry one, and falls back to the seat otherwise. */
+  /* ---- NAMING WHO OPENED IT IS ONLY WORTH IT WHEN IT WAS THE OTHER COMMISSIONER ---------
+   * Casey, 9 Nov 2026: "do we need to say who it was opened by?" Not when it was him: he is
+   * reading his own address back. It matters when BOB opened it, because that is the thing he
+   * cannot otherwise know. This bar is drawn for a commissioner and nobody else, so those are
+   * the only two cases there are. */
   const byWhom = DS_PHASE_EMAIL || DS_PHASE_BY;
-  const who = byWhom ? ', opened by ' + _esc(byWhom) : '';
+  const wasMe = !!(DS_ME && DS_ME.seat && DS_PHASE_BY && DS_PHASE_BY === DS_ME.seat);
+  const who = (byWhom && !wasMe) ? ', opened by ' + _esc(byWhom) : '';
   el('runState').textContent =
       DS_PHASE === 'running' ? 'The draft is open' + who
     : DS_PHASE === 'done'    ? 'The draft is stopped' + who
@@ -9979,9 +10042,14 @@ function renderPreviewBar(){
   /* Casey, 4 Nov 2026: "I think it should say see it as draft viewer instead of owner,
      because there are some owners that are drafters." He is right -- most of the league are
      owners AND viewers, and one owner in each division is the drafter. Viewer is the job. */
+  /* ---- A BUTTON DOES NOT NEED A QUESTION IN FRONT OF IT ---------------------------------
+   * Casey, 9 Nov 2026: "Want to see what the draft viewer sees? Couldn't you just say see it as
+   * draft viewer? Why do you have to ask the question?" The button already says exactly that.
+   * The sentence stays for the state that is NOT obvious -- that nothing is being sent while
+   * the switch is on -- because that one is worth a row. */
   el('previewWho').innerHTML = DS_PREVIEW
     ? '<b>You are seeing this as a draft viewer.</b> Nothing you press is sent.'
-    : 'Want to see what a draft viewer sees?';
+    : '';
   el('btnPreview').textContent = DS_PREVIEW ? 'Back to My View' : 'See It as a Draft Viewer';
 }
 function setPreview(on){
@@ -10793,12 +10861,20 @@ function dsLine(){
      * you're watching predator. It's just a draft board to look at."
      * He is right. That sentence was written for a page that still had Draft buttons on it; a
      * board with no Draft button anywhere does not need a line explaining why. */
-    if (amTyping()) bits.push('<b>You are drafting for ' + divLabel(d) + '</b>');
+    /* ---- SAID ONCE, AND NOT HERE ------------------------------------------------------
+     * Casey, 9 Nov 2026: "you're saying you are drafting in Predator two different places
+     * there, and then you are drafting in Predator hand over drafting."
+     * He is right. The typing bar says who is drafting AND carries the Hand Over button beside
+     * it, which is where that sentence belongs -- a statement next to the control that changes
+     * it. This line said the same thing with nothing to act on, and it cost a whole row on a
+     * board where rows are the scarce thing.
+     * SO THIS LINE NOW ONLY SPEAKS WHEN THERE IS SOMETHING TO SAY, and takes no row at all
+     * when there is not. */
+    if (q) bits.push('<b>' + q + ' pick' + (q === 1 ? '' : 's') + ' not in the league yet</b>');
+    if (DS_NOTE) bits.push(_esc(DS_NOTE));
     box.innerHTML = bits.join(' &middot; ');
     box.className = (q || DS_NOTE) ? 'build warn' : 'build';
-    if (q) box.innerHTML += ' &middot; <b>' + q + ' pick' + (q === 1 ? '' : 's')
-                            + ' not in the league yet</b>';
-    if (DS_NOTE) box.innerHTML += ' &middot; ' + _esc(DS_NOTE);
+    box.classList.toggle('hide', !bits.length);
     return;
   }
   if (DS_PHASE === 'done'){
@@ -10813,6 +10889,7 @@ function dsLine(){
    * He is right: a version number is machinery. What he needs to know is whether the league
    * has this division's picks, and the honest three answers are kept -- the league has them,
    * the league has nothing for this division yet, or nobody has asked it yet. */
+  box.classList.remove('hide');
   bits.push(b ? divLabel(d) + ': '
                 + ((b.picks || []).length
                      ? (b.picks || []).length + ' pick'
