@@ -1576,10 +1576,48 @@ var Store = (function () {
   var dirty = false, sending = false, timer = null;
   var onstatus = function () {};
   var onstale = null;         // told when the league refused a list because it had moved on
+  /* ---- THE LEAGUE CONFIRMS A LIST, NOT THE PAGE -------------------------------------------
+   * Casey, 10 Nov 2026, relaying Jay McCarroll: three trades put in on his phone, a confirmation
+   * on screen, and the 4:00pm run had nothing of his. `submitList()` wrote `submitted = now()`
+   * into the phone's OWN copy, queued the send 700ms later and re-rendered at once, so the green
+   * card read "Saved" before a byte had left the device -- and kept reading it if the send never
+   * happened. A LOCKED PHONE IS NOT AN EDGE CASE: a pending timer is suspended the moment the
+   * browser goes to the background.
+   * `onsent` is told what the LEAGUE said, and the page stamps the list from that answer.
+   * THIRD TIME IN THIS CODEBASE: doClaim on 5 Oct, the draft board on 8 Nov, this. */
+  var onsent = null;
+  var QKEY = 'rfl_unsent_list';   // one seat's list, not yet landed, in THIS browser
+  var BEACON_ON = false;
   var state = 'ready';        // ready | saving | saved | offline | stale
   var lastWhy = '';
 
   function live() { return !!api; }
+
+  /* ---- A LIST THAT HAS NOT LANDED IS KEPT UNTIL IT DOES ------------------------------------
+   * In this browser, under its own key, so it survives the page closing. Written BEFORE the
+   * request goes out and cleared only once the league has answered, which is the only order that
+   * cannot lose it. A REFUSAL CLEARS IT TOO: a refused list is an answer, not a failed delivery.
+   */
+  function queueSet(body) {
+    try { localStorage.setItem(QKEY, JSON.stringify({at: Date.now(), body: body})); } catch (e) {}
+  }
+  function queueGet() {
+    try { return JSON.parse(localStorage.getItem(QKEY) || 'null'); } catch (e) { return null; }
+  }
+  function queueClear() { try { localStorage.removeItem(QKEY); } catch (e) {} }
+  function hasUnsent() { return !!queueGet(); }
+
+  /* THE LAST RESORT, FOR A PAGE THAT IS BEING CLOSED. `sendBeacon` is handed to the browser and
+     finished by the browser, so it survives the tab going away and the phone locking, which a
+     fetch does not. It cannot report an answer, so the queue stays and the next boot confirms. */
+  function beaconOut() {
+    var q = queueGet();
+    if (!q || !api || !navigator.sendBeacon) return;
+    try {
+      navigator.sendBeacon(api, new Blob([JSON.stringify(q.body)],
+                                         {type: 'text/plain;charset=utf-8'}));
+    } catch (e) {}
+  }
 
   function setStatus(s, why) {
     state = s; lastWhy = why || '';
@@ -1690,28 +1728,44 @@ var Store = (function () {
    * AN EMPTY LIST IS A CLEARED ENTRY, NOT A SILENT NO-OP. Deleting your last row has to reach the
    * league, or Monday settles a list you thought you had taken back.
    */
-  function submitMine(get) {
+  /* `opts.send`  'rows' to send the list, 'clear' to take it back. NEVER INFERRED any more: it
+                   was read off the local `submitted` stamp, so a copy without one sent a CLEAR
+                   and the owner was told it had saved.
+     `opts.now`   true for a deliberate press, which goes at once. The 700ms wait is for typing,
+                  not for a button somebody may walk away from the instant they press it. */
+  function submitMine(get, opts) {
+    var o = opts || {};
     clearTimeout(sendTimer);
-    sendTimer = setTimeout(function () {
+    var fire = function () {
       var st = get() || {};
       if (!mine) { setStatus('offline', 'this device is not signed in'); return; }
       var k = mine.div + '|' + mine.seat;
       var r = (st.requests || {})[k];
-      var rows = (r && r.submitted) ? (r.rows || []) : [];
+      var want = o.send || ((r && r.submitted) ? 'rows' : 'clear');
+      var rows = want === 'rows' ? ((r && r.rows) || []) : [];
+      var body = rows.length
+        ? {fn: 'submit', key: ckey(), rows: rows, week: r && r.week, baseSeq: mineSeq}
+        : {fn: 'submit', key: ckey(), clear: true, baseSeq: mineSeq};
+      /* WRITTEN DOWN BEFORE IT IS SENT. If the device dies between here and the answer, the next
+         boot finds it and sends it again. */
+      queueSet(body);
       setStatus('saving');
       fetch(api, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
-                  body: JSON.stringify(rows.length
-                    ? {fn: 'submit', key: ckey(), rows: rows, week: r.week, baseSeq: mineSeq}
-                    : {fn: 'submit', key: ckey(), clear: true, baseSeq: mineSeq})})
+                  body: JSON.stringify(body)})
         .then(function (x) { return x.json(); })
         .then(function (a) {
           if (a && a.ok) {
+            queueClear();
             rev = a.rev;
             /* `|| mineSeq` KEPT THE OLD NUMBER WHEN THE LEAGUE ANSWERED 0, because 0 is falsy.
                A version is a number that can be zero, so the test is for absence. */
             if (a.seq != null) mineSeq = Number(a.seq);
             lastSent = a;
             setStatus('saved');
+            /* THE LEAGUE'S OWN ANSWER, handed up so the page stamps the list from it and not from
+               its own clock. `a.mine` is what the league now holds for this seat, so an empty one
+               is a confirmed take-back. */
+            if (onsent) { try { onsent(a); } catch (e) {} }
             return;
           }
           /* ---- REFUSED BECAUSE SOMETHING ELSE CHANGED THE LIST FIRST ---------------------
@@ -1726,16 +1780,24 @@ var Store = (function () {
                told was wrong, so a second press was refused for the same reason, and the owner
                could only get out of it by reloading the whole page. */
             if (a.seq != null) mineSeq = Number(a.seq);
+            /* AN ANSWER, NOT A FAILED DELIVERY. It arrived and was refused, so there is nothing
+               to retry: the page re-reads what the league holds instead. */
+            queueClear();
             setStatus('stale', (a && a.note) || 'your list was changed somewhere else');
             if (onstale) { try { onstale(a); } catch (e) {} }
             return;
           }
+          queueClear();
           setStatus('offline', (a && a.note) || 'the league did not take that list');
         })
+        /* THE QUEUE IS LEFT IN PLACE, and this is the case that lost Jay's trades: the league was
+           never reached, so nothing about the list is settled and it has to go again. */
         .catch(function (e) {
           setStatus('offline', String(e && e.message ? e.message : e));
         });
-    }, 700);
+    };
+    if (o.now) { fire(); return; }
+    sendTimer = setTimeout(fire, 700);
   }
 
   /* ---- what the application calls ------------------------------------------------------ */
@@ -1752,7 +1814,20 @@ var Store = (function () {
       api = opts.api || null;
       onstatus = opts.status || function () {};
       onstale = opts.stale || null;
+      onsent = opts.sent || null;
       var get = opts.get, set = opts.set;
+      /* THE PAGE IS GOING AWAY AND A LIST HAS NOT LANDED. Handed to the browser to finish, which
+         is the only thing that survives a tab closing or a phone locking. Armed once. */
+      if (live() && !BEACON_ON) {
+        BEACON_ON = true;
+        var bye = function () { if (hasUnsent()) beaconOut(); };
+        try {
+          window.addEventListener('pagehide', bye);
+          document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') bye();
+          });
+        } catch (e) {}
+      }
 
       if (!live()) {
         var s = null;
@@ -1889,10 +1964,21 @@ var Store = (function () {
        An empty list still goes up as a clear -- deleting your last row has to reach the league,
        or Monday settles a list you thought you had taken back. What has changed is that an empty
        list no longer goes up when nothing happened to it. */
-    sendList: function (get) {
+    sendList: function (get, opts) {
       if (!live()) { try { localStorage.setItem(KEY, JSON.stringify(get())); } catch (e) {} return; }
       if (role === 'commissioner') { dirty = true; schedule(get, function () {}); return; }
-      submitMine(get);
+      submitMine(get, opts);
+    },
+
+    /* IS THIS BROWSER STILL HOLDING A LIST THE LEAGUE HAS NOT TAKEN? The page asks so it can say
+       so out loud rather than drawing a list that looks delivered. */
+    unsent: function () { return hasUnsent(); },
+
+    /* AND SEND IT AGAIN, which is what a boot does when it finds one waiting. */
+    retryUnsent: function (get) {
+      if (!live() || !hasUnsent()) return false;
+      submitMine(get, {send: 'rows', now: true});
+      return true;
     },
 
     /* WHAT THE LEAGUE SAID ABOUT THE LAST LIST THIS BROWSER SENT. */
@@ -2028,7 +2114,22 @@ function save(){ Store.save(function(){ return S; }, adopt); }
  *
  * SO THE LIST GOES UP FROM HERE AND NOWHERE ELSE. Four callers: adding or removing a row,
  * sending the list, and the two ways of taking it back. */
-function saveList(){ Store.sendList(function(){ return S; }); }
+/* WHICH SEAT THE LAST SEND WAS FOR. The league's answer to a take-back carries no entry, so
+   there is nothing in it to name the seat -- and a commissioner may have been entering for
+   somebody else, so the seat on screen now is not necessarily the one that was sent. */
+var LAST_SEND_KEY = null;
+/* ---- WHICH SEATS THIS DEVICE IS STILL TRYING TO SEND, AND IT IS NOT IN `S` -----------------
+ * It was, as `S.requests[k].sending`, and `adopt()` replaces `S.requests` wholesale every time
+ * the league is re-read -- so the flag vanished a second after it was set and the page went back
+ * to looking like nothing was happening. Same trap as the claim form and `actingAs`: A FACT THAT
+ * BELONGS TO ONE DEVICE MUST NOT LIVE IN THE STATE THE LEAGUE OWNS. It is also never sent.
+ */
+var SENDING = {};
+function saveList(o){
+  var a = actingSeat();
+  if (a) LAST_SEND_KEY = key(a.div, a.seat);
+  Store.sendList(function(){ return S; }, o);
+}
 /* TAKING A COPY THAT CAME FROM THE SHEET. Used on the first load and again whenever somebody
    else saved while this page was open. */
 function adopt(x){
@@ -3394,11 +3495,16 @@ try {
   window.addEventListener('resize', function(){ placeBar(); });
   window.addEventListener('orientationchange', function(){ setTimeout(placeBar, 120); });
 } catch (e) {}
+var RENDERING = false;
 function render(){
   if (PTR_DOWN){
     if (!RENDER_HELD){ RENDER_HELD = true; setTimeout(releasePointer, 400); }
     return;
   }
+  RENDERING = true;
+  try { return render_(); } finally { RENDERING = false; }
+}
+function render_(){
   /* THE SAME QUESTION, THE SAME ANSWER, WHICHEVER COPY IS RUNNING. This bar names the seat the
      reader is working as, and on the live page that comes from the league. */
   var s = whoIsThis();
@@ -3939,13 +4045,25 @@ function myReq(){
   return (r && r.week === weekNo()) ? r : null;
 }
 function myRows(){ var r = myReq(); return r ? r.rows : []; }
+/* THREE ANSWERS, NOT TWO. `in` means the league has it; `sending` means this device is still
+   trying; neither means it is not in. A page that only knows the first two cannot tell an owner
+   the difference between a delivered list and one sitting on their phone. */
 function isSubmitted(){ var r = myReq(); return !!(r && r.submitted); }
+function isSending(){
+  var a = actingSeat();
+  return !!(a && SENDING[key(a.div, a.seat)] && !isSubmitted());
+}
+function listStuck(){
+  try { return !isSubmitted() && !!Store.unsent && Store.unsent(); } catch (e) { return false; }
+}
 function setRows(rows){
   var a = actingSeat(); if (!a) return;
   var prev = myReq();
+  /* CHANGING A ROW TAKES THE LIST BACK OUT OF THE WEEK, so neither stamp survives it. */
+  delete SENDING[key(a.div, a.seat)];
   S.requests[key(a.div, a.seat)] = {week: weekNo(), rows: rows, by: a.by || a.seat,
                                     submitted: prev ? prev.submitted : null};
-  saveList();
+  saveList({send: prev && prev.submitted ? 'rows' : 'clear'});
 }
 /* WHAT IS WRONG WITH THIS LIST, in the owner's words. Returned as a list of sentences rather
    than a boolean, because "Submit is greyed out" is not a reason. */
@@ -4017,8 +4135,28 @@ function submitList(){
     return;
   }
   var a = actingSeat();
-  S.requests[key(a.div, a.seat)].submitted = now();
-  saveList();
+  /* ---- THE LEAGUE SAYS WHETHER THIS IS IN, NOT THIS PAGE ----------------------------------
+   * This line used to be `.submitted = now()`, and the render below it then drew the green
+   * "Your Trades Are In for Monday" card -- before anything had been sent, and for ever after if
+   * the send never happened. Casey, 10 Nov 2026, relaying Jay McCarroll: three trades entered on
+   * his phone with a confirmation on screen, and nothing in the 4:00pm run.
+   * `sending` is the third state this page never had. It becomes a real `submitted` stamp when
+   * the league answers, in the `sent` hook in bootOpts, and it stays `sending` until then.
+   * A DECISION MADE IN THE BROWSER AND NEVER SENT IS A DECISION THAT DID NOT HAPPEN. */
+  /* ---- THE PRACTICE COPY IS ITS OWN LEAGUE --------------------------------------------
+   * With no back end there is nothing to wait for: this browser IS the record, which is the
+   * whole point of the practice page. So the stamp goes on at once there. On the REAL page it
+   * never does -- only the league's own answer writes it. ONE BEHAVIOUR PER STORE, decided by
+   * which store there is, not by a flag somebody can get wrong. */
+  if (!DATA.api){
+    S.requests[key(a.div, a.seat)].submitted = now();
+    S.requests[key(a.div, a.seat)].sending = null;
+    saveList({send: 'rows'});
+  } else {
+    SENDING[key(a.div, a.seat)] = now();
+    /* AND IT GOES NOW, not in 700ms. He may lock the phone the instant he presses it. */
+    saveList({send: 'rows', now: true});
+  }
   /* NO PANEL. Casey, 15 Sep 2026: "the pop-up that comes out of that seems just like an extra
      step ... can we just not? On the screen it looks like you've saved something."
      He is right, and the page was already saying it twice: the card turns green and names the
@@ -4026,6 +4164,15 @@ function submitList(){
      and a tap to get rid of. A CONFIRMATION THAT REPEATS WHAT THE SCREEN ALREADY SHOWS IS NOISE. */
   render();
 }
+/* PRESS IT AGAIN. The queue in the store already holds exactly what was meant to go, so this
+   sends that rather than rebuilding it from the screen -- the screen may have been re-read since. */
+function retryList(){
+  var ok = false;
+  try { ok = !!Store.retryUnsent && Store.retryUnsent(function(){ return S; }); } catch (e) {}
+  if (!ok) saveList({send: 'rows', now: true});
+  render();
+}
+
 function unsubmit(){
   var a = actingSeat(); if (!a) return;
   var r = myReq(); if (!r) return;
@@ -4374,6 +4521,7 @@ function viewTrades(){
                     + fcfsBar() + clockCard();
 
   var rows = myRows(), req = myReq(), sent = isSubmitted();
+  var sending = isSending(), stuck = listStuck();
 
   /* WHERE THE STATUS GOES DEPENDS ON WHETHER THERE IS ONE.
      Casey, 10 Sep 2026: "I don't think I've saved anything on this device ... I would think that
@@ -4384,6 +4532,26 @@ function viewTrades(){
      answers a worry nobody had. Once the list IS sent, the status becomes the answer to the
      question they arrived with, so then it goes at the top. Until then it belongs beside the
      button that changes it, and nowhere else. */
+  /* ---- NOT IN YET, AND SAYING SO IS THE WHOLE POINT ---------------------------------------
+   * These two cards are what the page could not draw before, because it had no state between
+   * "typed" and "in". A list waiting on the league looked exactly like a list the league had.
+   * AN ABSENCE IS NEVER AN ANSWER: both of these say what is true now and what to do about it. */
+  if (!sent && (sending || stuck)){
+    h += '<div class="card warn"><h2 class="y">Not In Yet \u2014 Still Sending</h2>'
+      + '<p class="note">Your ' + rows.length + ' trade' + (rows.length === 1 ? '' : 's')
+      + ' ' + (rows.length === 1 ? 'is' : 'are') + ' on this device and '
+      + (rows.length === 1 ? 'it has' : 'they have') + ' <b>not reached the league yet</b>. '
+      + 'This page keeps trying, and it will go by itself as soon as it can. '
+      + '<b>Leave this page open if you can.</b></p>'
+      /* THE GREEN CARD'S OWN HEADLINE IS NOT QUOTED HERE. It was, and a reader scanning the page
+         would have found the words "Your Trades Are In for Monday" inside the warning that says
+         they are NOT in. A CARD MUST NOT CONTAIN THE SENTENCE THAT CONTRADICTS IT. */
+      + '<p class="note">Nothing is lost either way. If you close this page, open the trades tab '
+      + 'again before Monday at 4:00pm AZ and it goes then. The green card appears once the '
+      + 'league has your list, and not before.</p>'
+      + '<div class="row"><button class="pri" onclick="retryList()">Send It Again</button></div>'
+      + '</div>';
+  }
   if (sent){
     /* "SAVE" IS THE WORD HE ASKED FOR AND IT LOSES SOMETHING, so the state text carries it:
        saved here means IN for Monday, not merely kept on this phone. */
@@ -8633,6 +8801,14 @@ function blank(){
 /* THE SAVE LIGHT. On the real one this is the reader's only way of knowing their trade reached
    the league rather than their own browser, so it says which, in words, at all times. */
 function saveLight(st, why){
+  /* ---- A FAILED SEND HAS TO REDRAW THE PAGE, not just light a chip ------------------------
+   * The chip said "Not Saved" while the list above it still looked delivered, because nothing
+   * re-rendered when the send failed. The card that says "Not In Yet" is drawn from state this
+   * function has just learned about, so this is the one place that knows to ask for it.
+   * Guarded against re-entering: render() is what called this, on the first paint. */
+  if ((st === 'offline' || st === 'saved') && !RENDERING && typeof render === 'function'){
+    setTimeout(function(){ try { render(); } catch (e) {} }, 0);
+  }
   var b = el('savechip');
   if (!b) return;
   if (!Store.live()){ b.hidden = true; return; }
@@ -8706,6 +8882,24 @@ function bootOpts(){
     access: adoptAccess,
     accessLog: function(L){ LIVE_LOG = L || []; },
     status: saveLight,
+    /* ---- WHAT THE LEAGUE SAID ABOUT THE LIST THIS DEVICE JUST SENT -------------------------
+     * The only place `submitted` is ever written now. The time is the LEAGUE'S, taken from the
+     * entry it is holding, so two devices on one seat cannot disagree about when it went in. An
+     * answer carrying no entry is a confirmed take-back, and the stamp comes off. */
+    sent: function(a){
+      var m = (a && a.mine) || null;
+      var k = m ? (m.div + '|' + m.seat) : LAST_SEND_KEY;
+      if (!k) return;
+      var r = S.requests[k];
+      delete SENDING[k];
+      if (m && (m.rows || []).length){
+        if (!r) S.requests[k] = r = {week: m.week, rows: m.rows, by: m.by || k.split('|')[1]};
+        r.submitted = m.submitted || now();
+      } else if (r){
+        r.submitted = null;
+      }
+      save(); render();
+    },
     /* THE LEAGUE REFUSED A LIST BECAUSE IT HAD ALREADY MOVED ON, which happens when the owner
        has this seat open on a second device. Nothing was overwritten, and the owner has to be
        told that in words rather than left looking at a list the league does not have. The page
@@ -8791,6 +8985,18 @@ function boot(){
     return;
   }
   Store.boot(bootOpts());
+  /* ---- A LIST THIS BROWSER NEVER MANAGED TO SEND GOES NOW ----------------------------------
+   * The store keeps it under its own key, so it survives the page being closed and the phone
+   * being locked. This is the half of the fix that covers the case nothing else can: the owner
+   * pressed Send, walked away, and the request never left. It goes on the next open, by itself,
+   * and the card above says so until it lands. */
+  setTimeout(function(){
+    try {
+      if (Store.unsent && Store.unsent() && Store.retryUnsent) {
+        Store.retryUnsent(function(){ return S; });
+      }
+    } catch (e) {}
+  }, 1200);
 }
 buildRulesNote();
 /* A LINK FROM AN EMAIL IS HANDLED BEFORE THE PAGE ASKS WHO IT IS, because redeeming the link is
