@@ -6,7 +6,7 @@
  * Editing this file means the next build silently throws your change away.
  */
 
-const WORKER_BUILD = {id: '46c69e77c688', at: '2026-11-08 19:15 UTC'};
+const WORKER_BUILD = {id: 'dc56efadc9ef', at: '2026-11-10 06:21 UTC'};
 
 
 /* ===== peloton.js ===== */
@@ -912,7 +912,15 @@ function pending(requests, week) {
     if (!r || r.week !== week || !(r.rows || []).length) return;
     if (!r.submitted) return;
     var b = k.split('|');
-    out.push({seat: b[1], div: b[0],
+    /* THE WEEK AND THE SENT STAMP TRAVEL WITH THE ROW. This rebuilt a bare {seat, div, rows} and
+       dropped both, so `settleWeek` recorded `week: undefined, submitted: null` for every seat and
+       the What Was Waiting card printed "never sent" against lists this very function had just
+       refused to include unless they WERE sent. Casey, 10 Nov 2026: "saying never sent makes me
+       and Bob look at it and think that, oh, this trade was submitted but never sent. But it was
+       sent, because those are the trades that got actually processed."
+       ANY FACT THE WRITER KNEW AND THE READER CANNOT RECOVER BELONGS IN THE OBJECT. */
+    out.push({seat: b[1], div: b[0], week: r.week,
+              submitted: r.submitted || null,
               rows: r.rows.filter(function (x) { return x && x.pickup; })});
   });
   return out.filter(function (r) { return r.rows.length; });
@@ -2632,9 +2640,30 @@ async function settleWeek(env, opts) {
                                              rows: r.rows || []}))};
   /* `since` IS THE LOG LENGTH AFTER THE RUN, which is what tells the page what arrived
      afterwards -- a first come claim taken between the run and the undo. */
+  /* ---- A LIST THE SETTLE DID NOT ACT ON IS NOT DELETED WITH THE ONES IT DID ----------------
+   * This was `s.requests = {}`. It emptied every pending list without ever asking which ones had
+   * actually been settled, so a list skipped for any reason was wiped in the same breath and left
+   * no trace in the record, on the card, or in the log. That is what made Jay McCarroll's three
+   * trades unrecoverable rather than merely late on 9 Nov 2026.
+   * A SETTLE DELETES WHAT IT SETTLED. Anything else stays where it is and is NAMED, so a skipped
+   * list is still sitting there on Tuesday morning instead of having to be reconstructed from an
+   * owner's memory. An empty list is cleared too -- there is nothing in it to lose. */
+  const settledKeys = new Set(pending.map((r) => r.div + '|' + r.seat));
+  const skipped = [];
+  for (const k of Object.keys(s.requests || {})) {
+    const r = s.requests[k] || {};
+    const n = (r.rows || []).length;
+    if (settledKeys.has(k) || !n) { delete s.requests[k]; continue; }
+    skipped.push({seat: k, week: r.week == null ? null : Number(r.week), n: n,
+                  submitted: r.submitted || null,
+                  why: Number(r.week) !== Number(week)
+                         ? 'stamped week ' + r.week + ', and this run settled week ' + week
+                         : !r.submitted ? 'it was typed and never sent'
+                         : 'the run did not act on it'});
+  }
+  s.results.skipped = skipped;
   snap.since = (s.log || []).length;
   s.undo = snap;
-  s.requests = {};
   s.ranWeeks = s.ranWeeks || {};
   const prev = s.ranWeeks[week];
   s.ranWeeks[week] = {at: when, n: (prev ? prev.n : 0) + (res.log || []).length,
