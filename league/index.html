@@ -3810,7 +3810,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '10 Nov 2026, 7:58 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '14 Nov 2026, 2:33 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -3967,10 +3967,36 @@ function ownersMovedSince(w){
  * The two pools cannot drift apart, because neither of them is being asked what week it is.
  * NOTHING HERE IS CACHED. These are the games whose scores can still change, which is the whole
  * reason this path exists and is polled. */
-function liveDayPools(){
-  const w = lastPlayedWeek();
+function liveDayPools(){ return askDayPools(lastPlayedWeek()); }
+
+/* ---- WHICH DAYS TO ASK ESPN ABOUT: EVERY DAY OF THE WEEK, FOR EVERY POOL PLAYING IN IT -----
+ * Casey, 14 Nov 2026: "The Oklahoma-Mississippi game, due to the travel issues this weekend, got
+ * moved to Sunday. It's showing on ESPN on Sunday ... but it's not showing on ... the live
+ * scoring on the dashboard."
+ * The page asked for a pool only on the days the BUILT schedule gave it a game. ESPN moved that
+ * game -- same event id -- from Saturday to Sunday, and the built schedule had nothing but the NFL
+ * on Sunday, so the college board for Sunday was never requested. A game ESPN has moved is a game
+ * the build cannot know about. THE SCHEDULE SAYS WHICH POOLS PLAY THIS WEEK; IT NO LONGER SAYS
+ * WHICH DAYS. Every day of the league week is asked for every pool that plays in it. A day with no
+ * games comes back as an empty list, which costs one small request.
+ * League week 0 keeps the schedule's own days: it is two and a half weeks long and all played. */
+function askDayPools(w){
   const dp = weekDayPools(w);
-  return dp.length ? dp : weekDates(w).map(d => [d, Object.keys(EP)]);
+  const w1 = cal('league_week1_start');
+  if (w < 1 || !w1){
+    return dp.length ? dp : weekDates(w).map(d => [d, Object.keys(EP)]);
+  }
+  const pools = new Set();
+  for (const [, ps] of dp) for (const p of ps) pools.add(p);
+  const use = pools.size ? [...pools] : Object.keys(EP);
+  const start = new Date(w1 + 'T00:00:00Z');
+  start.setUTCDate(start.getUTCDate() + 7 * (w - 1));
+  const out = [];
+  for (let i = 0; i < 7; i++){
+    const d = new Date(start); d.setUTCDate(d.getUTCDate() + i);
+    out.push([d.toISOString().slice(0, 10), use.slice()]);
+  }
+  return out;
 }
 
 /* Every date the SCHEDULE says has a game in this league week, and WHICH POOLS play on it,
@@ -4028,9 +4054,7 @@ function espnDayURL(pool, iso){
 async function loadWeek(w){
   const ck = weekKey(w);
   if (WEEK_CACHE.has(ck)) return WEEK_CACHE.get(ck);
-  let dayPools = weekDayPools(w).length
-    ? weekDayPools(w)
-    : weekDates(w).map(d => [d, Object.keys(EP)]);
+  let dayPools = askDayPools(w);
   /* READING ONE PIECE OF A LONG WEEK ASKS ESPN FOR THAT PIECE'S DAYS AND NO OTHERS. */
   if (WEEK_SEG) dayPools = dayPools.filter(x => WEEK_SEG.indexOf(x[0]) >= 0);
   const out = [], errs = [], unmatched = new Set();
