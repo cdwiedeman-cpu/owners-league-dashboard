@@ -3810,7 +3810,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '15 Nov 2026, 11:57 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '16 Nov 2026, 2:25 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -5848,8 +5848,22 @@ function qbOutOn(team, date){
   const thru = NO_QB.get(team);
   return !!(thru && date && date <= thru);
 }
+/* AND THE OTHER DIRECTION: A TEAM THAT CHANGED TO A BETTER STARTER. Casey, 16 Nov 2026:
+   "you should add the appropriate bump ... for the Kirk Cousins being the starting quarterback
+   now for Minnesota, instead of it being a negative." Minnesota traded for Cousins at the
+   deadline, and its rating was earned mostly with Kyler Murray and Carson Wentz. The size is the
+   same QB_PTS a missing starter costs, one store of the rule, and the market agreed with it: the
+   first line posted after the trade put the Vikings 3.8 points better than this board did.
+   `DATA.injuries.qb_up` is {team: {from, thru, why}}, a verified list exactly like `no_qb`, and
+   a game a book has priced ignores it by the same road. BOTH SIDES OF THE GAME, as above. */
+const QB_UP = new Map(Object.entries(((DATA.injuries || {}).qb_up) || {}));
+function qbUpOn(team, date){
+  const u = QB_UP.get(team);
+  return !!(u && date && date >= u.from && date <= u.thru);
+}
 function qbGap(team, opp, date){
-  return (qbOutOn(team, date) ? -QB_PTS : 0) + (qbOutOn(opp, date) ? QB_PTS : 0);
+  return (qbOutOn(team, date) ? -QB_PTS : 0) + (qbOutOn(opp, date) ? QB_PTS : 0)
+       + (qbUpOn(team, date) ? QB_PTS : 0) - (qbUpOn(opp, date) ? QB_PTS : 0);
 }
 /* For a flag, which is about the team today rather than about one game. */
 function qbOutNow(team){ return NO_QB.has(team); }
@@ -9092,6 +9106,13 @@ function injPanel(name){
   const others = oth.any ? `<tr class="i-oth"><td colspan="5">
       <b>Everyone else:</b> ${esc(injOthersLine(oth))}</td></tr>` : '';
   const thru = NO_QB.get(name);
+  const up = QB_UP.get(name);
+  const upNote = up
+    ? `<div class="note"><b class="g">${esc(name)} has a better starting quarterback than the one
+       its rating was earned with.</b> ${esc(up.why || '')} Its projected margin is raised by
+       ${QB_PTS} points in every game no book has priced, from ${esc(pretty(up.from))}. A game a
+       book HAS priced is left alone, since a posted line already carries the quarterback.</div>`
+    : '';
   const qbNote = noQB
     ? `<div class="note"><b class="b">${esc(name)} is without its starting quarterback.</b>
        Its projected margin is cut by ${QB_PTS} points in every game no book has priced,
@@ -9107,7 +9128,7 @@ function injPanel(name){
        : '');
   return `<div class="card"><h2 class="b">\u2691 Injuries — ${esc(name)} · ${rows.length}
       Listed</h2>
-    ${qbNote}
+    ${upNote}${qbNote}
     <div class="scrhint"><b>Swipe</b> the table sideways to see every column.</div>
     <div class="scr"><table class="injtbl">
       <colgroup><col class="ci1"><col class="ci2"><col class="ci3"><col class="ci4">
@@ -9460,7 +9481,22 @@ function gameWhy(t, g, yours, inc){
   }
   /* THE ONE INJURY THAT MOVED THIS NUMBER, NAMED ON THE GAME IT MOVED. A figure that changes
      with no sentence attached is the thing this page keeps being asked to stop doing. */
-  if (g.qadj){
+  if (g.qadj && (qbUpOn(t.n, g.d) || qbUpOn(g.opp, g.d))){
+    const parts = [];
+    if (qbOutOn(t.n, g.d)) parts.push(`<b class="b">${t.n} is without its starting quarterback</b>,
+      which takes ${QB_PTS.toFixed(0)} points off this margin.`);
+    if (qbOutOn(g.opp, g.d)) parts.push(`<b class="g">${g.opp} is without its starting
+      quarterback</b>, which adds ${QB_PTS.toFixed(0)} points to this margin.`);
+    if (qbUpOn(t.n, g.d)) parts.push(`<b class="g">${t.n} has a better starting quarterback
+      than the one its rating was earned with</b> (${esc(QB_UP.get(t.n).why || '')}), which adds
+      ${QB_PTS.toFixed(0)} points to this margin.`);
+    if (qbUpOn(g.opp, g.d)) parts.push(`<b class="b">${g.opp} has a better starting quarterback
+      than the one its rating was earned with</b> (${esc(QB_UP.get(g.opp).why || '')}), which
+      takes ${QB_PTS.toFixed(0)} points off this margin.`);
+    bits.push(`${parts.join(' ')} A quarterback change is the only roster news on this page that
+      changes a number, and it applies only where no book has priced the game. A posted line
+      already carries it.`);
+  } else if (g.qadj){
     const mine = NO_QB.has(t.n), theirs = NO_QB.has(g.opp);
     const who = mine && theirs
       ? `Both teams are without their starting quarterback, so the two adjustments cancel and
