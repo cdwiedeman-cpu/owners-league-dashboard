@@ -3855,7 +3855,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Nov 2026, 12:39 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Nov 2026, 11:00 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12185,20 +12185,114 @@ function setStandTab(k){
    Drawn in the tab strip where there is room for it, and on its own line under the strip on a
    phone, where it does not stick, so the strip stays one row tall while the table scrolls. */
 function divPts(rows){ return (rows || []).reduce((a, o) => a + (o.pts || 0), 0); }
+/* SHARE OF THE BEST TEAMS. Casey, 20 Nov 2026, settling what "strongest" means: "I think the right
+   answer is which division is hardest to be able to win the overall points total across all three
+   divisions." And why: "there's been teams sitting on the waiver wire for months, or that should
+   have been picked up a long time ago. That would never be available in Predator or Scorpion."
+   Every division drafts and trades from the same pool, so a division is hard to win from when its
+   owners leave nothing good lying around. The measure:
+     * the BEST TEAMS are the ones that have scored the most this season, as many as one division
+       can hold at once -- its owners times the NFL and college slots each owner has;
+     * a division's CAPTURE is what its owners earned from those teams, in the weeks they held them;
+     * its SHARE is capture over the best teams' total.
+   The slot counts are read off his own roster, never typed. Recomputed from SEASON on every render,
+   so it moves with the live scores exactly as the standings do. */
+function divShare(byDiv){
+  if (!SEASON || !SEASON.size) return null;
+  /* THE SLOT COUNTS ARE READ OFF THE ROSTERS THEMSELVES, the most any owner holds right now in
+     each pool, so the same code works on the league page, which carries nobody's own slots. */
+  let perNFL = 0, perCOL = 0;
+  for (const rows of Object.values(byDiv)) for (const o of rows){
+    const held = (o.teams || []).filter(r => r.held);
+    const nN = held.filter(r => (BY.get(r.team) || {}).pool === 'NFL').length;
+    perNFL = Math.max(perNFL, nN); perCOL = Math.max(perCOL, held.length - nN);
+  }
+  const owners = Math.max(0, ...Object.values(byDiv).map(r => r.length));
+  if (!perNFL || !perCOL || !owners) return null;
+  const pts = n => ((SEASON.get(n) || {}).pts) || 0;
+  const all = [...SEASON.keys()].filter(n => BY.get(n));
+  const top = (isNFL, k) => all.filter(n => (BY.get(n).pool === 'NFL') === isNFL)
+    .sort((a, b) => pts(b) - pts(a) || a.localeCompare(b)).slice(0, k);
+  const best = top(true, perNFL * owners).concat(top(false, perCOL * owners));
+  const bench = best.reduce((a, n) => a + pts(n), 0);
+  if (!(bench > 0)) return null;
+  const per = {};
+  for (const [d, rows] of Object.entries(byDiv)){
+    const held = new Map();
+    for (const o of rows) for (const r of (o.teams || []))
+      held.set(r.team, (held.get(r.team) || 0) + (r.pts || 0));
+    /* A TEAM CAN NEVER BE CAPTURED FOR MORE THAN IT EARNED, whatever the rows add to. */
+    const cap = best.reduce((a, n) => a + Math.min(held.get(n) || 0, pts(n)), 0);
+    const missed = best.map(n => [n, pts(n) - Math.min(held.get(n) || 0, pts(n))])
+      .filter(x => x[1] > 0.01).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    per[d] = {cap, share: 100 * cap / bench, missed};
+  }
+  return {bench, n: best.length, nNFL: perNFL * owners, nCOL: perCOL * owners, per};
+}
 function divStrength(byDiv, where){
-  const ds = Object.keys(byDiv).map(d => ({d, pts: divPts(byDiv[d]), n: byDiv[d].length}))
-    .sort((a, b) => b.pts - a.pts || String(DIVNAME[a.d] || a.d).localeCompare(String(DIVNAME[b.d] || b.d)));
+  const sh = divShare(byDiv);
+  const ds = Object.keys(byDiv).map(d => ({d, pts: divPts(byDiv[d]), n: byDiv[d].length,
+                                           share: sh ? sh.per[d].share : null}))
+    .sort((a, b) => (b.share || 0) - (a.share || 0) || b.pts - a.pts
+                    || String(DIVNAME[a.d] || a.d).localeCompare(String(DIVNAME[b.d] || b.d)));
   if (ds.length < 2) return '';
-  const top = ds[0].pts;
   const tile = x => {
-    const gap = top - x.pts;
     const name = DIVNAME[x.d] || x.d;
-    const sub = gap < 0.05 ? (ds.filter(y => top - y.pts < 0.05).length > 1 ? 'Level' : 'Leads')
-                           : '\u2212' + gap.toFixed(1);
-    return `<div class="sodt${x.d === MY_DIV ? ' sodme' : ''}" title="${esc(name)}: ${x.pts.toFixed(1)} points earned by its ${x.n} owners${gap < 0.05 ? '' : `, ${gap.toFixed(1)} behind ${esc(DIVNAME[ds[0].d] || ds[0].d)}`}.">
+    const sub = x.share == null ? '<span class="d">—</span>' : x.share.toFixed(1) + '%';
+    const t = `${name}: ${x.pts.toFixed(1)} points earned by its ${x.n} owners.` + (x.share == null
+      ? ' The share of the best teams needs the season\'s results, which have not loaded.'
+      : ` They hold ${x.share.toFixed(1)}% of the points the season's ${sh.n} best teams have earned.`);
+    return `<div class="sodt${x.d === MY_DIV ? ' sodme' : ''}" title="${esc(t)}">
       <span class="sodn">${esc(name)}</span><b class="sodv">${x.pts.toFixed(1)}</b><span class="sodg">${sub}</span></div>`;
   };
-  return `<div class="sod ${where}" aria-label="Strength of Division"><span class="sodh">Strength of Division</span>${ds.map(tile).join('')}</div>`;
+  return `<div class="sod ${where}" aria-label="Strength of Division"><span class="sodh">Strength of Division
+    <button type="button" class="qm" onclick="event.stopPropagation();openSodHelp()"
+      title="How Strength of Division is worked out, and why">?</button></span>${ds.map(tile).join('')}</div>`;
+}
+/* THE EXPLANATION, IN THE SAME MODAL THE BONUS AND POST QUESTION MARKS USE. Casey: "put like a
+   little question mark next to it so it explains the logic of how this is determined, of why and
+   how." The numbers in it are this render's, so the example is never a stale one. */
+function openSodHelp(){
+  if (BONUS_OPEN === 'sod'){ closeHelp(); return; }
+  const box = el('help'); if (!box) return;
+  const byDiv = {};
+  for (const o of ownerTotals()) (byDiv[o.div] = byDiv[o.div] || []).push(o);
+  const sh = divShare(byDiv);
+  BONUS_OPEN = 'sod';
+  const divs = Object.keys(byDiv).sort((a, b) => sh ? sh.per[b].share - sh.per[a].share : 0);
+  const rows = sh ? divs.map(d => `<tr><td><b>${esc(DIVNAME[d] || d)}</b></td>
+      <td class="num">${sh.per[d].cap.toFixed(1)}</td><td class="num"><b>${sh.per[d].share.toFixed(1)}%</b></td>
+      <td>${sh.per[d].missed.slice(0, 3).map(m => `${esc(m[0])} (${m[1].toFixed(1)})`).join(', ') || '<span class="d">None</span>'}</td></tr>`).join('') : '';
+  box.hidden = false;
+  box.innerHTML = `<div class="modalbox">
+    <div class="modalhd"><div><h2>Strength of Division — How It Is Worked Out</h2></div>
+      <button class="modalx" onclick="closeHelp()" aria-label="Close">✕</button></div>
+    <div class="note">
+      <p><b>The question it answers:</b> which division is the hardest to win the overall title from?</p>
+      <p><b>Why that is the question.</b> All three divisions draft and trade from the same pool of
+      teams. When the other owners in your division take the good teams, there is less left for you.
+      A division that leaves good teams sitting unclaimed for weeks is an easier place to build a
+      title-winning season.</p>
+      <p><b>How it is worked out:</b></p>
+      <ol style="margin:2px 0 8px 18px">
+        <li>Take the teams that have scored the most points this season, as many as one division can
+          hold at once: the best ${sh ? sh.nNFL : 27} NFL teams and the best ${sh ? sh.nCOL : 72} college
+          teams.${sh ? ` Together they have earned <b>${sh.bench.toFixed(1)}</b> points.` : ''}</li>
+        <li>For each division, add up the points its owners earned from those teams, counting only
+          the weeks they held each one.</li>
+        <li>Divide that by the best teams' total. That is the percentage on the tile.</li>
+      </ol>
+      <p><b>How to read it.</b> The higher the percentage, the more of the season's best teams that
+      division has locked up, and the harder it is to win from. The number above it is every point
+      the division has earned, the same as its Total row.</p>
+      ${sh ? `<div class="scr"><table>
+        <thead><tr><th>Division</th><th class="num">From the Best Teams</th><th class="num">Share</th>
+          <th>Best Teams It Missed Most</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
+      <p class="d">It is measured on points scored so far, so it moves every week. A team that is good
+      but has not scored much yet is not one of the best teams until it does.</p>
+    </div></div>`;
+  const x = box.querySelector('.modalx'); if (x) x.focus({preventScroll: true});
+  document.body.style.overflow = 'hidden';
 }
 function standBar(byDiv, how){
   const divs = Object.keys(byDiv).sort((a, b) =>
