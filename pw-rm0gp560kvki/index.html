@@ -863,6 +863,23 @@ details.how>summary::before{content:'?';display:inline-flex;align-items:center;
   border:1px solid var(--line);font-size:12px;color:var(--dim)}
 details.how[open]>summary::before{content:'x'}
 details.how>summary:hover::before{border-color:var(--blue);color:var(--blue)}
+/* THE ? IN THE STANDINGS TAB STRIP. A round button at the right-hand end of the strip, the
+   explanation dropping over the page under the strip rather than pushing the table down. The
+   strip is sticky, so it is the box the panel hangs from. */
+.subtabs details.how.inbar{margin:0 0 0 auto;align-self:center}
+details.how.inbar>summary{min-height:40px;min-width:40px;justify-content:center;gap:0;padding:0}
+details.how.inbar>summary::before{width:30px;height:30px;font-size:15px;font-weight:700;
+  background:var(--pan)}
+details.how.inbar>.howpanel{position:absolute;left:0;right:0;top:100%;z-index:20;margin:4px 0 0;
+  background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:10px 14px;
+  max-height:70vh;overflow-y:auto;box-shadow:0 6px 18px rgba(15,47,82,.18)}
+/* A CLOSED PANEL IS GIVEN NO BOX AT ALL. Chrome lays out a closed <details> body with
+   content-visibility:hidden, which contains it, so the absolute panel hung off the 40px summary
+   and ran past the right edge of every phone. Nothing showed, but the box was there. */
+details.how.inbar:not([open])>.howpanel{display:none}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.standwarn{margin:0 0 8px}
+tr.divtot>td{border-top:2px solid var(--line);background:var(--pan2);font-weight:600}
 /* One table for the whole comparison, so a heading can never sit over a different edge from the
    values beneath it. Everything in it is left aligned, including the numbers: they are read
    across a row against each other, not down a column of decimals. */
@@ -1430,9 +1447,13 @@ table.esptbl td.num, table.esptbl td.c-team{white-space:nowrap}
    room: Team keeps its 372px and each figure column keeps its 90px. 99% on purpose -- at 100 the
    browser rounds up and the table reports more pixels than it was given. */
 table.rostertbl{min-width:1330px}
-.rt-team{width:27.9%}.rt-hold{width:10.2%}.rt-rec{width:6.77%}.rt-n3{width:6.77%}
-.rt-fin{width:6.77%}.rt-bank{width:6.77%}.rt-rest{width:6.77%}.rt-post{width:6.77%}
-.rt-finish{width:6.77%}.rt-full{width:6.77%}.rt-proj{width:6.77%}
+/* AND ONCE MORE, 20 NOV 2026, for the row that finally carried everything at once: `NFL Houston
+   Texans` with DROP FIRST, UPSET, a two-digit injury count and the plan flag needs 382px, and the
+   plan flag wrapped under the name in a 374px cell. Team takes 392px now and each figure column
+   gives up one pixel, keeping 89px for a figure that needs 57. */
+.rt-team{width:29.5%}.rt-hold{width:10.2%}.rt-rec{width:6.7%}.rt-n3{width:6.7%}
+.rt-fin{width:6.7%}.rt-bank{width:6.7%}.rt-rest{width:6.7%}.rt-post{width:6.7%}
+.rt-finish{width:6.7%}.rt-full{width:6.7%}.rt-proj{width:6.7%}
 table.slottbl{min-width:660px}
 /* ---- THE NUMBER, THE TEAM AND THE POINTS FIT THE PHONE; THE REST IS THE SWIPE ---------------
  * Casey, 27 Sep 2026: "I can get the slot number, the team, and the points across those without
@@ -3810,7 +3831,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '16 Nov 2026, 2:27 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '19 Nov 2026, 11:54 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -11956,7 +11977,7 @@ const sortVal = (o, k) => k === 'pts' ? o.pts
   : k === 'cwk' ? weekPtsOf(o, lastPlayedWeek())
   : ((o.q || {})[k] || 0);
 
-function standTable(rows, title, note, showDiv){
+function standTable(rows, title, note, showDiv, totLabel){
   /* Casey, 31 Aug 2026: "On the standings page for the overall standings, can you include a
      column for division to the right of the owner column." Only on the OVERALL table -- inside
      a division table every row carries the same value, which is a column answering a question
@@ -12046,8 +12067,32 @@ function standTable(rows, title, note, showDiv){
         ${qs.map(q => th(q, q, `Points earned in ${q} — ${wk(q)} of the league season.`)).join('')}
         <th class="num c-q">Post ${helpQM('stand', 'post')}</th>
         </tr></thead>
-      <tbody>${blocks.map(b => b.row).join('')}</tbody></table></div>
+      <tbody>${blocks.map(b => b.row).join('')}</tbody>${totLabel ? divTotalRow(rows, totLabel) : ''}</table></div>
     ${note || ''}</div>` + blocks.map(b => b.detail).join('');
+}
+
+/* THE DIVISION'S OWN TOTAL, ON THE LAST LINE OF ITS TABLE. Casey, 20 Nov 2026: "on our old
+   spreadsheet ... we give a total points that have been accumulated by each division ... I don't
+   want to have a grand total underneath the total points column for overall, but I'd like totals
+   for Predator, Scorpion, and Viper individually ... it might just need to be like a total at the
+   bottom of each division."
+   So it is drawn on a division's table and never on Overall. It sums the same cells the rows above
+   it print, column by column, so it can never disagree with them. The projection columns, Win% and
+   Behind are left empty: a division has no average finish or tiebreaker of its own. Bonus stays a
+   dash for the same reason it is a dash on every row: nothing has been awarded yet. */
+function divTotalRow(rows, label){
+  const sum = f => rows.reduce((a, o) => a + (f(o) || 0), 0);
+  const postN = sum(o => (o.teams || []).reduce((a, t) => a + (t.postN || 0), 0));
+  return `<tfoot><tr class="divtot" title="Every point the ${rows.length} owners in this division have earned, added together.">
+      <td class="num c-rank"></td><td class="c-own"><b>${esc(label)}</b></td>
+      <td class="num c-tot"><b>${sum(o => o.pts).toFixed(1)}</b></td>
+      <td class="num c-cwk">${sum(o => weekPtsOf(o, lastPlayedWeek())).toFixed(1)}</td>
+      ${PROJ_ON ? '<td class="num c-proj"></td><td class="num c-ffin"></td>' : ''}
+      <td class="num c-pct hide-s"></td><td class="num c-beh hide-s"></td>
+      ${undecidedCell('bonus')}
+      ${QKEYS().map(q => `<td class="num c-q">${sum(o => (o.q || {})[q]).toFixed(1)}</td>`).join('')}
+      ${postCell({post: sum(o => o.post), postN})}
+    </tr></tfoot>`;
 }
 
 /* WHAT THE TRANSACTION LOG COULD NOT ANSWER ON ITS OWN.
@@ -12106,7 +12151,7 @@ function setStandTab(k){
   const gap = bar.getBoundingClientRect().top;
   if (gap < 0) window.scrollBy({top: gap - 8});
 }
-function standBar(byDiv){
+function standBar(byDiv, how){
   const divs = Object.keys(byDiv).sort((a, b) =>
     a === MY_DIV ? -1 : b === MY_DIV ? 1 : a.localeCompare(b));
   const tab = (k, label, title) => `<button class="tab pick-tab ${STANDTAB === k ? 'on' : ''}"
@@ -12114,7 +12159,7 @@ function standBar(byDiv){
       onclick="setStandTab('${k}')" title="${title}">${label}</button>`;
   return `<div class="tabs subtabs">${tab('ALL', 'Overall', 'All 27 owners, every division together — this is the title everyone is playing for.')}${
     divs.map(d => tab(d, DIVNAME[d] || d,
-      `The ${DIVNAME[d] || d} division on its own${d === MY_DIV ? ' — yours' : ''}.`)).join('')}</div>`;
+      `The ${DIVNAME[d] || d} division on its own${d === MY_DIV ? ' — yours' : ''}.`)).join('')}${how || ''}</div>`;
 }
 
 function renderStandings(){
@@ -12157,16 +12202,20 @@ function renderStandings(){
      A <details> element, not a hand-rolled panel: it is a real disclosure control, it is
      keyboard reachable, it needs no state of ours, and it survives a re-render because the DOM
      carries the open flag. Closed by default -- he has read it. */
-  b.innerHTML = standBar(byDiv) +
-    `<div class="card"><details class="how"><summary>How these are worked out${
-      SEASON_LIVE === false ? ' <span class="chip warn">not live</span>' : ''}${
-      /* A SHORT SWEEP REORDERS THE TABLE SILENTLY. A week-scoreboard that failed to load leaves
-         every team that played in it looking as though it scored nothing, and nothing on the
-         face of the page said so -- the explanation was inside this panel, closed by default.
-         Unknown is not zero, so the shortfall goes on the summary line itself. */
-      SEASON_ERR ? ` <span class="chip warn">${SEASON_ERR.length} week(s) missing — totals short</span>` : ''}${
-      SEASON_BLOCKED ? ` <span class="chip warn">${SEASON_BLOCKED.length} team(s) not updated</span>` : ''
-      }</summary><div class="note">
+  /* THE ? SITS IN THE TAB STRIP, AT THE RIGHT, AND OPENS OVER THE PAGE. Casey, 20 Nov 2026:
+     "that bar, that white bar that it sits in is really big ... put it up over to the right next
+     to Viper. So again, you can pull the owner's scores up further on the screen." It is still a
+     <details>, so it keeps its own open state and every check that reads its text still finds it.
+     THE WARNINGS STAY ON THE FACE OF THE PAGE. They used to ride on the summary line, and unknown
+     is not zero, so a short sweep must not hide behind a closed control: they get a line of their
+     own, and only when there is something to say. */
+  const howWarn = (SEASON_LIVE === false ? ' <span class="chip warn">not live</span>' : '')
+    + (SEASON_ERR ? ` <span class="chip warn">${SEASON_ERR.length} week(s) missing — totals short</span>` : '')
+    + (SEASON_BLOCKED ? ` <span class="chip warn">${SEASON_BLOCKED.length} team(s) not updated</span>` : '');
+  b.innerHTML = standBar(byDiv,
+    `<details class="how inbar"><summary title="How These Are Worked Out"
+      aria-label="How these are worked out"><span class="vh">How these are worked out</span
+      ></summary><div class="note howpanel">
       ${SEASON_LIVE === false ? (SEASON_SRC
         ? `<p><b class="y">ESPN could not be reached, so these are the results THIS DEVICE last
         saw</b> — fetched here on <b>${pretty(String(SEASON_SRC.at).slice(0, 10))}</b>, covering
@@ -12230,14 +12279,16 @@ function renderStandings(){
         inside a week, so a new final cannot be added without either double-counting it or
         erasing the rest of the week. Their numbers are unchanged, not wrong-by-a-game. Reload
         with a connection to ESPN and they update normally.</p>` : ''}
-      ${wbNote}${tradeNote()}</div></details></div>`
+      ${wbNote}${tradeNote()}</div></details>`)
+    + (howWarn ? `<div class="standwarn">${howWarn}</div>` : '')
     + (STANDTAB === 'ALL'
         ? standTable(all, 'Overall',
             `<div class="note"><b>Overall — all ${all.length} owners.</b> All three divisions
              compete for this title. Tap any owner for every team they have held this
              season.</div>`, true)
         : standTable(byDiv[STANDTAB] || [], `${DIVNAME[STANDTAB] || STANDTAB} division`,
-            STANDTAB === MY_DIV ? '<div class="note">Your division.</div>' : ''))
+            STANDTAB === MY_DIV ? '<div class="note">Your division.</div>' : '', false,
+            `${DIVNAME[STANDTAB] || STANDTAB} Total`))
     + `<div class="note">Sorted by <b>${SORTBY === 'pts' ? 'total points' : SORTBY}</b>. Tap any
         column heading to change it — it applies to whichever table you are looking at.</div>`;
 }
