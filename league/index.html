@@ -898,6 +898,10 @@ table.stattbl td.num{white-space:nowrap;padding-left:10px}
 .pill.statdiv{font-size:10.5px;margin-left:2px}
 table.stattbl td{vertical-align:top}
 .statsub{font-size:11.5px;font-weight:400;margin-top:1px}
+td.statrank{width:2.2em;padding-right:4px}
+tr.statme>td{background:var(--pan2)}
+.statmore{margin:8px 0 0;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:9px;
+  background:var(--pan);color:var(--blue);font:600 13px inherit;cursor:pointer}
 .sod{display:flex;align-items:stretch;gap:6px;min-width:0}
 /* `.own` IS TAKEN. A global `.own` rule sets display:block for the owner line under a team, so the
    first cut of this tile used it for "your division" and that tile laid itself out sideways. */
@@ -3878,7 +3882,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Nov 2026, 2:52 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Nov 2026, 4:05 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12552,10 +12556,11 @@ function floatHeadSync(rebuild){
    Both read the roster positions rebuilt from the OWNERSHIP SNAPSHOTS (`ownerLineage`), the same
    record the standings total is computed from, and the same per-week points (`slotPts`). The suite
    holds every owner's pickup number to the slot-by-slot sum worked out a second way.
-   NOT `seatLineage`, ON PURPOSE. For his own seat that reads the workbook's recorded slot order,
-   and on 20 Nov 2026 it put his two latest pickups (North Texas, Oklahoma State) one week EARLY
-   against the snapshots the standings use -- 1.5 points the standings never credited him. Until
-   that is settled, a number printed beside the standings total must come from the same record. */
+   NOT `seatLineage`. For his own seat that reads the workbook's recorded slot order, and on
+   20 Nov 2026 it had his two latest pickups (North Texas, Oklahoma State) one week EARLY against
+   the snapshots the standings use. That was fixed at the source the same day
+   (`_slot_weeks_from_log` in build_season.py) and the suite now holds the two to each other, but a
+   number printed beside the standings total still reads the record the standings are made from. */
 function statsSplit(o){
   const lin = ownerLineage(o.div, o.owner);
   if (!lin || !lin.lineage || !lin.lineage.length) return null;
@@ -12587,11 +12592,26 @@ const statsWho = o => `${statsMine(o) ? `<span class="mebox" title="This is you.
   : ownerName(o.owner)} <span class="pill p-div statdiv${o.div === MY_DIV ? ' own' : ''}"
   title="${esc(DIVNAME[o.div] || o.div)} division">${esc(DIVNAME[o.div] || o.div)}</span>`;
 const statsSigned = v => (v > 0.05 ? '+' : v < -0.05 ? '−' : '') + Math.abs(v).toFixed(1);
-function statsCard(title, caption, head, rows){
+/* A BOX CAN SHOW ITS WHOLE LIST. Casey, 20 Nov 2026: "owners would want to see like where they sit
+   within their draft compared to others ... it shows the top three, but then like there's a more
+   button and it'll expand and show the rest of everybody." `more` is every row in order; the box
+   shows the first three until its button is pressed, and the choice lasts the visit. */
+const STATS_OPEN = new Set();
+function statsToggle(key){
+  if (STATS_OPEN.has(key)) STATS_OPEN.delete(key); else STATS_OPEN.add(key);
+  renderStats();
+}
+function statsCard(title, caption, head, rows, more){
+  const key = title.replace(/\W+/g, '');
+  const open = !!more && STATS_OPEN.has(key);
+  const shown = open ? more : rows;
+  const btn = more && more.length > rows.length
+    ? `<button type="button" class="statmore" aria-expanded="${open}" onclick="statsToggle('${key}')"
+        >${open ? 'Show Top Three' : `Show All ${more.length}`}</button>` : '';
   return `<div class="card statcard"><h2>${title}</h2><div class="note statcap">${caption}</div>
     <table class="stattbl"><thead><tr>${head.map((h, i) =>
-      `<th class="${i ? 'num' : ''}">${h}</th>`).join('')}</tr></thead>
-    <tbody>${rows.length ? rows.join('') : `<tr><td colspan="${head.length}" class="d">Nothing to show yet.</td></tr>`}</tbody></table></div>`;
+      `<th class="${i > 1 || (i === 1 && head[0] !== '#') ? 'num' : ''}">${h}</th>`).join('')}</tr></thead>
+    <tbody>${shown.length ? shown.join('') : `<tr><td colspan="${head.length}" class="d">Nothing to show yet.</td></tr>`}</tbody></table>${btn}</div>`;
 }
 function renderStats(){
   const b = el('statsBody'); if (!b) return;
@@ -12617,31 +12637,41 @@ function renderStats(){
   const split = all.map(o => ({o, s: statsSplit(o)})).filter(x => x.s);
   const byDraft = split.slice().sort((a, b2) => b2.s.draft - a.s.draft || a.o.owner.localeCompare(b2.o.owner));
   const byPick = split.slice().sort((a, b2) => b2.s.pick - a.s.pick || a.o.owner.localeCompare(b2.o.owner));
-  const ownerRow = (x, i, v) => `<tr><td>${statsWho(x.o)}</td><td class="num"><b>${v}</b></td></tr>`;
+  /* THE RANK IS THE PLACE IN THE WHOLE LIST, so a box that shows the bottom three says 25, 26, 27. */
+  /* TIED OWNERS SHARE A PLACE, 1, 2, 2, 4, the way the standings rank them. */
+  const ranks = (list, f) => list.map((x, i) => {
+    let j = i; while (j > 0 && Math.abs(f(list[j - 1]) - f(x)) < 1e-9) j--; return j + 1; });
+  const ownerRow = (x, i, v, rk) => `<tr${statsMine(x.o) ? ' class="statme"' : ''}><td class="d statrank">${rk ? rk[i] : i + 1}</td>
+    <td>${statsWho(x.o)}</td><td class="num"><b>${v}</b></td></tr>`;
+  const N = split.length;
   const draftCap = `Points the eleven teams each owner <b>drafted</b> have earned this season, as if
      none of them had ever been traded away. It judges the draft on its own.`;
   const pickCap = `What each owner's moves gained over simply keeping the draft: their total minus
      their draft points. A negative number means the teams let go have outscored the teams brought in.`;
-  const bestDraft = statsCard('Best Drafters', draftCap, ['Owner', 'Draft Pts'],
-    byDraft.slice(0, 3).map((x, i) => ownerRow(x, i, x.s.draft.toFixed(1))));
-  const worstDraft = statsCard('Worst Drafters', draftCap, ['Owner', 'Draft Pts'],
-    byDraft.slice(-3).reverse().map((x, i) => ownerRow(x, i, x.s.draft.toFixed(1))));
-  const bestPick = statsCard('Best at Pickups', pickCap, ['Owner', 'Gained'],
-    byPick.slice(0, 3).map((x, i) => ownerRow(x, i, statsSigned(x.s.pick))));
-  const worstPick = statsCard('Worst at Pickups', pickCap, ['Owner', 'Gained'],
-    byPick.slice(-3).reverse().map((x, i) => ownerRow(x, i, statsSigned(x.s.pick))));
+  const rD = ranks(byDraft, x => x.s.draft), rP = ranks(byPick, x => x.s.pick);
+  const draftRows = byDraft.map((x, i) => ownerRow(x, i, x.s.draft.toFixed(1), rD));
+  const pickRows = byPick.map((x, i) => ownerRow(x, i, statsSigned(x.s.pick), rP));
+  const bestDraft = statsCard('Best Drafters', draftCap, ['#', 'Owner', 'Draft Pts'],
+    draftRows.slice(0, 3), draftRows);
+  const worstDraft = statsCard('Worst Drafters', draftCap, ['#', 'Owner', 'Draft Pts'],
+    draftRows.slice(-3).reverse());
+  const bestPick = statsCard('Best at Pickups', pickCap, ['#', 'Owner', 'Gained'],
+    pickRows.slice(0, 3), pickRows);
+  const worstPick = statsCard('Worst at Pickups', pickCap, ['#', 'Owner', 'Gained'],
+    pickRows.slice(-3).reverse());
 
   /* THE SINGLE MOVES. Each pickup against the team it replaced, over the same weeks. */
   const moves = split.flatMap(x => x.s.moves).sort((a, b2) => b2.net - a.net || a.inn.localeCompare(b2.inn));
-  const moveRow = m => `<tr><td>${statsWho(m.o)}<div class="d statsub">${esc(m.inn)} in for
+  const moveRow = (m, i) => `<tr${statsMine(m.o) ? ' class="statme"' : ''}><td class="d statrank">${i + 1}</td><td>${statsWho(m.o)}<div class="d statsub">${esc(m.inn)} in for
       ${esc(m.out)}</div></td><td class="num"><b>${statsSigned(m.net)}</b><div class="d statsub">${
       m.got.toFixed(1)} vs ${m.lost.toFixed(1)}</div></td></tr>`;
   const moveCap = `One pickup at a time: what the team brought in has scored since, against what the
      team it replaced scored in the same weeks.`;
-  const bestMove = statsCard('Best Single Pickups', moveCap, ['Owner and Move', 'Gained'],
-    moves.slice(0, 3).map(moveRow));
-  const worstMove = statsCard('Worst Single Pickups', moveCap, ['Owner and Move', 'Gained'],
-    moves.slice(-3).reverse().filter(m => m.net < 0).map(moveRow));
+  const moveRows = moves.map(moveRow);
+  const bestMove = statsCard('Best Single Pickups', moveCap, ['#', 'Owner and Move', 'Gained'],
+    moveRows.slice(0, 3), moveRows);
+  const worstMove = statsCard('Worst Single Pickups', moveCap, ['#', 'Owner and Move', 'Gained'],
+    moveRows.map((r, i) => [r, moves[i]]).slice(-3).reverse().filter(x => x[1].net < 0).map(x => x[0]));
 
   /* HOTTEST OVER THE LAST FOUR WEEKS. */
   const L = lastPlayedWeek(), F = Math.max(0, L - 3);
@@ -12649,10 +12679,11 @@ function renderStats(){
     let p = 0; for (let w = F; w <= L; w++) p += weekPtsOf(o, w);
     return {o, p};
   }).sort((a, b2) => b2.p - a.p || a.o.owner.localeCompare(b2.o.owner));
+  const rH = ranks(hot, x => x.p);
+  const hotRows = hot.map((x, i) => ownerRow(x, i, x.p.toFixed(1), rH));
   const hotCard = statsCard('Hottest Owners Lately',
     `Most points in league weeks ${F}–${L}, the last four weeks including this one.`,
-    ['Owner', 'Points'], hot.slice(0, 3).map(x => `<tr><td>${statsWho(x.o)}</td>
-      <td class="num"><b>${x.p.toFixed(1)}</b></td></tr>`));
+    ['#', 'Owner', 'Points'], hotRows.slice(0, 3), hotRows);
 
   /* THE TOP SCORING TEAMS, THREE PER POOL. */
   const teamCard = pool => {
