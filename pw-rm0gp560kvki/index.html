@@ -886,6 +886,18 @@ details.how.inbar:not([open])>.howpanel{display:none}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .standwarn{margin:0 0 8px}
 tr.divtot>td{border-top:2px solid var(--line);background:var(--pan2);font-weight:600}
+/* LEAGUE STATS: a grid of small boxes, as many across as fit, one column on a phone. */
+/* min(290px,100%), NOT 290px: a folded phone is 280px wide and a fixed floor pushed every box
+   past the right edge. test_devices.js caught it. */
+.statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr));gap:12px;margin-bottom:12px}
+.statgrid .statcard{margin:0}
+.statcap{margin:2px 0 8px}
+table.stattbl{width:100%;border-collapse:collapse;table-layout:auto}
+table.stattbl th{font-size:11px;white-space:nowrap}
+table.stattbl td.num{white-space:nowrap;padding-left:10px}
+.pill.statdiv{font-size:10.5px;margin-left:2px}
+table.stattbl td{vertical-align:top}
+.statsub{font-size:11.5px;font-weight:400;margin-top:1px}
 .sod{display:flex;align-items:stretch;gap:6px;min-width:0}
 /* `.own` IS TAKEN. A global `.own` rule sets display:block for the owner line under a team, so the
    first cut of this tile used it for "your division" and that tile laid itself out sideways. */
@@ -1969,6 +1981,12 @@ td.c-p30.oddscell .oclean{display:block;font-size:10px;color:var(--dim);white-sp
   <section id="stand" hidden>
     <div id="standBody"></div>
   </section>
+  <!-- LEAGUE STATS. Casey, 20 Nov 2026. On both pages, right after Standings. Everything on it is
+       worked out from final scores and the ownership record, so it carries no projection and is
+       safe for the all-owners page. -->
+  <section id="stats" hidden>
+    <div id="statsBody"></div>
+  </section>
   <section id="pick" hidden>
     <div id="pickBody"></div>
   </section>
@@ -2089,10 +2107,10 @@ const TABSETS = {
      far ... Only put this on the Palma Wiedemann dashboard." It is not in TABSETS.league, so
      the all-owners page never shows it. It needs no payload of its own -- it ranks the same
      live results the standings are computed from -- so nothing extra ships anywhere either. */
-  personal: [['scores','Live Scores'],['stand','Standings'],['pick','Pickups'],
+  personal: [['scores','Live Scores'],['stand','Standings'],['stats','League Stats'],['pick','Pickups'],
              ['slots','Slots'],['best','Top Scorers'],['race','Race'],
              ['weekly','Weekly / Quarterly'],['summary','Season Summary'],['draft','Draft']],
-  league:   [['scores','Live Scores'],['stand','Standings'],['weekly','Weekly / Quarterly'],
+  league:   [['scores','Live Scores'],['stand','Standings'],['stats','League Stats'],['weekly','Weekly / Quarterly'],
              ['summary','Season Summary']],
 };
 /* THE DRAFT TAB ON THE ALL-OWNERS PAGE IS FOR A SIGNED-IN COMMISSIONER AND NOBODY ELSE.
@@ -2223,7 +2241,7 @@ function composeTabs(){
     .concat(RULES_TAB);
 }
 let TABS = composeTabs();
-const ALL_SECTIONS = ['scores','stand','pick','slots','race','best','weekly','summary','draft','start','rules','guide']
+const ALL_SECTIONS = ['scores','stand','stats','pick','slots','race','best','weekly','summary','draft','start','rules','guide']
   .concat(COMMISH_SECTIONS);
 
 /* PUT THE TAB UP, OR TAKE IT DOWN, TO MATCH WHO THE LEAGUE SAYS THIS IS. */
@@ -2695,6 +2713,7 @@ function showTab(which){
   if (which === 'race') renderRace();
   if (which === 'weekly') renderWeekly();
   if (which === 'summary') renderSummary();
+  if (which === 'stats'){ renderStats(); needSeason(() => renderStats()); }
   if (which === 'draft') openDraft();
   /* THE WIDE COLUMN BELONGS TO THE DRAFT TAB AND IS TAKEN BACK BY EVERY OTHER ONE. */
   const mn = document.querySelector('main');
@@ -3859,7 +3878,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Nov 2026, 11:51 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Nov 2026, 2:52 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12438,7 +12457,7 @@ function renderStandings(){
             `${DIVNAME[STANDTAB] || STANDTAB} Total`))
     + `<div class="note">Sorted by <b>${SORTBY === 'pts' ? 'total points' : SORTBY}</b>. Tap any
         column heading to change it — it applies to whichever table you are looking at.</div>`;
-  standHeadBuild();
+  floatHeadSync(true);
 }
 
 /* THE COLUMN HEADINGS STAY ON SCREEN. Casey, 20 Nov 2026: "the row header should freeze when you
@@ -12452,54 +12471,203 @@ function renderStandings(){
    NOTHING IS PLACED PER FRAME UP AND DOWN: the copy is fixed, so the page scrolling under it
    needs no help. Only the sideways offset follows the table, from the table's own scroll event,
    because the heading must line up with the columns under it when the quarters are swiped in. */
-let SH_BOUND = false;
-function standHeadBuild(){
+/* AND THE SAME ON WEEKLY / QUARTERLY AND SEASON SUMMARY. Casey, 20 Nov 2026: "when you go into
+   weekly, quarterly, or season summary, when you scroll up and down, the column headers don't hold."
+   Those two tabs draw one table per owner, so the copy follows WHICHEVER table is passing under
+   the strip, and is rebuilt from that table the moment it changes. One copy, one listener, three
+   tabs. The scroll listener is on the document in the capture phase, so it hears the page AND
+   every table's own sideways scroll. */
+const FLOAT_BODIES = ['standBody', 'weeklyBody', 'summaryBody'];
+let FLOAT_BOUND = false;
+function floatHeadGet(){
   let fl = document.getElementById('standFloat');
   if (!fl){
     fl = document.createElement('div'); fl.id = 'standFloat'; fl.hidden = true;
     fl.setAttribute('aria-hidden', 'true');
     document.body.appendChild(fl);
   }
-  fl.dataset.built = '';
-  const tbl = document.querySelector('#standBody table.standtbl');
-  if (!tbl || !tbl.tHead){ fl.hidden = true; fl.innerHTML = ''; return; }
-  /* MEASURED FROM THE REAL HEADINGS, so the copy can never be cut to different widths. A table
-     on a hidden tab measures nothing, so the copy is built again the first time it is needed. */
-  const ws = [...tbl.tHead.rows[0].cells].map(c => c.getBoundingClientRect().width);
-  if (!ws.length || ws.some(w => !(w > 0))){ fl.hidden = true; return; }
-  fl.innerHTML = `<table class="standtbl standfloat" style="width:${tbl.getBoundingClientRect().width}px;min-width:0;table-layout:fixed;margin:0">
+  if (!FLOAT_BOUND){
+    FLOAT_BOUND = true;
+    document.addEventListener('scroll', () => floatHeadSync(), {passive: true, capture: true});
+    window.addEventListener('resize', () => floatHeadSync(true), {passive: true});
+  }
+  return fl;
+}
+function floatHeadBuild(fl, tbl){
+  fl.__src = null; fl.innerHTML = '';
+  /* MEASURED FROM THE REAL TABLE, so the copy can never be cut to different widths. A heading row
+     can span columns (Season Summary groups its categories), so the widths are read off the first
+     row that has one cell per column, wherever it is. */
+  const ncols = [...tbl.tHead.rows[0].cells].reduce((a, c) => a + (c.colSpan || 1), 0);
+  const full = [...tbl.rows].find(r => r.cells.length === ncols);
+  if (!full) return false;
+  const ws = [...full.cells].map(c => c.getBoundingClientRect().width);
+  if (!ws.length || ws.some(w => !(w > 0))) return false;
+  fl.innerHTML = `<table class="${esc(tbl.className)} standfloat" style="width:${tbl.getBoundingClientRect().width}px;min-width:0;table-layout:fixed;margin:0">
     <colgroup>${ws.map(w => `<col style="width:${w}px">`).join('')}</colgroup>
     <thead>${tbl.tHead.innerHTML}</thead></table>`;
-  fl.dataset.built = '1';
-  const scr = tbl.closest('.scr');
-  if (scr && !scr.dataset.shBound){ scr.dataset.shBound = '1';
-    scr.addEventListener('scroll', standHeadSync, {passive: true}); }
-  if (!SH_BOUND){
-    SH_BOUND = true;
-    window.addEventListener('scroll', standHeadSync, {passive: true});
-    window.addEventListener('resize', standHeadBuild, {passive: true});
-  }
-  standHeadSync();
+  fl.__src = tbl;
+  return true;
 }
-function standHeadSync(){
-  const fl = document.getElementById('standFloat');
-  if (!fl) return;
-  const tbl = document.querySelector('#standBody table.standtbl');
-  if (!tbl || !tbl.tHead || !tbl.getClientRects().length){ fl.hidden = true; return; }
-  const bar = document.querySelector('#standBody .subtabs');
-  const top = bar ? bar.getBoundingClientRect().bottom : 0;
-  const hd = tbl.tHead.getBoundingClientRect(), tb = tbl.getBoundingClientRect();
-  const show = hd.top < top && tb.bottom > top + hd.height + 8;
-  if (show && fl.dataset.built !== '1'){ standHeadBuild(); return; }
-  fl.hidden = !show;
-  if (!show) return;
-  const scr = tbl.closest('.scr') || tbl.parentElement;
+function floatHeadSync(rebuild){
+  const fl = floatHeadGet();
+  if (rebuild) fl.__src = null;
+  const body = FLOAT_BODIES.map(id => el(id)).find(x => x && x.getClientRects().length);
+  if (!body){ fl.hidden = true; return; }
+  const bar = body.querySelector('.stickystack') || body.querySelector('.subtabs');
+  const top = bar ? bar.getBoundingClientRect().bottom
+                  : (document.querySelector('header') || {getBoundingClientRect: () => ({bottom: 0})})
+                      .getBoundingClientRect().bottom;
+  /* ONLY A TOP-LEVEL TABLE WITH HEADINGS. An owner's opened drawer holds tables of its own. */
+  const t = [...body.querySelectorAll('table')].find(x => x.tHead && x.tHead.rows.length
+    && !x.parentElement.closest('table') && !x.closest('#standFloat') && x.getClientRects().length
+    && x.tHead.getBoundingClientRect().top < top
+    && x.getBoundingClientRect().bottom > top + x.tHead.getBoundingClientRect().height + 8);
+  if (!t){ fl.hidden = true; return; }
+  if (fl.__src !== t && !floatHeadBuild(fl, t)){ fl.hidden = true; return; }
+  const scr = t.closest('.scr') || t.parentElement;
   const sr = scr.getBoundingClientRect();
   fl.style.top = top + 'px';
   fl.style.left = sr.left + 'px';
   fl.style.width = scr.clientWidth + 'px';
   const inner = fl.firstElementChild;
   if (inner) inner.style.transform = `translateX(${-scr.scrollLeft}px)`;
+  fl.hidden = false;
+}
+
+/* ============================ LEAGUE STATS =================================================
+   Casey, 20 Nov 2026: "a tab called ... League Stats ... several boxes with different analytics":
+   strength of division, the best and worst drafters, the best and worst at pickups, the top three
+   NFL, FBS and FCS teams, and "maybe you can come up with some other cool ideas". Two were added
+   and said so in the reply: who is hottest over the last four weeks, and the single best and worst
+   pickups of the season.
+   EVERY OWNER'S SEASON SPLITS INTO TWO PARTS THAT ADD BACK UP, and that is what makes the drafter
+   and pickup boxes fair to each other. He asked for exactly that: an owner who drafted well and
+   never needed to trade must not look like one who should have traded and did not.
+     * DRAFT POINTS: what the eleven teams the owner DRAFTED have earned this season, every week,
+       whether the owner kept them or not. It judges the draft as if nothing was ever traded.
+     * PICKUP POINTS: everything else, i.e. the owner's total minus their draft points. It is
+       what the moves gained over simply keeping the draft, and it is NEGATIVE when the teams let go
+       have since outscored the teams brought in.
+   Both read the roster positions rebuilt from the OWNERSHIP SNAPSHOTS (`ownerLineage`), the same
+   record the standings total is computed from, and the same per-week points (`slotPts`). The suite
+   holds every owner's pickup number to the slot-by-slot sum worked out a second way.
+   NOT `seatLineage`, ON PURPOSE. For his own seat that reads the workbook's recorded slot order,
+   and on 20 Nov 2026 it put his two latest pickups (North Texas, Oklahoma State) one week EARLY
+   against the snapshots the standings use -- 1.5 points the standings never credited him. Until
+   that is settled, a number printed beside the standings total must come from the same record. */
+function statsSplit(o){
+  const lin = ownerLineage(o.div, o.owner);
+  if (!lin || !lin.lineage || !lin.lineage.length) return null;
+  let draft = 0, unknown = false;
+  const moves = [];
+  for (const sl of lin.lineage){
+    const sp = sl.spells || [];
+    if (!sp.length || sp[0].team == null) continue;
+    const d = slotPts(sp[0].team, sp[0].from_week, null);
+    if (d == null){ unknown = true; continue; }
+    draft += d;
+    for (let k = 1; k < sp.length; k++){
+      const a = sp[k], b = sp[k - 1];
+      if (a.team == null || b.team == null) continue;
+      const got = slotPts(a.team, a.from_week, a.to_week);
+      const lost = slotPts(b.team, a.from_week, a.to_week);
+      if (got == null || lost == null) continue;
+      moves.push({o, inn: a.team, out: b.team, from: a.from_week, to: a.to_week,
+                  got, lost, net: got - lost});
+    }
+  }
+  if (unknown) return null;
+  return {draft, pick: o.pts - draft, moves};
+}
+const statsMine = o => !!meName() && o.div === MY_DIV && o.owner === meName();
+/* `ownerName()` RETURNS MARKUP (a long and a short form, one shown per width), so it is never
+   escaped a second time. The first cut did, and printed the tags. */
+const statsWho = o => `${statsMine(o) ? `<span class="mebox" title="This is you.">${ownerName(o.owner)}</span>`
+  : ownerName(o.owner)} <span class="pill p-div statdiv${o.div === MY_DIV ? ' own' : ''}"
+  title="${esc(DIVNAME[o.div] || o.div)} division">${esc(DIVNAME[o.div] || o.div)}</span>`;
+const statsSigned = v => (v > 0.05 ? '+' : v < -0.05 ? '−' : '') + Math.abs(v).toFixed(1);
+function statsCard(title, caption, head, rows){
+  return `<div class="card statcard"><h2>${title}</h2><div class="note statcap">${caption}</div>
+    <table class="stattbl"><thead><tr>${head.map((h, i) =>
+      `<th class="${i ? 'num' : ''}">${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.length ? rows.join('') : `<tr><td colspan="${head.length}" class="d">Nothing to show yet.</td></tr>`}</tbody></table></div>`;
+}
+function renderStats(){
+  const b = el('statsBody'); if (!b) return;
+  const gate = lNoSeason('League Stats'); if (gate){ b.innerHTML = gate; return; }
+  const all = ownerTotals();
+  const byDiv = {};
+  for (const o of all) (byDiv[o.div] = byDiv[o.div] || []).push(o);
+  const r = (n, i) => `<td class="d statrank">${i + 1}</td>`;
+
+  /* STRENGTH OF DIVISION: the same numbers as the Standings tiles, with room to say more. */
+  const sh = divShare(byDiv);
+  const divs = Object.keys(byDiv).sort((a, b2) => sh ? sh.per[b2].share - sh.per[a].share : 0);
+  const sod = statsCard('Strength of Division',
+    `Which division is hardest to win the overall title from: the share of the points earned by
+     the season's ${sh ? sh.n : 99} best teams that its owners have held.
+     <button type="button" class="qm" onclick="event.stopPropagation();openSodHelp()"
+       title="How Strength of Division is worked out, and why">?</button>`,
+    ['Division', 'Total', 'Share'],
+    divs.map(d => `<tr><td><b>${esc(DIVNAME[d] || d)}</b></td><td class="num">${divPts(byDiv[d]).toFixed(1)}</td>
+      <td class="num"><b>${sh ? sh.per[d].share.toFixed(1) + '%' : '—'}</b></td></tr>`));
+
+  /* THE DRAFT AND THE MOVES. */
+  const split = all.map(o => ({o, s: statsSplit(o)})).filter(x => x.s);
+  const byDraft = split.slice().sort((a, b2) => b2.s.draft - a.s.draft || a.o.owner.localeCompare(b2.o.owner));
+  const byPick = split.slice().sort((a, b2) => b2.s.pick - a.s.pick || a.o.owner.localeCompare(b2.o.owner));
+  const ownerRow = (x, i, v) => `<tr><td>${statsWho(x.o)}</td><td class="num"><b>${v}</b></td></tr>`;
+  const draftCap = `Points the eleven teams each owner <b>drafted</b> have earned this season, as if
+     none of them had ever been traded away. It judges the draft on its own.`;
+  const pickCap = `What each owner's moves gained over simply keeping the draft: their total minus
+     their draft points. A negative number means the teams let go have outscored the teams brought in.`;
+  const bestDraft = statsCard('Best Drafters', draftCap, ['Owner', 'Draft Pts'],
+    byDraft.slice(0, 3).map((x, i) => ownerRow(x, i, x.s.draft.toFixed(1))));
+  const worstDraft = statsCard('Worst Drafters', draftCap, ['Owner', 'Draft Pts'],
+    byDraft.slice(-3).reverse().map((x, i) => ownerRow(x, i, x.s.draft.toFixed(1))));
+  const bestPick = statsCard('Best at Pickups', pickCap, ['Owner', 'Gained'],
+    byPick.slice(0, 3).map((x, i) => ownerRow(x, i, statsSigned(x.s.pick))));
+  const worstPick = statsCard('Worst at Pickups', pickCap, ['Owner', 'Gained'],
+    byPick.slice(-3).reverse().map((x, i) => ownerRow(x, i, statsSigned(x.s.pick))));
+
+  /* THE SINGLE MOVES. Each pickup against the team it replaced, over the same weeks. */
+  const moves = split.flatMap(x => x.s.moves).sort((a, b2) => b2.net - a.net || a.inn.localeCompare(b2.inn));
+  const moveRow = m => `<tr><td>${statsWho(m.o)}<div class="d statsub">${esc(m.inn)} in for
+      ${esc(m.out)}</div></td><td class="num"><b>${statsSigned(m.net)}</b><div class="d statsub">${
+      m.got.toFixed(1)} vs ${m.lost.toFixed(1)}</div></td></tr>`;
+  const moveCap = `One pickup at a time: what the team brought in has scored since, against what the
+     team it replaced scored in the same weeks.`;
+  const bestMove = statsCard('Best Single Pickups', moveCap, ['Owner and Move', 'Gained'],
+    moves.slice(0, 3).map(moveRow));
+  const worstMove = statsCard('Worst Single Pickups', moveCap, ['Owner and Move', 'Gained'],
+    moves.slice(-3).reverse().filter(m => m.net < 0).map(moveRow));
+
+  /* HOTTEST OVER THE LAST FOUR WEEKS. */
+  const L = lastPlayedWeek(), F = Math.max(0, L - 3);
+  const hot = all.map(o => {
+    let p = 0; for (let w = F; w <= L; w++) p += weekPtsOf(o, w);
+    return {o, p};
+  }).sort((a, b2) => b2.p - a.p || a.o.owner.localeCompare(b2.o.owner));
+  const hotCard = statsCard('Hottest Owners Lately',
+    `Most points in league weeks ${F}–${L}, the last four weeks including this one.`,
+    ['Owner', 'Points'], hot.slice(0, 3).map(x => `<tr><td>${statsWho(x.o)}</td>
+      <td class="num"><b>${x.p.toFixed(1)}</b></td></tr>`));
+
+  /* THE TOP SCORING TEAMS, THREE PER POOL. */
+  const teamCard = pool => {
+    const ts = [...SEASON.entries()].filter(([n]) => (BY.get(n) || {}).pool === pool)
+      .sort((a, b2) => (b2[1].pts || 0) - (a[1].pts || 0) || a[0].localeCompare(b2[0])).slice(0, 3);
+    return statsCard(`Top ${pool} Teams`, `Most league points earned this season.`,
+      ['Team', 'Record', 'Points'], ts.map(([n, g]) => `<tr><td><b>${esc(n)}</b></td>
+        <td class="num">${g.w || 0}-${g.l || 0}${g.t ? '-' + g.t : ''}</td>
+        <td class="num"><b>${(g.pts || 0).toFixed(1)}</b></td></tr>`));
+  };
+
+  b.innerHTML = `<div class="statgrid">${[sod, bestDraft, worstDraft, bestPick, worstPick,
+      bestMove, worstMove, hotCard, teamCard('NFL'), teamCard('FBS'), teamCard('FCS')].join('')}</div>
+    <div class="note">Every figure here is worked out from final scores and the ownership record.
+      Nothing on this tab is a projection, and it updates with the live scores.</div>`;
 }
 
 /* ============================ SLOTS ========================================================
@@ -13243,6 +13411,14 @@ function ownerLineage(div, owner){
 /* team name -> points the SLOT that team occupies has earned all year, across every team that
    has held it. Null when there is no history to read, which is a different statement from zero
    and is why the caller checks for null rather than for a falsy value. */
+/* ONE SEAT'S ROSTER POSITIONS, slot by slot, each with the teams that have held it. His own seat
+   is read from the workbook's recorded order, every other seat is rebuilt from the ownership
+   snapshots. Slots and League Stats both ask this, so the two can never disagree about it. */
+function seatLineage(div, owner){
+  const mine = (div + '|' + owner) === raceMine();
+  return mine ? (slotRows() ? {lineage: slotRows(), inferred: false} : null)
+              : ownerLineage(div, owner);
+}
 function slotTotalsFor(div, owner){
   /* UNKNOWN IS NOT ZERO. slotPts returns null until the results are loaded, and a lineage sums
      those nulls to 0.0 -- right for the Slots tab's own "not yet" state, wrong here, where a 0
@@ -13251,10 +13427,9 @@ function slotTotalsFor(div, owner){
   /* MY OWN SLOTS ARE OBSERVED, NOT INFERRED. The workbook records my eleven positions in order,
      so for my seat the recorded lineage wins over anything reconstructed from set differences.
      Two stores of one fact: the observed one is the truth. */
-  const mine = (div + '|' + owner) === raceMine();
-  const lin = mine ? (slotRows() ? {lineage: slotRows(), inferred: false} : null)
-                   : ownerLineage(div, owner);
+  const lin = seatLineage(div, owner);
   if (!lin || !lin.lineage || !lin.lineage.length) return null;
+  const mine = (div + '|' + owner) === raceMine();
   const out = new Map();
   for (const l of lin.lineage){
     const spells = l.spells.map(sp => sp.team == null ? 0
@@ -14526,6 +14701,7 @@ function lRepaint(){
   draw(renderRace, 'race', 'raceBody');
   draw(renderWeekly, 'weekly', 'weeklyBody');
   draw(renderSummary, 'summary', 'summaryBody');
+  draw(renderStats, 'stats', 'statsBody');
 }
 
 function lNoSeason(what){
@@ -14709,6 +14885,7 @@ function renderWeekly(){
       opened. <b>BYE</b> = no game that week. <b>–</b> = a game with no result on this device
       yet. <b>·</b> = not on this owner's roster that week.</div></div>`
     + shown.map(o => weeklyCard(o, weeks)).join('');
+  floatHeadSync(true);
 }
 
 function weeklyCard(o, weeks){
@@ -14925,6 +15102,7 @@ function renderSummary(){
       <p><b>Total = Q1 + Q2 + Q3 + Q4 + Bonus + Post</b>, and nothing is counted twice. Blowouts
       and shutouts are never in Bonus: a regular season one is in its quarter, a postseason one is
       in Post.</p>`)}</div>`;
+  floatHeadSync(true);
 }
 
 /* ---- ROSTER SLOTS, FOR ANY OWNER -----------------------------------------------------------
