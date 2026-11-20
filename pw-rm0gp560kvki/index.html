@@ -880,6 +880,30 @@ details.how.inbar:not([open])>.howpanel{display:none}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .standwarn{margin:0 0 8px}
 tr.divtot>td{border-top:2px solid var(--line);background:var(--pan2);font-weight:600}
+.sod{display:flex;align-items:stretch;gap:6px;min-width:0}
+/* `.own` IS TAKEN. A global `.own` rule sets display:block for the owner line under a team, so the
+   first cut of this tile used it for "your division" and that tile laid itself out sideways. */
+.sod .sodh{align-self:center;font:700 11px/1.2 inherit;color:var(--dim);max-width:80px}
+.sodt{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:0 1 auto;
+  padding:3px 9px;border:1px solid var(--line);border-radius:9px;background:var(--pan);line-height:1.15}
+.sodt.sodme{border-color:var(--blue)}
+.sodt .sodn{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sodt .sodv{font-size:14px;color:var(--ink)}
+.sodt .sodg{font-size:11px;color:var(--dim);white-space:nowrap}
+.subtabs .sod.inbar{margin-left:auto}
+.subtabs .sod.inbar + details.how.inbar{margin-left:4px}
+.sod.below{display:none;margin:0 0 8px}
+@media (max-width: 899px){
+  .subtabs .sod.inbar{display:none}
+  .subtabs .sod.inbar + details.how.inbar{margin-left:auto}
+  .sod.below{display:flex}
+  .sod.below .sodt{flex:1 1 0}
+}
+/* ON A FOLDED PHONE THE LABEL TAKES A LINE OF ITS OWN, so the three tiles keep their names. */
+@media (max-width: 359px){
+  .sod.below{flex-wrap:wrap}
+  .sod.below .sodh{flex:0 0 100%;max-width:none}
+}
 /* One table for the whole comparison, so a heading can never sit over a different edge from the
    values beneath it. Everything in it is left aligned, including the numbers: they are read
    across a row against each other, not down a column of decimals. */
@@ -3831,7 +3855,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '19 Nov 2026, 11:54 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Nov 2026, 12:39 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12085,7 +12109,7 @@ function divTotalRow(rows, label){
   const postN = sum(o => (o.teams || []).reduce((a, t) => a + (t.postN || 0), 0));
   return `<tfoot><tr class="divtot" title="Every point the ${rows.length} owners in this division have earned, added together.">
       <td class="num c-rank"></td><td class="c-own"><b>${esc(label)}</b></td>
-      <td class="num c-tot"><b>${sum(o => o.pts).toFixed(1)}</b></td>
+      <td class="num c-tot"><b>${divPts(rows).toFixed(1)}</b></td>
       <td class="num c-cwk">${sum(o => weekPtsOf(o, lastPlayedWeek())).toFixed(1)}</td>
       ${PROJ_ON ? '<td class="num c-proj"></td><td class="num c-ffin"></td>' : ''}
       <td class="num c-pct hide-s"></td><td class="num c-beh hide-s"></td>
@@ -12151,6 +12175,31 @@ function setStandTab(k){
   const gap = bar.getBoundingClientRect().top;
   if (gap < 0) window.scrollBy({top: gap - 8});
 }
+/* STRENGTH OF DIVISION. Casey, 20 Nov 2026: "I actually think it'd be cool to put like a strength
+   of division score up at the top ... using the totals ... almost like a little dashboard type
+   thing right at the top there that's small, but that would show like that total, and then like
+   the difference in the divisions."
+   One tile per division, strongest first: its total and how far it sits behind the leader. The
+   total is `divPts()`, the same sum the division's own Total row prints, so the two can never
+   disagree. Every division has nine owners, so the total ranks them exactly as an average would.
+   Drawn in the tab strip where there is room for it, and on its own line under the strip on a
+   phone, where it does not stick, so the strip stays one row tall while the table scrolls. */
+function divPts(rows){ return (rows || []).reduce((a, o) => a + (o.pts || 0), 0); }
+function divStrength(byDiv, where){
+  const ds = Object.keys(byDiv).map(d => ({d, pts: divPts(byDiv[d]), n: byDiv[d].length}))
+    .sort((a, b) => b.pts - a.pts || String(DIVNAME[a.d] || a.d).localeCompare(String(DIVNAME[b.d] || b.d)));
+  if (ds.length < 2) return '';
+  const top = ds[0].pts;
+  const tile = x => {
+    const gap = top - x.pts;
+    const name = DIVNAME[x.d] || x.d;
+    const sub = gap < 0.05 ? (ds.filter(y => top - y.pts < 0.05).length > 1 ? 'Level' : 'Leads')
+                           : '\u2212' + gap.toFixed(1);
+    return `<div class="sodt${x.d === MY_DIV ? ' sodme' : ''}" title="${esc(name)}: ${x.pts.toFixed(1)} points earned by its ${x.n} owners${gap < 0.05 ? '' : `, ${gap.toFixed(1)} behind ${esc(DIVNAME[ds[0].d] || ds[0].d)}`}.">
+      <span class="sodn">${esc(name)}</span><b class="sodv">${x.pts.toFixed(1)}</b><span class="sodg">${sub}</span></div>`;
+  };
+  return `<div class="sod ${where}" aria-label="Strength of Division"><span class="sodh">Strength of Division</span>${ds.map(tile).join('')}</div>`;
+}
 function standBar(byDiv, how){
   const divs = Object.keys(byDiv).sort((a, b) =>
     a === MY_DIV ? -1 : b === MY_DIV ? 1 : a.localeCompare(b));
@@ -12159,7 +12208,7 @@ function standBar(byDiv, how){
       onclick="setStandTab('${k}')" title="${title}">${label}</button>`;
   return `<div class="tabs subtabs">${tab('ALL', 'Overall', 'All 27 owners, every division together — this is the title everyone is playing for.')}${
     divs.map(d => tab(d, DIVNAME[d] || d,
-      `The ${DIVNAME[d] || d} division on its own${d === MY_DIV ? ' — yours' : ''}.`)).join('')}${how || ''}</div>`;
+      `The ${DIVNAME[d] || d} division on its own${d === MY_DIV ? ' — yours' : ''}.`)).join('')}${divStrength(byDiv, 'inbar')}${how || ''}</div>${divStrength(byDiv, 'below')}`;
 }
 
 function renderStandings(){
