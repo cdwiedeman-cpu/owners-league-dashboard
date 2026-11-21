@@ -3894,7 +3894,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '21 Nov 2026, 9:44 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '21 Nov 2026, 1:16 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12781,10 +12781,19 @@ function historyCards(H){
   const rM = rk(most, x => x[1]);
   const mRows = most.map((m, i) => `<tr><td class="d statrank">${rM[i]}</td><td>${esc(m[0])}</td>
     <td class="num"><b>${m[1]}</b></td></tr>`);
+  /* HIGHEST SCORING SEASONS. Casey, 21 Nov 2026: "a box for the top three highest point scorers
+     across the years." The overall winner is the top scorer of each season, so this is the
+     champions ranked on their points, this season's included once it is over. */
+  const best = played.filter(c => c.pts != null).slice().sort((a, b) => b.pts - a.pts || a.year - b.year);
+  const rB = rk(best, x => x.pts);
+  const bRows = best.map((c, i) => `<tr><td class="d statrank">${rB[i]}</td><td>${esc(c.winner)}
+      <div class="d statsub">${c.year}</div></td><td class="num"><b>${c.pts.toFixed(1)}</b></td></tr>`);
   return `<h2 class="histhd">${span} Seasons</h2>`
     + statsCard('Overall Championships', `Overall titles won since ${Math.min(...yrs)}. Bob's count
         through ${bobThrough}, and every champion since. ${played.length} seasons have been played.`,
         ['#', 'Owner', 'Titles'], tRows.slice(0, 3), tRows)
+    + statsCard('Highest Scoring Seasons', `The most points any owner has scored in one season, and
+        the year they did it.`, ['#', 'Owner', 'Pts'], bRows.slice(0, 3), bRows)
     + statsCard('Champions by Year', `Every season's overall winner and the points they scored,
         with the runner-up and the other division winners.`, ['Year', 'Champion', 'Pts'],
         cRows.slice(0, 3), cRows)
@@ -12814,8 +12823,9 @@ let STATSTAB = 'season';
 function setStatsTab(k){ STATSTAB = k; renderStats(); }
 function renderStats(){
   const b = el('statsBody'); if (!b) return;
-  const yr = cal('season');
-  const bar = `<div class="tabs subtabs">${[['season', yr ? `${yr} Season` : 'This Season'],
+  /* "Season Stats", not the year. Casey, 21 Nov 2026: "all those stats in there are going to be
+     replaced next season. We're not keeping those." */
+  const bar = `<div class="tabs subtabs">${[['season', 'Season Stats'],
       ['history', 'League History'], ['honors', 'League Honors']].map(([k, l]) =>
     `<button class="tab pick-tab ${STATSTAB === k ? 'on' : ''}" aria-pressed="${STATSTAB === k}"
       data-statstab="${k}" onclick="setStatsTab('${k}')">${l}</button>`).join('')}</div>`;
