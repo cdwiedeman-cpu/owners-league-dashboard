@@ -889,6 +889,7 @@ tr.divtot>td{border-top:2px solid var(--line);background:var(--pan2);font-weight
 /* LEAGUE STATS: a grid of small boxes, as many across as fit, one column on a phone. */
 /* min(290px,100%), NOT 290px: a folded phone is 280px wide and a fixed floor pushed every box
    past the right edge. test_devices.js caught it. */
+.statone{max-width:640px;margin-bottom:12px}.statone .statcard{margin:0}
 .statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr));gap:12px;margin-bottom:12px}
 .statgrid .statcard{margin:0}
 .statgrid .histhd{grid-column:1/-1;margin:10px 0 0;font-size:14px;letter-spacing:.06em;
@@ -3893,7 +3894,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '21 Nov 2026, 9:24 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '21 Nov 2026, 9:44 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12780,7 +12781,7 @@ function historyCards(H){
   const rM = rk(most, x => x[1]);
   const mRows = most.map((m, i) => `<tr><td class="d statrank">${rM[i]}</td><td>${esc(m[0])}</td>
     <td class="num"><b>${m[1]}</b></td></tr>`);
-  return `<h2 class="histhd">League History, ${span}</h2>`
+  return `<h2 class="histhd">${span} Seasons</h2>`
     + statsCard('Overall Championships', `Overall titles won since ${Math.min(...yrs)}. Bob's count
         through ${bobThrough}, and every champion since. ${played.length} seasons have been played.`,
         ['#', 'Owner', 'Titles'], tRows.slice(0, 3), tRows)
@@ -12805,9 +12806,33 @@ function statsCard(title, caption, head, rows, more){
       `<th class="${i > 1 || (i === 1 && head[0] !== '#' && head[0] !== 'Year') ? 'num' : ''}">${h}</th>`).join('')}</tr></thead>
     <tbody>${shown.length ? shown.join('') : `<tr><td colspan="${head.length}" class="d">Nothing to show yet.</td></tr>`}</tbody></table>${btn}</div>`;
 }
+/* THREE SUB-TABS. Casey, 21 Nov 2026: "let's create two tabs underneath league stats. One for
+   current, maybe current year stats", then "a tab for the this season stats, and then a tab for
+   league history", then "and then another tab for league honors." The choice lasts the visit and
+   is never saved, so the tab always opens on this season. */
+let STATSTAB = 'season';
+function setStatsTab(k){ STATSTAB = k; renderStats(); }
 function renderStats(){
   const b = el('statsBody'); if (!b) return;
-  const gate = lNoSeason('League Stats'); if (gate){ b.innerHTML = gate; return; }
+  const yr = cal('season');
+  const bar = `<div class="tabs subtabs">${[['season', yr ? `${yr} Season` : 'This Season'],
+      ['history', 'League History'], ['honors', 'League Honors']].map(([k, l]) =>
+    `<button class="tab pick-tab ${STATSTAB === k ? 'on' : ''}" aria-pressed="${STATSTAB === k}"
+      data-statstab="${k}" onclick="setStatsTab('${k}')">${l}</button>`).join('')}</div>`;
+  if (STATSTAB === 'honors'){
+    b.innerHTML = bar + `<div class="statone">${honorsCard()}</div>`;
+    return;
+  }
+  if (STATSTAB === 'history'){
+    const h = historyCards(DATA.league_history);
+    b.innerHTML = bar + (h ? `<div class="statgrid">${h}</div>
+      <div class="note">League History is Bob's record up to 2025, and the league adds each season
+        once it is over.</div>`
+      : `<div class="card"><div class="note">The league's history has not been loaded into this
+        page, so there is nothing to show here yet.</div></div>`);
+    return;
+  }
+  const gate = lNoSeason('League Stats'); if (gate){ b.innerHTML = bar + gate; return; }
   const all = ownerTotals();
   const byDiv = {};
   for (const o of all) (byDiv[o.div] = byDiv[o.div] || []).push(o);
@@ -12913,13 +12938,11 @@ function renderStats(){
         <td class="num"><b>${(g.pts || 0).toFixed(1)}</b></td></tr>`));
   };
 
-  /* LEAGUE HONORS LEADS. Casey, 21 Nov 2026: "let's put these stats at the top of the page." */
-  b.innerHTML = `<div class="statgrid">${[honorsCard(), sod, bestDraft, worstDraft, bestPick, worstPick,
-      bestMove, worstMove, awayCard, hotCard, luckiest, unluckiest, teamCard('NFL'), teamCard('FBS'), teamCard('FCS')].join('')}${historyCards(DATA.league_history)}</div>
+  /* League Honors and League History have sub-tabs of their own. See setStatsTab(). */
+  b.innerHTML = bar + `<div class="statgrid">${[sod, bestDraft, worstDraft, bestPick, worstPick,
+      bestMove, worstMove, awayCard, hotCard, luckiest, unluckiest, teamCard('NFL'), teamCard('FBS'), teamCard('FCS')].join('')}</div>
     <div class="note">Every figure here is worked out from final scores and the ownership record.
-      Nothing on this tab is a projection, and it updates with the live scores. League Honors is
-      the one box that is awarded rather than worked out. League History is Bob's record up to 2025,
-      and the league adds each season once it is over.</div>`;
+      Nothing on this tab is a projection, and it updates with the live scores.</div>`;
 }
 
 /* ============================ SLOTS ========================================================
