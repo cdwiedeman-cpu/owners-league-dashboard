@@ -3891,7 +3891,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Nov 2026, 10:44 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Nov 2026, 11:39 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12649,6 +12649,24 @@ function statsToggle(key){
   if (STATS_OPEN.has(key)) STATS_OPEN.delete(key); else STATS_OPEN.add(key);
   renderStats();
 }
+/* LEAGUE HONORS. Casey, 20-21 Nov 2026, choosing every word himself: Bob is "discount Pete Carroll
+   fucktard edition", Zach Fryer is "draft day no-show thunder cunt" ("he never shows up" to the
+   draft, "prioritizes every year something else like hockey"), and Young/Mars, former owners, is
+   "douchebag emeritus". THESE ARE AWARDED, NOT WORKED OUT, and the box says so in its first line,
+   because every other box on the tab is calculated. This list is the one place they are written:
+   to add an honor or take one down, change this list and nothing else. */
+const LEAGUE_HONORS = [
+  {honor: 'Discount Pete Carroll, Fucktard Edition', who: 'Bob Tucker', note: 'Scorpion'},
+  {honor: 'Draft Day No-Show Thundercunt', who: 'Zach Fryer', note: 'Twitchell/Fryer, Predator'},
+  {honor: 'Douchebag Emeritus', who: 'Young/Mars', note: 'Former owners'},
+];
+function honorsCard(){
+  return `<div class="card statcard honors"><h2>League Honors</h2>
+    <div class="note statcap">Awarded by the commissioners, not worked out from any score.</div>
+    <table class="stattbl"><thead><tr><th>Honor</th><th>Awarded To</th></tr></thead><tbody>${
+      LEAGUE_HONORS.map(h => `<tr><td><b>${esc(h.honor)}</b></td><td>${esc(h.who)}${
+        h.note ? `<div class="d statsub">${esc(h.note)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+}
 function statsCard(title, caption, head, rows, more){
   const key = title.replace(/\W+/g, '');
   const open = !!more && STATS_OPEN.has(key);
@@ -12769,10 +12787,12 @@ function renderStats(){
         <td class="num"><b>${(g.pts || 0).toFixed(1)}</b></td></tr>`));
   };
 
-  b.innerHTML = `<div class="statgrid">${[sod, bestDraft, worstDraft, bestPick, worstPick,
+  /* LEAGUE HONORS LEADS. Casey, 21 Nov 2026: "let's put these stats at the top of the page." */
+  b.innerHTML = `<div class="statgrid">${[honorsCard(), sod, bestDraft, worstDraft, bestPick, worstPick,
       bestMove, worstMove, awayCard, hotCard, luckiest, unluckiest, teamCard('NFL'), teamCard('FBS'), teamCard('FCS')].join('')}</div>
     <div class="note">Every figure here is worked out from final scores and the ownership record.
-      Nothing on this tab is a projection, and it updates with the live scores.</div>`;
+      Nothing on this tab is a projection, and it updates with the live scores. League Honors is
+      the one box that is awarded rather than worked out.</div>`;
 }
 
 /* ============================ SLOTS ========================================================
