@@ -898,7 +898,7 @@ table.stattbl td.num{white-space:nowrap;padding-left:10px}
 .pill.statdiv{font-size:10.5px;margin-left:2px}
 table.stattbl td{vertical-align:top}
 .statsub{font-size:11.5px;font-weight:400;margin-top:1px}
-td.statrank{width:2.2em;padding-right:4px}
+td.statrank{width:2.6em;padding-right:4px;white-space:nowrap}
 tr.statme>td{background:var(--pan2)}
 .statmore{margin:8px 0 0;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:9px;
   background:var(--pan);color:var(--blue);font:600 13px inherit;cursor:pointer}
@@ -3882,7 +3882,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Nov 2026, 4:05 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Nov 2026, 5:22 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12585,6 +12585,45 @@ function statsSplit(o){
   if (unknown) return null;
   return {draft, pick: o.pts - draft, moves};
 }
+/* LUCKIEST AND UNLUCKIEST. Casey, 20 Nov 2026: "Go ahead and build them all." Game by game, for
+   the weeks the owner held each team: the points the final score paid (`pointsFor`, the same rule
+   the standings use) against the points the pre-game odds expected (`pre_ep`, worked out before
+   kickoff). A plus means the owner's teams kept winning games they were expected to lose. Only
+   games in the build's own results count, because only those carry a pre-game number. */
+function statsLuck(o){
+  const lin = ownerLineage(o.div, o.owner);
+  if (!lin || !lin.lineage) return null;
+  let act = 0, exp = 0, n = 0;
+  for (const sl of lin.lineage) for (const sp of (sl.spells || [])){
+    if (sp.team == null) continue;
+    const t = BY.get(sp.team); if (!t) continue;
+    for (const g of (t.hist || [])){
+      if (g.pre_ep == null || g.pf == null || g.pa == null || !g.d) continue;
+      const w = lWeekOfDate(g.d);
+      if (w == null || w < sp.from_week || (sp.to_week != null && w >= sp.to_week)) continue;
+      act += pointsFor(t.pool, g.pf, g.pa); exp += g.pre_ep; n++;
+    }
+  }
+  return n ? {act, exp, luck: act - exp, n} : null;
+}
+/* THE ONE THAT GOT AWAY. For each owner, the team they let go that has scored the most since,
+   counted from the week it left them. */
+function statsGotAway(o){
+  const lin = ownerLineage(o.div, o.owner);
+  if (!lin || !lin.lineage) return null;
+  let best = null;
+  for (const sl of lin.lineage){
+    const sp = sl.spells || [];
+    for (let k = 0; k < sp.length - 1; k++){
+      const a = sp[k];
+      if (a.team == null || a.to_week == null) continue;
+      const since = slotPts(a.team, a.to_week, null);
+      if (since == null) continue;
+      if (!best || since > best.since) best = {o, team: a.team, since, week: a.to_week};
+    }
+  }
+  return best;
+}
 const statsMine = o => !!meName() && o.div === MY_DIV && o.owner === meName();
 /* `ownerName()` RETURNS MARKUP (a long and a short form, one shown per width), so it is never
    escaped a second time. The first cut did, and printed the tags. */
@@ -12673,6 +12712,32 @@ function renderStats(){
   const worstMove = statsCard('Worst Single Pickups', moveCap, ['#', 'Owner and Move', 'Gained'],
     moveRows.map((r, i) => [r, moves[i]]).slice(-3).reverse().filter(x => x[1].net < 0).map(x => x[0]));
 
+  /* LUCK. */
+  const lucky = all.map(o => ({o, l: statsLuck(o)})).filter(x => x.l)
+    .sort((a, b2) => b2.l.luck - a.l.luck || a.o.owner.localeCompare(b2.o.owner));
+  const rL = ranks(lucky, x => x.l.luck);
+  const luckRows = lucky.map((x, i) => `<tr${statsMine(x.o) ? ' class="statme"' : ''}><td class="d statrank">${rL[i]}</td>
+    <td>${statsWho(x.o)}</td><td class="num"><b>${statsSigned(x.l.luck)}</b><div class="d statsub">${
+      x.l.act.toFixed(1)} vs ${x.l.exp.toFixed(1)}</div></td></tr>`);
+  const luckCap = `Points each owner's teams scored, game by game in the weeks they held them, against
+     what the pre-game odds expected. A plus means their teams kept winning games they were
+     expected to lose.`;
+  const luckiest = statsCard('Luckiest Owners', luckCap, ['#', 'Owner', 'vs Odds'],
+    luckRows.slice(0, 3), luckRows);
+  const unluckiest = statsCard('Unluckiest Owners', luckCap, ['#', 'Owner', 'vs Odds'],
+    luckRows.slice(-3).reverse());
+
+  /* THE ONE THAT GOT AWAY. */
+  const away = all.map(statsGotAway).filter(Boolean)
+    .sort((a, b2) => b2.since - a.since || a.o.owner.localeCompare(b2.o.owner));
+  const rA = ranks(away, x => x.since);
+  const awayRows = away.map((x, i) => `<tr${statsMine(x.o) ? ' class="statme"' : ''}><td class="d statrank">${rA[i]}</td>
+    <td>${statsWho(x.o)}<div class="d statsub">${esc(x.team)}, let go before week ${x.week}</div></td>
+    <td class="num"><b>${x.since.toFixed(1)}</b></td></tr>`);
+  const awayCard = statsCard('The One That Got Away',
+    `For each owner, the team they let go that has scored the most points since it left them.`,
+    ['#', 'Owner and Team', 'Pts Since'], awayRows.slice(0, 3), awayRows);
+
   /* HOTTEST OVER THE LAST FOUR WEEKS. */
   const L = lastPlayedWeek(), F = Math.max(0, L - 3);
   const hot = all.map(o => {
@@ -12696,7 +12761,7 @@ function renderStats(){
   };
 
   b.innerHTML = `<div class="statgrid">${[sod, bestDraft, worstDraft, bestPick, worstPick,
-      bestMove, worstMove, hotCard, teamCard('NFL'), teamCard('FBS'), teamCard('FCS')].join('')}</div>
+      bestMove, worstMove, awayCard, hotCard, luckiest, unluckiest, teamCard('NFL'), teamCard('FBS'), teamCard('FCS')].join('')}</div>
     <div class="note">Every figure here is worked out from final scores and the ownership record.
       Nothing on this tab is a projection, and it updates with the live scores.</div>`;
 }
