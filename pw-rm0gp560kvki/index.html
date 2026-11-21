@@ -3893,7 +3893,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '21 Nov 2026, 9:17 AM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '21 Nov 2026, 9:24 AM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -12653,7 +12653,7 @@ function statsToggle(key){
 }
 /* LEAGUE HONORS. Casey, 20-21 Nov 2026, choosing every word himself: Bob is "discount Pete Carroll
    fucktard edition", Zach Fryer is "draft day no-show thunder cunt" ("he never shows up" to the
-   draft, "prioritizes every year something else like hockey"), and Young/Mars, former owners, is
+   draft, "prioritizes every year something else like hockey"), and Young/Mares, former owners, is
    "douchebag emeritus". The box credits them to AI at his word, 21 Nov 2026: "Instead of saying
    awarded by commissioners, can you say awarded by AI?" THESE ARE AWARDED, NOT WORKED OUT, and
    the box says so in its first line,
@@ -12662,7 +12662,7 @@ function statsToggle(key){
 const LEAGUE_HONORS = [
   {honor: 'Discount Pete Carroll, Fucktard Edition', who: 'Bob Tucker', note: 'Scorpion'},
   {honor: 'Draft Day No-Show Thundercunt', who: 'Zach Fryer', note: 'Twitchell/Fryer, Predator'},
-  {honor: 'Douchebag Emeritus', who: 'Young/Mars', note: 'Former owners'},
+  {honor: 'Douchebag Emeritus', who: 'Young/Mares', note: 'Former owners'},
 ];
 function honorsCard(){
   return `<div class="card statcard honors"><h2>League Honors</h2>
