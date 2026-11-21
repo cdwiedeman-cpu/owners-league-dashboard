@@ -3518,9 +3518,18 @@ function closeInfo(){ const m = el('info'); if (m){ m.hidden = true; m.innerHTML
    IT WAITS FOR THE OWNER PICKER. The league page asks a new reader who they are first. Two
    panels stacked on a phone on a first visit is a wall, so this one follows that one. */
 const NEWS_KEY = 'rfl_whats_new_seen_v1';
+/* AN ENTRY SHOWS FROM ITS OWN DATE, ARIZONA TIME. Casey, 20 Nov 2026, about League Stats: "some
+   sort of pop-up for everyone tomorrow." So the page leaves out any entry dated after today, and
+   the newest one it shows is the one it remembers a reader as having read. A page pushed the night
+   before therefore opens the panel the next morning, and not a minute earlier. */
 function newsData(){
   const n = DATA.whats_new;
-  return (n && n.entries && n.entries.length) ? n : null;
+  if (!n || !n.entries || !n.entries.length) return null;
+  const today = azToday();
+  const rows = n.entries.filter(e => !e.date || e.date <= today);
+  if (!rows.length) return null;
+  return {...n, entries: rows, newest: rows[0].date,
+          intro: !!(n.intro && rows[0] === n.entries[0])};
 }
 function newsSeen(){ try { return localStorage.getItem(NEWS_KEY) || ''; } catch (e) { return ''; } }
 function newsButton(){
@@ -3882,7 +3891,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '20 Nov 2026, 5:22 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '20 Nov 2026, 10:44 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
