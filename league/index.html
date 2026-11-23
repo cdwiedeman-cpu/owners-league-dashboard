@@ -3894,7 +3894,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '22 Nov 2026, 5:51 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '22 Nov 2026, 6:50 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -10949,14 +10949,25 @@ async function loadSeason(){
      NOT FETCHED ALL SEASON. Ten more scoreboards on every load, all of them empty until
      December, is ten more things to wait for on a phone. They start being asked for once the
      league is deep enough into Q4 for a bowl to exist. */
+  /* THE BOWLS AND BRACKETS ARE ON ESPN WEEKS BEFORE THEY ARE PLAYED, and a bonus for reaching one
+     is settled the moment a team is named in it. So the college postseason is asked for from
+     league week 10, when the first conference races are being decided. ESPN files every bowl,
+     the Celebration Bowl and the FCS semi-finals under week 1 of its postseason, and the College
+     Football Playoff under week 999. */
+  const lookAhead = postSeasonPossible() || ((gwOf(azToday()) || 0) >= 10);
+  if (lookAhead){
+    jobs.push(['FBS', 1, `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300&seasontype=3&week=1&dates=2026`, true]);
+    jobs.push(['FCS', 1, `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=81&limit=300&seasontype=3&week=1&dates=2026`, true]);
+    jobs.push(['FBS', 999, `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300&seasontype=3&week=999&dates=2026`, true]);
+  }
   if (postSeasonPossible()){
     for (let w = 1; w <= 5; w++){
-      jobs.push(['FBS', w, `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300&seasontype=3&week=${w}&dates=2026`, true]);
-      jobs.push(['FCS', w, `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=81&limit=300&seasontype=3&week=${w}&dates=2026`, true]);
+      if (w > 1){
+        jobs.push(['FBS', w, `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300&seasontype=3&week=${w}&dates=2026`, true]);
+        jobs.push(['FCS', w, `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=81&limit=300&seasontype=3&week=${w}&dates=2026`, true]);
+      }
       jobs.push(['NFL', w, `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=3&week=${w}&dates=2026`, true]);
     }
-    /* ESPN FILES THE COLLEGE FOOTBALL PLAYOFF AS WEEK 999 of its postseason, not 2 to 5. */
-    jobs.push(['FBS', 999, `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300&seasontype=3&week=999&dates=2026`, true]);
   }
 
   SEASON_PROGRESS = `asking ESPN for ${jobs.length} week-scoreboards…`;
@@ -11294,7 +11305,12 @@ function bonusLedger(){
     const cid = confOfTeam.get(n);
     if (cid && !tgOfConf.has(cid)) tgOfConf.set(cid, v[1] === undefined ? null : v[1]);
   }
-  const titleGames = E.filter(isTitleGame);
+  /* NOT UNTIL BOTH TEAMS HAVE FINISHED THEIR REGULAR SEASON. Casey, 23 Nov 2026: "for FBS, we
+     don't want to show any conference championship points until the regular season is done. So
+     even though it shows it that way, it lists it that way, we don't want to show it until the
+     regular season is done." ESPN names a title game as soon as its two teams have clinched, a
+     week before either has played its last regular-season game. */
+  const titleGames = E.filter(e => isTitleGame(e) && e.teams.every(s => regDone.get(s.name)));
   const tgFor = new Map();
   for (const e of titleGames){
     tgFor.set(e.teams[0].conf, e);
@@ -11394,7 +11410,32 @@ function bonusLedger(){
       setPart(t.n, 'bowl', 0); setPart(t.n, 'bowlwin', 0);
     }
   }
+  /* THE CELEBRATION BOWL IS THE MEAC CHAMPION AGAINST THE SWAC CHAMPION, so a team is in it the
+     moment it is its conference's champion, before ESPN writes its name into the game. Casey,
+     23 Nov 2026: "South Carolina State has officially qualified for the Celebration Bowl ... But
+     you're missing that bonus point." ESPN still listed it as TBD against TBD that day. A MEAC
+     tie at the top is left to ESPN, because only one co-champion goes. */
+  const confName = cid => { for (const [n, v] of Object.entries(CONF)) if (confOfTeam.get(n) === cid) return v[0]; return null; };
+  const celIn = new Set();
+  for (const [cid, members] of byConf){
+    const nm = confName(cid);
+    if (nm === 'MEAC'){
+      const ch = members.filter(n => (led(n).parts || {}).conf_notitle === 1);
+      if (ch.length === 1 && members.every(n => led(n).parts.conf_notitle !== undefined)) celIn.add(ch[0]);
+    }
+    if (nm === 'SWAC'){
+      const g = tgFor.get(cid);
+      if (g && g.fin) for (const s of g.teams) if (s.won) celIn.add(s.name);
+    }
+  }
+  for (const n of celIn) setPart(n, 'bowl', 1);
   const cel = E.find(e => /Celebration Bowl/i.test(e.hl));
+  if (celIn.size === 2 && !(cel && cel.teams.every(s => s.name))){
+    for (const t of (DATA.teams || [])){
+      if (t.pool !== 'FCS' || celIn.has(t.n)) continue;
+      setPart(t.n, 'bowl', 0); setPart(t.n, 'bowlwin', 0);
+    }
+  }
   if (cel && cel.teams.every(s => s.name)){
     for (const s of cel.teams){
       setPart(s.name, 'bowl', 1);
