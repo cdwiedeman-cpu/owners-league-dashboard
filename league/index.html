@@ -3894,7 +3894,7 @@ function tvHTML(tv, game){
    week that has already been played. Both get the same objects out of it, because a second copy
    of this loop is a second definition of what a game is -- and the two would drift on the day
    somebody fixes one of them. */
-const PAGE_BUILT = '22 Nov 2026, 4:10 PM AZ';  // filled at render; NOT the same as DATA._built
+const PAGE_BUILT = '22 Nov 2026, 5:51 PM AZ';  // filled at render; NOT the same as DATA._built
 const ESPN_TEAM = {};                 // board name -> {id, pool}, learned from the live feed
 function espnTeamURL(n){
   const e = ESPN_TEAM[n];
@@ -4363,7 +4363,7 @@ function applyLiveToSeason(){
        of it. So the week is left exactly as it is and the team is named on screen. */
     if (!had && !cur.gAll && cur.wk[v.w] != null){ blocked.add(v.team); continue; }
     cur.rec = cur.rec || {};
-    const rw = k => (cur.rec[k] = cur.rec[k] || {w: 0, t: 0, n: 0});
+    const rw = k => (cur.rec[k] = cur.rec[k] || {w: 0, t: 0, n: 0, bl: 0, so: 0});
     if (had){
       cur.pts = r2(cur.pts - had.p);
       cur.wk[v.w] = r2((cur.wk[v.w] || 0) - had.p);
@@ -4376,6 +4376,8 @@ function applyLiveToSeason(){
          exactly this: the week can differ from v.w if a date was corrected. */
       const hr = rw(had.w != null ? had.w : v.w);
       hr.n--; if (had.won) hr.w--; else if (had.tied) hr.t--;
+      if (had.bl) hr.bl = (hr.bl || 0) - 1;
+      if (had.so) hr.so = (hr.so || 0) - 1;
     } else cur.n++;
     cur.pts = r2(cur.pts + v.pts);
     cur.wk[v.w] = r2((cur.wk[v.w] || 0) + v.pts);
@@ -4384,6 +4386,8 @@ function applyLiveToSeason(){
     if (v.so) cur.so++;
     const nr = rw(v.w);
     nr.n++; if (v.won) nr.w++; else if (v.tied) nr.t++;
+    if (v.bl) nr.bl = (nr.bl || 0) + 1;
+    if (v.so) nr.so = (nr.so || 0) + 1;
     cur.g[v.gk] = {p: v.pts, won: v.won, tied: v.tied, bl: v.bl, so: v.so, w: v.w};
     SEASON.set(v.team, cur);
     changed = true;
@@ -11072,8 +11076,10 @@ async function loadSeason(){
             const rw = isPost && afterW18 ? null : weekOf(mePool, ev.date);
             if (rw != null){
               cur.rec = cur.rec || {};
-              const rr = cur.rec[rw] = cur.rec[rw] || {w: 0, t: 0, n: 0};
+              const rr = cur.rec[rw] = cur.rec[rw] || {w: 0, t: 0, n: 0, bl: 0, so: 0};
               rr.n++; if (margin > 0) rr.w++; else if (margin === 0) rr.t++;
+              if (isBlowout(mePool, me_.score, other.score)) rr.bl = (rr.bl || 0) + 1;
+              if (other.score === 0 && margin > 0) rr.so = (rr.so || 0) + 1;
             }
           }
           /* AND PER GAME. A WEEK IS NOT A GAME -- league week 0 is every college game played
@@ -11573,7 +11579,7 @@ function bakedSeason(){
     const rec = {};
     for (const [k, r] of Object.entries(wks)){
       n += r.n; w += r.w; ti += r.t; bl += r.bl || 0; so += r.so || 0;
-      rec[+k] = {w: r.w, t: r.t, n: r.n};
+      rec[+k] = {w: r.w, t: r.t, n: r.n, bl: r.bl || 0, so: r.so || 0};
     }
     if (!n) continue;
     const cur = m.get(team);
@@ -11603,8 +11609,10 @@ function bakedSeason(){
          standings knew nothing about. */
       const p = pointsFor(t.pool, g.pf, g.pa);
       wk[k] = (wk[k] || 0) + p; pts += p;
-      const r = rec[k] = rec[k] || {w: 0, t: 0, n: 0};
+      const r = rec[k] = rec[k] || {w: 0, t: 0, n: 0, bl: 0, so: 0};
       r.n++; if (g.pf > g.pa) r.w++; else if (g.pf === g.pa) r.t++;
+      if (isBlowout(t.pool, g.pf, g.pa)) r.bl++;
+      if (g.pa === 0 && g.pf > g.pa) r.so++;
     }
     if (!n) continue;
     const cur = m.get(t.n);
@@ -15739,15 +15747,38 @@ function lRec(t){
   return `${t.w}-${t.l}${t.t ? '-' + t.t : ''}`;
 }
 function lRules(){ return (DATA.rules || {}).rows || (DATA.standings || {}).bonus_rules || []; }
+/* ---- A ROW COUNTS ONLY THE WEEKS IT COVERS -------------------------------------------------
+ * Casey, 23 Nov 2026: "in the win total column, you have teams like Wake Forest with 23 wins.
+ * That doesn't make sense." It did not. Every category column counted the TEAM's whole season
+ * while the row's points were the owner's weeks, so a slot that held UNLV, then Virginia, then
+ * Wake Forest added all three teams' full seasons together: 7 + 6 + 10 = 23 wins. Every row and
+ * every spell now counts the games in its own weeks, the same weeks its points come from, so the
+ * columns add up to the row. A postseason game after week 18 belongs to whoever holds the team at
+ * the end, exactly as its points do. Null when the per-week record cannot say, and the row then
+ * falls back to the team's season. */
+function rowCounts(t){
+  const got = SEASON ? SEASON.get(t.team) : null;
+  if (!got || !got.rec || !t.wk) return null;
+  const c = {w: 0, t: 0, bl: 0, so: 0};
+  for (const k of Object.keys(t.wk)){
+    const r = got.rec[k];
+    if (!r) continue;
+    if (r.bl === undefined || r.so === undefined) return null;   // an older copy with no halves
+    c.w += r.w || 0; c.t += r.t || 0; c.bl += r.bl || 0; c.so += r.so || 0;
+  }
+  if (t.held !== false && t.to_week == null){
+    c.w += got.postW || 0; c.t += got.postT || 0; c.bl += got.postBl || 0; c.so += got.postSo || 0;
+  }
+  return c;
+}
 function lCount(t, key){
-  /* Counts are the TEAM's season; the points credited are the owner's weeks. Where those differ
-     the row says so rather than letting one contradict the other. */
   if (!lKnown(t)) return undefined;          // unknown, and never rendered as 0
-  if (key === 'win') return t.w;
-  if (key === 'tie') return t.t;
-  if (key === 'shut_outs') return t.so;
-  if (key === '50_pt_wins') return t.pool === 'NFL' ? null : t.bl;
-  if (key === '40_pt_wins') return t.pool === 'NFL' ? t.bl : null;
+  const c = rowCounts(t) || t;
+  if (key === 'win') return c.w;
+  if (key === 'tie') return c.t;
+  if (key === 'shut_outs') return c.so;
+  if (key === '50_pt_wins') return t.pool === 'NFL' ? null : c.bl;
+  if (key === '40_pt_wins') return t.pool === 'NFL' ? c.bl : null;
   return null;
 }
 /* HOW MUCH OF THAT COUNT WAS EARNED IN A POSTSEASON GAME. Casey, 7 Sep 2026: "a post season
@@ -15761,6 +15792,8 @@ function lPostToo(){
 }
 function lCountPost(t, key){
   if (!lKnown(t) || !lPostToo().includes(key)) return 0;
+  /* A POSTSEASON GAME AFTER WEEK 18 IS THE HOLDER'S, so a spell that has ended has none. */
+  if (rowCounts(t) && !(t.held !== false && t.to_week == null)) return 0;
   if (key === 'win') return t.postW || 0;
   if (key === 'tie') return t.postT || 0;
   if (key === 'shut_outs') return t.postSo || 0;
@@ -15806,10 +15839,16 @@ function colPts(t, c){
   if (!(c.r.pools || []).includes(t.pool)) return null;
   if (c.r.bucket !== 'weekly'){
     /* A SETTLED BONUS IS WORTH ITS PAY TO WHOEVER HOLDS THE TEAM, AND NOTHING TO ANYBODY ELSE. */
+    /* A TEAM THIS OWNER NO LONGER HOLDS CAN NEVER PAY THEM A BONUS, so its cell is a settled
+       zero, not "not decided yet". Casey, 23 Nov 2026, on Spielman: "you're giving him 0.5
+       points in the FBS Conference Championship participant, but there's no team associated
+       with that." Wake Forest had earned it, but it shares a slot with UNLV and Virginia, and
+       UNLV's undecided cell blanked the whole slot while the total underneath counted it. */
+    const holder = t.held !== false && t.to_week == null;
+    if (!holder) return 0;
     const b = bonusOf(t.team);
     if (!b || b.keys[c.r.key] === undefined) return 'undecided';
-    const holder = t.held !== false && t.to_week == null;
-    return holder && b.keys[c.r.key] === 1 ? c.r.pay : 0;
+    return b.keys[c.r.key] === 1 ? c.r.pay : 0;
   }
   const n = lCount(t, c.r.key);
   if (n === undefined) return undefined;
